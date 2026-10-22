@@ -105,6 +105,8 @@ func _ready() -> void:
 		_root.pivot_offset = _root.size * 0.5)
 	GameState.data_changed.connect(refresh_all)
 	GameState.pet_changed.connect(_refresh_pet)
+	GameSettings.changed.connect(_on_setting_changed)
+	_apply_touch_mode()
 	GameState.boss_health_changed.connect(_on_boss_health)
 	GameState.expedition_changed.connect(_refresh_loot)
 	GameState.emergency_changed.connect(_on_emergency_changed)
@@ -432,6 +434,9 @@ func _build_controls() -> void:
 	_mp_count.offset_bottom = -98
 	_mp_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_root.add_child(_mp_count)
+	# Badges are drawn on the potion buttons themselves now.
+	_hp_count.visible = false
+	_mp_count.visible = false
 	_control_nodes = {
 		"joystick": _joystick,
 		"attack": _attack_button,
@@ -699,6 +704,12 @@ func _process(delta: float) -> void:
 	if _loot_timer > 0.25:
 		_loot_timer = 0.0
 		_refresh_loot()
+	if _attack_button:
+		var combatant := get_tree().get_first_node_in_group("player")
+		if combatant != null and is_instance_valid(combatant) and combatant.has_method("cooldown_fraction"):
+			_attack_button.set_cooldown(float(combatant.call("cooldown_fraction")))
+		else:
+			_attack_button.set_cooldown(0.0)
 	_mission_timer += delta
 	if _mission_timer > 0.2:
 		_mission_timer = 0.0
@@ -731,9 +742,9 @@ func _update_prompt() -> void:
 		if _interact_button:
 			if prompt.length() > 0:
 				var short := prompt.split(" ")[0]
-				_interact_button.caption = short.trim_suffix(".")
+				_interact_button.set_contextual(short.trim_suffix("."), _prompt_icon_kind(prompt))
 			else:
-				_interact_button.caption = "Use"
+				_interact_button.set_contextual("Use", "spark")
 
 
 func _use_quick_potion(item_id: String) -> void:
@@ -744,7 +755,7 @@ func set_world(w: Node) -> void:
 	world = w
 	_last_prompt = ""
 	if _interact_button:
-		_interact_button.caption = "Use"
+		_interact_button.set_contextual("Use", "spark")
 	_prompt_panel.visible = false
 	_boss_panel.visible = false
 	_sleep_panel.visible = false
@@ -769,6 +780,14 @@ func refresh_all() -> void:
 	_refresh_loot()
 	_hp_count.text = "x%d" % GameState.item_count("health_potion")
 	_mp_count.text = "x%d" % GameState.item_count("mana_potion")
+	# Count badges live on the buttons now; the old floating labels stay hidden.
+	if _health_potion_button:
+		_health_potion_button.set_badge("x%d" % GameState.item_count("health_potion") if GameState.item_count("health_potion") > 0 else "")
+	if _mana_potion_button:
+		_mana_potion_button.set_badge("x%d" % GameState.item_count("mana_potion") if GameState.item_count("mana_potion") > 0 else "")
+	# The Strike icon follows the active hero's weapon discipline.
+	if _attack_button:
+		_attack_button.set_icon(GameState.character_weapon_style())
 	var vitals := _root.find_child("VitalsStats", true, false)
 	if vitals is Label:
 		vitals.text = "ATK %d  •  DEF %d  •  SH %d" % [GameState.attack_power(), GameState.defense(), GameState.shield()]
@@ -862,6 +881,60 @@ func set_sleep_state(active: bool, progress: float, label: String) -> void:
 	if active:
 		_sleep_label.text = label
 		_sleep_bar.set_values(int(progress * 10.0), 10)
+
+
+func _prompt_icon_kind(prompt: String) -> String:
+	# Context-sensitive Use icon: talk / door / bed / gather / spark.
+	var verb := prompt.split(" ")[0]
+	match verb:
+		"Talk":
+			return "talk"
+		"Enter", "Open", "Return":
+			return "door"
+		"Sleep":
+			return "bed"
+		"Gather":
+			return "gather"
+	return "spark"
+
+
+func _show_key_hints() -> bool:
+	# Keycaps only when the player is not on a touch layout.
+	var mode := GameSettings.touch_controls()
+	if mode == "always":
+		return false
+	if mode == "hidden":
+		return true
+	return not DisplayServer.is_touchscreen_available()
+
+
+func _key_for_action(action_name: String) -> String:
+	for event in InputMap.action_get_events(action_name):
+		if event is InputEventKey:
+			var code := (event as InputEventKey).physical_keycode
+			if code != 0:
+				return OS.get_keycode_string(code)
+	return ""
+
+
+func _apply_touch_mode() -> void:
+	# Joystick hides on pure-keyboard layouts; buttons stay (they double as
+	# clickable targets) and gain keycap hints sourced from the InputMap.
+	var mode := GameSettings.touch_controls()
+	var show_touch := mode == "always" or (mode == "auto" and DisplayServer.is_touchscreen_available())
+	if _joystick:
+		_joystick.visible = show_touch
+	var hints := _show_key_hints()
+	for pair in [["attack", _attack_button], ["interact", _interact_button], ["open_inventory", _inventory_button], ["toggle_build", _build_button], ["use_health_potion", _health_potion_button], ["use_mana_potion", _mana_potion_button]]:
+		var button := pair[1] as TouchActionButton
+		if button == null:
+			continue
+		button.set_key_hint(_key_for_action(pair[0]) if hints else "")
+
+
+func _on_setting_changed(key: String) -> void:
+	if key == "touch_controls":
+		_apply_touch_mode()
 
 
 func show_toast(_text: String, _tone: String = "info") -> void:

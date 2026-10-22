@@ -13,10 +13,15 @@ var value := 100
 var maximum := 100
 var compact := false
 
+var _displayed := -1.0
+var _flash := 0.0
+var _gain := 0.0
+
 
 func _ready() -> void:
 	custom_minimum_size = Vector2(210, 30 if compact else 36)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	set_process(true)
 	queue_redraw()
 
 
@@ -30,9 +35,31 @@ func setup(title: String, color: Color, segment_count: int = 10, is_compact: boo
 
 
 func set_values(current: int, total: int) -> void:
+	var previous := value
 	value = clampi(current, 0, maxi(1, total))
 	maximum = maxi(1, total)
+	if _displayed < 0.0:
+		_displayed = float(value)
+	elif value < previous:
+		_flash = 0.32
+	elif value > previous:
+		_gain = 0.4
 	queue_redraw()
+
+
+func _process(delta: float) -> void:
+	if _displayed < 0.0:
+		_displayed = float(value)
+	var drifting := absf(_displayed - float(value)) > 0.01
+	if drifting:
+		# Smooth drain/fill toward the real value; instant for the first paint.
+		_displayed = lerpf(_displayed, float(value), clampf(delta * 9.0, 0.0, 1.0))
+	if _flash > 0.0:
+		_flash = maxf(0.0, _flash - delta)
+	if _gain > 0.0:
+		_gain = maxf(0.0, _gain - delta)
+	if drifting or _flash > 0.0 or _gain > 0.0:
+		queue_redraw()
 
 
 func set_caption(text: String) -> void:
@@ -50,7 +77,8 @@ func _draw() -> void:
 	var gap := 2.0
 	var segment_w := (inner.size.x - gap * float(segments - 1)) / float(segments)
 	var ratio := clampf(float(value) / float(maximum), 0.0, 1.0)
-	var filled := ratio * float(segments)
+	var shown := clampf(_displayed / float(maximum), 0.0, 1.0)
+	var filled := shown * float(segments)
 	for i in segments:
 		var x := inner.position.x + float(i) * (segment_w + gap)
 		draw_rect(Rect2(x, inner.position.y, segment_w, inner.size.y), empty_color)
@@ -59,6 +87,10 @@ func _draw() -> void:
 			var color := fill_color
 			if ratio <= 0.3:
 				color = fill_color.lerp(Color("#ff9e54"), 0.45)
+			if _flash > 0.0:
+				color = color.lerp(Color.WHITE, _flash * 1.6)
+			elif _gain > 0.0:
+				color = color.lerp(Color("#d6ffd0"), _gain * 1.2)
 			draw_rect(Rect2(x, inner.position.y, segment_w * amount, inner.size.y), color)
 			draw_rect(Rect2(x, inner.position.y, segment_w * amount, 2), color.lightened(0.28))
 	draw_rect(Rect2(0, bar_y, size.x, bar_h), border_color, false, 1.0)

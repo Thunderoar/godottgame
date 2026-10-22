@@ -21,6 +21,7 @@ var invulnerable := 0.0
 var dead := false
 
 var _attack_timer := 0.0
+var _attack_total := 0.45
 var _sleep_elapsed := 0.0
 var _sleep_duration := 10.0
 var _sleep_hp_start := 0
@@ -156,6 +157,7 @@ func try_attack() -> bool:
 	var character := GameState.character_data()
 	var style := str(character.get("weapon_style", "sword"))
 	_attack_timer = float(character.get("attack_cooldown", 0.45))
+	_attack_total = maxf(0.05, _attack_timer)
 	attacking = true
 	if style == "bow":
 		_fire_arrow(character)
@@ -391,3 +393,10 @@ func toast(text: String, tone: String = "info") -> void:
 
 func get_facing_angle() -> float:
 	return facing.angle()
+
+
+func cooldown_fraction() -> float:
+	# 1.0 right after a swing, easing to 0.0; drives the HUD cooldown sweep.
+	if _attack_timer <= 0.0:
+		return 0.0
+	return clampf(_attack_timer / _attack_total, 0.0, 1.0)

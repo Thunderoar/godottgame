@@ -48,6 +48,26 @@ func _rebuild() -> void:
 		hud.set_gui_scale(value))
 	content.add_child(scale_row)
 
+	add_section("EFFECTS & COMFORT", GameUI.GOLD)
+	var effects_row := HBoxContainer.new()
+	effects_row.add_theme_constant_override("separation", 12)
+	effects_row.add_child(GameUI.label("Effects quality", 14, GameUI.TEXT))
+	var quality := OptionButton.new()
+	for mode in GameSettings.EFFECT_QUALITIES:
+		quality.add_item(mode.capitalize())
+	quality.selected = maxi(0, GameSettings.EFFECT_QUALITIES.find(GameSettings.effects_quality()))
+	quality.custom_minimum_size = Vector2(150, 38)
+	quality.item_selected.connect(func(index: int) -> void:
+		GameSettings.set_effects_quality(str(GameSettings.EFFECT_QUALITIES[mini(index, GameSettings.EFFECT_QUALITIES.size() - 1)])))
+	effects_row.add_child(quality)
+	var motion := CheckBox.new()
+	motion.text = "Reduce motion"
+	motion.button_pressed = GameSettings.reduce_motion()
+	motion.toggled.connect(func(on: bool) -> void: GameSettings.set_reduce_motion(on))
+	effects_row.add_child(motion)
+	content.add_child(effects_row)
+	add_body_text("Low drops ambient life, wind bending and hit-stop; Reduce motion disables shake and camera look-ahead.", GameUI.MUTED, 13)
+
 	add_section("TOUCH CONTROLS", GameUI.GOLD)
 	add_body_text("Adjust X, Y and size. Changes apply immediately and are saved.", GameUI.MUTED, 13)
 	var layout := hud.get_control_layout_current()
