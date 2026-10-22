@@ -3,8 +3,11 @@ extends ModalBase
 ## Cottage upgrade NPC. Diamonds are the only accepted currency. The preview,
 ## cost and recovery change are shown before a separate Confirm action.
 
+var _band: ShopScene
+
+
 func _ready() -> void:
-	_panel_size = Vector2(900, 660)
+	_panel_size = Vector2(940, 700)
 	super._ready()
 	GameState.data_changed.connect(func() -> void:
 		if visible:
@@ -16,10 +19,16 @@ func _ready() -> void:
 
 func open_house() -> void:
 	open_panel("Bram's Construction Shop")
+	if _band != null:
+		_band.keeper_say(ShopLinesDB.line("house", "greeting"))
 
 
 func _rebuild() -> void:
 	_clear_content()
+	_band = ShopScene.new()
+	_band.setup("house", "Bram")
+	content.add_child(_band)
+	content.add_child(GameUI.spacer(2))
 	var level := GameState.house_level()
 	var current := HouseDB.get_level(level)
 	var next := HouseDB.next_level(level)
@@ -60,8 +69,14 @@ func _rebuild() -> void:
 	confirm.disabled = GameState.diamonds() < int(next.cost)
 	confirm.pressed.connect(func() -> void:
 		var result := GameState.upgrade_house()
-		if not result.ok:
-			GameState.toast_requested.emit(str(result.message), "bad"))
+		if result.ok:
+			Sfx.play("equip", -8.0)
+			if _band != null and is_instance_valid(_band):
+				_band.keeper_say(ShopLinesDB.line("house", "buy"), "check")
+		else:
+			Sfx.play("deny", -10.0)
+			if _band != null and is_instance_valid(_band):
+				_band.keeper_say(ShopLinesDB.line("house", "deny"), "close"))
 	content.add_child(confirm)
 	if GameState.diamonds() < int(next.cost):
 		add_body_text("You need %d more diamonds. Bosses and dungeon gems are the surest source." % (int(next.cost) - GameState.diamonds()), GameUI.RED, 13)

@@ -758,6 +758,128 @@ static func stall_texture(kind: String) -> Texture2D:
                 return img)
 
 
+static func shop_interior_texture(kind: String) -> Texture2D:
+        return cached_texture("shop_interior_%s" % kind, func() -> Image:
+                var palette: Array = {
+                        "potion": [Color("#2a3d2f"), Color("#1c2a20"), Color("#4a7a57"), Color("#d8c05d")],
+                        "equipment": [Color("#3a2a22"), Color("#241a15"), Color("#7b4633"), Color("#d59a64")],
+                        "pet": [Color("#332a44"), Color("#221b30"), Color("#594078"), Color("#d9b76a")],
+                        "house": [Color("#2e3540"), Color("#1e232b"), Color("#555d63"), Color("#91b6c4")],
+                }.get(kind, [Color("#333333"), Color("#222222"), Color("#555555"), Color("#aaaaaa")])
+                var wall: Color = palette[0]
+                var wall_dark: Color = palette[1]
+                var wood: Color = palette[2]
+                var trim: Color = palette[3]
+                var img := image(448, 84)
+                # Back wall with plank lines.
+                rect(img, 0, 0, 448, 62, wall)
+                for y in range(6, 62, 10):
+                        hline(img, 0, y, 448, wall_dark)
+                # Floor.
+                rect(img, 0, 62, 448, 22, wall_dark)
+                hline(img, 0, 62, 448, wood.darkened(0.3))
+                for x in range(4, 448, 18):
+                        vline(img, x, 63, 21, Color(0, 0, 0, 0.14))
+                # Two shelf planks with goods.
+                for sy in [22, 42]:
+                        rect(img, 24, sy, 168, 3, wood.darkened(0.25))
+                        hline(img, 24, sy, 168, trim.darkened(0.15))
+                        for sx in range(30, 186, 22):
+                                match kind:
+                                        "potion":
+                                                rect(img, sx, sy - 9, 4, 2, Color("#d9d2b9"))
+                                                ellipse(img, sx + 2, sy - 4, 4, 4, Color("#94313d") if (sx / 2) % 2 else Color("#3d6bb0"))
+                                        "equipment":
+                                                line(img, sx, sy - 1, sx + 4, sy - 10, Color("#d9dad2"))
+                                                line(img, sx + 1, sy - 1, sx + 5, sy - 10, Color("#78818a"))
+                                        "pet":
+                                                ellipse(img, sx + 2, sy - 5, 5, 4, Color("#b9a0ce") if (sx / 2) % 2 else Color("#cda778"))
+                                        "house":
+                                                rect(img, sx, sy - 8, 12, 8, Color("#e7ddc2"))
+                                                hline(img, sx, sy - 5, 12, Color("#678aa0"))
+                # Hanging goods from a top rail.
+                rect(img, 232, 2, 150, 3, wood.darkened(0.4))
+                for hx in range(242, 376, 26):
+                        line(img, hx, 5, hx, 14, Color("#8a7a5c"))
+                        match kind:
+                                "potion":
+                                        ellipse(img, hx, 20, 4, 5, Color("#94313d"))
+                                "equipment":
+                                        line(img, hx - 5, 16, hx + 5, 24, Color("#b9c0ba"))
+                                "pet":
+                                        ellipse(img, hx, 19, 5, 3, Color("#c5a5df"))
+                                "house":
+                                        rect(img, hx - 6, 15, 12, 5, Color("#c9a45c"))
+                # Counter across the front with a lamp.
+                rect(img, 0, 66, 448, 10, wood)
+                hline(img, 0, 66, 448, trim)
+                rect(img, 390, 46, 14, 20, wood.darkened(0.35))
+                ellipse(img, 397, 44, 7, 7, trim.darkened(0.2))
+                ellipse(img, 397, 44, 4, 4, Color("#ffe28a"))
+                # A window with light on the far left.
+                rect(img, 8, 12, 40, 26, wall_dark.darkened(0.2))
+                rect(img, 11, 15, 34, 20, Color("#cfe3d2") if kind == "potion" else Color("#d8cfb0"))
+                vline(img, 28, 15, 20, wall_dark)
+                hline(img, 11, 25, 34, wall_dark)
+                return img)
+
+
+static func shopkeeper_bust(kind: String, blink := false) -> Texture2D:
+        return cached_texture("bust_%s_%s" % [kind, str(blink)], func() -> Image:
+                var palette: Array = {
+                        "potion": [Color("#4b7658"), Color("#badb9e"), Color("#6a3f2f")],
+                        "equipment": [Color("#7b4535"), Color("#d8a06e"), Color("#4e2d25")],
+                        "pet": [Color("#5a457a"), Color("#c5a5df"), Color("#3d2e53")],
+                        "house": [Color("#46627a"), Color("#a8c4d6"), Color("#2e4152")],
+                }.get(kind, [Color("#5c5c5c"), Color("#c9c9c9"), Color("#333333")])
+                var robe: Color = palette[0]
+                var accent: Color = palette[1]
+                var dark: Color = palette[2]
+                var img := image(72, 88)
+                # Shoulders.
+                ellipse(img, 36, 84, 32, 22, dark)
+                ellipse(img, 36, 82, 28, 19, robe)
+                rect(img, 26, 72, 20, 6, accent.darkened(0.15))
+                # Neck and head.
+                rect(img, 32, 60, 8, 8, Color("#d9b18b"))
+                ellipse(img, 36, 42, 17, 19, OUTLINE)
+                ellipse(img, 36, 42, 15, 17, Color("#d9b18b"))
+                # Hair / hood.
+                ellipse(img, 36, 30, 16, 11, dark)
+                rect(img, 20, 32, 6, 14, dark)
+                rect(img, 46, 32, 6, 14, dark)
+                # Face: eyes (blink state), brows, mouth.
+                if blink:
+                        hline(img, 26, 44, 7, OUTLINE)
+                        hline(img, 39, 44, 7, OUTLINE)
+                else:
+                        rect(img, 27, 41, 5, 4, Color.WHITE)
+                        rect(img, 40, 41, 5, 4, Color.WHITE)
+                        px(img, 29, 42, OUTLINE)
+                        px(img, 42, 42, OUTLINE)
+                        hline(img, 26, 38, 6, dark.darkened(0.1))
+                        hline(img, 40, 38, 6, dark.darkened(0.1))
+                hline(img, 32, 51, 9, Color("#8a5a50"))
+                # Apron hint and hands on the counter.
+                rect(img, 24, 74, 24, 12, accent.lightened(0.1))
+                ellipse(img, 22, 86, 6, 4, Color("#d9b18b"))
+                ellipse(img, 50, 86, 6, 4, Color("#d9b18b"))
+                # Per-keeper prop silhouettes (animated by ShopScene on top).
+                match kind:
+                        "equipment":
+                                line(img, 56, 66, 64, 50, Color("#5b3c24"))
+                                rect(img, 58, 44, 10, 8, Color("#8b9694"))
+                        "potion":
+                                ellipse(img, 58, 74, 6, 5, Color("#94313d"))
+                                ellipse(img, 58, 74, 3, 2, Color("#dd5761"))
+                        "pet":
+                                ellipse(img, 58, 76, 6, 4, Color("#b9a0ce"))
+                        "house":
+                                rect(img, 54, 68, 16, 10, Color("#e7ddc2"))
+                                hline(img, 54, 72, 16, Color("#678aa0"))
+                return img)
+
+
 static func portal_texture(portal_id: String) -> Texture2D:
         return cached_texture("portal_%s" % portal_id, func() -> Image:
                 var img := image(80, 112)

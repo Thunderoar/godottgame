@@ -568,7 +568,7 @@ func upgrade_pet(pet_id: String) -> Dictionary:
 	var level := int(pet.get("level", 1))
 	if level >= PetDB.MAX_LEVEL:
 		return {"ok": false, "message": "That companion is already at max level."}
-	var cost := 45 + level * 35
+	var cost := pet_upgrade_cost(level)
 	if gold() < cost:
 		return {"ok": false, "message": "Not enough gold."}
 	data.gold = gold() - cost
@@ -596,6 +596,28 @@ func _give_pet_xp(pet: Dictionary, amount: int) -> int:
 		pet.hp = int(pet.hp_max)
 	pet_changed.emit()
 	return levels_gained
+
+
+func pet_upgrade_cost(level: int) -> int:
+	# Single source of truth for the companion upgrade price (was duplicated in
+	# ShopPanel; formula unchanged: 45 + level * 35 gold).
+	return 45 + clampi(level, 1, PetDB.MAX_LEVEL) * 35
+
+
+func pet_xp_progress_for(pet_id: String) -> Dictionary:
+	# Same shape as pet_xp_progress() but for any owned companion, not just the
+	# active one (the shop shows XP bars for every owned pen).
+	var pet := get_pet(pet_id)
+	if pet.is_empty():
+		return {"xp": 0, "next": 1, "level": 1, "max": false}
+	var level := int(pet.get("level", 1))
+	var maxed := level >= PetDB.MAX_LEVEL
+	return {
+		"xp": int(pet.get("xp", 0)),
+		"next": PetDB.xp_for_level(level + 1) if not maxed else 1,
+		"level": level,
+		"max": maxed,
+	}
 
 
 func pet_xp_progress() -> Dictionary:
