@@ -8,7 +8,7 @@ Authors: Qayyim, Farhan and Ayiz.
 - ~14,500 lines GDScript: 61 files / ~11,100 lines under `scripts/`, 8 tools / ~3,400 lines under `tools/`
 - Main scene: `res://scenes/game.tscn` (`project.godot:15`) — **6 lines, one root node, everything else built in code**
 - **There is no git repo here.** No history, no diff, no revert. Copy a file before a large rewrite.
-- Two autoloads only: `GameState` then `Sfx` (`project.godot:21-22`)
+- Three autoloads: `GameState`, `Sfx`, then `GameSettings` (`project.godot:21-23`). GameSettings owns device prefs (`user://settings.cfg`) incl. reduce_motion and effects_quality.
 
 Deep research backing this document (read on demand, not by default):
 `.hermes/research/agents-md/agent-a-architecture.md` (runtime),
@@ -30,13 +30,14 @@ godot --headless --path . --import
 timeout 600 godot --headless --path . res://tools/tide_test.tscn ; echo "EXIT=$?"
 ```
 
-**BASELINE IS RED, AND THAT IS THE STARTING TRUTH: `250 checks, 1 FAILURE(S)`, exit 1.**
+**BASELINE ON `visual-overhaul`: GREEN. `313 checks, PASS`, exit 0** (the
+main-branch history below is kept for context). The tree decision was resolved
+by the owner: trees have persistent HP, fall at zero and all-dead triggers a
+locked game-over; the suite, ACCEPTANCE_TESTS and the README all agree now.
+Attack-timing checks wait for the active frame (AttackDB wind-ups), which is a
+documented rule change, not a weakened assertion.
 
-The single failure is `forest trees are invulnerable to structural damage`
-(`tools/tide_test.gd:147`). Do not treat it as "pre-existing noise you can ignore", and do
-not "fix" it by weakening the assertion — see §2.
-
-A clean run must be `0 FAILURE(S)` and exit 0. Nothing else is a green build.
+A clean run must end `PASS` and exit 0. Nothing else is a green build.
 
 **The suite deletes the player's save** (`tools/tide_test.gd:13,109` →
 `GameState.delete_save()`), and `user://` is keyed on `config/name`, so running it from a
@@ -45,7 +46,7 @@ A clean run must be `0 FAILURE(S)` and exit 0. Nothing else is a green build.
 
 ---
 
-## 2. The one unresolved product decision (fixes the red test)
+## 2. The former tree product decision (RESOLVED on this branch)
 
 Docs and one test say forest trees are invulnerable; the code says otherwise:
 
@@ -117,7 +118,10 @@ Rules of the runtime that shape every change:
 `scenes/main.tscn` (4298 lines) is a **converted Unity demo**, not the game. Only
 `tools/convert.gd`, `play_test.gd` and `smoke_test.gd` reference it. It still ships
 (`export_presets.cfg:12-14` excludes only `tools/*, docs/*`). `scripts/control_mode.gd`
-is referenced by nothing at all.
+is referenced by nothing at all. The same is true of `scripts/ui/pause_menu.gd`
+(615 lines) and `scripts/ui/confirm_dialog.gd`: nothing instantiates them and
+there is no `pause_menu` InputMap action. They are orphaned half-built
+features — do not wire them in without an owner decision.
 
 ---
 

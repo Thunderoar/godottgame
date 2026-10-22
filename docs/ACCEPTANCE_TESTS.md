@@ -117,6 +117,35 @@ new screenshots at 1280×720.
 - The box includes the exact lines “Welcome to Unisza” and “We are students from
   Unisza.”
 
+## Visual & feel overhaul checks
+
+These rules landed with the `visual-overhaul` branch and are covered by the
+suite (`_test_visual_overhaul_contracts` and updated attack waits):
+
+- **Attack timing rule change:** melee and bow damage lands on the ACTIVE
+  frame of the AttackDB chain (anticipation -> active -> recovery), not on the
+  button press. Sword wind-up 0.06 s, hammer 0.20 s, bow draw 0.12 s; the
+  suite waits for the hit frame instead of checking on the same frame.
+  `attack_cooldown` restarts at each hit frame, so per-second damage is
+  unchanged.
+- The Strike touch icon matches the active hero's weapon style for all three
+  heroes, and the Use icon is context-sensitive (talk / door / bed / gather).
+- The 32 px icon set generates for weapons, interact variants and currencies.
+- Portal art (frame, sealed variant, 8 swirl frames) is generated from the
+  PortalDB theme of every portal - ten distinct themes, no portal-id special
+  cases.
+- The companion upgrade price is read from `GameState.pet_upgrade_cost()`
+  (single source; formula unchanged).
+- `GameSettings` sanitises the new `effects_quality` (low/med/high) and
+  `reduce_motion` keys.
+- Shops refresh in place on `data_changed`: the pet shop keeps its scroll
+  position across repeated updates (the sea-cleaning gold drip no longer
+  resets browsing).
+- Enemy attacks telegraph for at least 0.42 s (ground decal + wind-up pose)
+  and deal damage only on the active frame; wind-ups can be interrupted.
+- Quality tiers: `low` drops ambient life, wind sway and hit-stop; reduce
+  motion disables shake, look-ahead and bending.
+
 ## Regression rules for agents
 
 1. **Do not reintroduce timed toast pop-ups or floating NPC names.** Use the HUD,

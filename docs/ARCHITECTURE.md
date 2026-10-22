@@ -24,6 +24,13 @@ trigger/damage simulation and transitions. It does not duplicate stats.
 tree impacts, aggro calls, charges, skill use, selection and victory. No external
 audio assets are required.
 
+`GameSettings` (added by the visual overhaul) is the third autoload. It owns
+device-level preferences in `user://settings.cfg`, independent of the save
+file: volumes, mute, fullscreen, UI scale, touch layout mode, screen shake,
+`reduce_motion` and `effects_quality` (low/med/high). The Settings panel reads
+and writes it; visual systems call `GameSettings.effects_at_least()` /
+`reduce_motion()` before spawning ambient layers.
+
 ## Authoritative data
 
 `GameState` owns:
@@ -226,6 +233,54 @@ in the top-left HUD panel and use `GameState.data.xp_next` and
   anchors.
 - `GameOverPanel` is a locked modal. `GameState.trigger_game_over()` disables
   autosave, `Game` deletes the failed save and the panel can only return to title.
+
+## Visual & feel systems (visual-overhaul branch)
+
+- **`scripts/core/icon_art.gd`** - native 32 px icon set (1 px auto-outline,
+  3-tone shading). `PixelArt.icon(kind, size >= 24)` routes here; the 16 px
+  art is untouched.
+- **`scripts/core/vfx.gd` + `vfx_pool.gd`** - one pre-allocated pool per world
+  (sparks, rings, dust, damage numbers, icon pops). No per-hit allocation;
+  steals are safe because spawns reset every tweened property.
+- **`scripts/core/shaders.gd`** - shared canvas_item materials built in code.
+  The wind shader bends vertices from the sprite base with a phase derived
+  from `MODEL_MATRIX` plus a per-instance `INSTANCE_CUSTOM` seed (MultiMesh
+  safe), and bends grass away from up to four "benders" pushed through
+  shader globals. The water shader renders the sea mask with moving bands,
+  foam crests and sparkle while respecting the mask alpha.
+- **`scripts/data/attack_db.gd`** - weapon attack chains
+  (anticipation/active/recovery per step). Damage is applied on the active
+  frame; `attack_cooldown` restarts at each hit frame, preserving DPS.
+- **`scripts/combat/hit_feedback.gd`** - the shared hit pipeline (flash,
+  sparks, numbers, hit-stop, micro-shake). Enemies implement
+  `apply_hit_stop()`; hit-stop is skipped under reduce-motion/low quality.
+- **Enemy FSM** - `SPAWN/WANDER/ALERT/CHASE/WINDUP/ATTACK/RECOVER/STAGGER/DEAD`
+  with a >=0.42 s telegraph (ground decal + wind-up pose), separation steering
+  (cached group list) and per-kind movement personalities.
+- **Shops** - `ShopScene` (storefront band, animated keeper bust, dialogue
+  from `ShopLinesDB`), `ItemCard` (reusable card) and an in-place refresh in
+  `ShopPanel`: cards update without rebuilding, so scroll and hover survive
+  `data_changed`; the card set signature triggers a full rebuild only when
+  the stock or owned-pet set changes. `GameState.pet_upgrade_cost()` is the
+  single source of the companion upgrade price.
+- **Portals** - `PixelArt.portal_theme_palette/frame/swirl/emblem` generate
+  per-theme art from `PortalDB` (ten themes plus the pet arena look; no
+  portal-id special cases). `PortalEntrance` composites frame + animated
+  swirl + motes + light pool, wakes when the player approaches, seals when
+  locked and wears a golden aura when cleared. Enter/exit pull the player in
+  before the existing world-load flow.
+- **Light sizing rule** - light textures are 128 px and 1 world unit = 1 px,
+  so a `texture_scale` of ~0.05 gives a ~3-unit light pool. Every pre-existing
+  light was ~13x oversized and washed the whole map; they are now local pools.
+- **Grass** - `Lobby._build_grass_fields()` renders 300-520 clustered tufts
+  through four `MultiMeshInstance2D` fields (one draw call per texture
+  variant) with per-instance colour jitter and phase seeds, using a dedicated
+  seeded RNG so the tree-id sequence never changes. Flowers stay individual
+  sprites (the `flowers` group is an acceptance contract).
+- **Ambient life** - `Lobby._build_ambient_life()` (cloud shadows, pollen,
+  butterflies, forest light shafts, eastern grade, chimney smoke) and
+  `_update_ambient()` (bender push, falling leaves, ward motes), all gated
+  behind `effects_quality >= med` and `reduce_motion == false`.
 
 ## Save format
 

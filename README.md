@@ -83,9 +83,10 @@ forest**. The persistent emergency HUD marks the danger. The player is never
 teleported and portal combat is never forcibly interrupted. Returning through
 the Shore Gate spawns the raiders, residents flee or fight according to their
 role, defenders automatically attack, and buildings and resident cottages take
-visible damage. The **73 forest trees are invulnerable**: forest monsters strike
-them constantly with leaf/shake VFX and synthesized impact SFX, but the trees
-never lose structural health or fall. Eight forest monsters patrol the woodland
+visible damage. The **73 forest trees have persistent HP**: forest monsters
+strike them with leaf/shake VFX and synthesized impact SFX, damaged trees show
+an HP bar, a tree falls when its health reaches zero, and losing every tree
+triggers a locked game-over screen. Eight forest monsters patrol the woodland
 outside raids, with three more joining during an emergency.
 
 Forest monsters attack trees without waiting for the player. As soon as the
@@ -151,6 +152,39 @@ Two gates stand side by side on the north path:
 Monster portals use the reusable dark dungeon scene, with loot, expedition
 banking, defeat/reset and safe Shore Gate returns.
 
+## Visual & feel overhaul
+
+The `visual-overhaul` branch adds a presentation layer on top of the same
+rules (see `docs/VISUAL_OVERHAUL.md` for the design decisions):
+
+- **Shops with people.** Every shop opens onto an illustrated storefront band
+  with an animated shopkeeper (Mara stirs, Garrick hammers, Nia tends, Bram
+  unrolls blueprints), contextual dialogue lines, browsing silhouettes, stock
+  cards with before/after stat compare and in-panel buy feedback (coin arc,
+  currency tick, keeper reaction). Scrolling survives background gold drips.
+- **Movement & combat feel.** The hero eases in and out of movement with a
+  4-frame walk cycle, footstep dust and hurt/death poses. Attacks are
+  data-driven anticipation -> active -> recovery chains (sword 3-hit combo,
+  hammer shockwave slam, bow draw-and-release); damage lands on the active
+  frame and cooldowns preserve the original pacing. Hits flash, spark, count
+  and micro-shake; enemies telegraph every attack with a ground decal before
+  it lands.
+- **Portals as the centrepiece.** Both gates animate (8-frame swirls, motes,
+  rune glow, approach wake) with ten distinct PortalDB-driven themes, sealed
+  frames while locked, golden auras once cleared, and a pull-in transition on
+  entry. Dungeon floors are coherent stone with real wall faces, themed
+  dressing, flickering torches and a boss-arena emblem.
+- **A living meadow.** Grass renders in clustered MultiMesh fields that sway
+  in a shared wind shader and bend away from walking characters; the sea
+  carries animated bands, foam and sparkle; cloud shadows, pollen,
+  butterflies, light shafts, chimney smoke and falling leaves keep the world
+  breathing. (The old washed-out look was every PointLight2D being ~13x
+  oversized; lights are now real local pools.)
+- **Comfort settings.** Settings gains Effects quality (low/med/high) and
+  Reduce motion. Touch buttons show keycap hints on keyboard layouts, a
+  cooldown sweep on Strike, count badges on potions and a context-sensitive
+  Use icon.
+
 ## Project structure
 
 ```text
@@ -186,10 +220,13 @@ godot --headless --path . res://tools/tide_test.tscn
 godot --path . res://tools/tide_capture.tscn
 ```
 
-Latest result: **250 checks, PASS**. The suite covers title/credits, tutorial,
+Latest result on the `visual-overhaul` branch: **313 checks, PASS**. The suite
+must always end with `PASS` and exit 0; the tally itself is data-driven and
+drifts as catalogue data changes. The suite covers title/credits, tutorial,
 three weapons, permanent daytime, no NPC labels or pop-ups, XP bars, Pet Food,
 three-skill simultaneous pet turns, guaranteed victory level-up, paired battle
-portals, invulnerable forest trees, forest-monster line-of-sight charges, SFX/VFX,
+portals, persistent tree HP with the forest game-over, forest-monster
+line-of-sight charges, SFX/VFX,
 the dedicated Construction Shop, resident cottages, horses,
 flowers/gardens/decorations, sea-cleaning progress, auto-heal, pet support,
 auto-loot, emergency persistence, sea/forest attacks, defender participation,

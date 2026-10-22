@@ -92,6 +92,7 @@ func _ready() -> void:
 	await _test_movement()
 	await _test_gathering()
 	await _test_shops()
+	await _test_visual_overhaul_contracts()
 	await _test_house_and_sleep()
 	await _test_menu_and_settings()
 	await _test_auto_heal_and_shield()
@@ -278,6 +279,51 @@ func _test_shops() -> void:
 	game.call("open_shop", "potion", "Mara")
 	await get_tree().create_timer(0.2).timeout
 	_check(hud.shop_panel.visible, "shop panel opens")
+	hud.hide_modals()
+	await get_tree().process_frame
+
+
+func _test_visual_overhaul_contracts() -> void:
+	# 3C: Strike icon follows the active hero's weapon discipline.
+	_check(str(hud.get("_attack_button").icon_kind) == GameState.character_weapon_style(), "strike icon follows the hero's weapon")
+	# 3C: the detailed 32px icon set generates for the key kinds.
+	for kind in ["sword", "hammer", "bow", "talk", "door", "bed", "gather", "chest", "gold", "diamond", "close", "pet"]:
+		_check(PixelArt.icon(kind, 32) != null, "32px icon generates for %s" % kind)
+	# 3E: portal art is driven by PortalDB themes, never portal ids.
+	var themes := {}
+	for portal_id in PortalDB.ordered_ids():
+		var theme := str(PortalDB.get_portal(portal_id).get("theme", ""))
+		themes[theme] = true
+		_check(PixelArt.portal_frame_texture(theme, false) != null and PixelArt.portal_frame_texture(theme, true) != null, "%s frame art generates (live and sealed)" % theme)
+		_check(PixelArt.portal_swirl_texture(theme, 0) != null and PixelArt.portal_swirl_texture(theme, 7) != null, "%s swirl frames generate" % theme)
+	_check(themes.size() >= 10, "all ten portal themes are distinct (%d)" % themes.size())
+	# 3A: upgrade price has a single source of truth.
+	_check(GameState.pet_upgrade_cost(1) == 80 and GameState.pet_upgrade_cost(3) == 150 and GameState.pet_upgrade_cost(5) == 220, "pet upgrade price comes from GameState.pet_upgrade_cost")
+	# Quality settings sanitise on write.
+	GameSettings.set_effects_quality("bogus")
+	_check(GameSettings.effects_quality() == "high", "unknown effects quality falls back to high")
+	GameSettings.set_effects_quality("low")
+	_check(GameSettings.effects_quality() == "low", "effects quality accepts low")
+	GameSettings.set_effects_quality("high")
+	GameSettings.set_reduce_motion(true)
+	_check(GameSettings.reduce_motion(), "reduce motion stores")
+	GameSettings.set_reduce_motion(false)
+	# 3A: shops refresh in place, so the scroll position survives data_changed
+	# (including the sea-cleaning gold drip).
+	game.call("open_shop", "pet", "Nia")
+	await get_tree().create_timer(0.3).timeout
+	_check(hud.shop_panel.visible, "shop opens for the scroll test")
+	var scroll := hud.shop_panel.body as ScrollContainer
+	scroll.scroll_vertical = 999999
+	await get_tree().process_frame
+	var before := scroll.scroll_vertical
+	_check(before > 0, "shop content is long enough to scroll (%d)" % before)
+	GameState.data_changed.emit()
+	await get_tree().create_timer(0.1).timeout
+	_check(scroll.scroll_vertical == before, "shop keeps its scroll position on data_changed")
+	GameState.data_changed.emit()
+	await get_tree().create_timer(0.1).timeout
+	_check(scroll.scroll_vertical == before, "shop keeps its scroll position across repeated updates")
 	hud.hide_modals()
 	await get_tree().process_frame
 
@@ -770,6 +816,7 @@ func _test_single_style(character_id: String, starter_weapon: String, style: Str
 	await get_tree().create_timer(0.3).timeout
 	var p: Player = game.call("player")
 	_check(GameState.equipped_item("weapon") == starter_weapon, "%s starts with the correct weapon" % character_id.capitalize())
+	_check(str(hud.get("_attack_button").icon_kind) == style, "%s strike icon matches the weapon style" % character_id.capitalize())
 	_check(GameState.character_weapon_style() == style, "%s uses the %s style" % [character_id.capitalize(), style])
 	var dummy := Enemy.new()
 	dummy.kind = "bogling"
