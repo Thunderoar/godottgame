@@ -84,7 +84,7 @@ func _build_visuals(palette: Dictionary, shown_title: String, is_pet: bool) -> v
 
 	_glow = PointLight2D.new()
 	_glow.texture = PixelArt.light_texture()
-	_glow.texture_scale = 0.75
+	_glow.texture_scale = 0.055
 	_glow.energy = 0.8
 	_glow.color = palette["glow"] if gate_kind == "pet" else (palette["glow_light"] as Color).lerp(Color.WHITE, 0.25)
 	_glow.position = Vector2(0, -1.45)

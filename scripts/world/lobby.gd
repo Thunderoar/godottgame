@@ -64,6 +64,7 @@ func _ready() -> void:
 	_build_forest_monsters()
 	_build_scatter()
 	_build_coastal_system()
+	_build_ambient_life()
 	_build_recovery_ward()
 	_build_settlement_editor()
 	_build_player_and_pet()
@@ -97,12 +98,20 @@ func _build_background() -> void:
 	background.z_as_relative = false
 	background.z_index = -1000
 	background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	background.modulate = Color(0.84, 0.9, 0.78)
+	# Daylight grade. The old neon look was actually the PointLight2Ds being
+	# ~13x oversized (one 128px light covered the entire map); with correctly
+	# sized lights the baked terrain needs only a gentle sunny lift.
+	background.modulate = Color(1.0, 1.0, 0.97)
 	add_child(background)
+	var grade := CanvasModulate.new()
+	grade.name = "DaylightGrade"
+	grade.color = Color(1.04, 1.08, 1.0)
+	add_child(grade)
+	_build_water_layer()
 
 
 func _make_terrain_texture() -> Texture2D:
-	var key := "terrain_lobby_v2"
+	var key := "terrain_lobby_v3"
 	if PixelArt.CACHE.has(key):
 		return PixelArt.CACHE[key]
 	var w := int(MAP_RECT.size.x * 32.0)
@@ -124,8 +133,8 @@ func _make_terrain_texture() -> Texture2D:
 	# Broad moss / sun-bleached patches.
 	for i in 34:
 		var c := Vector2(rng.randf_range(0, w), rng.randf_range(0, h))
-		var col := Color("#687c3b") if i % 2 == 0 else Color("#8c9a50")
-		_blend_ellipse(img, int(c.x), int(c.y), rng.randi_range(40, 135), rng.randi_range(26, 80), col, 0.10)
+		var col := Color("#5e7040") if i % 2 == 0 else Color("#7e8a4e")
+		_blend_ellipse(img, int(c.x), int(c.y), rng.randi_range(40, 135), rng.randi_range(26, 80), col, 0.09)
 	# Path network.
 	_paint_path(img, [Vector2(34, 24), Vector2(30, 23.2), Vector2(27, 22.6), Vector2(23.8, 22.2)], 0.72)
 	_paint_path(img, [Vector2(33.2, 23.5), Vector2(31.5, 20.5), Vector2(29.5, 16.5), Vector2(27, 12.2), Vector2(24, 10.2)], 0.62)
@@ -147,7 +156,7 @@ func _make_terrain_texture() -> Texture2D:
 		var shore := _coast_pixel_y(x)
 		if y > shore - 7:
 			continue
-		var color := Color("#708b43") if i % 5 != 0 else Color("#e6cf72")
+		var color := Color("#5f7940") if i % 5 != 0 else Color("#d8c268")
 		img.set_pixel(x, y, color)
 		if i % 7 == 0:
 			img.set_pixel(x + 1, y, color.lightened(0.1))
@@ -181,6 +190,13 @@ func _paint_coast(img: Image, rng: RandomNumberGenerator) -> void:
 		img.fill_rect(Rect2i(x, deep_start, 2, img.get_height() - deep_start), water_far)
 		# Wet sand line.
 		img.fill_rect(Rect2i(x, shore - 4, 2, 4), sand_dark)
+		# Dithered grass-to-sand transition band above the wet line.
+		for band in 7:
+			var by := shore - 5 - band
+			if by < 0:
+				continue
+			if (x + band * 3) % (band + 2) != 0:
+				img.set_pixel(x, by, Color("#8f9a58").darkened(0.05 * float(band)))
 		# Ragged foam.
 		if (x / 2) % 7 != 0:
 			img.set_pixel(x, shore, foam)
@@ -265,6 +281,169 @@ func _blend_ellipse(img: Image, cx: int, cy: int, rx: int, ry: int, color: Color
 			img.set_pixel(px, py, existing.lerp(color, alpha))
 
 
+func _build_water_layer() -> void:
+	# Animated sea on top of the baked terrain: a half-resolution water mask
+	# drives the shape; the shared water shader supplies the moving bands, foam
+	# crests and sparkle. Bobbing props keep their own sprites above this.
+	if not GameSettings.effects_at_least("med") or GameSettings.reduce_motion():
+		return
+	var mask := _make_water_mask_texture()
+	var water := Sprite2D.new()
+	water.name = "WaterLayer"
+	water.texture = mask
+	water.centered = false
+	water.scale = Vector2(PixelArt.PX * 2.0, PixelArt.PX * 2.0)
+	water.z_as_relative = false
+	water.z_index = -999
+	water.material = Shaders.water_material()
+	add_child(water)
+
+
+func _make_water_mask_texture() -> Texture2D:
+	var key := "water_mask_lobby"
+	if PixelArt.CACHE.has(key):
+		return PixelArt.CACHE[key]
+	var w := 1024
+	var h := 640
+	var img := PixelArt.image(w, h)
+	for x in w:
+		var shore := _coast_pixel_y(x * 2) / 2.0
+		for y in h:
+			if float(y) < shore:
+				continue
+			var depth := clampf((float(y) - shore) / 90.0, 0.0, 1.0)
+			# Sea shape with a soft foam lip at the shoreline.
+			var a := 0.55 + depth * 0.45
+			if float(y) - shore < 3.0:
+				a = 0.75
+			img.set_pixel(x, y, Color(1, 1, 1, a))
+	var tex := ImageTexture.create_from_image(img)
+	PixelArt.CACHE[key] = tex
+	return tex
+
+
+func _update_ambient(delta: float) -> void:
+	# Wind benders (player + pet) for the grass shader, falling forest leaves
+	# and recovery-ward motes. All gated above by quality + reduce-motion.
+	_wind_push_timer -= delta
+	if _wind_push_timer <= 0.0:
+		_wind_push_timer = 0.12
+		var benders: Array = []
+		if is_instance_valid(player):
+			benders.append(player.global_position)
+		if is_instance_valid(pet):
+			benders.append(pet.global_position)
+		Shaders.push_benders(benders)
+	_leaf_timer -= delta
+	if _leaf_timer <= 0.0:
+		_leaf_timer = randf_range(0.8, 1.9)
+		if not _forest_trees.is_empty():
+			var tree: ForestTree = _forest_trees[randi() % _forest_trees.size()]
+			if is_instance_valid(tree) and tree.is_alive():
+				Vfx.leaves(tree.global_position + Vector2(randf_range(-0.4, 0.4), -randf_range(1.6, 2.6)), 2)
+	_ward_mote_timer -= delta
+	if _ward_mote_timer <= 0.0 and GameState.recovery_active():
+		_ward_mote_timer = 0.7
+		Vfx.pop(RECOVERY_CENTER + Vector2(randf_range(-1.6, 1.6), -randf_range(0.4, 2.2)), "heart", Color(0.7, 1.0, 0.85, 0.8))
+
+
+func _build_ambient_life() -> void:
+	# Cloud shadows, pollen, butterflies, forest light shafts, the eastern
+	# danger grade and chimney smoke. Everything is a handful of sprites and
+	# one capped CPU particle emitter; low quality drops the whole layer.
+	if not GameSettings.effects_at_least("med") or GameSettings.reduce_motion():
+		return
+	var holder := Node2D.new()
+	holder.name = "AmbientLife"
+	add_child(holder)
+	# Drifting cloud shadows over the meadow.
+	for i in 3:
+		var cloud := Sprite2D.new()
+		cloud.texture = PixelArt.light_texture()
+		cloud.modulate = Color(0.16, 0.22, 0.26, 0.10)
+		cloud.scale = Vector2(0.55 + float(i) * 0.2, 0.3)
+		cloud.z_as_relative = false
+		cloud.z_index = 1
+		cloud.position = Vector2(randf_range(4.0, 50.0), randf_range(8.0, 30.0))
+		holder.add_child(cloud)
+		var drift := cloud.create_tween().set_loops()
+		drift.tween_property(cloud, "position:x", cloud.position.x + randf_range(14.0, 22.0), randf_range(30.0, 46.0)).set_trans(Tween.TRANS_SINE)
+		drift.tween_property(cloud, "position:x", cloud.position.x, randf_range(30.0, 46.0)).set_trans(Tween.TRANS_SINE)
+	# Pollen motes over the meadow.
+	var pollen := CPUParticles2D.new()
+	pollen.amount = 12
+	pollen.lifetime = 5.0
+	pollen.preprocess = 2.5
+	pollen.texture = PixelArt.icon("spark", 16)
+	pollen.scale_amount_min = 0.18
+	pollen.scale_amount_max = 0.35
+	pollen.color = Color(1.0, 0.95, 0.75, 0.28)
+	pollen.direction = Vector2(0.4, -0.2)
+	pollen.spread = 180.0
+	pollen.gravity = Vector2.ZERO
+	pollen.initial_velocity_min = 0.4
+	pollen.initial_velocity_max = 1.2
+	pollen.position = Vector2(32.0, 22.0)
+	pollen.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	pollen.emission_rect_extents = Vector2(26.0, 16.0)
+	pollen.z_as_relative = false
+	pollen.z_index = 680
+	holder.add_child(pollen)
+	# Butterflies fluttering near the flower borders.
+	for i in 3:
+		var butterfly := Sprite2D.new()
+		butterfly.texture = PixelArt.icon("spark", 16)
+		butterfly.scale = Vector2(0.022, 0.022)
+		butterfly.modulate = [Color("#ffd47b"), Color("#a8e8ff"), Color("#ffb0c8")][i]
+		butterfly.z_index = 8
+		butterfly.position = Vector2(randf_range(18.0, 44.0), randf_range(16.0, 30.0))
+		holder.add_child(butterfly)
+		var flutter := butterfly.create_tween().set_loops()
+		for j in 4:
+			var to := butterfly.position + Vector2(randf_range(-2.5, 2.5), randf_range(-1.4, 1.4))
+			flutter.tween_property(butterfly, "position", to, randf_range(1.4, 2.4)).set_trans(Tween.TRANS_SINE)
+	# Light shafts through the eastern canopy.
+	for i in 2:
+		var shaft := Sprite2D.new()
+		shaft.texture = PixelArt.light_texture()
+		shaft.modulate = Color(1.0, 0.95, 0.7, 0.09)
+		shaft.scale = Vector2(0.30, 0.85)
+		shaft.rotation = 0.5
+		shaft.z_as_relative = false
+		shaft.z_index = 2
+		shaft.position = Vector2(51.0 + float(i) * 4.5, 16.0 + float(i) * 6.0)
+		holder.add_child(shaft)
+		var breathe := shaft.create_tween().set_loops()
+		breathe.tween_property(shaft, "modulate:a", 0.13, 2.2).set_trans(Tween.TRANS_SINE)
+		breathe.tween_property(shaft, "modulate:a", 0.08, 2.2).set_trans(Tween.TRANS_SINE)
+	# Eastern danger grade: the woodland reads darker toward the horizon.
+	var grade := Sprite2D.new()
+	grade.texture = PixelArt.light_texture()
+	grade.modulate = Color(0.08, 0.12, 0.18, 0.16)
+	grade.scale = Vector2(1.1, 1.0)
+	grade.z_as_relative = false
+	grade.z_index = 2
+	grade.position = Vector2(56.5, 20.0)
+	holder.add_child(grade)
+	# Chimney smoke once the cottage has one (level 3+).
+	if GameState.house_level() >= 3:
+		var smoke := CPUParticles2D.new()
+		smoke.amount = 8
+		smoke.lifetime = 3.2
+		smoke.preprocess = 1.5
+		smoke.texture = PixelArt.light_texture()
+		smoke.scale_amount_min = 0.10
+		smoke.scale_amount_max = 0.22
+		smoke.color = Color(0.75, 0.8, 0.8, 0.16)
+		smoke.direction = Vector2(0.15, -1)
+		smoke.spread = 12.0
+		smoke.gravity = Vector2.ZERO
+		smoke.initial_velocity_min = 0.3
+		smoke.initial_velocity_max = 0.7
+		smoke.position = _house_position + Vector2(2.3, -3.6)
+		holder.add_child(smoke)
+
+
 # ------------------------------------------------------------------ physical bounds
 
 func _build_bounds() -> void:
@@ -327,7 +506,7 @@ func _build_house() -> void:
 	house.add_child(house_sprite)
 	house_glow = PointLight2D.new()
 	house_glow.texture = PixelArt.light_texture()
-	house_glow.texture_scale = 0.72
+	house_glow.texture_scale = 0.052
 	house_glow.energy = 0.32
 	house_glow.color = Color("#ffc970")
 	house_glow.position = Vector2(0.4, -1.7)
@@ -555,11 +734,19 @@ func _build_dock_and_ship() -> void:
 	ship.position = Vector2(7.5, 32.0)
 	ship.z_index = 3
 	add_child(ship)
+	# Gentle bobbing so the harbour feels alive.
+	if GameSettings.effects_at_least("med") and not GameSettings.reduce_motion():
+		var bob := ship.create_tween().set_loops()
+		bob.tween_property(ship, "position:y", 32.05, 2.1).set_trans(Tween.TRANS_SINE)
+		bob.tween_property(ship, "position:y", 31.95, 2.1).set_trans(Tween.TRANS_SINE)
+		var sway := ship.create_tween().set_loops()
+		sway.tween_property(ship, "rotation", 0.008, 3.1).set_trans(Tween.TRANS_SINE)
+		sway.tween_property(ship, "rotation", -0.008, 3.1).set_trans(Tween.TRANS_SINE)
 	# Lamps on the jetty.
 	for x in [3.4, 13.5]:
 		var lamp := PointLight2D.new()
 		lamp.texture = PixelArt.light_texture()
-		lamp.texture_scale = 0.3
+		lamp.texture_scale = 0.024
 		lamp.energy = 0.22
 		lamp.color = Color("#ffd483")
 		lamp.position = Vector2(x, 29.5)
@@ -692,7 +879,7 @@ func _add_tree(at: Vector2, upper_path: String, lower_path: String, scale_mul: f
 	shadow.modulate = Color(0, 0, 0, 0.33)
 	shadow.position = Vector2(0, -0.03)
 	shadow.z_index = -1
-	holder.add_child(shadow)
+	add_child(shadow)
 	var lower_sprite := Sprite2D.new()
 	lower_sprite.texture = lower
 	lower_sprite.centered = false
@@ -700,15 +887,16 @@ func _add_tree(at: Vector2, upper_path: String, lower_path: String, scale_mul: f
 	lower_sprite.scale = Vector2(PixelArt.PX, PixelArt.PX) * scale_mul
 	lower_sprite.modulate = Color(0.76, 0.9, 0.74)
 	lower_sprite.z_index = 3
-	holder.add_child(lower_sprite)
+	add_child(lower_sprite)
 	var upper_sprite := Sprite2D.new()
 	upper_sprite.texture = upper
+	upper_sprite.material = Shaders.wind_material() if GameSettings.effects_at_least("med") else null
 	upper_sprite.centered = false
 	upper_sprite.offset = Vector2(-upper_size.x * 0.5, -total_h)
 	upper_sprite.scale = Vector2(PixelArt.PX, PixelArt.PX) * scale_mul
 	upper_sprite.modulate = Color(0.76, 0.9, 0.74)
 	upper_sprite.z_index = 3
-	holder.add_child(upper_sprite)
+	add_child(upper_sprite)
 	holder.register_visual(lower_sprite)
 	holder.register_visual(upper_sprite)
 	var body := StaticBody2D.new()
@@ -720,7 +908,7 @@ func _add_tree(at: Vector2, upper_path: String, lower_path: String, scale_mul: f
 	shape.shape = circle
 	shape.position = Vector2(0, -0.2)
 	body.add_child(shape)
-	holder.add_child(body)
+	add_child(body)
 
 
 func _build_scatter() -> void:
@@ -746,16 +934,11 @@ func _build_scatter() -> void:
 		Vector2(22.3, 13.2), Vector2(47.0, 18.0), Vector2(49.5, 24.5),
 		Vector2(26.0, 26.9), Vector2(20.0, 26.0), Vector2(11.0, 19.8),
 	]:
-		_add_decor_sprite(bush_paths[_rng.randi_range(0, bush_paths.size() - 1)], p, 1.0 + _rng.randf_range(-0.12, 0.18), 4)
-	# Grass tufts.
-	for i in 95:
-		var p := Vector2(_rng.randf_range(2, 62), _rng.randf_range(3, 38))
-		if _too_close_to_landmarks(p) and _rng.randf() > 0.25:
-			continue
-		var shore := float(_coast_pixel_y(int(p.x * 32))) / 32.0
-		if p.y > shore - 0.4:
-			continue
-		_add_decor_sprite(grass_paths[_rng.randi_range(0, grass_paths.size() - 1)], p, 0.8 + _rng.randf_range(-0.2, 0.2), 2)
+		_add_wind_decor(bush_paths[_rng.randi_range(0, bush_paths.size() - 1)], p, 1.0 + _rng.randf_range(-0.12, 0.18), 4)
+	# Grass "rumput2": clustered MultiMesh fields (a handful of draw calls for
+	# hundreds of tufts) instead of one sprite per tuft. A dedicated seeded RNG
+	# keeps this fully deterministic and never touches the tree-id sequence.
+	_build_grass_fields(grass_paths)
 	# Flower clumps.
 	for i in 34:
 		var p := Vector2(_rng.randf_range(2, 60), _rng.randf_range(4, 35))
@@ -765,17 +948,17 @@ func _build_scatter() -> void:
 		if p.y > shore - 0.5:
 			continue
 		for j in _rng.randi_range(2, 5):
-			_add_decor_sprite(flower_paths[0], p + Vector2(_rng.randf_range(-0.5, 0.5), _rng.randf_range(-0.35, 0.35)), 0.9, 3)
+			_add_wind_decor(flower_paths[0], p + Vector2(_rng.randf_range(-0.5, 0.5), _rng.randf_range(-0.35, 0.35)), 0.9, 3)
 	# Moveable decorations near the cottage.
 	_add_decor_placeable("barrel_1", "res://assets/sprites/TX Props__TX Props Barrel.tres", Vector2(28.8, 23.8), 1.0, 5, Vector2(1.2, 1.4))
 	_add_decor_placeable("barrel_2", "res://assets/sprites/TX Props__TX Props Barrel.tres", Vector2(40.2, 22.8), 1.0, 5, Vector2(1.2, 1.4))
 	_add_decor_placeable("signpost", "res://assets/sprites/TX Props__TX Props Road Sign W.tres", Vector2(25.7, 22.1), 1.0, 5, Vector2(1.3, 1.5))
 
 
-func _add_decor_sprite(path: String, at: Vector2, scale_mul: float, z: int) -> void:
+func _add_decor_sprite(path: String, at: Vector2, scale_mul: float, z: int) -> Sprite2D:
 	var tex := load(path) as Texture2D
 	if tex == null:
-		return
+		return null
 	var sprite := Sprite2D.new()
 	sprite.texture = tex
 	sprite.centered = false
@@ -787,6 +970,7 @@ func _add_decor_sprite(path: String, at: Vector2, scale_mul: float, z: int) -> v
 	if "Flower" in path:
 		sprite.add_to_group("flowers")
 	add_child(sprite)
+	return sprite
 
 
 func _add_decor_placeable(id: String, path: String, at: Vector2, scale_mul: float, z: int, selection: Vector2) -> void:
@@ -809,6 +993,89 @@ func _add_decor_placeable(id: String, path: String, at: Vector2, scale_mul: floa
 	sprite.scale = Vector2(PixelArt.PX, PixelArt.PX) * scale_mul
 	sprite.z_index = z
 	group.add_child(sprite)
+
+
+func _add_wind_decor(path: String, at: Vector2, scale_mul: float, z: int) -> void:
+	# Scatter sprite that joins the shared wind sway (med quality and above).
+	var sprite := _add_decor_sprite(path, at, scale_mul, z)
+	if sprite != null and GameSettings.effects_at_least("med"):
+		sprite.material = Shaders.wind_material()
+
+
+var _grass_rng := RandomNumberGenerator.new()
+
+
+func _build_grass_fields(grass_paths: Array) -> void:
+	# Noise-clustered meadows: ~14 patch centres each seeding a gaussian
+	# cluster, over a sparse uniform background. Instances render through one
+	# MultiMesh per texture variant, with per-instance colour jitter and a
+	# custom-data phase seed for the wind shader.
+	if not GameSettings.effects_at_least("low"):
+		return
+	_grass_rng.seed = 20531
+	var clusters: Array[Vector2] = []
+	for i in 14:
+		clusters.append(Vector2(_grass_rng.randf_range(3.0, 61.0), _grass_rng.randf_range(4.0, 36.0)))
+	var count := 520 if GameSettings.effects_at_least("med") else 260
+	var placements: Array[Transform2D] = []
+	var colors: Array[Color] = []
+	var variants: Array = []
+	for i in count:
+		var p := Vector2.ZERO
+		if _grass_rng.randf() < 0.72:
+			var c: Vector2 = clusters[_grass_rng.randi_range(0, clusters.size() - 1)]
+			p = c + Vector2(_grass_rng.randfn(0.0, 2.6), _grass_rng.randfn(0.0, 1.7))
+		else:
+			p = Vector2(_grass_rng.randf_range(2.0, 62.0), _grass_rng.randf_range(3.0, 38.0))
+		var shore := float(_coast_pixel_y(int(p.x * 32))) / 32.0
+		if p.y > shore - 0.45 or p.x < 0.5 or p.x > 63.5 or p.y < 1.0 or p.y > 39.0:
+			continue
+		if _too_close_to_landmarks(p) and _grass_rng.randf() > 0.3:
+			continue
+		var variant := _grass_rng.randi_range(0, grass_paths.size() - 1)
+		var mul := 0.75 + _grass_rng.randf_range(-0.15, 0.35)
+		variants.append(variant)
+		placements.append(Transform2D(0.0, Vector2(mul, mul), 0.0, p))
+		var tint := 0.62 + _grass_rng.randf() * 0.24
+		colors.append(Color(tint, tint * (0.98 + _grass_rng.randf() * 0.08), tint * 0.82))
+	for vi in grass_paths.size():
+		var tex := load(str(grass_paths[vi])) as Texture2D
+		if tex == null:
+			continue
+		var mesh := QuadMesh.new()
+		mesh.size = tex.get_size()
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_2D
+		mm.use_colors = true
+		mm.use_custom_data = true
+		var instance_count := 0
+		for i in placements.size():
+			if variants[i] == vi:
+				instance_count += 1
+		if instance_count == 0:
+			continue
+		mm.instance_count = instance_count
+		var write := 0
+		for i in placements.size():
+			if variants[i] != vi:
+				continue
+			var xf: Transform2D = placements[i]
+			var s := PixelArt.PX * xf.get_scale().x
+			# QuadMesh is centred; shift so the base of the tuft sits on the point.
+			var origin := xf.origin - Vector2(0.0, tex.get_size().y * 0.5 * s)
+			mm.set_instance_transform_2d(write, Transform2D(0.0, Vector2(s, s), 0.0, origin))
+			mm.set_instance_color(write, colors[i])
+			# Custom data carries a per-instance phase seed for the wind shader.
+			mm.set_instance_custom_data(write, Color(_grass_rng.randf() * 10.0, 0.0, 0.0, 0.0))
+			write += 1
+		var field := MultiMeshInstance2D.new()
+		field.name = "GrassField%d" % vi
+		field.multimesh = mm
+		field.texture = tex
+		field.z_index = 2
+		field.material = Shaders.wind_material() if GameSettings.effects_at_least("med") else null
+		field.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		add_child(field)
 
 
 # ------------------------------------------------------------------ actors
@@ -930,20 +1197,20 @@ func _add_resident_house(house_name: String, at: Vector2, level: int) -> void:
 	art.offset = Vector2(-112, -176)
 	art.scale = Vector2(PixelArt.PX, PixelArt.PX) * 0.78
 	art.z_index = 7
-	holder.add_child(art)
+	add_child(art)
 	var glow := PointLight2D.new()
 	glow.texture = PixelArt.light_texture()
 	glow.texture_scale = 0.4
 	glow.energy = 0.2
 	glow.color = Color("#ffd58c")
 	glow.position = Vector2(0, -1.2)
-	holder.add_child(glow)
+	add_child(glow)
 	var target := SettlementTarget.new()
 	target.name = "ResidentHouseTarget"
 	target.target_name = "Resident cottage"
 	target.damage_scale = 0.25
 	target.position = Vector2(0, -0.8)
-	holder.add_child(target)
+	add_child(target)
 	var body := StaticBody2D.new()
 	body.collision_layer = 1
 	var shape := CollisionShape2D.new()
@@ -952,7 +1219,7 @@ func _add_resident_house(house_name: String, at: Vector2, level: int) -> void:
 	shape.shape = rect
 	shape.position = Vector2(0, -0.55)
 	body.add_child(shape)
-	holder.add_child(body)
+	add_child(body)
 	_house_positions.append(at)
 	_markers.append({"position": at, "color": Color("#e4c571"), "size": 3.5, "shape": "square"})
 
@@ -969,7 +1236,7 @@ func _add_ruin_house(house_name: String, at: Vector2, state: String) -> void:
 	art.offset = Vector2(-112, -176)
 	art.scale = Vector2(PixelArt.PX, PixelArt.PX) * 0.74
 	art.z_index = 6
-	holder.add_child(art)
+	add_child(art)
 	match state:
 		"abandoned":
 			art.modulate = Color(0.58, 0.58, 0.52)
@@ -989,7 +1256,7 @@ func _add_ruin_house(house_name: String, at: Vector2, state: String) -> void:
 				rubble.rotation = randf_range(-0.8, 0.8)
 				rubble.position = Vector2(randf_range(-2.0, 2.0), randf_range(-0.4, 0.3))
 				rubble.modulate = Color("#8a6a47")
-				holder.add_child(rubble)
+				add_child(rubble)
 			_add_smoke(holder, Vector2(0.0, -2.0))
 	var body := StaticBody2D.new()
 	body.collision_layer = 1
@@ -999,7 +1266,7 @@ func _add_ruin_house(house_name: String, at: Vector2, state: String) -> void:
 	shape.shape = rect
 	shape.position = Vector2(0, -0.5)
 	body.add_child(shape)
-	holder.add_child(body)
+	add_child(body)
 	_ruin_positions.append(at)
 	_markers.append({"position": at, "color": Color("#8b7b62"), "size": 3.0, "shape": "square"})
 
@@ -1012,7 +1279,7 @@ func _add_smoke(holder: Node2D, at: Vector2) -> void:
 		smoke.modulate = Color(0.45, 0.43, 0.4, 0.35)
 		smoke.position = at + Vector2(float(i) * 0.25, 0)
 		smoke.z_index = 7
-		holder.add_child(smoke)
+		add_child(smoke)
 		var tween := smoke.create_tween().set_loops()
 		tween.tween_property(smoke, "position:y", smoke.position.y - 1.2, 2.4 + float(i) * 0.2)
 		tween.parallel().tween_property(smoke, "modulate:a", 0.0, 2.4)
@@ -1163,6 +1430,11 @@ func _build_recovery_ward() -> void:
 	add_child(_recovery_ward)
 
 
+var _wind_push_timer := 0.0
+var _leaf_timer := 1.4
+var _ward_mote_timer := 0.0
+
+
 func _process(delta: float) -> void:
 	if GameState.recovery_active() and is_instance_valid(player):
 		_tick_recovery(delta)
@@ -1170,6 +1442,8 @@ func _process(delta: float) -> void:
 		_emergency_fire.modulate.a = 0.65 + sin(Time.get_ticks_msec() * 0.009) * 0.25
 	if _emergency_wall_toast > 0.0:
 		_emergency_wall_toast = maxf(0.0, _emergency_wall_toast - delta)
+	if GameSettings.effects_at_least("med") and not GameSettings.reduce_motion():
+		_update_ambient(delta)
 
 
 func _tick_recovery(delta: float) -> void:
@@ -1198,6 +1472,11 @@ func _tick_recovery(delta: float) -> void:
 
 
 func _on_emergency_changed(active: bool, remaining: int, damage: int) -> void:
+	if active:
+		# Raid presentation: a rumble and an ominous halo over the village.
+		if camera:
+			camera.shake(0.1, 0.5)
+		Vfx.ring(Vector2(30.0, 22.0), 5.5, Color(0.9, 0.35, 0.3, 0.5), 0.8)
 	if active:
 		_spawn_emergency_monsters(remaining)
 	else:

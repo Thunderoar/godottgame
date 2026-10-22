@@ -96,7 +96,9 @@ global uniform vec4 tide_bender_2 = vec4(0.0);
 global uniform vec4 tide_bender_3 = vec4(0.0);
 
 void vertex() {
-	float phase = MODEL_MATRIX[3].x * 0.37 + MODEL_MATRIX[3].y * 0.53;
+	// Sprites get their phase from world position; batched grass carries a
+	// per-instance seed in INSTANCE_CUSTOM.x (use_custom_data).
+	float phase = MODEL_MATRIX[3].x * 0.37 + MODEL_MATRIX[3].y * 0.53 + INSTANCE_CUSTOM.x * 7.13;
 	float t = TIME * tide_wind_speed;
 	float sway = sin(t + phase) * 0.62 + sin(t * 2.31 + phase * 1.7) * 0.24;
 	// Weight grows toward the TIP of the sprite. Canvas textures have UV.y = 0
@@ -138,10 +140,12 @@ shader_type canvas_item;
 uniform vec4 shallow : source_color = vec4(0.43, 0.66, 0.65, 0.85);
 uniform vec4 deep : source_color = vec4(0.24, 0.48, 0.53, 0.92);
 uniform vec4 foam : source_color = vec4(0.86, 0.91, 0.87, 0.9);
-uniform float band_scale := 42.0;
-uniform float speed := 0.55;
+uniform float band_scale = 42.0;
+uniform float speed = 0.55;
 
 void fragment() {
+	// The texture is a shape mask: sea where alpha > 0, foam lip at the shore.
+	float mask_a = texture(TEXTURE, UV).a;
 	float wave = sin(UV.x * band_scale + TIME * speed) * 0.5
 		+ sin(UV.x * band_scale * 0.53 - TIME * speed * 0.8) * 0.5;
 	float band = fract(UV.y * 7.0 + wave * 0.18 + TIME * 0.06);
@@ -149,7 +153,8 @@ void fragment() {
 	float depth = smoothstep(0.0, 1.0, UV.y);
 	vec4 col = mix(shallow, deep, depth);
 	float sparkle = step(0.985, sin(UV.x * 220.0 + TIME * 2.2) * sin(UV.y * 140.0 - TIME * 1.7));
-	COLOR = vec4(mix(col.rgb, foam.rgb, crest * 0.85), mix(col.a, 1.0, crest * 0.5));
-	COLOR.rgb += sparkle * 0.35 * (1.0 - depth * 0.6);
+	vec3 rgb = mix(col.rgb, foam.rgb, crest * 0.85);
+	rgb += sparkle * 0.35 * (1.0 - depth * 0.6);
+	COLOR = vec4(rgb, mix(col.a, 1.0, crest * 0.5) * mask_a);
 }
 "

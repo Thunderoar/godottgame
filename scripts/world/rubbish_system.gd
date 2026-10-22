@@ -66,6 +66,8 @@ func spawn_piece(lane: int = 0) -> RubbishPiece:
 
 func on_rubbish_caught(piece: RubbishPiece) -> void:
 	caught_count += 1
+	# A small ripple where the guard's net lifts the piece out.
+	Vfx.ring(piece.global_position + Vector2(0, 0.1), 0.5, Color(0.85, 0.95, 0.95, 0.7), 0.35)
 	GameState.register_rubbish_cleaned(1)
 	if piece:
 		piece.outcome = "caught"

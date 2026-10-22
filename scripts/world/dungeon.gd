@@ -68,7 +68,7 @@ func _build_lighting() -> void:
 		"storm": Color("#7e88ac"), "coral": Color("#a0868e"), "abyss": Color("#6e6e94"),
 		"throne": Color("#a09a84"),
 	}.get(_theme(), Color("#7d84a0")) as Color
-	canvas_modulate.color = ambient
+	canvas_modulate.color = ambient.lightened(0.18)
 	add_child(canvas_modulate)
 
 
@@ -275,7 +275,7 @@ func _build_decor() -> void:
 	for p in [Vector2(6, 5), Vector2(42, 5), Vector2(6, 24), Vector2(42, 24)]:
 		var lamp := PointLight2D.new()
 		lamp.texture = PixelArt.light_texture()
-		lamp.texture_scale = 0.45
+		lamp.texture_scale = 0.034
 		lamp.energy = 0.33
 		lamp.color = glow.lightened(0.1)
 		lamp.position = p
@@ -290,7 +290,7 @@ func _build_decor() -> void:
 	# Boss warning haze (kept: it doubles as the arena's mood light).
 	var boss_glow := PointLight2D.new()
 	boss_glow.texture = PixelArt.light_texture()
-	boss_glow.texture_scale = 1.2
+	boss_glow.texture_scale = 0.09
 	boss_glow.energy = 0.26
 	boss_glow.color = glow
 	boss_glow.position = Vector2(24, 7)

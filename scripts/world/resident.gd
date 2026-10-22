@@ -155,6 +155,8 @@ func _tool_icon() -> String:
 
 func _on_emergency_changed(active: bool, _remaining: int, _damage: int) -> void:
 	_frightened = active
+	if active:
+		Vfx.pop(global_position + Vector2(0, -1.4), "close", Color("#ff9c6b"))
 	if not active:
 		_threat_notified = false
 
