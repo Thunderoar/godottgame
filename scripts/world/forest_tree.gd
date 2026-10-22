@@ -22,6 +22,7 @@ func _ready() -> void:
 	add_to_group("forest_tree")
 	health = GameState.forest_tree_health(tree_id, max_health) if tree_id != "" else max_health
 	z_index = 3
+	light_mask = 0
 	if health <= 0:
 		_apply_initial_fall()
 	else:

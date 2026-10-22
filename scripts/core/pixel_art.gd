@@ -654,6 +654,7 @@ static func npc_texture(kind: String) -> Texture2D:
 			"trader": [Color("#6a4b5c"), Color("#d6a8bb"), Color("#432e3a")],
 			"defender": [Color("#3b5368"), Color("#a8c8d8"), Color("#26343f")],
 			"resident": [Color("#5b5967"), Color("#c7c2d6"), Color("#34323d")],
+			"student": [Color("#b08a20"), Color("#ffe06a"), Color("#5a4312")],
 		}.get(kind, [Color("#5c5c5c"), Color("#c9c9c9"), Color("#333333")])
 		var robe: Color = palette[0]
 		var accent: Color = palette[1]

@@ -37,6 +37,9 @@ func _ready() -> void:
 	collision_mask = 5
 	_build_body()
 	_build_visual()
+	var vitals := PlayerVitalHud.new()
+	vitals.name = "VitalHud"
+	add_child(vitals)
 	set_process_input(true)
 
 

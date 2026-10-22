@@ -137,7 +137,10 @@ func _make_default(character_id: String) -> Dictionary:
 
 
 func new_game(character_id: String = DEFAULT_CHARACTER) -> void:
+	var carried_settings: Dictionary = (data.get("settings", {}) as Dictionary).duplicate(true)
 	data = _make_default(character_id)
+	if not carried_settings.is_empty():
+		data.settings = carried_settings
 	_auto_heal_armed = true
 	game_over_active = false
 	has_existing_save = true
@@ -1154,6 +1157,8 @@ func objective_lines() -> Array[String]:
 
 
 func save_game() -> void:
+	if game_over_active:
+		return
 	_save_now()
 
 

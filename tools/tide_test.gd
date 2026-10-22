@@ -93,6 +93,7 @@ func _ready() -> void:
 	await _test_gathering()
 	await _test_shops()
 	await _test_house_and_sleep()
+	await _test_menu_and_settings()
 	await _test_auto_heal_and_shield()
 	await _test_pet_support()
 	await _test_pet_battle_portal()
@@ -105,6 +106,7 @@ func _ready() -> void:
 	await _test_save_load()
 	await _test_build_editor()
 	await _test_character_styles()
+	await _test_forest_game_over()
 
 	GameState.delete_save()
 	print("--- tide test: %d checks, %s ---" % [checks, "PASS" if fails == 0 else "%d FAILURE(S)" % fails])
@@ -144,11 +146,11 @@ func _test_settlement_expansion() -> void:
 		var tree_hp := tree.health
 		var hits_before := tree.hit_count
 		tree.take_attack_damage(12)
-		_check(tree.health == tree_hp, "forest trees are invulnerable to structural damage")
+		_check(tree.health < tree_hp, "forest trees lose HP when monsters attack")
 		_check(tree.hit_count == hits_before + 1, "tree attacks still play visual feedback")
-		_check(not tree.fallen, "tree attacks do not fell the tree")
+		_check(not tree.fallen, "a damaged tree remains standing until its HP reaches zero")
 	var forest_monsters := get_tree().get_nodes_in_group("forest_monsters")
-	_check(forest_monsters.size() >= 8, "many forest monsters patrol the woodland (%d)" % forest_monsters.size())
+	_check(forest_monsters.size() >= 12, "many forest monsters patrol the woodland (%d)" % forest_monsters.size())
 	_check(Sfx.has_sound("tree_hit") and Sfx.has_sound("aggro"), "tree-hit and aggro sounds are generated")
 	if not forest_monsters.is_empty() and game.call("player") != null:
 		var forest_monster := forest_monsters[0] as Enemy
@@ -165,7 +167,8 @@ func _test_settlement_expansion() -> void:
 		_check(bool(forest_monster.get("_saw_player")) and bool(forest_monster.get("_charging")), "forest monsters immediately target and charge a seen player")
 		test_player.global_position = old_player_pos
 		forest_monster.global_position = old_monster_pos
-	_check(get_tree().get_nodes_in_group("resident_house").size() >= 4, "more residents' houses stand around the village")
+	_check(get_tree().get_nodes_in_group("resident_house").size() >= 7, "more residents' houses stand around the village (%d)" % get_tree().get_nodes_in_group("resident_house").size())
+	_check(get_tree().get_nodes_in_group("ruin_house").size() >= 3, "abandoned, damaged and destroyed houses decorate the outskirts")
 	_check(get_tree().get_nodes_in_group("horses").size() >= 2, "horses live in the village")
 	_check(PixelArt.animal_texture("horse") != null, "horse art generates")
 	_check(get_tree().get_nodes_in_group("flowers").size() >= 50, "flower borders fill the village")
@@ -192,6 +195,32 @@ func _test_settlement_expansion() -> void:
 		_check(not def.is_empty() and int(def.get("hp", 0)) > 0, "%s defines a 1v1 opponent" % level_id)
 	_check(bool(GameState.pet_battle_state(duel_ids[0]).get("unlocked", false)), "first pet duel is available")
 	_check(not bool(GameState.pet_battle_state(duel_ids[1]).get("unlocked", false)), "later pet duels unlock in order")
+	await get_tree().process_frame
+	hud.call("_update_mission_guide")
+	var arrows := hud.get("_mission_arrows") as Array
+	var visible_arrows := 0
+	for arrow in arrows:
+		if arrow is MissionArrow and arrow.visible:
+			visible_arrows += 1
+	_check(visible_arrows >= 1, "mission guidance arrows point toward objectives")
+	var player := game.call("player") as Player
+	_check(player != null and player.get_node_or_null("VitalHud") is PlayerVitalHud, "player has a floating Health/Mana dashboard")
+	var special_npc: UniszaStudent = null
+	for node in get_tree().get_nodes_in_group("special_npc"):
+		if node is UniszaStudent:
+			special_npc = node
+	_check(special_npc != null, "yellow Unisza NPC exists")
+	if special_npc != null:
+		special_npc.call("interact", player)
+		await get_tree().process_frame
+		_check(hud.dialogue_panel.visible, "yellow NPC opens a dialogue box")
+		_check(_has_label(hud.dialogue_panel, "“Welcome to Unisza”"), "dialogue contains the Welcome to Unisza line")
+		_check(_has_label(hud.dialogue_panel, "“We are students from Unisza.”"), "dialogue contains the Unisza students line")
+		hud.hide_modals()
+		await get_tree().process_frame
+	for monster in forest_monsters:
+		if is_instance_valid(monster):
+			monster.set_physics_process(false)
 
 
 func _test_gathering() -> void:
@@ -292,6 +321,29 @@ func _test_house_and_sleep() -> void:
 	_check(not p.sleeping, "sleep state ends")
 
 
+func _test_menu_and_settings() -> void:
+	var menu_button := hud.get("_menu_button") as Button
+	_check(menu_button != null and menu_button.anchor_left >= 0.99, "Menu button sits in the top-right corner")
+	game.call("open_menu")
+	await get_tree().process_frame
+	_check(hud.menu_panel.visible, "Menu button opens the in-game menu")
+	hud.menu_panel.close_panel()
+	await get_tree().process_frame
+	game.call("open_settings")
+	await get_tree().process_frame
+	_check(hud.settings_panel.visible, "Settings can be opened from the menu system")
+	var old_scale := float(hud.get_gui_scale())
+	hud.call("set_gui_scale", 1.10)
+	_check(is_equal_approx(hud.get_gui_scale(), 1.10) and is_equal_approx(GameState.gui_scale(), 1.10), "GUI scale setting applies and persists")
+	hud.call("set_control_layout", "attack", 100.0, 500.0, 88.0)
+	var attack := hud.get("_attack_button") as TouchActionButton
+	_check(attack.position.distance_to(Vector2(100, 500)) < 0.5 and is_equal_approx(attack.diameter, 88.0), "button positions and sizes are customizable")
+	hud.call("set_gui_scale", old_scale)
+	hud.call("reset_control_layout")
+	hud.settings_panel.close_panel()
+	await get_tree().process_frame
+
+
 func _test_auto_heal_and_shield() -> void:
 	if GameState.item_count("health_potion") == 0:
 		GameState.add_item("health_potion", 2, true)
@@ -344,15 +396,15 @@ func _test_pet_battle_portal() -> void:
 	var gold_before := GameState.gold()
 	var pet_before := GameState.get_active_pet()
 	var pet_level_before := int(pet_before.get("level", 1))
-	_check(PetBattlePanel.SKILLS.size() == 3, "both pets choose from three skills")
+	_check(PetBattlePanel.SKILLS.size() == 2, "pet combat has only Attack and Defend")
 	var started: bool = bool(panel.start_battle("pet_duel_1"))
 	_check(started, "first pet duel starts")
 	_check(int(panel.get("_player_hp")) > 0 and int(panel.get("_opponent_hp")) > 0, "pet duel starts with two living combatants")
 	_check(panel.get("_player_bar") != null and panel.get("_enemy_bar") != null, "pet duel displays both health bars")
 	var skill_buttons := panel.get("_skill_buttons") as Array
-	_check(skill_buttons.size() == 3, "the player pet has three skill buttons")
+	_check(skill_buttons.size() == 2, "the player pet has two skill buttons")
 	_check(is_equal_approx(float(panel.get("_turn_timer")), 2.0), "each skill window lasts two seconds")
-	_check(PetBattlePanel.SKILLS.has(str(panel.get("_enemy_choice"))), "the enemy pet chooses from three skills")
+	_check(PetBattlePanel.SKILLS.has(str(panel.get("_enemy_choice"))), "the enemy pet chooses from Attack or Defend")
 	var enemy_before := int(panel.get("_opponent_hp"))
 	var player_before := int(panel.get("_player_hp"))
 	panel.call("choose_skill", "attack")
@@ -360,12 +412,22 @@ func _test_pet_battle_portal() -> void:
 	panel.set("_turn_timer", 0.0)
 	panel.call("_process", 0.01)
 	_check(int(panel.get("_opponent_hp")) < enemy_before and int(panel.get("_player_hp")) < player_before, "both pets execute their actions simultaneously")
+	var hit_fx := 0
+	for child in panel.get_children():
+		if child is PetHitEffect:
+			hit_fx += 1
+	_check(hit_fx >= 2, "pet hits create scratch/punch impact effects")
 	panel.call("_process", 0.95)
 	panel.set("_opponent_hp", 1)
 	panel.call("choose_skill", "attack")
-	panel.set("_enemy_choice", "guard")
+	panel.set("_enemy_choice", "defend")
 	panel.set("_turn_timer", 0.0)
 	panel.call("_process", 0.01)
+	var shield_fx := false
+	for child in panel.get_children():
+		if child is PetHitEffect and str(child.get("kind")) == "shield":
+			shield_fx = true
+	_check(shield_fx, "defending creates a shield effect")
 	await get_tree().process_frame
 	_check(bool(GameState.pet_battle_state("pet_duel_1").get("cleared", false)), "pet duel victory is recorded")
 	_check(bool(GameState.pet_battle_state("pet_duel_2").get("unlocked", false)), "pet duel victory unlocks the next level")
@@ -722,6 +784,28 @@ func _test_single_style(character_id: String, starter_weapon: String, style: Str
 	_check(struck, "%s attack executes" % character_id.capitalize())
 	_check(dummy.hp < hp_before, "%s %s attack damages a target" % [character_id.capitalize(), style])
 	dummy.queue_free()
+
+
+func _test_forest_game_over() -> void:
+	if not game.world is Lobby:
+		game.call("_load_lobby", false)
+		await get_tree().create_timer(0.35).timeout
+	var trees := get_tree().get_nodes_in_group("forest_tree")
+	_check(not trees.is_empty(), "living forest trees remain before the game-over test")
+	for node in trees:
+		if node is ForestTree:
+			var tree := node as ForestTree
+			if tree.is_alive():
+				tree.max_health = 10
+				tree.health = 10
+				tree.take_attack_damage(99)
+	await get_tree().create_timer(0.35).timeout
+	_check(GameState.game_over_active, "destroying every tree triggers game over")
+	_check(hud.game_over_panel.visible, "game over screen appears when the forest is lost")
+	_check(bool(game.get("_game_over")), "game flow enters the locked game-over state")
+	game.call("return_to_title", true)
+	await get_tree().create_timer(0.2).timeout
+	_check(game.title_screen != null and not hud.visible, "game over returns to the title screen")
 
 
 func _find_loot(root: Node) -> LootDrop:

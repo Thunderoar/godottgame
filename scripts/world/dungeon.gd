@@ -362,6 +362,12 @@ func _on_boss_health_changed(active: bool, name: String, value: int, maximum: in
 
 # ------------------------------------------------------------------ API
 
+func get_guidance_targets() -> Array:
+	if is_instance_valid(boss) and not bool(boss.dead):
+		return [{"label": "BOSS", "position": boss.global_position, "color": Color("#e15b58")}]
+	return [{"label": "SHORE GATE", "position": Vector2(24, 30.1), "color": Color("#8fe8f7")}]
+
+
 func get_map_rect() -> Rect2:
 	return map_rect
 

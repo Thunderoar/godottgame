@@ -24,8 +24,9 @@ renderer/rendering_method.mobile="gl_compatibility"
 
 `0` is landscape. The HUD anchors to the viewport. The joystick and combat
 buttons are bottom-left/bottom-right; backpack and Build are intentionally at
-top-left below the currency and XP bars. There is no minimap, no floating NPC
-name labels and no timed toast banner.
+top-left below the currency and XP bars. The **Menu** button is at top-right and
+opens Settings (GUI scale plus per-control X/Y/size editing). There is no minimap,
+no floating NPC name labels and no timed toast banner.
 
 ## Remaining machine setup
 
@@ -52,17 +53,23 @@ Release builds need a release keystore. No keystore is committed.
 - `Game._notification` saves on pause/focus loss.
 - Ten-segment player and five-segment pet bars remain legible.
 - Player and pet XP bars remain legible beneath the currency row.
-- Pet Battle Portal opens the tournament; Fight, the three skill buttons,
-  Forfeit and Back work by touch. Verify the 2-second choice timer and both
-  simultaneous health-bar updates.
-- Forest tree impacts, aggro charges and battle SFX play through the device's
-  media volume without external audio assets.
+- Floating player HP/MP bars remain legible above the player without lighting wash.
+- Mission arrows update direction and distance without obscuring touch controls.
+- Menu opens by touch; Settings GUI-scale slider and X/Y/size spin boxes are usable.
+- Custom control positions/sizes apply immediately; Reset restores defaults.
+- Pet Battle Portal opens the tournament; Fight, Attack/Defend, Forfeit and Back
+  work by touch. Verify the 2-second choice timer, scratch/punch impacts and
+  shield effect.
+- Forest tree HP bars, impacts, aggro charges and battle SFX play through the
+  device's media volume without external audio assets.
 - Pet Food Buy/Feed buttons work in Nia's shop.
-- Settlement raiders from sea and forest, resident flee paths, invulnerable tree
-  impact VFX/SFX, forest-monster line-of-sight charges, resident cottages and
-  defender attacks run at target frame rate.
-- Play through: choose hero -> tutorial -> shop -> house -> pet food -> pet duel
-  -> monster portal -> auto-loot -> emergency -> return -> defender battle ->
-  recovery -> settlement editing -> save/continue.
+- Talk to the yellow Unisza student and verify both dialogue lines.
+- Destroying all trees shows the locked Game Over screen.
+- Settlement raiders from sea and forest, resident flee paths, perishable tree HP,
+  forest-monster line-of-sight charges, resident/ruin houses and defender attacks
+  run at target frame rate.
+- Play through: choose hero -> tutorial -> menu/settings -> shop -> house ->
+  pet food -> pet duel -> monster portal -> auto-loot -> emergency -> return ->
+  defender battle -> recovery -> settlement editing -> save/continue.
 
 Permanent daytime means there is no night-lighting performance test.

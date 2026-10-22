@@ -15,6 +15,7 @@ var _transitioning := false
 var _portal_elapsed := 0.0
 var _emergency_triggered := false
 var _settlement_damage_accum := 0.0
+var _game_over := false
 
 const EMERGENCY_DELAY := 14.0
 const SETTLEMENT_DAMAGE_TICK := 5.0
@@ -31,6 +32,7 @@ func _ready() -> void:
 	hud.visible = false
 	_connect_hud()
 	GameState.player_defeated.connect(_on_player_defeated)
+	GameState.game_over_triggered.connect(_on_game_over)
 	_show_title()
 
 
@@ -57,8 +59,12 @@ func _connect_hud() -> void:
 	hud.house_panel.closed.connect(_on_modal_closed)
 	hud.victory_panel.closed.connect(_on_modal_closed)
 	hud.defeat_panel.closed.connect(_on_modal_closed)
+	hud.menu_panel.closed.connect(_on_modal_closed)
+	hud.settings_panel.closed.connect(_on_modal_closed)
+	hud.dialogue_panel.closed.connect(_on_modal_closed)
 	hud.inventory_requested.connect(open_inventory)
 	hud.build_mode_requested.connect(toggle_build_mode)
+	hud.menu_requested.connect(open_menu)
 
 
 func _show_title() -> void:
@@ -76,9 +82,11 @@ func _show_title() -> void:
 func _on_character_selected(character_id: String) -> void:
 	if _transitioning:
 		return
+	GameState.autosave_enabled = true
 	GameState.new_game(character_id)
 	_remove_title()
 	hud.visible = true
+	_game_over = false
 	_load_lobby(false)
 	hud.start_tutorial()
 
@@ -267,6 +275,65 @@ func open_sea_cleaning() -> void:
 	hud.sea_cleaning_panel.open_sea_cleaning()
 
 
+func open_menu() -> void:
+	if _game_over or world == null:
+		return
+	_input_locked = true
+	_apply_input_lock()
+	hud.menu_panel.open_menu()
+
+
+func open_settings() -> void:
+	if _game_over:
+		return
+	_input_locked = true
+	_apply_input_lock()
+	hud.settings_panel.open_settings()
+
+
+func open_dialogue(speaker: String, lines: Array) -> void:
+	if world is Dungeon or _game_over:
+		return
+	_input_locked = true
+	_apply_input_lock()
+	hud.dialogue_panel.open_dialogue(speaker, lines)
+
+
+func _on_game_over(reason: String) -> void:
+	if _game_over:
+		return
+	_game_over = true
+	_input_locked = true
+	GameState.autosave_enabled = false
+	GameState.delete_save()
+	GameState.has_existing_save = false
+	var p := player()
+	if p != null:
+		p.controls_locked = true
+	hud.hide_modals()
+	hud.game_over_panel.show_game_over(reason)
+
+
+func return_to_title(from_game_over: bool = false) -> void:
+	if _transitioning:
+		return
+	_transitioning = true
+	hud.hide_modals()
+	hud.game_over_panel.force_close()
+	_clear_world()
+	hud.visible = false
+	_input_locked = false
+	_game_over = false
+	_defeat_pending = false
+	GameState.game_over_active = false
+	if not from_game_over:
+		GameState.save_game()
+		GameState.autosave_enabled = true
+	_remove_title()
+	_show_title()
+	_transitioning = false
+
+
 func open_inventory() -> void:
 	if _input_locked and not hud.inventory_panel.visible:
 		return
@@ -304,4 +371,5 @@ func player() -> Player:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_APPLICATION_FOCUS_OUT:
-		GameState.save_game()
+		if GameState.autosave_enabled:
+			GameState.save_game()

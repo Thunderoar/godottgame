@@ -1,13 +1,12 @@
 class_name PetBattlePanel
 extends ModalBase
-## Five-level 1v1 companion tournament with simultaneous skill turns.
-## Both pets choose from three skills during a two-second window; when it
+## Five-level 1v1 companion tournament with simultaneous turns.
+## Both pets choose Attack or Defend during a two-second window; when it
 ## expires, both actions resolve together. A victory always grants a pet level.
 
 const SKILLS := {
 	"attack": {"name": "Attack", "description": "Deal full attack damage this turn."},
-	"guard": {"name": "Guard", "description": "Reduce incoming damage by 65% this turn."},
-	"recover": {"name": "Recover", "description": "Restore 16% of maximum HP this turn."},
+	"defend": {"name": "Defend", "description": "Raise a shield and reduce incoming damage by 65% this turn."},
 }
 
 var selected := ""
@@ -36,6 +35,8 @@ var _rng := RandomNumberGenerator.new()
 
 var _player_bar: SegmentedBar
 var _enemy_bar: SegmentedBar
+var _player_sprite: TextureRect
+var _enemy_sprite: TextureRect
 var _player_hp_label: Label
 var _enemy_hp_label: Label
 var _status: Label
@@ -74,7 +75,7 @@ func _rebuild() -> void:
 	add_body_text("Active companion: %s  •  Lv %d  •  HP %d/%d" % [PetDB.name_of(pet_id), pet_level, int(pet.get("hp", 0)), int(pet.get("hp_max", 0))], GameUI.TEXT, 17)
 	var xp_text := "PET XP MAX" if bool(xp.get("max", false)) else "Pet XP %d/%d" % [int(xp.get("xp", 0)), int(xp.get("next", 1))]
 	add_body_text("%s  •  Gold %d" % [xp_text, GameState.gold()], GameUI.PURPLE, 14)
-	add_body_text("Choose a duel. Both pets pick one of three skills during a two-second window; actions then resolve at the same time.", GameUI.MUTED, 13)
+	add_body_text("Choose a duel. Both pets pick Attack or Defend during a two-second window; actions then resolve at the same time.", GameUI.MUTED, 13)
 	content.add_child(GameUI.spacer(2))
 	for level_id in PetBattleDB.ordered_ids():
 		_add_level_card(level_id)
@@ -219,17 +220,22 @@ func _resolve_turn() -> void:
 	var enemy_action := _enemy_choice if _enemy_choice != "" else _choose_enemy_skill()
 	var player_damage := _player_damage if player_action == "attack" else 0
 	var enemy_damage := _enemy_damage if enemy_action == "attack" else 0
-	if player_action == "guard":
+	if player_action == "defend":
 		enemy_damage = int(ceil(float(enemy_damage) * 0.35))
-	if enemy_action == "guard":
+	if enemy_action == "defend":
 		player_damage = int(ceil(float(player_damage) * 0.35))
-	var player_heal := maxi(8, int(round(float(_player_max) * 0.16))) if player_action == "recover" else 0
-	var enemy_heal := maxi(8, int(round(float(_opponent_max) * 0.16))) if enemy_action == "recover" else 0
-	_opponent_hp = clampi(_opponent_hp - player_damage + enemy_heal, 0, _opponent_max)
-	_player_hp = clampi(_player_hp - enemy_damage + player_heal, 0, _player_max)
+	_opponent_hp = clampi(_opponent_hp - player_damage, 0, _opponent_max)
+	_player_hp = clampi(_player_hp - enemy_damage, 0, _player_max)
 	_play_skill_sound(player_action)
-	if enemy_action != player_action:
-		_play_skill_sound(enemy_action)
+	_play_skill_sound(enemy_action)
+	if player_action == "defend":
+		_spawn_hit_fx("shield", true)
+	if enemy_action == "defend":
+		_spawn_hit_fx("shield", false)
+	if player_damage > 0:
+		_spawn_hit_fx("scratch" if _turn_number % 2 == 1 else "punch", false)
+	if enemy_damage > 0:
+		_spawn_hit_fx("punch" if _turn_number % 2 == 1 else "scratch", true)
 	_update_bars()
 	var bits: Array[String] = []
 	bits.append("You: %s   •   Rival: %s" % [str(SKILLS[player_action].name), str(SKILLS[enemy_action].name)])
@@ -237,10 +243,10 @@ func _resolve_turn() -> void:
 		bits.append("You dealt %d." % player_damage)
 	if enemy_damage > 0:
 		bits.append("Rival dealt %d." % enemy_damage)
-	if player_heal > 0:
-		bits.append("You recovered %d HP." % player_heal)
-	if enemy_heal > 0:
-		bits.append("Rival recovered %d HP." % enemy_heal)
+	if player_action == "defend" and enemy_damage > 0:
+		bits.append("Your shield absorbed the worst of it.")
+	if enemy_action == "defend" and player_damage > 0:
+		bits.append("The rival's shield held.")
 	if _status != null:
 		_status.text = "  ".join(bits)
 	if _opponent_hp <= 0 or _player_hp <= 0:
@@ -259,26 +265,27 @@ func _resolve_turn() -> void:
 
 func _choose_enemy_skill() -> String:
 	var hp_ratio := float(_opponent_hp) / float(maxi(1, _opponent_max))
-	if hp_ratio <= 0.3 and _rng.randf() < 0.58:
-		return "recover"
-	if hp_ratio <= 0.55 and _rng.randf() < 0.45:
-		return "guard"
-	var roll := _rng.randf()
-	if roll < 0.58:
-		return "attack"
-	if roll < 0.84:
-		return "guard"
-	return "recover"
+	if hp_ratio <= 0.35 and _rng.randf() < 0.58:
+		return "defend"
+	return "attack" if _rng.randf() < 0.64 else "defend"
 
 
 func _play_skill_sound(skill_id: String) -> void:
-	match skill_id:
-		"guard":
-			Sfx.play("skill_guard", -8.0)
-		"recover":
-			Sfx.play("skill_recover", -8.0)
-		_:
-			Sfx.play("skill_attack", -7.0)
+	if skill_id == "defend":
+		Sfx.play("skill_guard", -8.0)
+	else:
+		Sfx.play("skill_attack", -7.0)
+
+
+func _spawn_hit_fx(kind: String, on_player: bool) -> void:
+	var target := _player_sprite if on_player else _enemy_sprite
+	if target == null or not is_instance_valid(target):
+		return
+	var centre := target.get_global_rect().get_center()
+	var effect := PetHitEffect.new()
+	add_child(effect)
+	effect.setup(kind, centre, 96.0)
+	effect.global_position = centre - effect.size * 0.5
 
 
 func _update_timer_ui() -> void:
@@ -294,7 +301,7 @@ func _render_battle() -> void:
 	_skill_buttons.clear()
 	var def := PetBattleDB.get_level(_battle_level)
 	add_section("%s  •  %s" % [str(def.get("name", "Pet Duel")), str(def.get("subtitle", "Duel"))], GameUI.GOLD)
-	add_body_text("Both pets choose from 3 skills. When the 2-second timer ends, both actions execute simultaneously.", GameUI.MUTED, 13)
+	add_body_text("Both pets choose Attack or Defend. When the 2-second timer ends, both actions execute simultaneously.", GameUI.MUTED, 13)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 26)
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -304,6 +311,7 @@ func _render_battle() -> void:
 	row.add_child(left)
 	_player_bar = left.get_meta("hp_bar") as SegmentedBar
 	_player_hp_label = left.get_meta("hp_label") as Label
+	_player_sprite = left.get_meta("preview") as TextureRect
 	var middle := VBoxContainer.new()
 	middle.custom_minimum_size = Vector2(80, 0)
 	middle.add_child(GameUI.spacer(74))
@@ -312,12 +320,13 @@ func _render_battle() -> void:
 	middle.add_child(vs)
 	row.add_child(middle)
 	var tint: Color = def.get("opponent_tint", Color.WHITE)
-	var right := _battle_card(str(def.get("opponent_pet", "ember")), str(def.get("opponent_name", "Rival")), "Arena rival  •  3 skills", tint)
+	var right := _battle_card(str(def.get("opponent_pet", "ember")), str(def.get("opponent_name", "Rival")), "Arena rival  •  Attack / Defend", tint)
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(right)
 	_enemy_bar = right.get_meta("hp_bar") as SegmentedBar
 	_enemy_hp_label = right.get_meta("hp_label") as Label
-	var skills_line := GameUI.label("Rival skills: Attack  •  Guard  •  Recover", 12, GameUI.MUTED)
+	_enemy_sprite = right.get_meta("preview") as TextureRect
+	var skills_line := GameUI.label("Rival skills: Attack  •  Defend", 12, GameUI.MUTED)
 	skills_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	content.add_child(skills_line)
 	_status = GameUI.label("", 14, GameUI.TEXT)
@@ -367,6 +376,7 @@ func _battle_card(pet_id: String, display_name: String, subtitle: String, tint: 
 	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	preview.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	box.add_child(preview)
+	card.set_meta("preview", preview)
 	var title := GameUI.label(display_name, 19, GameUI.TEXT)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(title)

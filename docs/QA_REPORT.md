@@ -4,7 +4,7 @@
 **Test host:** Windows desktop (headless logic run + OpenGL screenshot run)  
 **Main scene:** `res://scenes/game.tscn`  
 **Automated test:** `res://tools/tide_test.tscn`  
-**Result:** **250 checks, PASS**  
+**Result:** **269 checks, PASS**  
 **Android device/emulator:** not available in this environment; pending.
 
 ## Reproduce
@@ -31,6 +31,13 @@ acceptance guidance lives in [`ACCEPTANCE_TESTS.md`](ACCEPTANCE_TESTS.md).
 - **No toast/pop-up notification container** exists; `show_toast()` is a no-op.
 - Player and pet XP bars exist and show next-level requirements.
 - Player health 10 segments; pet health 5 segments.
+- Floating Health and Mana bars follow above the player's head.
+- Three mission-guidance arrows point to the current portals/build/emergency.
+- Top-right **Menu** opens Resume, Settings and Return to Title.
+- Settings adjusts GUI scale and each touch control's X/Y/size.
+- Settings persist through new runs and save/load.
+- Yellow Unisza NPC opens a persistent dialogue box.
+- Dialogue contains the exact welcome and student lines.
 
 ### Two battle portals
 - Exactly two `battle_portal` gates stand side by side on the north path.
@@ -42,10 +49,11 @@ acceptance guidance lives in [`ACCEPTANCE_TESTS.md`](ACCEPTANCE_TESTS.md).
 - Five pet duel levels are defined with opponent stats and rewards.
 - Only the first duel is unlocked; each clear unlocks the next.
 - Duel uses the active companion's level and generates both combatants.
-- Both pets have three skills: **Attack**, **Guard** and **Recover**.
+- Combat has only two mechanics: **Attack** and **Defend**.
 - Each turn gives the player a two-second choice window; the enemy also selects
-  from its three skills.
+  Attack or Defend.
 - When the timer expires, both chosen actions execute simultaneously.
+- Attack impacts spawn scratch/punch effects; Defend raises a shield effect.
 - Both health bars render; win/loss/forfeit resolve correctly.
 - Victory grants Gold + pet XP, records the clear, unlocks the next level and
   **always raises the companion's level by at least one**.
@@ -56,7 +64,8 @@ acceptance guidance lives in [`ACCEPTANCE_TESTS.md`](ACCEPTANCE_TESTS.md).
 
 ### Settlement and village life
 - Twelve residents populate the village; four are combat-capable.
-- Four neighbouring resident cottages exist.
+- Seven neighbouring resident cottages exist.
+- Abandoned, damaged and destroyed houses decorate the outskirts.
 - Six editable garden beds, 50+ flowers and 12+ decoration placeables exist.
 - Two horses exist and horse art generates.
 - Build mode toggles on, locks movement, shows the editor HUD and allows the
@@ -64,16 +73,16 @@ acceptance guidance lives in [`ACCEPTANCE_TESTS.md`](ACCEPTANCE_TESTS.md).
 - Dragged positions save to GameState and survive a lobby reload.
 - Build mode toggles off and restores movement.
 
-### Protected forest
-- 73 `ForestTree` nodes form the eastern woodland.
-- Trees are settlement targets but **invulnerable**: no structural health loss,
-  no felling and no settlement damage from tree hits.
-- Tree hits still shake the canopy, emit leaf/spark VFX and play synthesized
-  impact SFX.
-- Eight forest monsters patrol the woods; three more join during an emergency.
+### Protected forest and game over
+- 64 `ForestTree` nodes form the eastern woodland.
+- Each tree has independent HP, a visible HP bar and persistent health.
+- Tree hits shake the canopy, emit leaf/spark VFX and play synthesized impact SFX.
+- Twelve forest monsters patrol the woods; four more join during an emergency.
 - Forest monsters attack trees at a faster cadence without needing player
   proximity, and immediately target + charge the player on line-of-sight
   detection.
+- When every tree reaches zero HP, the locked Game Over screen appears.
+- Game Over deletes the failed run and returns to the title screen.
 
 ### Sea cleaning
 - Coastal Guard catches drifting rubbish.
@@ -125,23 +134,25 @@ acceptance guidance lives in [`ACCEPTANCE_TESTS.md`](ACCEPTANCE_TESTS.md).
 Screenshots in [`screenshots/`](screenshots/):
 
 - `tide_title.png`, `tide_tutorial.png`
-- `tide_lobby.png`, `tide_lobby_portal.png`, `tide_build.png`
-- `tide_forest.png`, `tide_shore.png`
-- `tide_pet_battles.png`, `tide_pet_duel.png`, `tide_pet_resolution.png`, `tide_pet_shop.png`
+- `tide_lobby.png`, `tide_menu.png`, `tide_settings.png`, `tide_dialogue.png`
+- `tide_lobby_portal.png`, `tide_build.png`, `tide_forest.png`, `tide_ruins.png`
+- `tide_shore.png`, `tide_pet_battles.png`
+- `tide_pet_duel.png`, `tide_pet_resolution.png`, `tide_pet_shop.png`
 - `tide_shop.png`, `tide_house.png`, `tide_inventory.png`
 - `tide_portals.png`, `tide_dungeon.png`, `tide_boss.png`
 - `tide_emergency.png`, `tide_settlement_attack.png`, `tide_recovery.png`
+- `tide_game_over.png`
 
-Reviewed at 1280×720: title/credits/menu, XP bars, top-left Pack/Build, paired
-portals, pet tournament and duel, dense forest, settlement editor, permanent
-daytime, settlement defence and recovery ward. No NPC name labels or toast
-notifications appear.
+Reviewed at 1280×720: title/credits/menu, mission arrows, floating player HP/MP,
+top-left Pack/Build, paired portals, Attack/Defend pet duel with impact/shield
+effects, dense forest and tree HP, ruin houses, settlement editor, settlement
+defence and recovery ward. No NPC name labels or toast notifications appear.
 
 ## Known risks
 
 1. Android export, signing and real-device performance are untested.
 2. Music and ambient audio are absent; gameplay SFX are synthesized at runtime.
-3. Building damage has no repair interaction yet; trees are invulnerable.
+3. Building damage has no repair interaction; trees have HP but no replanting.
 4. Bosses use one primary special pattern; no full multi-phase move sets.
 5. Pet duels use an animated arena panel rather than a walkable scene.
 6. The reusable monster dungeon scene is differentiated by data/palette/boss set

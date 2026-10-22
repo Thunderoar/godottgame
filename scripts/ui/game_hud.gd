@@ -4,6 +4,17 @@ extends CanvasLayer
 
 signal inventory_requested
 signal build_mode_requested
+signal menu_requested
+
+const DEFAULT_CONTROL_LAYOUT := {
+	"joystick": {"x": 20.0, "y": 514.0, "size": 190.0},
+	"attack": {"x": 1148.0, "y": 586.0, "size": 102.0},
+	"interact": {"x": 1156.0, "y": 486.0, "size": 82.0},
+	"inventory": {"x": 24.0, "y": 160.0, "size": 64.0},
+	"build": {"x": 96.0, "y": 160.0, "size": 64.0},
+	"health_potion": {"x": 1122.0, "y": 540.0, "size": 58.0},
+	"mana_potion": {"x": 1054.0, "y": 608.0, "size": 58.0},
+}
 
 var world: Node = null
 var shop_panel: ShopPanel
@@ -15,6 +26,10 @@ var house_panel: HousePanel
 var victory_panel: VictoryPanel
 var defeat_panel: DefeatPanel
 var tutorial_guide: TutorialGuide
+var menu_panel: MenuPanel
+var settings_panel: SettingsPanel
+var dialogue_panel: DialoguePanel
+var game_over_panel: GameOverPanel
 
 var _root: Control
 var _gold_label: Label
@@ -57,6 +72,9 @@ var _mana_potion_button: TouchActionButton
 var _hp_count: Label
 var _mp_count: Label
 var _build_mode_panel: PanelContainer
+var _menu_button: Button
+var _control_nodes: Dictionary = {}
+var _default_transforms: Dictionary = {}
 var _fade: ColorRect
 var _last_prompt := ""
 var _last_objectives := ""
@@ -65,7 +83,9 @@ var _loot_timer := 0.0
 
 func _ready() -> void:
 	layer = 10
+	add_to_group("hud")
 	_build_root()
+	_build_menu_button()
 	_build_currency_panel()
 	_build_vitals_panel()
 	_build_objectives()
@@ -74,12 +94,15 @@ func _ready() -> void:
 	_build_build_mode_panel()
 	_build_boss_bar()
 	_build_controls()
+	_apply_saved_settings()
 	_build_prompt()
 	_build_sleep_panel()
 	_build_recovery_panel()
 	_build_tutorial()
 	_build_modals()
 	_build_fade()
+	_root.resized.connect(func() -> void:
+		_root.pivot_offset = _root.size * 0.5)
 	GameState.data_changed.connect(refresh_all)
 	GameState.pet_changed.connect(_refresh_pet)
 	GameState.boss_health_changed.connect(_on_boss_health)
@@ -96,6 +119,20 @@ func _build_root() -> void:
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.theme = GameUI.theme()
 	add_child(_root)
+
+
+func _build_menu_button() -> void:
+	_menu_button = GameUI.button("Menu", Vector2(92, 38))
+	_menu_button.name = "MenuButton"
+	_menu_button.anchor_left = 1.0
+	_menu_button.anchor_right = 1.0
+	_menu_button.offset_left = -114
+	_menu_button.offset_right = -22
+	_menu_button.offset_top = 18
+	_menu_button.offset_bottom = 56
+	_menu_button.add_theme_font_size_override("font_size", 15)
+	_menu_button.pressed.connect(func() -> void: menu_requested.emit())
+	_root.add_child(_menu_button)
 
 
 func _build_currency_panel() -> void:
@@ -140,8 +177,8 @@ func _build_vitals_panel() -> void:
 	panel.anchor_right = 1.0
 	panel.offset_left = -330
 	panel.offset_right = -22
-	panel.offset_top = 18
-	panel.offset_bottom = 172
+	panel.offset_top = 64
+	panel.offset_bottom = 218
 	_root.add_child(panel)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 3)
@@ -395,6 +432,136 @@ func _build_controls() -> void:
 	_mp_count.offset_bottom = -98
 	_mp_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_root.add_child(_mp_count)
+	_control_nodes = {
+		"joystick": _joystick,
+		"attack": _attack_button,
+		"interact": _interact_button,
+		"inventory": _inventory_button,
+		"build": _build_button,
+		"health_potion": _health_potion_button,
+		"mana_potion": _mana_potion_button,
+	}
+	_default_transforms.clear()
+	for control_id in _control_nodes:
+		var node := _control_nodes[control_id] as Control
+		var entry := {
+			"anchor_left": node.anchor_left,
+			"anchor_top": node.anchor_top,
+			"anchor_right": node.anchor_right,
+			"anchor_bottom": node.anchor_bottom,
+			"offset_left": node.offset_left,
+			"offset_top": node.offset_top,
+			"offset_right": node.offset_right,
+			"offset_bottom": node.offset_bottom,
+		}
+		if node is TouchActionButton:
+			entry["diameter"] = (node as TouchActionButton).diameter
+		_default_transforms[control_id] = entry
+
+
+func _apply_saved_settings() -> void:
+	var saved := GameState.control_layout()
+	if not saved.is_empty():
+		_apply_control_layout(saved)
+	_apply_gui_scale(GameState.gui_scale())
+
+
+func get_gui_scale() -> float:
+	return _root.scale.x if _root != null else 1.0
+
+
+func set_gui_scale(value: float) -> void:
+	var clamped := clampf(value, 0.75, 1.3)
+	_apply_gui_scale(clamped)
+	GameState.set_gui_scale(clamped)
+
+
+func _apply_gui_scale(value: float) -> void:
+	if _root == null:
+		return
+	_root.pivot_offset = _root.size * 0.5
+	_root.scale = Vector2(value, value)
+
+
+func get_control_layout_current() -> Dictionary:
+	var result: Dictionary = {}
+	for control_id in _control_nodes:
+		var node := _control_nodes[control_id] as Control
+		if node == null:
+			continue
+		var node_size := node.size.x
+		if node is TouchActionButton:
+			node_size = (node as TouchActionButton).diameter
+		result[control_id] = {"x": node.position.x, "y": node.position.y, "size": node_size}
+	return result
+
+
+func set_control_layout(control_id: String, x: float, y: float, control_size: float) -> void:
+	GameState.set_control_layout(control_id, x, y, control_size)
+	_apply_control(control_id, x, y, control_size)
+
+
+func reset_control_layout() -> void:
+	GameState.reset_control_layout()
+	_restore_default_control_layout()
+
+
+func _restore_default_control_layout() -> void:
+	for control_id in _default_transforms:
+		var node := _control_nodes.get(control_id) as Control
+		if node == null:
+			continue
+		var entry: Dictionary = _default_transforms[control_id]
+		node.anchor_left = float(entry.get("anchor_left", 0.0))
+		node.anchor_top = float(entry.get("anchor_top", 0.0))
+		node.anchor_right = float(entry.get("anchor_right", 0.0))
+		node.anchor_bottom = float(entry.get("anchor_bottom", 0.0))
+		node.offset_left = float(entry.get("offset_left", 0.0))
+		node.offset_top = float(entry.get("offset_top", 0.0))
+		node.offset_right = float(entry.get("offset_right", 0.0))
+		node.offset_bottom = float(entry.get("offset_bottom", 0.0))
+		if node is TouchActionButton and entry.has("diameter"):
+			var button := node as TouchActionButton
+			button.diameter = float(entry["diameter"])
+			button.custom_minimum_size = Vector2(button.diameter, button.diameter)
+		elif node is TouchJoystick:
+			var joystick := node as TouchJoystick
+			joystick.radius = 72.0
+			joystick.knob_radius = 30.0
+			joystick.custom_minimum_size = Vector2(190, 190)
+			joystick.queue_redraw()
+		node.queue_redraw()
+
+
+func _apply_control_layout(saved: Dictionary) -> void:
+	for control_id in saved:
+		if not DEFAULT_CONTROL_LAYOUT.has(control_id) or not _control_nodes.has(control_id):
+			continue
+		var values: Dictionary = (DEFAULT_CONTROL_LAYOUT[control_id] as Dictionary).duplicate()
+		var override: Dictionary = saved[control_id]
+		for key in override:
+			values[key] = override[key]
+		_apply_control(control_id, float(values.get("x", 0.0)), float(values.get("y", 0.0)), float(values.get("size", 80.0)))
+
+
+func _apply_control(control_id: String, x: float, y: float, control_size: float) -> void:
+	var node: Control = _control_nodes.get(control_id) as Control
+	if node == null:
+		return
+	node.anchor_left = 0.0
+	node.anchor_top = 0.0
+	node.anchor_right = 0.0
+	node.anchor_bottom = 0.0
+	node.position = Vector2(x, y)
+	node.size = Vector2(control_size, control_size)
+	node.custom_minimum_size = Vector2(control_size, control_size)
+	if node is TouchActionButton:
+		(node as TouchActionButton).diameter = control_size
+	elif node is TouchJoystick:
+		var joystick := node as TouchJoystick
+		joystick.radius = control_size * 0.38
+		joystick.knob_radius = control_size * 0.16
+		joystick.queue_redraw()
 
 
 func _build_prompt() -> void:
@@ -491,6 +658,14 @@ func _build_modals() -> void:
 	_root.add_child(victory_panel)
 	defeat_panel = DefeatPanel.new()
 	_root.add_child(defeat_panel)
+	menu_panel = MenuPanel.new()
+	_root.add_child(menu_panel)
+	settings_panel = SettingsPanel.new()
+	_root.add_child(settings_panel)
+	dialogue_panel = DialoguePanel.new()
+	_root.add_child(dialogue_panel)
+	game_over_panel = GameOverPanel.new()
+	_root.add_child(game_over_panel)
 
 
 func _build_fade() -> void:
@@ -707,14 +882,14 @@ func set_build_mode(active: bool) -> void:
 
 
 func any_modal_open() -> bool:
-	for panel in [shop_panel, inventory_panel, portal_panel, pet_battle_panel, sea_cleaning_panel, house_panel, victory_panel, defeat_panel]:
+	for panel in [shop_panel, inventory_panel, portal_panel, pet_battle_panel, sea_cleaning_panel, house_panel, victory_panel, defeat_panel, menu_panel, settings_panel, dialogue_panel, game_over_panel]:
 		if panel != null and panel.visible:
 			return true
 	return false
 
 
 func hide_modals() -> void:
-	for panel in [shop_panel, inventory_panel, portal_panel, pet_battle_panel, sea_cleaning_panel, house_panel, victory_panel, defeat_panel]:
+	for panel in [shop_panel, inventory_panel, portal_panel, pet_battle_panel, sea_cleaning_panel, house_panel, victory_panel, defeat_panel, menu_panel, settings_panel, dialogue_panel, game_over_panel]:
 		if panel != null and panel.visible:
 			panel.close_panel()
 

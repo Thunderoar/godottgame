@@ -52,8 +52,8 @@ func _ready() -> void:
 	anchor_bottom = 0.0
 	offset_left = -338
 	offset_right = -22
-	offset_top = 184
-	offset_bottom = 442
+	offset_top = 226
+	offset_bottom = 468
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	add_theme_stylebox_override("panel", GameUI.style(Color(0.03, 0.075, 0.085, 0.94), Color("#5c8c85"), 2, 0))
 	visible = false

@@ -8,6 +8,7 @@ const SPAWN := Vector2(34.0, 24.3)
 const HOUSE_BASE := Vector2(34.0, 21.4)
 const MONSTER_GATE := Vector2(30.8, 11.3)
 const PET_GATE := Vector2(37.2, 11.3)
+const CONSTRUCTION_SHOP := Vector2(41.2, 16.2)
 
 var zone_name := "Seaside Home"
 var player: Player
@@ -35,6 +36,8 @@ var _forest_monsters: Array[Enemy] = []
 var _shop_stalls: Array[Sprite2D] = []
 var _tree_positions: Array[Vector2] = []
 var _forest_trees: Array[ForestTree] = []
+var _house_positions: Array[Vector2] = []
+var _ruin_positions: Array[Vector2] = []
 var _tree_serial := 0
 var _emergency_fire: Sprite2D
 var _emergency_wall_toast := 0.0
@@ -52,6 +55,7 @@ func _ready() -> void:
 	_build_bounds()
 	_build_house()
 	_build_shops()
+	_build_special_npc()
 	_build_residential_life()
 	_build_portals()
 	_build_gathering()
@@ -380,7 +384,7 @@ func _build_shops() -> void:
 	_add_shop("equipment", Vector2(21.2, 19.2), "Garrick", Color("#8a5a42"))
 	_add_shop("pet", Vector2(26.8, 17.8), "Nia", Color("#735b92"))
 	# Dedicated construction shop for the five-level cottage progression.
-	_add_shop("house", Vector2(41.2, 16.2), "Bram", Color("#8f8060"))
+	_add_shop("house", CONSTRUCTION_SHOP, "Bram", Color("#8f8060"))
 
 
 func _add_shop(kind: String, at: Vector2, npc_name: String, color: Color) -> void:
@@ -421,6 +425,13 @@ func _add_shop(kind: String, at: Vector2, npc_name: String, color: Color) -> voi
 	lamp.color = color.lightened(0.35)
 	lamp.position = Vector2(0, -1.3)
 	shop.add_child(lamp)
+
+
+func _build_special_npc() -> void:
+	var student := UniszaStudent.new()
+	student.name = "UniszaStudent"
+	student.position = Vector2(36.4, 23.2)
+	add_child(student)
 
 
 # ------------------------------------------------------------------ portals
@@ -482,7 +493,7 @@ func forest_alive_count() -> int:
 
 
 func _build_forest_monsters() -> void:
-	_spawn_forest_monsters(8)
+	_spawn_forest_monsters(12)
 
 
 func _spawn_forest_monsters(count: int) -> void:
@@ -602,7 +613,7 @@ func _build_forest() -> void:
 	for i in framing.size():
 		var p: Vector2 = framing[i]
 		var blocked := false
-		for shop in [Vector2(23.8, 22.2), Vector2(21.2, 19.2), Vector2(26.8, 17.8), Vector2(41.2, 16.2)]:
+		for shop in [Vector2(23.8, 22.2), Vector2(21.2, 19.2), Vector2(26.8, 17.8), CONSTRUCTION_SHOP]:
 			if p.distance_to(shop) < 2.6:
 				blocked = true
 		if p.distance_to(MONSTER_GATE) < 3.2 or p.distance_to(PET_GATE) < 3.2 or p.distance_to(SPAWN) < 2.2:
@@ -614,9 +625,9 @@ func _build_forest() -> void:
 	# A dense eastern woodland. These are all attackable ForestTree nodes, so the
 	# player has a real forest to defend during raids.
 	for gy in 9:
-		for gx in 6:
+		for gx in 7:
 			var p := Vector2(
-				47.6 + float(gx) * 2.45 + _rng.randf_range(-0.75, 0.75),
+				47.2 + float(gx) * 2.35 + _rng.randf_range(-0.75, 0.75),
 				3.8 + float(gy) * 3.75 + _rng.randf_range(-0.8, 0.8))
 			if _too_close_to_landmarks(p) or _tree_too_close(p, 1.55):
 				continue
@@ -636,7 +647,13 @@ func _tree_too_close(p: Vector2, distance: float) -> bool:
 func _too_close_to_landmarks(p: Vector2) -> bool:
 	if p.distance_to(HOUSE_BASE) < 12.0:
 		return true
-	for shop in [Vector2(23.8, 22.2), Vector2(21.2, 19.2), Vector2(26.8, 17.8), Vector2(41.2, 16.2)]:
+	for house_at in _house_positions:
+		if p.distance_to(house_at) < 4.2:
+			return true
+	for ruin_at in _ruin_positions:
+		if p.distance_to(ruin_at) < 4.2:
+			return true
+	for shop in [Vector2(23.8, 22.2), Vector2(21.2, 19.2), Vector2(26.8, 17.8), CONSTRUCTION_SHOP]:
 		if p.distance_to(shop) < 4.2:
 			return true
 	if p.distance_to(MONSTER_GATE) < 3.8:
@@ -842,6 +859,14 @@ func _build_residential_life() -> void:
 	_add_resident_house("ResidentHouseWest", Vector2(14.0, 18.1), 1)
 	_add_resident_house("ResidentHouseSouth", Vector2(39.4, 31.4), 3)
 	_add_resident_house("ResidentHouseNorth", Vector2(25.0, 8.0), 2)
+	_add_resident_house("ResidentHouseWestNorth", Vector2(11.0, 12.0), 1)
+	_add_resident_house("ResidentHouseEastSouth", Vector2(54.5, 33.0), 2)
+	_add_resident_house("ResidentHouseSouthWest", Vector2(29.0, 33.0), 1)
+	# Abandoned and battle-damaged homes make the village feel lived-in and at risk.
+	_add_ruin_house("AbandonedHouse", Vector2(17.8, 13.6), "abandoned")
+	_add_ruin_house("DamagedHouse", Vector2(52.0, 33.2), "damaged")
+	_add_ruin_house("DestroyedHouse", Vector2(22.5, 32.4), "destroyed")
+	_add_ruin_house("RuinedHouse", Vector2(55.5, 7.8), "destroyed")
 	# Garden beds.
 	_add_garden("garden_1", Vector2(39.4, 24.7))
 	_add_garden("garden_2", Vector2(41.8, 24.7))
@@ -923,7 +948,72 @@ func _add_resident_house(house_name: String, at: Vector2, level: int) -> void:
 	shape.position = Vector2(0, -0.55)
 	body.add_child(shape)
 	holder.add_child(body)
+	_house_positions.append(at)
 	_markers.append({"position": at, "color": Color("#e4c571"), "size": 3.5, "shape": "square"})
+
+
+func _add_ruin_house(house_name: String, at: Vector2, state: String) -> void:
+	var holder := Node2D.new()
+	holder.name = house_name
+	holder.position = at
+	holder.add_to_group("ruin_house")
+	add_child(holder)
+	var art := Sprite2D.new()
+	art.texture = PixelArt.house_texture(2 if state == "abandoned" else 1)
+	art.centered = false
+	art.offset = Vector2(-112, -176)
+	art.scale = Vector2(PixelArt.PX, PixelArt.PX) * 0.74
+	art.z_index = 6
+	holder.add_child(art)
+	match state:
+		"abandoned":
+			art.modulate = Color(0.58, 0.58, 0.52)
+			art.rotation = -0.07
+		"damaged":
+			art.modulate = Color(0.74, 0.64, 0.56)
+			art.rotation = 0.08
+			_add_smoke(holder, Vector2(0.3, -3.0))
+		"destroyed":
+			art.modulate = Color(0.45, 0.4, 0.36, 0.92)
+			art.scale.y *= 0.42
+			art.rotation = 0.2
+			for i in 4:
+				var rubble := Sprite2D.new()
+				rubble.texture = PixelArt.icon("wood")
+				rubble.scale = Vector2(0.055, 0.055)
+				rubble.rotation = randf_range(-0.8, 0.8)
+				rubble.position = Vector2(randf_range(-2.0, 2.0), randf_range(-0.4, 0.3))
+				rubble.modulate = Color("#8a6a47")
+				holder.add_child(rubble)
+			_add_smoke(holder, Vector2(0.0, -2.0))
+	var body := StaticBody2D.new()
+	body.collision_layer = 1
+	var shape := CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(4.6, 1.0) if state != "destroyed" else Vector2(3.8, 0.6)
+	shape.shape = rect
+	shape.position = Vector2(0, -0.5)
+	body.add_child(shape)
+	holder.add_child(body)
+	_ruin_positions.append(at)
+	_markers.append({"position": at, "color": Color("#8b7b62"), "size": 3.0, "shape": "square"})
+
+
+func _add_smoke(holder: Node2D, at: Vector2) -> void:
+	for i in 3:
+		var smoke := Sprite2D.new()
+		smoke.texture = PixelArt.light_texture()
+		smoke.scale = Vector2(0.012, 0.012)
+		smoke.modulate = Color(0.45, 0.43, 0.4, 0.35)
+		smoke.position = at + Vector2(float(i) * 0.25, 0)
+		smoke.z_index = 7
+		holder.add_child(smoke)
+		var tween := smoke.create_tween().set_loops()
+		tween.tween_property(smoke, "position:y", smoke.position.y - 1.2, 2.4 + float(i) * 0.2)
+		tween.parallel().tween_property(smoke, "modulate:a", 0.0, 2.4)
+		tween.tween_callback(func() -> void:
+			smoke.position = at + Vector2(float(i) * 0.25, 0)
+			smoke.modulate = Color(0.45, 0.43, 0.4, 0.35))
 
 
 func _add_garden(id: String, at: Vector2) -> void:
@@ -1145,8 +1235,8 @@ func _spawn_emergency_monsters(count: int) -> void:
 	for monster in _forest_monsters:
 		if is_instance_valid(monster):
 			live_forest += 1
-	if live_forest < 11:
-		_spawn_forest_monsters(mini(3, 11 - live_forest))
+	if live_forest < 16:
+		_spawn_forest_monsters(mini(4, 16 - live_forest))
 
 
 func _clear_emergency_monsters() -> void:
@@ -1185,6 +1275,29 @@ func toggle_build_mode() -> bool:
 
 
 # ------------------------------------------------------------------ API for HUD / Game
+
+func get_guidance_targets() -> Array:
+	var targets: Array = []
+	if GameState.emergency_active() and not _emergency_monsters.is_empty():
+		var raider := _emergency_monsters[0]
+		if is_instance_valid(raider):
+			targets.append({"label": "DEFEND", "position": raider.global_position, "color": Color("#e15b58")})
+	var monster_pending := false
+	for portal_id in PortalDB.ordered_ids():
+		if not bool(GameState.portal_state(portal_id).get("cleared", false)):
+			monster_pending = true
+			break
+	if monster_pending:
+		targets.append({"label": "MONSTER", "position": MONSTER_GATE, "color": Color("#b08cff")})
+	if not bool(GameState.pet_battle_state("pet_duel_1").get("cleared", false)):
+		targets.append({"label": "PET DUEL", "position": PET_GATE, "color": Color("#5bd6cf")})
+	if GameState.house_level() < HouseDB.max_level():
+		targets.append({"label": "BUILD", "position": CONSTRUCTION_SHOP, "color": Color("#f2c45a")})
+	if targets.is_empty():
+		targets.append({"label": "FOREST", "position": Vector2(51.0, 21.0), "color": Color("#8ac36b")})
+		targets.append({"label": "GUARD", "position": Vector2(11.2, 27.0), "color": Color("#8fe8f7")})
+	return targets.slice(0, 3)
+
 
 func get_map_rect() -> Rect2:
 	return MAP_RECT

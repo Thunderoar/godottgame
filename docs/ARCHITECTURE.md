@@ -8,7 +8,8 @@ Game (game.tscn)
 │   ├── Lobby (seaside hub, residents, rubbish watch, recovery, emergencies)
 │   └── Dungeon (reusable portal instance)
 ├── GameHUD (CanvasLayer)
-│   ├── permanent HUD / action controls / tutorial guide
+│   ├── permanent HUD / mission arrows / player dashboard / touch controls
+│   ├── MenuPanel / SettingsPanel / DialoguePanel / GameOverPanel
 │   ├── ShopPanel / InventoryPanel / PortalPanel / PetBattlePanel / SeaCleaningPanel
 │   ├── HousePanel / VictoryPanel / DefeatPanel
 │   └── fade overlay (no toast layer)
@@ -39,7 +40,9 @@ audio assets are required.
 - recovery state,
 - emergency state (active, remaining monsters, building damage),
 - settlement layout (saved editable-object positions),
+- persistent per-tree forest health,
 - sea-cleaning count,
+- GUI scale and custom touch-control layout,
 - in-game play time and counters.
 
 The world is intentionally locked in **permanent daytime**; there is no phase
@@ -57,6 +60,7 @@ expedition_changed
 boss_health_changed(active, name, value, maximum)
 recovery_changed(active, progress)
 emergency_changed(active, remaining, damage)
+game_over_triggered(reason)
 toast_requested(text, tone)  # internal only; no toast UI exists
 ```
 
@@ -143,10 +147,12 @@ in the top-left HUD panel and use `GameState.data.xp_next` and
   `battle_portal` group.
 - Monster mode opens `PortalPanel`; pet mode opens `PetBattlePanel`.
 - `PetBattlePanel` starts a 1v1 duel with the active pet's real level/stats.
-  Both pets have `Attack`, `Guard` and `Recover`.
+  Both pets have `Attack` and `Defend`.
 - Each round opens a 2-second choice window. Player and enemy choices are held,
-  then `_resolve_turn()` applies both simultaneously. Guard reduces incoming
-  damage by 65%; Recover heals 16% max HP.
+  then `_resolve_turn()` applies both simultaneously. Defend reduces incoming
+  damage by 65%.
+- `PetHitEffect` adds scratch/punch impacts on damage and a shield shell when a
+  pet defends.
 - `PetBattleDB` supplies five opponents. The first duel is open; each clear
   unlocks the next. Wins call `GameState.complete_pet_battle()`, which guarantees
   at least one companion level; losses/forfeits grant no clear.
@@ -168,8 +174,9 @@ in the top-left HUD panel and use `GameState.data.xp_next` and
 ## Residential life, editing and emergencies
 
 - `Lobby` builds fences, twelve `Resident` nodes, six gardens, 50+ flowers,
-  chickens/goats, two horses, four resident cottages, the coastal guard/rubbish
-  system and a dense forest.
+  chickens/goats, two horses, seven resident cottages, abandoned/damaged/destroyed
+  ruin houses, the coastal guard/rubbish system, the yellow Unisza student and a
+  dense forest.
 - `Resident` follows daily waypoints. Non-combat residents flee to shelter on
   `emergency_changed(true, ...)`; combat-capable residents and defenders attack
   nearby raiders. Residents and merchants no longer create floating name labels.
@@ -178,10 +185,10 @@ in the top-left HUD panel and use `GameState.data.xp_next` and
   grid area and supports touch/mouse drag with grid snap and bounds clamping.
   Positions save under `settlement_layout` and survive lobby reloads.
 - `SettlementTarget` marks the cottage, shop stalls and resident cottages.
-  `ForestTree` marks the 73 protected trees in the eastern woodland. Trees are
-  intentionally invulnerable: `take_attack_damage()` keeps health unchanged and
-  never damages the settlement, but still shakes, flashes, emits leaf/spark VFX
-  and plays `tree_hit`.
+  `ForestTree` marks the 64 protected trees in the eastern woodland. Every tree
+  has persistent HP, shakes/flashes, emits leaf/spark VFX and plays `tree_hit`.
+  At zero HP it falls and leaves the target group. When all trees are dead,
+  `Lobby` calls `GameState.trigger_game_over()`.
 - `Lobby` spawns eight persistent `forest_mode` monsters and three extra during
   an emergency. Their attack cadence is 0.62s, so tree impacts stay active.
 - `Enemy.forest_mode` targets the nearest tree until `_can_see_player()` passes a
@@ -202,10 +209,29 @@ in the top-left HUD panel and use `GameState.data.xp_next` and
   three-hero **CHOOSE YOUR ROAD** cards.
 - New games start `TutorialGuide` (eight non-blocking steps); Continue skips it.
 
+## Guidance, dashboard and menus
+
+- `Lobby.get_guidance_targets()` returns up to three mission targets: emergency
+  raider, Monster gate, Pet gate, Construction Shop or forest/guard fallback.
+  `Dungeon.get_guidance_targets()` returns the boss or Shore Gate.
+- `GameHUD._update_mission_guide()` refreshes three `MissionArrow` nodes every
+  0.2s with direction and distance.
+- `PlayerVitalHud` is a child of `Player` with `light_mask = 0`; it draws only HP
+  and MP above the player's head.
+- `GameHUD.MenuButton` emits `menu_requested`. `MenuPanel` opens Settings or
+  returns to title.
+- `SettingsPanel` controls `GameState.settings.gui_scale` and
+  `settings.control_layout`. `GameHUD` applies GUI scale to its root and absolute
+  X/Y/size overrides to the touch controls; Reset restores the original responsive
+  anchors.
+- `GameOverPanel` is a locked modal. `GameState.trigger_game_over()` disables
+  autosave, `Game` deletes the failed save and the panel can only return to title.
+
 ## Save format
 
-JSON at `user://tidesworn_save.json`, version 5. Loading recursively merges over
+JSON at `user://tidesworn_save.json`, version 6. Loading recursively merges over
 a default, sanitizes stats/currency/house/recovery/emergency bounds, keeps the
-settlement layout, pet-duel clears and sea-cleaning count, removes retired items,
-restores pets and validates the hero's equipped weapon.
+settlement layout, pet-duel clears, sea-cleaning count, per-tree forest health and
+GUI/control settings, removes retired items, restores pets and validates the
+hero's equipped weapon.
 Autosave runs on important transactions and app pause/focus loss.

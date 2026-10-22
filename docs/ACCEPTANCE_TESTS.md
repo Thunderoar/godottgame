@@ -11,7 +11,7 @@ Run from `GAME_COMP_RPG-Godot/`:
 # Parse/import every script and report warnings as failures.
 godot --headless --path . --editor --quit
 
-# Full acceptance suite. Expect: 250 checks, PASS.
+# Full acceptance suite. Expect: 269 checks, PASS.
 godot --headless --path . res://tools/tide_test.tscn
 
 # Visual capture harness (writes PNGs).
@@ -47,10 +47,10 @@ new screenshots at 1280×720.
 - Only the first duel is unlocked initially; each win unlocks the next.
 - The active pet's real level and stats are used.
 - A duel shows two living combatants and two health bars.
-- Both pets have exactly three skills: Attack, Guard and Recover.
-- The player has a two-second choice window; the enemy selects from the same
-  three skills.
+- Combat has exactly two mechanics: **Attack** and **Defend**.
+- The player has a two-second choice window; the enemy selects Attack or Defend.
 - When the timer expires, both actions execute simultaneously.
+- Attacks create scratch/punch impact nodes; Defend creates a shield effect.
 - A win records the clear, grants Gold and pet XP, unlocks the next duel and
   raises the active companion's level by at least one.
 - A loss or forfeit grants no clear or level.
@@ -64,18 +64,20 @@ new screenshots at 1280×720.
 ### 5. Protected forest and monster behaviour
 - The `forest_tree` group contains at least 60 living trees.
 - Every tree is a `ForestTree` and is also a `settlement_target`.
-- Trees are invulnerable: `take_attack_damage()` must leave health unchanged,
-  must not fell the tree and must not damage the settlement.
-- Tree hits must still increment the feedback counter and play VFX/SFX.
-- At least eight `forest_monsters` patrol the woodland; emergencies add more.
+- Every tree has independent HP and persistent health.
+- `take_attack_damage()` reduces tree HP, increments feedback and plays VFX/SFX.
+- Tree HP reaches zero -> tree falls; all trees dead -> `GameState.game_over_active`.
+- Game Over shows a locked panel and returns to title without a Continue save.
+- At least twelve `forest_monsters` patrol the woodland; emergencies add four more.
 - Forest monsters attack nearby trees at a faster cadence without needing the
   player nearby.
 - A clear line of sight to the player immediately sets the player as target,
   starts a charge and triggers the aggro sound.
 - Generated `tree_hit` and `aggro` sounds must exist in `Sfx`.
 
-### 6. Lively village
-- At least four `resident_house` nodes exist.
+### 6. Lively village and ruins
+- At least seven `resident_house` nodes exist.
+- At least three `ruin_house` nodes include abandoned, damaged and destroyed art.
 - At least six `garden` nodes and 50 `flowers` nodes exist.
 - At least two `horses` nodes exist and horse art generates.
 - At least nine editable `decoration` placeables exist.
@@ -96,6 +98,24 @@ new screenshots at 1280×720.
 - Three weapons, ten monster portals, boss ability variety, Android touch
   controls, auto-loot, pet support, emergency defence, defeat/recovery and
   permanent daytime remain intact.
+
+### 9. Guidance, dashboard and menus
+- The HUD has three `MissionArrow` nodes; at least one is visible in the lobby.
+- Mission arrows point toward Monster Portal, Pet Duel, Construction Shop or an
+  emergency target and display distance.
+- The player owns a `PlayerVitalHud` that draws only Health and Mana above the
+  player's head.
+- The top-right `MenuButton` opens the in-game menu.
+- Settings opens from the menu.
+- GUI scale changes apply to the HUD root and persist in `GameState`.
+- Control X/Y/size changes apply immediately to the touch controls and reset to
+  the default responsive layout.
+
+### 10. Special NPC
+- A yellow `UniszaStudent` belongs to the `special_npc` group.
+- Interaction opens `DialoguePanel`.
+- The box includes the exact lines “Welcome to Unisza” and “We are students from
+  Unisza.”
 
 ## Regression rules for agents
 
@@ -118,16 +138,20 @@ new screenshots at 1280×720.
 Inspect these captures:
 
 - `tide_title.png` - title, credit and responsive character cards
-- `tide_lobby.png` - XP bars, Pack/Build, lively village
+- `tide_lobby.png` - XP bars, mission arrows, Pack/Build, lively village
+- `tide_menu.png`, `tide_settings.png` - menu and settings
+- `tide_dialogue.png` - exact Unisza dialogue
 - `tide_lobby_portal.png` - paired Monster/Pet gates
 - `tide_pet_battles.png` - five-level tournament
 - `tide_pet_duel.png` - 1v1 arena during the two-second choice window
-- `tide_pet_resolution.png` - simultaneous turn result and both health bars
+- `tide_pet_resolution.png` - simultaneous turn, impact and shield effects
 - `tide_pet_shop.png` - Pet Food and Feed controls
 - `tide_house.png` - Construction Shop Level 1-5 progression
-- `tide_forest.png` - dense protected woodland and monster impacts
+- `tide_forest.png` - dense protected woodland and tree HP impacts
+- `tide_ruins.png` - abandoned/damaged/destroyed houses
 - `tide_build.png` - settlement editor
 - `tide_settlement_attack.png` - emergency HUD and raid
 - `tide_recovery.png` - recovery ward
+- `tide_game_over.png` - locked all-trees-destroyed game-over screen
 
 No NPC name labels or toast banners should be visible in any capture.

@@ -27,6 +27,21 @@ func _ready() -> void:
 		game.hud.tutorial_guide.call("_skip")
 	await get_tree().create_timer(0.8).timeout
 	await _shot("tide_lobby.png")
+	game.call("open_menu")
+	await get_tree().create_timer(0.25).timeout
+	await _shot("tide_menu.png")
+	game.hud.menu_panel.close_panel()
+	await get_tree().create_timer(0.15).timeout
+	game.call("open_settings")
+	await get_tree().create_timer(0.3).timeout
+	await _shot("tide_settings.png")
+	game.hud.settings_panel.close_panel()
+	await get_tree().create_timer(0.15).timeout
+	game.call("open_dialogue", "Unisza Student", ["“Welcome to Unisza”", "“We are students from Unisza.”"])
+	await get_tree().create_timer(0.25).timeout
+	await _shot("tide_dialogue.png")
+	game.hud.dialogue_panel.close_panel()
+	await get_tree().create_timer(0.15).timeout
 	game.call("toggle_build_mode")
 	await get_tree().create_timer(0.35).timeout
 	await _shot("tide_build.png")
@@ -71,6 +86,13 @@ func _ready() -> void:
 	forest_player.global_position = Vector2(46.8, 25.0)
 	await get_tree().create_timer(0.8).timeout
 	await _shot("tide_forest.png")
+	for monster in get_tree().get_nodes_in_group("forest_monsters"):
+		if is_instance_valid(monster):
+			monster.set_physics_process(false)
+	var ruin_player: Node2D = game.call("player")
+	ruin_player.global_position = Vector2(19.0, 30.8)
+	await get_tree().create_timer(0.7).timeout
+	await _shot("tide_ruins.png")
 	var sea_player: Node2D = game.call("player")
 	sea_player.global_position = Vector2(13.5, 25.6)
 	await get_tree().create_timer(0.7).timeout
@@ -119,6 +141,16 @@ func _ready() -> void:
 	game.call("_load_lobby", false)
 	await get_tree().create_timer(0.8).timeout
 	await _shot("tide_recovery.png")
+	# Final game-over capture: kill every remaining tree.
+	for node in get_tree().get_nodes_in_group("forest_tree"):
+		if node is ForestTree:
+			var tree := node as ForestTree
+			if tree.is_alive():
+				tree.max_health = 10
+				tree.health = 10
+				tree.take_attack_damage(99)
+	await get_tree().create_timer(0.35).timeout
+	await _shot("tide_game_over.png")
 	GameState.delete_save()
 	print("captures done")
 	get_tree().quit(0)
