@@ -7,6 +7,8 @@ extends Interactable
 @export var amount := 10
 @export var item_id := ""
 
+var pop_velocity := Vector2.ZERO
+
 var _sprite: Sprite2D
 var _label: Label
 var _t := 0.0
@@ -37,6 +39,11 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_t += delta
+	if pop_velocity.length_squared() > 0.0005:
+		# Short spit-arc out of a defeated body, decaying quickly.
+		global_position += pop_velocity * delta
+		pop_velocity = pop_velocity.move_toward(Vector2.ZERO, delta * 7.0)
+		pop_velocity.y += delta * 3.0
 	if _sprite:
 		_sprite.position.y = -0.18 + sin(_t * 3.2) * 0.06
 	var player := get_tree().get_first_node_in_group("player")

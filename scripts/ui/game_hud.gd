@@ -76,6 +76,7 @@ var _menu_button: Button
 var _control_nodes: Dictionary = {}
 var _default_transforms: Dictionary = {}
 var _fade: ColorRect
+var _vignette: TextureRect
 var _last_prompt := ""
 var _last_objectives := ""
 var _loot_timer := 0.0
@@ -674,6 +675,14 @@ func _build_modals() -> void:
 
 
 func _build_fade() -> void:
+	_vignette = TextureRect.new()
+	_vignette.texture = PixelArt.vignette_texture()
+	_vignette.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_vignette.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_vignette.stretch_mode = TextureRect.STRETCH_SCALE
+	_vignette.modulate.a = 0.0
+	_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(_vignette)
 	_fade = ColorRect.new()
 	_fade.color = Color.BLACK
 	_fade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -935,6 +944,21 @@ func _apply_touch_mode() -> void:
 func _on_setting_changed(key: String) -> void:
 	if key == "touch_controls":
 		_apply_touch_mode()
+
+
+func flash_hurt() -> void:
+	# Player-damage vignette: an additional listener next to the camera shake.
+	if _vignette == null:
+		return
+	if GameSettings.reduce_motion():
+		_vignette.modulate.a = 0.25
+		var quick := create_tween()
+		quick.tween_property(_vignette, "modulate:a", 0.0, 0.3)
+		return
+	_vignette.modulate.a = 0.55
+	var tween := create_tween()
+	tween.tween_property(_vignette, "modulate:a", 0.12, 0.12)
+	tween.tween_property(_vignette, "modulate:a", 0.0, 0.4)
 
 
 func show_toast(_text: String, _tone: String = "info") -> void:

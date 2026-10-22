@@ -514,6 +514,8 @@ func _test_portal_combat_and_auto_loot() -> void:
 		var hp_before := target.hp
 		var strike: bool = bool(p.call("try_attack"))
 		_check(strike, "sword attack executes")
+		# Damage lands on the ACTIVE frame after the wind-up (AttackDB).
+		await get_tree().create_timer(0.25).timeout
 		_check(target.hp < hp_before, "sword attack damages a monster")
 		target.call("take_damage", 99999, Vector2.ZERO, p)
 	await get_tree().create_timer(0.7).timeout
@@ -780,7 +782,8 @@ func _test_single_style(character_id: String, starter_weapon: String, style: Str
 	await get_tree().process_frame
 	var hp_before := dummy.hp
 	var struck: bool = bool(p.call("try_attack"))
-	await get_tree().create_timer(0.35 if style == "bow" else 0.1).timeout
+	# Weapon wind-ups (AttackDB) delay the hit frame; bows add flight time.
+	await get_tree().create_timer(0.5 if style == "bow" else 0.32).timeout
 	_check(struck, "%s attack executes" % character_id.capitalize())
 	_check(dummy.hp < hp_before, "%s %s attack damages a target" % [character_id.capitalize(), style])
 	dummy.queue_free()

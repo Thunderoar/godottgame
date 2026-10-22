@@ -20,7 +20,10 @@ static func ensure_pool(world: Node) -> VfxPool:
 
 
 static func pool() -> VfxPool:
-	for node in Engine.get_main_loop().get_tree().get_nodes_in_group("vfx_pool"):
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return null
+	for node in tree.get_nodes_in_group("vfx_pool"):
 		if is_instance_valid(node):
 			return node as VfxPool
 	return null

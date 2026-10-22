@@ -11,6 +11,7 @@ var source: Node = null
 
 var _sprite: Sprite2D
 var _dead := false
+var _trail_timer := 0.0
 
 
 func _ready() -> void:
@@ -34,6 +35,11 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 		return
 	global_position += direction * speed * delta
+	# Faint trail behind the arrow.
+	_trail_timer -= delta
+	if _trail_timer <= 0.0 and not GameSettings.reduce_motion():
+		_trail_timer = 0.035
+		Vfx.dust(global_position - direction * 0.3, 1, Color(0.9, 0.85, 0.7, 0.4))
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
 			continue

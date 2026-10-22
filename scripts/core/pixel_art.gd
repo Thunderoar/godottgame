@@ -331,8 +331,35 @@ static func character_texture(character_id: String, facing: int, frame: int = 0)
                                 cloak = Color("#2a4d4a")
                                 pants = Color("#30373a")
                 var img := image(32, 48)
-                var step := 1 if frame % 2 == 0 else -1
-                var bob := 0 if frame % 2 == 0 else 1
+                # Frame map: 0-3 walk cycle (contact / pass / contact / pass),
+                # 4 idle stand, 5 idle blink, 6 hurt recoil. Old callers that
+                # only ever passed 0/1 keep working.
+                var step := 0
+                var bob := 0
+                match frame:
+                        0:
+                                step = 1
+                                bob = 0
+                        1:
+                                step = 0
+                                bob = 1
+                        2:
+                                step = -1
+                                bob = 0
+                        3:
+                                step = 0
+                                bob = 2
+                        4:
+                                step = 0
+                                bob = 0
+                        5:
+                                step = 0
+                                bob = 0
+                        _:
+                                step = 0
+                                bob = 1
+                var hurt := frame == 6
+                var eyes_closed := frame == 5
                 # Cloak / silhouette behind the body.
                 ellipse(img, 16, 34 + bob, 8, 10, OUTLINE)
                 ellipse(img, 16, 34 + bob, 7, 9, cloak)
@@ -381,9 +408,15 @@ static func character_texture(character_id: String, facing: int, frame: int = 0)
                         rect(img, 10, 13 + bob, 4, 9, hair.darkened(0.08))
                         rect(img, 19, 15 + bob, 3, 2, skin)
                         rect(img, 21, 17 + bob, 2, 2, skin.darkened(0.06))
-                        rect(img, 18, 16 + bob, 2, 2, OUTLINE)
-                        px(img, 19, 16 + bob, accent.lightened(0.4))
-                        hline(img, 18, 20 + bob, 4, Color("#9a5a50"))
+                        if eyes_closed:
+                                hline(img, 17, 17 + bob, 3, OUTLINE)
+                        else:
+                                rect(img, 18, 16 + bob, 2, 2, OUTLINE)
+                                px(img, 19, 16 + bob, accent.lightened(0.4))
+                        if hurt:
+                                rect(img, 17, 19 + bob, 3, 3, Color("#5e2f2f"))
+                        else:
+                                hline(img, 18, 20 + bob, 4, Color("#9a5a50"))
                         if character_id == "farhan":
                                 rect(img, 10, 17 + bob, 7, 6, hair.darkened(0.05))
                 else:
@@ -399,12 +432,19 @@ static func character_texture(character_id: String, facing: int, frame: int = 0)
                                 rect(img, 13, 22 + bob, 6, 3, hair)
                                 hline(img, 12, 16 + bob, 8, hair.darkened(0.2))
                         # Eyes, nose, mouth.
-                        rect(img, 12, 17 + bob, 3, 2, OUTLINE)
-                        rect(img, 18, 17 + bob, 3, 2, OUTLINE)
-                        px(img, 13, 17 + bob, accent.lightened(0.5))
-                        px(img, 19, 17 + bob, accent.lightened(0.5))
+                        if eyes_closed:
+                                hline(img, 12, 18 + bob, 3, OUTLINE)
+                                hline(img, 18, 18 + bob, 3, OUTLINE)
+                        else:
+                                rect(img, 12, 17 + bob, 3, 2, OUTLINE)
+                                rect(img, 18, 17 + bob, 3, 2, OUTLINE)
+                                px(img, 13, 17 + bob, accent.lightened(0.5))
+                                px(img, 19, 17 + bob, accent.lightened(0.5))
                         px(img, 16, 19 + bob, skin.darkened(0.18))
-                        hline(img, 14, 21 + bob, 5, Color("#8d4e4e"))
+                        if hurt:
+                                rect(img, 14, 20 + bob, 4, 3, Color("#5e2f2f"))
+                        else:
+                                hline(img, 14, 21 + bob, 5, Color("#8d4e4e"))
                 # Scarf / collar.
                 rect(img, 11, 23 + bob, 10, 2, accent.darkened(0.2))
                 # Unique weapon silhouette.
@@ -1128,6 +1168,74 @@ static func grass_tuft_texture() -> Texture2D:
                 for p in [Vector2i(3, 10), Vector2i(6, 9), Vector2i(9, 10), Vector2i(12, 8), Vector2i(4, 6), Vector2i(10, 5)]:
                         line(img, p.x, p.y, p.x - 1, p.y - 5, Color("#5f793c"))
                         line(img, p.x, p.y, p.x + 1, p.y - 6, Color("#728c47"))
+                return img)
+
+
+static func slash_arc_texture(kind: String) -> Texture2D:
+        return cached_texture("slash_arc_%s" % kind, func() -> Image:
+                var img := image(64, 64)
+                match kind:
+                        "lr":
+                                # Crescent sweeping left-to-right.
+                                for i in 22:
+                                        var a := deg_to_rad(-70.0 + i * 5.2)
+                                        var r := 20.0 + sin(float(i) / 22.0 * PI) * 9.0
+                                        var p := Vector2i(14 + int(cos(a) * r), 32 + int(sin(a) * r))
+                                        ellipse(img, p.x, p.y, 2, 2, Color(1.0, 0.97, 0.72, 0.9 - float(i) * 0.012))
+                                        px(img, p.x, p.y - 1, Color(1, 1, 1, 0.95))
+                                for i in 12:
+                                        var a := deg_to_rad(-58.0 + i * 4.4)
+                                        var p := Vector2i(14 + int(cos(a) * 13.0), 32 + int(sin(a) * 13.0))
+                                        px(img, p.x, p.y, Color(1.0, 0.9, 0.55, 0.55))
+                        "rl":
+                                for i in 22:
+                                        var a := deg_to_rad(10.0 + i * 5.2)
+                                        var r := 20.0 + sin(float(i) / 22.0 * PI) * 9.0
+                                        var p := Vector2i(50 - int(cos(a) * r), 32 + int(sin(a) * r))
+                                        ellipse(img, p.x, p.y, 2, 2, Color(1.0, 0.97, 0.72, 0.9 - float(i) * 0.012))
+                                        px(img, p.x, p.y - 1, Color(1, 1, 1, 0.95))
+                                for i in 12:
+                                        var a := deg_to_rad(22.0 + i * 4.4)
+                                        var p := Vector2i(50 - int(cos(a) * 13.0), 32 + int(sin(a) * 13.0))
+                                        px(img, p.x, p.y, Color(1.0, 0.9, 0.55, 0.55))
+                        "thrust":
+                                # Forward streak with a bright tip.
+                                for i in 16:
+                                        var x := 8 + i * 3
+                                        ellipse(img, x, 32, 2 if i < 12 else 3, 2, Color(1.0, 0.98, 0.8, 0.35 + float(i) * 0.04))
+                                ellipse(img, 56, 32, 4, 3, Color(1, 1, 0.95, 0.95))
+                                px(img, 54, 30, Color.WHITE)
+                                px(img, 58, 33, Color.WHITE)
+                        "slam":
+                                # Downward crush burst.
+                                for i in 20:
+                                        var a := -PI * 0.5 + (float(i) / 19.0 - 0.5) * 2.4
+                                        var r := 14.0 + absf(sin(float(i) / 19.0 * PI)) * 8.0
+                                        var p := Vector2i(32 + int(cos(a) * r), 18 + int(sin(a) * r * 1.6))
+                                        ellipse(img, p.x, p.y, 2, 3, Color(1.0, 0.85, 0.5, 0.9))
+                                for i in 26:
+                                        var x := 8 + i * 2
+                                        hline(img, x, 52 + (2 if i % 3 == 0 else 0), 2, Color(0.85, 0.7, 0.45, 0.5))
+                        "shot":
+                                # Bow release flash.
+                                ellipse(img, 18, 32, 3, 6, Color(1.0, 0.95, 0.75, 0.9))
+                                for i in 10:
+                                        var x := 24 + i * 3
+                                        hline(img, x, 32, 1, Color(1, 0.95, 0.7, 0.6 - float(i) * 0.05))
+                return img)
+
+
+static func vignette_texture() -> Texture2D:
+        return cached_texture("vignette", func() -> Image:
+                var size := 320
+                var img := image(size, size)
+                var centre := Vector2(size * 0.5, size * 0.5)
+                for y in size:
+                        for x in size:
+                                var d := Vector2(x + 0.5, y + 0.5).distance_to(centre) / (size * 0.5)
+                                var a := clampf((d - 0.55) / 0.45, 0.0, 1.0)
+                                if a > 0.0:
+                                        img.set_pixel(x, y, Color(0.72, 0.1, 0.12, a * a * 0.85))
                 return img)
 
 

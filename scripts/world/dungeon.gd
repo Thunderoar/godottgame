@@ -256,7 +256,10 @@ func _build_player_and_pet() -> void:
 	add_child(pet)
 	player.hurt_flash.connect(func() -> void:
 		if camera:
-			camera.shake(0.18, 0.24))
+			camera.shake(0.18, 0.24)
+		var hud := get_tree().get_first_node_in_group("hud")
+		if hud != null and hud.has_method("flash_hurt"):
+			hud.call("flash_hurt"))
 
 
 func _build_monsters() -> void:

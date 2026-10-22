@@ -87,6 +87,25 @@ func _ready() -> void:
 	hud.hide_modals()
 	await get_tree().process_frame
 
+	# Combat frame strip: sword wind-up / active / recovery against a dummy.
+	var strip_player: Node = game.call("player")
+	if strip_player != null and game.world is Lobby:
+		strip_player.global_position = Vector2(34.0, 30.0)
+		var dummy: Enemy = load("res://scripts/combat/enemy.gd").new()
+		dummy.kind = "bogling"
+		dummy.max_hp = 500
+		dummy.damage = 0
+		dummy.speed = 0.0
+		dummy.position = strip_player.global_position + Vector2(1.6, 0.2)
+		game.world.add_child(dummy)
+		strip_player.set("facing", Vector2.RIGHT)
+		await get_tree().create_timer(0.3).timeout
+		strip_player.call("try_attack")
+		for i in 5:
+			await get_tree().create_timer(0.07).timeout
+			await _shot("13_combat_strip_%d" % i)
+		dummy.queue_free()
+
 	print("visual_review: done")
 	get_tree().quit(0)
 
