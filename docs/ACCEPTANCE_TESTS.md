@@ -11,7 +11,7 @@ Run from `GAME_COMP_RPG-Godot/`:
 # Parse/import every script and report warnings as failures.
 godot --headless --path . --editor --quit
 
-# Full acceptance suite. Expect: 269 checks, PASS.
+# Full acceptance suite. Expect: 314 checks, PASS.
 godot --headless --path . res://tools/tide_test.tscn
 
 # Visual capture harness (writes PNGs).
@@ -95,6 +95,10 @@ new screenshots at 1280×720.
 - Interacting with Bram opens the house panel, branded as the Construction Shop.
 - The panel exposes Levels 1-5 and only accepts diamonds.
 - Title reads `SAVE THE WORLD`; credit names Qayyim, Farhan and Ayiz.
+- The recovery ward heals at `GameState.sleep_recovery_seconds()` - the
+  HouseDB rate for the current cottage level (10 s at Level 1 down to 2 s at
+  Level 5), matching the bed and the Construction Shop panel. The old
+  hardcoded 8.0 s ward clock is gone.
 - Three weapons, ten monster portals, boss ability variety, Android touch
   controls, auto-loot, pet support, emergency defence, defeat/recovery and
   permanent daytime remain intact.

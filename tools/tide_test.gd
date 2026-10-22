@@ -688,6 +688,11 @@ func _test_defeat_and_recovery() -> void:
 	var hp_before := GameState.health()
 	await get_tree().create_timer(1.0).timeout
 	_check(GameState.health() > hp_before, "health regenerates inside the recovery ward")
+	# Regression: the ward must heal at the HouseDB rate for the current house
+	# level (level 5 = 2 s -> ~50% of max per second), not the old hardcoded
+	# 8.0 s clock (~12.5% per second). Respawn health is <= 12% of max, so a
+	# full second of healing gains at least 25% of max only under the fixed rate.
+	_check(GameState.health() - hp_before >= int(GameState.health_max() * 0.25), "recovery ward heals at the HouseDB rate for the cottage level")
 	p.global_position = Lobby.RECOVERY_CENTER + Vector2(12, 0)
 	await get_tree().create_timer(0.2).timeout
 	_check(p.global_position.distance_to(Lobby.RECOVERY_CENTER) <= Lobby.RECOVERY_RADIUS + 0.1, "recovery ward prevents leaving early")

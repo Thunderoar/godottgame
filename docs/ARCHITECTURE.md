@@ -131,7 +131,10 @@ Currency is deducted only after validation and never becomes negative.
   auto-heal consumes exactly one potion and rearms only after health climbs above
   35%.
 - `Lobby` clamps the player inside `RECOVERY_CENTER/RADIUS` while
-  `GameState.recovery_active` is true and heals over eight seconds.
+  `GameState.recovery_active` is true and heals over
+  `GameState.sleep_recovery_seconds()` - the HouseDB rate for the current
+  cottage level (10 s at Level 1 down to 2 s at Level 5), the same clock the
+  bed and the Construction Shop panel use.
 - `finish_recovery()` releases the player at full health. Potions bypass waiting
   by restoring health directly.
 

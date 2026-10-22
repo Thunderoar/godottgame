@@ -220,7 +220,7 @@ godot --headless --path . res://tools/tide_test.tscn
 godot --path . res://tools/tide_capture.tscn
 ```
 
-Latest result on the `visual-overhaul` branch: **313 checks, PASS**. The suite
+Latest result on the `visual-overhaul` branch: **314 checks, PASS**. The suite
 must always end with `PASS` and exit 0; the tally itself is data-driven and
 drifts as catalogue data changes. The suite covers title/credits, tutorial,
 three weapons, permanent daytime, no NPC labels or pop-ups, XP bars, Pet Food,

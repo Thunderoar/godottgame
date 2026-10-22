@@ -44,7 +44,6 @@ var _emergency_wall_toast := 0.0
 
 const RECOVERY_CENTER := Vector2(34.0, 23.7)
 const RECOVERY_RADIUS := 4.3
-const RECOVERY_SECONDS := 8.0
 
 
 func _ready() -> void:
@@ -1460,7 +1459,10 @@ func _tick_recovery(delta: float) -> void:
 		if _emergency_wall_toast <= 0.0:
 			_emergency_wall_toast = 3.0
 			GameState.toast_requested.emit("The recovery ward holds you until your health is fully restored.", "info")
-	_recovery_heal_accum += float(GameState.health_max()) / RECOVERY_SECONDS * delta
+	# One clock everywhere: the ward heals at the HouseDB rate for the current
+	# cottage level (GameState.sleep_recovery_seconds), matching the bed and the
+	# Construction Shop panel instead of a local hardcoded constant.
+	_recovery_heal_accum += float(GameState.health_max()) / GameState.sleep_recovery_seconds() * delta
 	var heal_amount := int(floor(_recovery_heal_accum))
 	if heal_amount > 0:
 		_recovery_heal_accum -= float(heal_amount)

@@ -30,7 +30,7 @@ godot --headless --path . --import
 timeout 600 godot --headless --path . res://tools/tide_test.tscn ; echo "EXIT=$?"
 ```
 
-**BASELINE ON `visual-overhaul`: GREEN. `313 checks, PASS`, exit 0** (the
+**BASELINE ON `visual-overhaul`: GREEN. `314 checks, PASS`, exit 0** (the
 main-branch history below is kept for context). The tree decision was resolved
 by the owner: trees have persistent HP, fall at zero and all-dead triggers a
 locked game-over; the suite, ACCEPTANCE_TESTS and the README all agree now.
@@ -172,8 +172,8 @@ adding an earlier `_rng` call rebinds every saved tree's health. Do not repeat t
 - **UI refreshes by full rebuild on a signal, guarded by `visible`:**
   ```gdscript
   GameState.data_changed.connect(func() -> void:
-  	if visible:
-  		_rebuild())
+        if visible:
+                _rebuild())
   ```
   and `_rebuild()` starts with `_clear_content()` (`portal_panel.gd:11-14`).
 - **Signals live on GameState**; world objects do not emit to UI — they `call()` `Game` as
@@ -257,12 +257,14 @@ adding an earlier `_rng` call rebinds every saved tree's health. Do not repeat t
 1. **Every user-facing message is silent** — see rule 19. Purchases, level-ups,
    "EMERGENCY!", tutorial skip: written into the void.
 2. **No pause** means opening a shop mid-raid is a control-locked death (`game.gd:37-48`).
-3. **The recovery ward ignores the house tier.** `lobby.gd:44,1094` hardcodes
-   `RECOVERY_SECONDS := 8.0` while `HousePanel` advertises 10→2 s and `house_bed.gd` uses
-   `HouseDB.recovery_time` — two different clocks, so upgrading the cottage does nothing
-   to the ward.
-4. **`upgrade_pet` cost is duplicated** (`45 + level*35` at `game_state.gd:568` **and**
-   `shop_panel.gd:238`). Change both or the button lies.
+3. **The recovery ward used to ignore the house tier — FIXED.** It now heals at
+   `GameState.sleep_recovery_seconds()` (`HouseDB.recovery_time` per cottage
+   level, 10→2 s), the same clock as `house_bed.gd` and the `HousePanel`
+   progression. The hardcoded `RECOVERY_SECONDS := 8.0` const is gone; the
+   suite asserts the ward's heal rate follows HouseDB.
+4. **`upgrade_pet` cost duplication — FIXED.** Both the transaction and the shop
+   button now read `GameState.pet_upgrade_cost(level)` (`45 + level*35`,
+   single source); the formula lives in exactly one place.
 5. **`emergency_damage` is cosmetic.** `_apply_emergency_damage` only tints sprites
    (`lobby.gd:1159-1169`); nothing is destroyed and the run cannot fail from it. It also
    only resets at the *next* raid (`game_state.gd:1098`).

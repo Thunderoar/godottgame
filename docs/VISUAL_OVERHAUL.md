@@ -94,9 +94,11 @@ shared `HitFeedback`/`Vfx` helpers (flash, sparks, damage numbers, micro-shake).
    nothing (no `pause_menu` action, no wiring in `game.gd`). Per the task rules this
    branch does NOT wire it in. Recommendation: either wire it (needs an owner call
    on pausing during emergencies) or delete it.
-5. **`RECOVERY_SECONDS` gameplay bug (NOT fixed here)** — `lobby.gd` hardcodes the
-   recovery-ward clock at 8.0 s while `HouseDB.recovery_time` advertises 10→2 s and
-   `HousePanel` shows that progression. Reported, not silently fixed.
+5. **`RECOVERY_SECONDS` gameplay bug — fixed in the follow-up commit.** The
+   recovery ward now heals at `GameState.sleep_recovery_seconds()` (the
+   HouseDB `recovery_time` per cottage level, 10→2 s), matching the bed and
+   the `HousePanel` progression; the hardcoded 8.0 s const was removed and the
+   suite asserts the HouseDB rate.
 6. **`upgrade_pet` cost duplication** — consolidated behind
    `GameState.pet_upgrade_cost(level)` (formula unchanged: `45 + level * 35`). Safe
    consolidation, explicitly allowed by the task.
