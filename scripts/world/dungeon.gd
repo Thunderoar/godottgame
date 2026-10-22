@@ -45,6 +45,8 @@ func _ready() -> void:
 	_build_monsters()
 	_build_exit()
 	_build_camera()
+	Vfx.ensure_pool(self)
+	Shaders.apply_default_breeze()
 	GameState.player_defeated.connect(_on_player_defeated)
 	GameState.boss_health_changed.connect(_on_boss_health_changed)
 	GameState.toast_requested.emit("%s Your companion fights beside you." % str(_definition.get("lore", "Darkness closes in.")), "info")

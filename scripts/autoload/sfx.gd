@@ -103,6 +103,41 @@ func _build_stream(kind: String) -> AudioStreamWAV:
 			start_freq = 650.0
 			end_freq = 700.0
 			noise_amount = 0.0
+		"coin":
+			duration = 0.09
+			start_freq = 880.0
+			end_freq = 1320.0
+			noise_amount = 0.02
+		"equip":
+			duration = 0.16
+			start_freq = 240.0
+			end_freq = 520.0
+			noise_amount = 0.18
+		"deny":
+			duration = 0.18
+			start_freq = 190.0
+			end_freq = 120.0
+			noise_amount = 0.3
+		"hit":
+			duration = 0.1
+			start_freq = 300.0
+			end_freq = 150.0
+			noise_amount = 0.5
+		"step":
+			duration = 0.05
+			start_freq = 130.0
+			end_freq = 95.0
+			noise_amount = 0.4
+		"portal_in":
+			duration = 0.4
+			start_freq = 300.0
+			end_freq = 720.0
+			noise_amount = 0.08
+		"portal_out":
+			duration = 0.35
+			start_freq = 700.0
+			end_freq = 260.0
+			noise_amount = 0.08
 		_:
 			duration = 0.08
 			start_freq = 260.0

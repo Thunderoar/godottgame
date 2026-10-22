@@ -69,6 +69,8 @@ func _ready() -> void:
 	_build_player_and_pet()
 	_build_camera()
 	call_deferred("_check_forest_game_over")
+	Vfx.ensure_pool(self)
+	Shaders.apply_default_breeze()
 	GameState.house_changed.connect(_on_house_upgraded)
 	GameState.data_changed.connect(_on_data_changed)
 	GameState.pet_changed.connect(_on_pet_changed)
