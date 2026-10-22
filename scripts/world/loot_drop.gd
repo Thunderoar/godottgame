@@ -1,0 +1,76 @@
+class_name LootDrop
+extends Interactable
+## Loot is collected automatically when the player touches it. There is no
+## collect button and these do not join the interaction prompt group.
+
+@export var kind := "gold"
+@export var amount := 10
+@export var item_id := ""
+
+var _sprite: Sprite2D
+var _label: Label
+var _t := 0.0
+
+
+func _ready() -> void:
+	available = false
+	interact_radius = 0.9
+	show_marker = false
+	collision_layer = 0
+	collision_mask = 0
+	monitoring = false
+	monitorable = false
+	_sprite = Sprite2D.new()
+	_sprite.texture = PixelArt.loot_texture(kind if kind != "item" else item_id)
+	_sprite.scale = Vector2(0.045, 0.045)
+	_sprite.position = Vector2(0, -0.18)
+	_sprite.z_index = 5
+	add_child(_sprite)
+	_label = Label.new()
+	_label.text = str(amount) if kind != "item" else ""
+	_label.add_theme_font_size_override("font_size", 11)
+	_label.add_theme_color_override("font_color", Color("#ffe08a") if kind == "gold" else Color("#9ff3ff"))
+	_label.scale = Vector2(0.028, 0.028)
+	_label.position = Vector2(-0.15, -0.55)
+	add_child(_label)
+
+
+func _physics_process(delta: float) -> void:
+	_t += delta
+	if _sprite:
+		_sprite.position.y = -0.18 + sin(_t * 3.2) * 0.06
+	var player := get_tree().get_first_node_in_group("player")
+	if player != null and is_instance_valid(player):
+		if global_position.distance_to(player.global_position) <= 0.9:
+			_collect()
+
+
+func _collect() -> void:
+	if is_queued_for_deletion():
+		return
+	if GameState.expedition_active():
+		if kind == "item":
+			GameState.add_expedition_loot("item", amount, item_id)
+		elif kind == "diamond":
+			GameState.add_expedition_loot("diamonds", amount)
+		else:
+			GameState.add_expedition_loot("gold", amount)
+	else:
+		if kind == "gold":
+			GameState.add_gold(amount)
+		elif kind == "diamond":
+			GameState.add_diamonds(amount)
+		elif kind == "item":
+			GameState.add_item(item_id, amount)
+	GameState.toast_requested.emit("Collected %s." % _loot_label(), "gold")
+	queue_free()
+
+
+func interact(_player: Node) -> void:
+	_collect()
+
+
+func _loot_label() -> String:
+	if kind == "item":
+		return "%dx %s" % [amount, ItemDB.name_of(item_id)]
+	return "%d %s" % [amount, "diamonds" if kind == "diamond" else "gold"]

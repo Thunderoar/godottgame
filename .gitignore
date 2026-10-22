@@ -1,0 +1,7 @@
+# Godot 4 editor cache and imported binaries
+.godot/
+export.cfg
+export_presets.cfg
+
+# Exported builds
+build/

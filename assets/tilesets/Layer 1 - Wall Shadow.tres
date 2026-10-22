@@ -1,0 +1,29 @@
+[gd_resource type="TileSet" format=3 uid="uid://8k4jd4wy685w"]
+
+[ext_resource type="Texture2D" uid="uid://dfpcruykdc5ad" path="res://assets/textures/TX Shadow.png" id="1_vvrie"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_0no0a"]
+texture = ExtResource("1_vvrie")
+texture_region_size = Vector2i(32, 32)
+15:11/next_alternative_id = 2
+15:11/0 = 0
+15:11/1 = 1
+15:11/1/physics_layer_0/polygon_0/points = PackedVector2Array(0, 0, 0, 0, 0, 0, 0, 0)
+15:10/next_alternative_id = 2
+15:10/0 = 0
+15:10/1 = 1
+15:10/1/physics_layer_0/polygon_0/points = PackedVector2Array(0, 0, 0, 0, 0, 0, 0, 0)
+15:9/next_alternative_id = 2
+15:9/0 = 0
+15:9/1 = 1
+15:9/1/physics_layer_0/polygon_0/points = PackedVector2Array(0, 0, 0, 0, 0, 0, 0, 0)
+15:8/next_alternative_id = 2
+15:8/0 = 0
+15:8/1 = 1
+15:8/1/physics_layer_0/polygon_0/points = PackedVector2Array(0, 0, 0, 0, 0, 0, 0, 0)
+
+[resource]
+tile_size = Vector2i(32, 32)
+physics_layer_0/collision_layer = 4294967295
+physics_layer_0/collision_mask = 0
+sources/0 = SubResource("TileSetAtlasSource_0no0a")

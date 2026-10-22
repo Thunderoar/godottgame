@@ -1,0 +1,9 @@
+[gd_resource type="AtlasTexture" load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/TX Tileset Stone Ground.png" id="1_tex"]
+
+[resource]
+atlas = ExtResource("1_tex")
+region = Rect2(0, 160, 32, 32)
+margin = Rect2(0, 0, 0, 0)
+filter_clip = false
