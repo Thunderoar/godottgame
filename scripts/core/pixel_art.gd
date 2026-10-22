@@ -993,6 +993,123 @@ static func portal_texture(portal_id: String) -> Texture2D:
                 return img)
 
 
+static func portal_theme_palette(theme_id: String) -> Dictionary:
+        # One palette per PortalDB theme. No portal-id special cases anywhere.
+        var table := {
+                "grotto": {"stone": "#5a6a72", "stone_light": "#8b9aa0", "glow": "#9a6ae0", "glow_light": "#d6b9ff", "mote": "#c9a8ff"},
+                "crypt": {"stone": "#5c6470", "stone_light": "#8f97a4", "glow": "#64c8e8", "glow_light": "#b8f0ff", "mote": "#9fe0f0"},
+                "reef": {"stone": "#6b5a52", "stone_light": "#a08a76", "glow": "#ff8a5c", "glow_light": "#ffc9a0", "mote": "#ffb08a"},
+                "brine": {"stone": "#586a5e", "stone_light": "#8aa492", "glow": "#67b8a5", "glow_light": "#d5ffe8", "mote": "#a8e8d0"},
+                "kelp": {"stone": "#54624e", "stone_light": "#84966e", "glow": "#5e9a58", "glow_light": "#c8ea8a", "mote": "#b0d888"},
+                "bone": {"stone": "#6a655c", "stone_light": "#a89f8c", "glow": "#85f1dc", "glow_light": "#d8fff4", "mote": "#e8e2c8"},
+                "storm": {"stone": "#4e5a70", "stone_light": "#7e8ca8", "glow": "#8fe8ff", "glow_light": "#d8f4ff", "mote": "#b9e8ff"},
+                "coral": {"stone": "#6a5260", "stone_light": "#a4828f", "glow": "#ff7f9c", "glow_light": "#ffc0d0", "mote": "#ffa8b8"},
+                "abyss": {"stone": "#4a4a60", "stone_light": "#7a7a9c", "glow": "#8a72d8", "glow_light": "#c9c2ff", "mote": "#b0a8e8"},
+                "throne": {"stone": "#5e5a4e", "stone_light": "#9a9482", "glow": "#f0c66b", "glow_light": "#ffe8a8", "mote": "#ffd88a"},
+                "pet": {"stone": "#4e6a72", "stone_light": "#84aab4", "glow": "#4fc8c4", "glow_light": "#a8f5ea", "mote": "#8fe8e0"},
+        }
+        var data: Dictionary = table.get(theme_id, table["grotto"]) as Dictionary
+        return {
+                "stone": Color(str(data.get("stone", "#5a6a72"))),
+                "stone_light": Color(str(data.get("stone_light", "#8b9aa0"))),
+                "glow": Color(str(data.get("glow", "#9a6ae0"))),
+                "glow_light": Color(str(data.get("glow_light", "#d6b9ff"))),
+                "mote": Color(str(data.get("mote", "#c9a8ff"))),
+        }
+
+
+static func portal_frame_texture(theme_id: String, locked := false) -> Texture2D:
+        # The static stone arch. The locked variant is sealed: darker stone, a slab
+        # where the swirl would be and chains across the opening.
+        return cached_texture("portal_frame_%s_%s" % [theme_id, str(locked)], func() -> Image:
+                var palette := portal_theme_palette(theme_id)
+                var stone: Color = palette["stone"]
+                var stone_light: Color = palette["stone_light"]
+                var stone_dark := (palette["stone"] as Color).darkened(0.42)
+                var img := image(80, 112)
+                if locked:
+                        stone = stone.darkened(0.25)
+                        stone_light = stone_light.darkened(0.3)
+                ellipse(img, 40, 108, 38, 5, Color(0, 0, 0, 0.25))
+                # Pillars with theme-tinted stone.
+                for side in [Vector2i(10, 0), Vector2i(53, 0)]:
+                        rect(img, side.x, 30, 17, 76, stone_dark)
+                        rect(img, side.x + 3, 32, 11, 72, stone)
+                        rect(img, side.x + 5, 36, 3, 64, stone_light)
+                        for y in range(38, 98, 13):
+                                hline(img, side.x + 1, y, 15, stone_dark)
+                # Arch.
+                rect(img, 8, 20, 64, 14, stone_dark)
+                rect(img, 12, 22, 56, 9, stone)
+                rect(img, 17, 24, 46, 3, stone_light)
+                # Keystone sigil glowing with the theme colour.
+                rect(img, 36, 14, 8, 9, stone_dark)
+                var sigil: Color = (palette["glow"] as Color).darkened(0.2) if not locked else Color("#3a4147")
+                ellipse(img, 40, 18, 3, 3, sigil)
+                px(img, 40, 17, Color.WHITE if not locked else Color("#555c62"))
+                if locked:
+                        # Sealed slab and chains.
+                        ellipse(img, 40, 58, 19, 35, Color("#232a2e"))
+                        ellipse(img, 40, 58, 17, 33, stone.darkened(0.5))
+                        for y in [40, 56, 72]:
+                                for x in range(22, 58):
+                                        if int(sin(float(x) * 0.5 + float(y)) * 2.0) == 0:
+                                                px(img, x, y + int(sin(float(x) * 0.3) * 2.0), Color("#7d8590"))
+                        hline(img, 24, 47, 32, Color("#6a727c"))
+                        hline(img, 24, 66, 32, Color("#6a727c"))
+                # Steps.
+                rect(img, 6, 101, 68, 7, stone_dark)
+                rect(img, 12, 96, 56, 7, stone)
+                return img)
+
+
+static func portal_swirl_texture(theme_id: String, frame: int) -> Texture2D:
+        # Eight baked frames of a rotating spiral interior, cycled at ~9 fps.
+        return cached_texture("portal_swirl_%s_%d" % [theme_id, frame], func() -> Image:
+                var palette := portal_theme_palette(theme_id)
+                var glow: Color = palette["glow"]
+                var glow_light: Color = palette["glow_light"]
+                var img := image(48, 76)
+                # Interior void.
+                ellipse(img, 24, 38, 22, 34, Color("#141020"))
+                ellipse(img, 24, 38, 20, 32, glow.darkened(0.62))
+                # Rotating spiral arms: phase advances a quarter turn per frame pair.
+                var phase := TAU * float(frame) / 8.0
+                for arm in 3:
+                        var arm_phase := phase + TAU * float(arm) / 3.0
+                        for step in 14:
+                                var t := float(step) / 13.0
+                                var r := 2.0 + t * 17.0
+                                var a := arm_phase + t * 3.4
+                                var cx := 24.0 + cos(a) * r
+                                var cy := 38.0 + sin(a) * r * 1.55
+                                var col := glow_light if step % 4 == 0 else glow
+                                px(img, int(cx), int(cy), col)
+                                if step % 4 == 0:
+                                        px(img, int(cx + 1), int(cy), Color(col.r, col.g, col.b, 0.6))
+                # Bright heart.
+                ellipse(img, 24, 38, 4, 7, glow)
+                ellipse(img, 24, 38, 2, 3, glow_light)
+                px(img, 24, 37, Color.WHITE)
+                return img)
+
+
+static func portal_emblem_texture(theme_id: String) -> Texture2D:
+        # Boss-arena floor emblem: a rune ring in the portal theme.
+        return cached_texture("portal_emblem_%s" % theme_id, func() -> Image:
+                var palette := portal_theme_palette(theme_id)
+                var glow: Color = palette["glow"]
+                var img := image(96, 48)
+                ellipse_outline(img, 48, 24, 42, 19, glow.darkened(0.25))
+                ellipse_outline(img, 48, 24, 34, 14, glow.darkened(0.45))
+                for i in 8:
+                        var a := TAU * float(i) / 8.0
+                        px(img, 48 + int(cos(a) * 38.0), 24 + int(sin(a) * 17.0), glow.lightened(0.25))
+                        px(img, 48 + int(cos(a) * 30.0), 24 + int(sin(a) * 12.0), Color.WHITE if i % 2 == 0 else glow)
+                ellipse(img, 48, 24, 5, 3, glow.lightened(0.3))
+                return img)
+
+
 static func house_texture(level: int) -> Texture2D:
         return cached_texture("house_%d" % level, func() -> Image:
                 var lvl := clampi(level, 1, 5)

@@ -45,8 +45,8 @@ func _ready() -> void:
 
 	var player: Node = game.call("player")
 	if player != null:
-		player.global_position = Vector2(34.0, 14.5)
-		await get_tree().create_timer(0.4).timeout
+		player.global_position = Vector2(34.0, 16.2)
+		await get_tree().create_timer(0.6).timeout
 	await _shot("03_lobby_portals")
 
 	if player != null:

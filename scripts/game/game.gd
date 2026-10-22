@@ -135,6 +135,7 @@ func _load_lobby(transition: bool = true) -> void:
 	world = lobby
 	_world_holder.add_child(lobby)
 	hud.set_world(lobby)
+	_restore_player_visual()
 	hud.set_sleep_state(false, 0.0, "")
 	if GameState.health() <= 0:
 		GameState.set_health(GameState.health_max())
@@ -160,12 +161,27 @@ func _load_dungeon(portal_id: String, transition: bool = true) -> void:
 	world = dungeon
 	_world_holder.add_child(dungeon)
 	hud.set_world(dungeon)
+	_restore_player_visual()
 	hud.set_sleep_state(false, 0.0, "")
 	_input_locked = false
 	_apply_input_lock()
 	if transition:
 		await hud.fade_from_black(0.35)
 	_transitioning = false
+
+
+func _restore_player_visual() -> void:
+	# Undo any pull-in shrink from the portal transition.
+	var p := player()
+	if p != null:
+		var visual: CanvasItem = p.get_node_or_null("Sprite")
+		if visual != null:
+			visual.scale = Vector2(PixelArt.PX, PixelArt.PX)
+			visual.rotation = 0.0
+			visual.modulate.a = 1.0
+
+
+var _portal_fx_active := false
 
 
 func enter_portal(portal_id: String) -> void:
@@ -179,7 +195,39 @@ func enter_portal(portal_id: String) -> void:
 	_portal_elapsed = 0.0
 	_emergency_triggered = false
 	_settlement_damage_accum = 0.0
+	_portal_entry_transition(portal_id)
+
+
+func _portal_entry_transition(portal_id: String) -> void:
+	# The player is pulled into the gate, the screen flashes, then the normal
+	# _load_dungeon flow takes over (guards and all). Direct _load_dungeon
+	# callers (tests, continue) skip this effect entirely.
+	if _portal_fx_active or _transitioning:
+		_load_dungeon(portal_id, true)
+		return
+	_portal_fx_active = true
+	_input_locked = true
+	_apply_input_lock()
+	Sfx.play("portal_in", -6.0)
+	var p := player()
+	if p != null and not GameSettings.reduce_motion():
+		var visual: CanvasItem = p.get_node_or_null("Sprite")
+		if visual != null:
+			var tween := visual.create_tween().set_parallel(true)
+			tween.tween_property(visual, "scale", Vector2(PixelArt.PX * 0.15, PixelArt.PX * 0.15), 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			tween.tween_property(visual, "rotation", 4.5, 0.3)
+			tween.tween_property(visual, "modulate:a", 0.1, 0.3)
+		p.global_position = p.global_position.move_toward(_nearest_gate_center(p.global_position), 0.5)
+	await get_tree().create_timer(0.28).timeout
+	_portal_fx_active = false
 	_load_dungeon(portal_id, true)
+
+
+func _nearest_gate_center(from: Vector2) -> Vector2:
+	# Drift slightly toward the paired gates so the pull reads as "into them".
+	if world is Lobby:
+		return (Lobby.MONSTER_GATE + Lobby.PET_GATE) * 0.5
+	return from
 
 
 func return_to_lobby(from_defeat: bool = false) -> void:

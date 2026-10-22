@@ -40,12 +40,19 @@ func _add_portal_card(portal_id: String) -> void:
 	hbox.add_theme_constant_override("separation", 18)
 	card.add_child(hbox)
 	var icon := TextureRect.new()
-	icon.texture = PixelArt.icon("portal")
+	icon.texture = PixelArt.icon("portal", 32)
 	icon.custom_minimum_size = Vector2(70, 70)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	icon.modulate = Color.WHITE if unlocked else Color(0.35, 0.4, 0.42)
+	# Theme-tinted per portal (from PortalDB), gold once cleared.
+	var theme_palette := PixelArt.portal_theme_palette(str(def.get("theme", "grotto")))
+	if cleared:
+		icon.modulate = Color("#ffd88a")
+	elif unlocked:
+		icon.modulate = theme_palette["glow_light"]
+	else:
+		icon.modulate = Color(0.35, 0.4, 0.42)
 	hbox.add_child(icon)
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL

@@ -54,12 +54,21 @@ func _ready() -> void:
 
 # ------------------------------------------------------------------ building
 
+func _theme() -> String:
+	return str(_definition.get("theme", "grotto"))
+
+
 func _build_lighting() -> void:
 	canvas_modulate = CanvasModulate.new()
 	canvas_modulate.name = "DungeonDarkness"
-	# Dungeons remain moody, but no longer depend on a pet light. Torches plus
-	# this ambient tint keep navigation readable without the companion.
-	canvas_modulate.color = Color("#737b90") if str(_definition.get("theme", "grotto")) == "grotto" else Color("#6d7a8f")
+	# Moody but readable: each theme tints the whole canvas differently.
+	var ambient := {
+		"grotto": Color("#7d84a0"), "crypt": Color("#7f96a8"), "reef": Color("#a08a80"),
+		"brine": Color("#84a094"), "kelp": Color("#7ca07e"), "bone": Color("#a89f8c"),
+		"storm": Color("#7e88ac"), "coral": Color("#a0868e"), "abyss": Color("#6e6e94"),
+		"throne": Color("#a09a84"),
+	}.get(_theme(), Color("#7d84a0")) as Color
+	canvas_modulate.color = ambient
 	add_child(canvas_modulate)
 
 
@@ -76,7 +85,11 @@ func _build_ground() -> void:
 
 
 func _make_dungeon_texture() -> Texture2D:
-	var key := "dungeon_%s" % portal_id
+	# One coherent floor per dungeon: a single base tile blitted everywhere
+	# (no random per-cell tile soup -> no visible grid maze), sparse accent
+	# tiles, smooth large-scale shading, and real wall faces with depth. The
+	# per-theme palette comes from PixelArt.portal_theme_palette.
+	var key := "dungeon_v2_%s" % portal_id
 	if PixelArt.CACHE.has(key):
 		return PixelArt.CACHE[key]
 	var w := int(map_rect.size.x * 32.0)
@@ -91,51 +104,65 @@ func _make_dungeon_texture() -> Texture2D:
 	]
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 8812 + portal_id.hash()
+	var palette := PixelArt.portal_theme_palette(_theme())
+	# A deterministic base tile keeps the floor seamless; accents stay rare.
+	var base: Vector2i = origins[(portal_id.hash() + 3) % origins.size()]
+	var accent: Vector2i = origins[(portal_id.hash() + 7) % origins.size()]
 	for gy in int(map_rect.size.y):
 		for gx in int(map_rect.size.x):
-			var tile: Vector2i = origins[rng.randi_range(0, origins.size() - 1)]
+			var tile := base
+			if rng.randf() < 0.06:
+				tile = accent
 			img.blit_rect(src, Rect2i(tile, Vector2i(32, 32)), Vector2i(gx * 32, gy * 32))
-	# Darken and tint the floor into a cold dungeon palette.
-	for y in range(0, h, 4):
-		for x in range(0, w, 4):
-			var c := img.get_pixel(x, y)
-			var tint := Color("#42515a") if portal_id == "tidebound_grotto" else Color("#3a4b55")
-			c = c.lerp(tint, 0.28)
-			img.fill_rect(Rect2i(x, y, 4, 4), c)
-	# Border walls.
-	for edge in 3:
-		var depth := 56
-		if edge == 0:
-			img.fill_rect(Rect2i(0, 0, w, depth), Color("#20262b"))
-			img.fill_rect(Rect2i(0, depth - 12, w, 12), Color("#101518"))
-		elif edge == 1:
-			img.fill_rect(Rect2i(0, h - depth, w, depth), Color("#20262b"))
-			img.fill_rect(Rect2i(0, h - depth, w, 12), Color("#101518"))
-		elif edge == 2:
-			img.fill_rect(Rect2i(0, 0, depth, h), Color("#20262b"))
-			img.fill_rect(Rect2i(0, 0, depth, h), Color("#151b1e"))
-	# Right wall.
-	img.fill_rect(Rect2i(w - 56, 0, 56, h), Color("#20262b"))
-	# Cracks and water stains.
+	# Smooth, large-scale light variation instead of per-block tinting. Kept
+	# very soft so it never reads as circular smudges on the floor.
+	var glow: Color = palette["glow"]
+	for i in 6:
+		var c := Vector2(rng.randf_range(90, w - 90), rng.randf_range(130, h - 130))
+		var col: Color = glow.darkened(0.55) if i % 2 == 0 else Color("#2d3440")
+		_blend_ellipse(img, int(c.x), int(c.y), rng.randi_range(90, 170), rng.randi_range(60, 120), col, 0.05)
+	# Wall band with a brick face, inner shadow and a walkable lip.
+	var wall := Color("#20262b").lerp(glow.darkened(0.72), 0.25)
+	var wall_face := Color("#39424b").lerp(glow.darkened(0.6), 0.2)
+	var depth := 44
+	# Top wall (tall face).
+	img.fill_rect(Rect2i(0, 0, w, depth), wall)
+	for y in range(8, depth - 8, 10):
+		for x in range(0 + ((y / 10) % 2) * 12, w, 24):
+			img.fill_rect(Rect2i(x + 1, y + 1, 21, 8), wall_face)
+	img.fill_rect(Rect2i(0, depth, w, 6), Color("#10151a"))
+	# Bottom wall (short face so the play area stays readable).
+	img.fill_rect(Rect2i(0, h - depth + 18, w, depth - 18), wall)
+	img.fill_rect(Rect2i(0, h - depth + 18, w, 5), Color("#0d1216"))
+	# Left and right walls.
+	img.fill_rect(Rect2i(0, 0, depth - 12, h), wall)
+	img.fill_rect(Rect2i(w - depth + 12, 0, depth - 12, h), wall)
+	for y in range(0, h, 12):
+		img.fill_rect(Rect2i(2, y + 1, depth - 18, 9), wall_face)
+		img.fill_rect(Rect2i(w - depth + 16, y + 1, depth - 18, 9), wall_face)
+	img.fill_rect(Rect2i(depth - 12, 0, 5, h), Color("#0d1216"))
+	img.fill_rect(Rect2i(w - depth + 8, 0, 5, h), Color("#0d1216"))
+	# Cracks (sparse, away from walls).
+	for i in 26:
+		var x := rng.randi_range(depth, w - depth)
+		var y := rng.randi_range(depth + 10, h - depth)
+		var n := rng.randi_range(4, 14)
+		for j in n:
+			if x + j * 2 < w - 8 and y + int(sin(j * 0.7) * 2) < h - 8:
+				img.set_pixel(x + j * 2, y + int(sin(j * 0.7) * 2), Color("#2b323e"))
+	# Theme-tinted puddles / sheen.
+	var puddle := glow.darkened(0.35)
+	for i in 10:
+		var pt := Vector2(rng.randi_range(90, w - 90), rng.randi_range(100, h - 100))
+		_blend_ellipse(img, int(pt.x), int(pt.y), rng.randi_range(14, 40), rng.randi_range(5, 12), puddle, 0.35)
+	# Glowing spores in the theme mote colour.
+	var mote: Color = palette["mote"]
 	for i in 70:
 		var x := rng.randi_range(60, w - 60)
 		var y := rng.randi_range(60, h - 60)
-		var n := rng.randi_range(4, 18)
-		for j in n:
-			if x + j * 2 < w - 4 and y + int(sin(j * 0.7) * 2) < h - 4:
-				img.set_pixel(x + j * 2, y + int(sin(j * 0.7) * 2), Color("#2d3440"))
-	# Puddles.
-	for i in 14:
-		var p := Vector2(rng.randi_range(100, w - 100), rng.randi_range(90, h - 100))
-		_blend_ellipse(img, int(p.x), int(p.y), rng.randi_range(14, 42), rng.randi_range(5, 14), Color("#2d5863"), 0.5)
-	# Glowing spores.
-	for i in 90:
-		var x := rng.randi_range(70, w - 70)
-		var y := rng.randi_range(70, h - 70)
-		var col := Color("#5fbcb3") if i % 4 else Color("#9a79c9")
-		img.set_pixel(x, y, col)
+		img.set_pixel(x, y, mote)
 		if i % 9 == 0:
-			img.set_pixel(x + 1, y + 1, col.darkened(0.25))
+			img.set_pixel(x + 1, y + 1, mote.darkened(0.25))
 	var tex := ImageTexture.create_from_image(img)
 	PixelArt.CACHE[key] = tex
 	return tex
@@ -200,48 +227,121 @@ func _add_pillar(at: Vector2) -> void:
 	holder.add_child(body)
 
 
+var _flicker_lamps: Array[PointLight2D] = []
+var _ambient: CPUParticles2D
+var _flicker_time := 0.0
+
+
 func _build_decor() -> void:
-	var skulls := [
+	var palette := PixelArt.portal_theme_palette(_theme())
+	var glow: Color = palette["glow"]
+	var theme := _theme()
+	# Base prop set: gravestones read as bone piles under a bone tint, the
+	# plant sprites become kelp / coral growths, road signs become storm rods.
+	var prop_pool: Array = {
+		"bone": [
+			"res://assets/sprites/TX Props__TX Props Gravestone A.tres",
+			"res://assets/sprites/TX Props__TX Props Gravestone B.tres",
+			"res://assets/sprites/TX Props__TX Props - Stone 02.tres",
+		],
+		"kelp": [
+			"res://assets/sprites/TX Plant__TX Plant - Grass 05.tres",
+			"res://assets/sprites/TX Plant__TX Plant - Grass 09.tres",
+			"res://assets/sprites/TX Plant__TX Bush T2.tres",
+		],
+	}.get(theme, [
 		"res://assets/sprites/TX Props__TX Props Gravestone A.tres",
 		"res://assets/sprites/TX Props__TX Props Gravestone B.tres",
-	]
-	for i in 10:
+	])
+	var prop_count := 14
+	for i in prop_count:
 		var x := _rng.randf_range(3.5, 44.5)
 		var y := _rng.randf_range(3.5, 29.0)
 		if Vector2(x, y).distance_to(Vector2(24, 7)) < 4.0 or Vector2(x, y).distance_to(SPAWN) < 3.0:
 			continue
 		var sprite := Sprite2D.new()
-		sprite.texture = load(skulls[i % skulls.size()])
+		sprite.texture = load(str(prop_pool[i % prop_pool.size()]))
 		sprite.centered = false
 		var sz := sprite.texture.get_size()
 		sprite.offset = Vector2(-sz.x * 0.5, -sz.y)
-		sprite.scale = Vector2(PixelArt.PX, PixelArt.PX)
+		sprite.scale = Vector2(PixelArt.PX, PixelArt.PX) * (1.0 if theme != "kelp" else 1.3)
 		sprite.position = Vector2(x, y)
-		sprite.modulate = Color(0.55, 0.62, 0.66)
+		sprite.modulate = glow.darkened(0.15).lerp(Color(0.55, 0.62, 0.66), 0.4)
+		if theme in ["kelp", "reef", "coral"]:
+			# Growth clusters get the theme hue so biomes read at a glance.
+			sprite.modulate = glow.lerp(Color(0.5, 0.65, 0.5), 0.35)
 		add_child(sprite)
-	# Torch lights keep the dungeon readable without a pet light.
+	# Torch lights keep the dungeon readable; each flickers independently.
 	for p in [Vector2(6, 5), Vector2(42, 5), Vector2(6, 24), Vector2(42, 24)]:
 		var lamp := PointLight2D.new()
 		lamp.texture = PixelArt.light_texture()
 		lamp.texture_scale = 0.45
 		lamp.energy = 0.33
-		lamp.color = Color("#63c7c6") if portal_id == "tidebound_grotto" else Color("#9d77d8")
+		lamp.color = glow.lightened(0.1)
 		lamp.position = p
 		add_child(lamp)
+		_flicker_lamps.append(lamp)
 		var fixture := Sprite2D.new()
 		fixture.texture = PixelArt.icon("portal")
 		fixture.scale = Vector2(0.045, 0.045)
 		fixture.position = p
 		fixture.modulate = lamp.color
 		add_child(fixture)
-	# Boss warning haze.
+	# Boss warning haze (kept: it doubles as the arena's mood light).
 	var boss_glow := PointLight2D.new()
 	boss_glow.texture = PixelArt.light_texture()
 	boss_glow.texture_scale = 1.2
 	boss_glow.energy = 0.26
-	boss_glow.color = Color("#a06fdd") if portal_id == "tidebound_grotto" else Color("#5bd6c8")
+	boss_glow.color = glow
 	boss_glow.position = Vector2(24, 7)
 	add_child(boss_glow)
+	# Boss arena identity: theme emblem on the floor + brazier ring (sprite
+	# only; the light budget stays at the existing count).
+	var emblem := Sprite2D.new()
+	emblem.texture = PixelArt.portal_emblem_texture(theme)
+	emblem.scale = Vector2(PixelArt.PX * 1.5, PixelArt.PX * 1.5)
+	emblem.position = Vector2(24, 7.4)
+	emblem.modulate = Color(glow.r, glow.g, glow.b, 0.55)
+	emblem.z_index = 1
+	add_child(emblem)
+	for i in 6:
+		var a := TAU * float(i) / 6.0
+		var brazier := Sprite2D.new()
+		brazier.texture = PixelArt.icon("spark", 16)
+		brazier.scale = Vector2(0.05, 0.05)
+		brazier.position = Vector2(24 + cos(a) * 4.2, 7.4 + sin(a) * 2.0)
+		brazier.modulate = glow.lightened(0.2)
+		brazier.z_index = 2
+		add_child(brazier)
+	# Ambient dust motes drifting through the room.
+	if GameSettings.effects_at_least("med") and not GameSettings.reduce_motion():
+		_ambient = CPUParticles2D.new()
+		_ambient.amount = 14
+		_ambient.lifetime = 4.0
+		_ambient.preprocess = 2.0
+		_ambient.texture = PixelArt.icon("spark", 16)
+		_ambient.scale_amount_min = 0.25
+		_ambient.scale_amount_max = 0.5
+		_ambient.color = Color(glow.r, glow.g, glow.b, 0.35)
+		_ambient.direction = Vector2(0.3, -1)
+		_ambient.spread = 180.0
+		_ambient.gravity = Vector2.ZERO
+		_ambient.initial_velocity_min = 1.0
+		_ambient.initial_velocity_max = 3.0
+		_ambient.position = Vector2(24, 16)
+		_ambient.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+		_ambient.emission_rect_extents = Vector2(22, 14)
+		add_child(_ambient)
+	set_process(true)
+
+
+func _process(_delta: float) -> void:
+	# Independent torch flicker: cheap sine mix, no RNG churn.
+	_flicker_time += _delta
+	for i in _flicker_lamps.size():
+		var lamp := _flicker_lamps[i]
+		if lamp != null and is_instance_valid(lamp):
+			lamp.energy = 0.30 + absf(sin(_flicker_time * (5.0 + float(i) * 1.7) + float(i) * 2.4)) * 0.09
 
 
 func _build_player_and_pet() -> void:
@@ -344,6 +444,17 @@ func _on_boss_finished(_enemy: Enemy) -> void:
 func exit_to_lobby(bank_loot: bool) -> void:
 	if bank_loot:
 		GameState.leave_portal_safely()
+	Sfx.play("portal_out", -8.0)
+	# A short surge back into the gate before the return flow takes over.
+	var p := get_tree().get_first_node_in_group("player") as Node2D
+	if p != null and not GameSettings.reduce_motion():
+		var visual: CanvasItem = p.get_node_or_null("Sprite")
+		if visual != null:
+			var tween := visual.create_tween().set_parallel(true)
+			tween.tween_property(visual, "scale", Vector2(PixelArt.PX * 0.25, PixelArt.PX * 0.25), 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			tween.tween_property(visual, "rotation", -3.0, 0.22)
+			tween.tween_property(visual, "modulate:a", 0.15, 0.22)
+			await tween.finished
 	var game := get_tree().get_first_node_in_group("game")
 	if game != null and game.has_method("return_to_lobby"):
 		game.call("return_to_lobby", false)
