@@ -163,6 +163,7 @@ func start_battle(level_id: String) -> bool:
 func _process(delta: float) -> void:
 	if not visible or not _battle_active or _battle_resolved:
 		return
+	_arena_idle(delta)
 	if _awaiting_next:
 		_next_turn_timer -= delta
 		if _next_turn_timer <= 0.0:
@@ -175,6 +176,23 @@ func _process(delta: float) -> void:
 	_update_timer_ui()
 	if _turn_timer <= 0.0:
 		_resolve_turn()
+
+
+var _arena_frame_timer := 0.0
+var _arena_frame := 0
+
+
+func _arena_idle(delta: float) -> void:
+	# Both duelists idle-bob on their cushions while waiting.
+	_arena_frame_timer += delta
+	if _arena_frame_timer >= 0.32:
+		_arena_frame_timer = 0.0
+		_arena_frame = 1 - _arena_frame
+		if _player_sprite != null and is_instance_valid(_player_sprite):
+			_player_sprite.texture = PixelArt.pet_texture(_player_pet_id, _arena_frame)
+		if _enemy_sprite != null and is_instance_valid(_enemy_sprite):
+			var def := PetBattleDB.get_level(_battle_level)
+			_enemy_sprite.texture = PixelArt.pet_texture(str(def.get("opponent_pet", "ember")), _arena_frame)
 
 
 func _begin_turn() -> void:
@@ -237,6 +255,7 @@ func _resolve_turn() -> void:
 	if enemy_damage > 0:
 		_spawn_hit_fx("punch" if _turn_number % 2 == 1 else "scratch", true)
 	_update_bars()
+	_play_resolve_animation(player_action, enemy_action, player_damage > 0, enemy_damage > 0)
 	var bits: Array[String] = []
 	bits.append("You: %s   •   Rival: %s" % [str(SKILLS[player_action].name), str(SKILLS[enemy_action].name)])
 	if player_damage > 0:
@@ -261,6 +280,28 @@ func _resolve_turn() -> void:
 	_next_turn_timer = 0.9
 	if _timer_label != null:
 		_timer_label.text = "Next round in 0.9s."
+
+
+func _play_resolve_animation(player_action: String, enemy_action: String, player_hit: bool, enemy_hit: bool) -> void:
+	# Attacker lunges toward the centre; a defender flashes behind a shield.
+	if GameSettings.reduce_motion():
+		return
+	if player_hit and _player_sprite != null and is_instance_valid(_player_sprite):
+		var lunge := _player_sprite.create_tween()
+		lunge.tween_property(_player_sprite, "position:x", 46.0, 0.1).set_trans(Tween.TRANS_SINE)
+		lunge.tween_property(_player_sprite, "position:x", 0.0, 0.2).set_trans(Tween.TRANS_BACK)
+	if enemy_hit and _enemy_sprite != null and is_instance_valid(_enemy_sprite):
+		var lunge2 := _enemy_sprite.create_tween()
+		lunge2.tween_property(_enemy_sprite, "position:x", -46.0, 0.1).set_trans(Tween.TRANS_SINE)
+		lunge2.tween_property(_enemy_sprite, "position:x", 0.0, 0.2).set_trans(Tween.TRANS_BACK)
+	if player_action == "defend" and _player_sprite != null and is_instance_valid(_player_sprite):
+		var guard := _player_sprite.create_tween()
+		_player_sprite.modulate = Color(0.62, 0.92, 1.05)
+		guard.tween_property(_player_sprite, "modulate", Color.WHITE, 0.4)
+	if enemy_action == "defend" and _enemy_sprite != null and is_instance_valid(_enemy_sprite):
+		var guard2 := _enemy_sprite.create_tween()
+		_enemy_sprite.modulate = Color(0.62, 0.92, 1.05)
+		guard2.tween_property(_enemy_sprite, "modulate", Color.WHITE, 0.4)
 
 
 func _choose_enemy_skill() -> String:
@@ -439,6 +480,19 @@ func _render_result() -> void:
 	var def := PetBattleDB.get_level(_battle_level)
 	var won := bool(_last_result.get("ok", false))
 	add_section("DUEL COMPLETE", GameUI.GOLD if won else GameUI.RED)
+	# Fresh pose preview (the battle widgets were just cleared).
+	var pose := TextureRect.new()
+	pose.texture = PixelArt.pet_texture(_player_pet_id, 6 if won else 5)
+	pose.custom_minimum_size = Vector2(120, 110)
+	pose.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pose.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	pose.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	pose.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	content.add_child(pose)
+	if not GameSettings.reduce_motion():
+		var bounce := pose.create_tween().set_loops(3)
+		bounce.tween_property(pose, "position:y", -8.0 if won else 2.0, 0.2).set_trans(Tween.TRANS_SINE)
+		bounce.tween_property(pose, "position:y", 0.0, 0.2).set_trans(Tween.TRANS_SINE)
 	add_body_text("%s  •  %s" % [str(def.get("name", "Pet Duel")), str(def.get("opponent_name", "Rival"))], GameUI.TEXT, 20)
 	if won:
 		var leveled := int(_last_result.get("pet_levels", 0)) > 0

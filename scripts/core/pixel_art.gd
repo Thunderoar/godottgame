@@ -475,6 +475,8 @@ static func character_texture(character_id: String, facing: int, frame: int = 0)
 # ------------------------------------------------------------------ pets
 
 static func pet_texture(pet_id: String, frame: int = 0) -> Texture2D:
+        # Frames 0/1 are the classic two-frame bob (existing callers). New frames:
+        # 2 idle blink, 3 walk pass, 4 attack leap, 5 downed/dazed, 6 happy bounce.
         return cached_texture("pet_%s_%d" % [pet_id, frame], func() -> Image:
                 var def := PetDB.get_pet(pet_id)
                 var body: Color = def.get("body", Color("#d8783f"))
@@ -538,7 +540,40 @@ static func pet_texture(pet_id: String, frame: int = 0) -> Texture2D:
                         # Legs.
                         rect(img, 11, 25 + bob, 3, 3, OUTLINE)
                         rect(img, 18, 25 + bob, 3, 3, OUTLINE)
-                return img)
+                return _pet_pose(img, pet_id, frame))
+
+
+static func _pet_pose(img: Image, pet_id: String, frame: int) -> Image:
+        # Pose post-processing shared by every companion: blinks, the attack
+        # leap, the downed curl and the happy bounce are cheap whole-image
+        # transforms so each species keeps its hand-drawn body.
+        var eyes: Array = {
+                "ember": [Vector2i(12, 13), Vector2i(18, 13)],
+                "moss": [Vector2i(12, 13), Vector2i(18, 13)],
+                "luma": [Vector2i(15, 12), Vector2i(17, 12)],
+        }.get(pet_id, [Vector2i(12, 13), Vector2i(19, 13)])
+        match frame:
+                2:
+                        for e in eyes:
+                                hline(img, e.x - 1, e.y, 4, OUTLINE)
+                4:
+                        var lifted := image(32, 32)
+                        lifted.blit_rect(img, Rect2i(Vector2i.ZERO, img.get_size()), Vector2i(0, -3))
+                        return lifted
+                5:
+                        var squashed := image(32, 20)
+                        squashed.blit_rect(img, Rect2i(Vector2i.ZERO, img.get_size()), Vector2i(0, 4))
+                        for e in eyes:
+                                hline(squashed, e.x - 1, e.y + 4, 4, Color("#3a3038"))
+                        return squashed
+                6:
+                        var happy := image(32, 32)
+                        happy.blit_rect(img, Rect2i(Vector2i.ZERO, img.get_size()), Vector2i(0, -2))
+                        px(happy, 5, 8, Color("#fff2b0"))
+                        px(happy, 26, 6, Color("#fff2b0"))
+                        px(happy, 24, 24, Color("#ffd47b"))
+                        return happy
+        return img
 
 
 # ------------------------------------------------------------------ enemies

@@ -20,6 +20,7 @@ const PETS := {
 		"shield_interval": 12.0,
 		"body": Color("#d8783f"),
 		"accent": Color("#ffd27a"),
+		"tiers": {"aura": 3, "glow": 5},
 	},
 	"moss": {
 		"name": "Moss",
@@ -36,6 +37,7 @@ const PETS := {
 		"shield_interval": 15.0,
 		"body": Color("#748d58"),
 		"accent": Color("#d6e79c"),
+		"tiers": {"aura": 3, "glow": 5},
 	},
 	"luma": {
 		"name": "Luma",
@@ -52,6 +54,7 @@ const PETS := {
 		"shield_interval": 10.0,
 		"body": Color("#9fdcff"),
 		"accent": Color("#fff3ad"),
+		"tiers": {"aura": 3, "glow": 5},
 	},
 }
 
