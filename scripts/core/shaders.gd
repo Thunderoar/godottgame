@@ -53,6 +53,8 @@ static func water_material() -> ShaderMaterial:
 		_water.shader = shader
 	_water.set_shader_parameter("shallow", WorldPalette.color("sea_shallow"))
 	_water.set_shader_parameter("deep", WorldPalette.color("sea_deep"))
+	_water.set_shader_parameter("middle", WorldPalette.color("sea_mid"))
+	_water.set_shader_parameter("foam", WorldPalette.color("foam"))
 	return _water
 
 
@@ -139,18 +141,21 @@ void vertex() {
 
 const WATER_CODE := "
 shader_type canvas_item;
-render_mode unshaded;
 uniform float speed = 0.32;
-uniform vec4 shallow : source_color = vec4(0.35, 0.72, 0.76, 1.0);
-uniform vec4 deep : source_color = vec4(0.15, 0.4, 0.5, 1.0);
+uniform vec4 shallow : source_color = vec4(0.47, 0.86, 0.84, 1.0);
+uniform vec4 middle : source_color = vec4(0.26, 0.66, 0.72, 1.0);
+uniform vec4 deep : source_color = vec4(0.16, 0.38, 0.49, 1.0);
+uniform vec4 foam : source_color = vec4(0.93, 0.97, 0.91, 1.0);
 void fragment() {
+	// Only colour changes. Neither UV nor vertex motion can move the coastline.
 	vec4 mask = texture(TEXTURE, UV);
-	float depth = mask.r;
-	float phase = UV.y * 100.0 + sin(UV.x * 85.0 + TIME * speed) * 0.5 - TIME * speed;
-	float crest = smoothstep(0.93, 1.0, sin(phase));
-	vec3 water = mix(shallow.rgb, deep.rgb, depth);
-	float lip = (1.0 - smoothstep(0.0, 0.055, depth)) * 0.3;
-	vec3 rgb = mix(water, vec3(0.86, 0.91, 0.87), max(crest * 0.12, lip));
-	COLOR = vec4(rgb, mask.a * 0.42);
+	vec2 pixel = floor(UV / TEXTURE_PIXEL_SIZE / 2.0) * 2.0;
+	float depth = floor(mask.r * 12.0) / 12.0;
+	vec3 water = depth < 0.5 ? mix(shallow.rgb, middle.rgb, depth * 2.0) : mix(middle.rgb, deep.rgb, (depth - 0.5) * 2.0);
+	float wave = sin(pixel.y * 0.19 + sin(pixel.x * 0.035) * 1.2 - TIME * speed);
+	float broken_crest = step(0.975, wave) * step(-0.15, sin(pixel.x * 0.11 + pixel.y * 0.025));
+	float shore_lip = (1.0 - step(0.025, mask.r)) * 0.4;
+	vec3 ink = mix(water, foam.rgb, max(broken_crest * 0.18, shore_lip));
+	COLOR = vec4(ink, mask.a * 0.38);
 }
 "

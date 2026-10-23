@@ -15,8 +15,8 @@ const FIRE_MONSTER_COUNT := 24
 const FIRE_MONSTER_LIMIT := 30
 const NIGHT_URCHIN_COUNT := 6
 const URCHIN_LIMIT := 18
-const DAY_GRADE := Color(1.04, 1.08, 1.0)
-const NIGHT_GRADE := Color(0.40, 0.48, 0.68)
+const DAY_GRADE := MonsoonLighting.DAY
+const NIGHT_GRADE := MonsoonLighting.NIGHT
 var _grade: CanvasModulate
 var _phase_tween: Tween
 var journey_serial := 0
@@ -71,8 +71,7 @@ func _ready() -> void:
 	_rng.seed = 7319
 	var authored := AuthoredMapRenderer.selected_map()
 	_authored_map = authored
-	if authored and authored.palette:
-		WorldPalette.use_palette(authored.palette)
+	WorldPalette.select_for_map(authored.palette if authored else null)
 	_build_background()
 	_build_bounds()
 	_build_house()
@@ -87,6 +86,7 @@ func _ready() -> void:
 	_build_beach_landmarks()
 	_build_forest_monsters()
 	_build_scatter()
+	_build_monsoon_scenery()
 	_build_coastal_system()
 	_build_recovery_ward()
 	_build_settlement_editor()
@@ -137,7 +137,7 @@ func _build_background() -> void:
 	# Daylight grade. The old neon look was actually the PointLight2Ds being
 	# ~13x oversized (one 128px light covered the entire map); with correctly
 	# sized lights the baked terrain needs only a gentle sunny lift.
-	background.modulate = Color(1.0, 1.0, 0.97)
+	background.modulate = Color.WHITE
 	add_child(background)
 	var grade := CanvasModulate.new()
 	grade.name = "DaylightGrade"
@@ -184,20 +184,19 @@ func _make_water_mask_texture() -> Texture2D:
 func _on_presentation_changed(_key: String) -> void:
 	if _key not in ["", "effects_quality", "reduce_motion"]:
 		return
-	for group in ["ambient_smoke", "animals"]:
+	for group in ["ambient_smoke", "animals", "ambient_boat"]:
 		for node in get_tree().get_nodes_in_group(group):
 			if not is_ancestor_of(node) or not node.has_meta("ambient_tween"):
 				continue
 			var motion: Tween = node.get_meta("ambient_tween")
-			var enabled: bool = not GameSettings.reduce_motion() and (group == "animals" or GameSettings.effects_at_least("high"))
+			var enabled: bool = not GameSettings.reduce_motion() and (group == "animals" or GameSettings.effects_at_least("med" if group == "ambient_boat" else "high"))
 			if group == "ambient_smoke":
 				node.visible = enabled
 			if enabled:
 				motion.play()
 			else:
 				motion.pause()
-	for lamp in _local_lights:
-		lamp.enabled = GameSettings.effects_at_least("med")
+	_update_daylight()
 	var water := get_node_or_null("WaterLayer") as Sprite2D
 	if water:
 		water.visible = GameSettings.effects_at_least("med") and not GameSettings.reduce_motion()
@@ -320,10 +319,11 @@ func _build_house() -> void:
 	house_sprite.scale = Vector2(PixelArt.PX, PixelArt.PX) * 1.3
 	house_sprite.z_index = 8
 	house.add_child(house_sprite)
+	_add_window_lights(house_sprite, GameState.house_level())
 	house_glow = PointLight2D.new()
 	house_glow.texture = PixelArt.light_texture()
 	house_glow.texture_scale = 0.052
-	house_glow.energy = 0.32
+	house_glow.energy = 0.42
 	house_glow.color = Color("#ffc970")
 	house_glow.position = Vector2(0.4, -1.7)
 	house.add_child(house_glow)
@@ -362,10 +362,32 @@ func _build_house() -> void:
 	_markers.append({"position": Vector2(38, 15), "color": Color("#8ac36b"), "size": 3.0, "shape": "disc"})
 
 
+func _add_window_lights(art: Sprite2D, level: int) -> void:
+	var windows := art.get_node_or_null("WarmWindows") as Sprite2D
+	# Independent house replacements retain their own pixels and window layout.
+	if AssetRegistry.get_texture("house_%d" % level) != null:
+		if windows: windows.visible = false
+		return
+	if windows == null:
+		windows = Sprite2D.new()
+		windows.name = "WarmWindows"
+		windows.centered = false
+		windows.offset = art.offset
+		windows.add_to_group("monsoon_windows")
+		var unshaded := CanvasItemMaterial.new()
+		unshaded.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+		windows.material = unshaded
+		art.add_child(windows)
+	windows.visible = true
+	windows.texture = PixelArt.cached_texture("monsoon/windows/%d" % level, func() -> Image: return MonsoonArt.house(level, true))
+	windows.modulate.a = MonsoonLighting.lantern_strength(float(GameState.data.get("world_time", 0.0))) * 0.85
+
+
 func _on_house_upgraded(level: int) -> void:
 	if house_sprite == null:
 		return
 	house_sprite.texture = PixelArt.house_texture(level)
+	_add_window_lights(house_sprite, level)
 	house_sprite.modulate = Color(1.25, 1.2, 1.05)
 	var tween := create_tween()
 	tween.tween_property(house_sprite, "modulate", Color.WHITE, 0.65)
@@ -580,17 +602,24 @@ func forget_monster(monster: Enemy) -> void:
 	_emergency_monsters.erase(monster)
 
 
-func _on_day_phase_changed(night: bool, immediate: bool = false) -> void:
+func _update_daylight() -> void:
+	if not is_instance_valid(_grade) or _devastation_started: return
+	var clock := float(GameState.data.get("world_time", 0.0))
+	_grade.color = MonsoonLighting.grade(clock)
+	var strength := MonsoonLighting.lantern_strength(clock)
+	for lamp in _local_lights:
+		if not is_instance_valid(lamp): continue
+		if not lamp.has_meta("day_energy"): lamp.set_meta("day_energy", lamp.energy)
+		lamp.energy = float(lamp.get_meta("day_energy")) * strength
+		lamp.enabled = GameSettings.effects_at_least("med") and strength > 0.02
+	for window in get_tree().get_nodes_in_group("monsoon_windows"):
+		if is_ancestor_of(window): window.modulate.a = strength * 0.85
+
+
+func _on_day_phase_changed(night: bool, _immediate: bool = false) -> void:
 	if is_queued_for_deletion() or GameState.game_over_active or journey_serial != GameState.journey_serial:
 		return
-	if _phase_tween:
-		_phase_tween.kill()
-	var color := NIGHT_GRADE if night else DAY_GRADE
-	if immediate or GameSettings.reduce_motion():
-		_grade.color = color
-	else:
-		_phase_tween = create_tween()
-		_phase_tween.tween_property(_grade, "color", color, 3.0)
+	_update_daylight()
 	# Dawn changes only the light. Living enemies keep their HP, targets and AI.
 	if not night or int(GameState.data.get("home_wave", -1)) >= GameState.night_number():
 		return
@@ -666,14 +695,15 @@ func _build_dock_and_ship() -> void:
 	ship.position = Vector2(7.5, 32.0)
 	ship.z_index = 3
 	add_child(ship)
-	# Gentle bobbing so the harbour feels alive.
-	if GameSettings.effects_at_least("med") and not GameSettings.reduce_motion():
-		var bob := ship.create_tween().set_loops()
-		bob.tween_property(ship, "position:y", 32.05, 2.1).set_trans(Tween.TRANS_SINE)
-		bob.tween_property(ship, "position:y", 31.95, 2.1).set_trans(Tween.TRANS_SINE)
-		var sway := ship.create_tween().set_loops()
-		sway.tween_property(ship, "rotation", 0.008, 3.1).set_trans(Tween.TRANS_SINE)
-		sway.tween_property(ship, "rotation", -0.008, 3.1).set_trans(Tween.TRANS_SINE)
+	# One owned optional tween responds even when settings change after loading.
+	ship.add_to_group("ambient_boat")
+	var bob := ship.create_tween().set_loops()
+	bob.set_parallel(true)
+	bob.tween_property(ship, "position:y", 32.05, 2.1).set_trans(Tween.TRANS_SINE)
+	bob.tween_property(ship, "rotation", 0.008, 2.1).set_trans(Tween.TRANS_SINE)
+	bob.chain().tween_property(ship, "position:y", 31.95, 2.1).set_trans(Tween.TRANS_SINE)
+	bob.parallel().tween_property(ship, "rotation", -0.008, 2.1).set_trans(Tween.TRANS_SINE)
+	ship.set_meta("ambient_tween", bob)
 	# Lamps on the jetty.
 	for x in [3.4, 13.5]:
 		var lamp := PointLight2D.new()
@@ -683,6 +713,7 @@ func _build_dock_and_ship() -> void:
 		lamp.color = Color("#ffd483")
 		lamp.position = Vector2(x, 29.5)
 		add_child(lamp)
+		_local_lights.append(lamp)
 	# A few crates for life.
 	for p in [Vector2(11.8, 27.8), Vector2(12.7, 28.2)]:
 		var crate := Sprite2D.new()
@@ -788,7 +819,7 @@ func _too_close_to_landmarks(p: Vector2) -> bool:
 	return false
 
 
-func _add_tree(at: Vector2, upper_path: String, lower_path: String, scale_mul: float) -> void:
+func _add_tree(at: Vector2, _upper_path: String, _lower_path: String, scale_mul: float) -> void:
 	var holder := ForestTree.new()
 	holder.name = "ForestTree"
 	holder.tree_id = "forest_%d" % _tree_serial
@@ -799,16 +830,20 @@ func _add_tree(at: Vector2, upper_path: String, lower_path: String, scale_mul: f
 	holder.felled.connect(_on_forest_tree_felled)
 	_forest_trees.append(holder)
 	_tree_positions.append(at)
-	var upper := _fresh_foliage(upper_path)
-	var lower := _fresh_foliage(lower_path)
+	# The ID is already assigned. Visual families consume no placement RNG.
+	var species := MonsoonArt.family(holder.tree_id, at)
+	holder.set_meta("visual_family", species)
+	var upper := AssetRegistry.get_texture("foliage/" + _upper_path)
+	var lower := AssetRegistry.get_texture("foliage/" + _lower_path)
+	if upper == null: upper = MonsoonArt.tree_texture(species, "upper")
+	if lower == null: lower = MonsoonArt.tree_texture(species, "lower")
 	var upper_size := upper.get_size()
 	var lower_size := lower.get_size()
 	var total_h := upper_size.y + lower_size.y
 	var shadow := Sprite2D.new()
-	shadow.texture = PixelArt.light_texture()
-	shadow.scale = Vector2(0.021 * scale_mul, 0.011 * scale_mul)
-	shadow.modulate = Color(0, 0, 0, 0.33)
-	shadow.position = Vector2(0, -0.03)
+	shadow.texture = MonsoonArt.tree_shadow(species)
+	shadow.scale = Vector2.ONE * PixelArt.PX * scale_mul
+	shadow.position = Vector2(0.25, 0.05)
 	shadow.z_index = -1
 	holder.add_child(shadow)
 	var lower_sprite := Sprite2D.new()
@@ -892,8 +927,36 @@ func _build_scatter() -> void:
 	_add_decor_placeable("signpost", "res://assets/sprites/TX Props__TX Props Road Sign W.tres", Vector2(25.7, 22.1), 1.0, 5, Vector2(1.3, 1.5))
 
 
+func _build_monsoon_scenery() -> void:
+	# Curated resident workspaces. Independent of _rng and all tree identities.
+	for entry in [["fishing_net", Vector2(11.3, 25.5)], ["baskets", Vector2(13.5, 26.5)], ["timber", Vector2(43.0, 17.5)], ["bucket", Vector2(46.2, 18.6)], ["lantern", Vector2(28.3, 12.0)], ["lantern", Vector2(39.6, 12.0)]]:
+		var sprite := Sprite2D.new()
+		sprite.name = "Monsoon_" + str(entry[0])
+		sprite.texture = MonsoonArt.prop(entry[0])
+		sprite.centered = false
+		sprite.offset = Vector2(-32, -64)
+		sprite.scale = Vector2.ONE * PixelArt.PX
+		sprite.position = entry[1]
+		sprite.z_index = 5
+		add_child(sprite)
+	for placeable in _placeables:
+		if not placeable.placeable_id.begins_with("shop_"): continue
+		var basket := Sprite2D.new()
+		basket.texture = MonsoonArt.prop("planter" if placeable.placeable_id == "shop_potion" else "baskets")
+		basket.scale = Vector2.ONE * PixelArt.PX * 0.65
+		basket.position = Vector2(-1.25, -0.05)
+		basket.offset = Vector2(0, -32)
+		basket.z_index = 0
+		placeable.add_child(basket)
+
+
 func _add_decor_sprite(path: String, at: Vector2, scale_mul: float, z: int) -> Sprite2D:
-	var tex := load(path) as Texture2D
+	var tex: Texture2D
+	if "TX Bush" in path or "Flower" in path:
+		var variant := 3 if "Flower" in path else posmod(absi(path.hash()), 3)
+		tex = PixelArt.cached_texture("monsoon/undergrowth/%d" % variant, func() -> Image: return MonsoonArt.undergrowth(variant))
+	else:
+		tex = load(path) as Texture2D
 	if tex == null:
 		return null
 	var sprite := Sprite2D.new()
@@ -953,7 +1016,7 @@ func _build_grass_fields(grass_paths: Array) -> void:
 	var clusters: Array[Vector2] = []
 	for i in 14:
 		clusters.append(Vector2(_grass_rng.randf_range(3.0, 61.0), _grass_rng.randf_range(4.0, 36.0)))
-	var count := 520 if GameSettings.effects_at_least("med") else 260
+	var count := 520 # Base artwork is identical at every effects tier.
 	var placements: Array[Transform2D] = []
 	var colors: Array[Color] = []
 	var variants: Array = []
@@ -970,12 +1033,17 @@ func _build_grass_fields(grass_paths: Array) -> void:
 		if _too_close_to_landmarks(p) and _grass_rng.randf() > 0.3:
 			continue
 		var variant := _grass_rng.randi_range(0, grass_paths.size() - 1)
+		# Forest pinnae, garden hibiscus, coastal blades; quiet maintained centre.
+		if p.x > 45.0: variant = 0 if i % 3 else 2
+		elif p.y > shore - 3.7: variant = 5
+		elif p.distance_to(SPAWN) < 7.0: variant = 4
+		elif i % 5 == 0: variant = 3
 		var mul := 0.75 + _grass_rng.randf_range(-0.15, 0.35)
 		variants.append(variant)
 		placements.append(Transform2D(0.0, Vector2(mul, mul), 0.0, p))
 		var tint := 0.94 + _grass_rng.randf() * 0.1
 		colors.append(Color(tint, tint * (0.98 + _grass_rng.randf() * 0.08), tint * 0.96))
-	for vi in grass_paths.size():
+	for vi in 6:
 		var tex := PixelArt.coastal_grass(vi)
 		if tex == null:
 			continue
@@ -1140,10 +1208,11 @@ func _add_resident_house(house_name: String, at: Vector2, level: int) -> void:
 	art.scale = Vector2(PixelArt.PX, PixelArt.PX) * 0.78
 	art.z_index = 0
 	holder.add_child(art)
+	_add_window_lights(art, level)
 	var glow := PointLight2D.new()
 	glow.texture = PixelArt.light_texture()
 	glow.texture_scale = 0.026
-	glow.energy = 0.10
+	glow.energy = 0.18
 	glow.color = Color("#ffd58c")
 	glow.position = Vector2(0, -1.2)
 	holder.add_child(glow)
@@ -1506,6 +1575,7 @@ var _ward_mote_timer := 0.0
 
 
 func _process(delta: float) -> void:
+	_update_daylight()
 	if is_instance_valid(player) and GameState.mission_step() == 0 and player.position.distance_to(_mission_walk_origin) >= 3.0:
 		GameState.record_mission_event("move")
 	if GameState.recovery_active() and is_instance_valid(player):
@@ -1703,6 +1773,7 @@ func get_player() -> Player:
 func refresh_house() -> void:
 	if house_sprite:
 		house_sprite.texture = PixelArt.house_texture(GameState.house_level())
+		_add_window_lights(house_sprite, GameState.house_level())
 
 
 func resident_path(from: Vector2, to: Vector2, allow_nearest_goal: bool = true) -> PackedVector2Array:

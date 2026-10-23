@@ -342,3 +342,37 @@ to verify saved assets, edited PNG colours, the authored map and water collision
 It never imports test art into the normal project. A GUI display is provided with
 Xvfb. Review emitted PNGs as well as logs; passing model checks are not a visual
 review. See `docs/CREATIVE_REVAMP_QA.md` and the workflow guides.
+
+## Monsoon Afterglow regression contract
+
+`MonsoonChecks.run` is included in the isolated gameplay gate. It verifies every
+forest ID/order/position/max-HP association against the clean main snapshot;
+five unclipped tree silhouettes; exact crown/trunk pixel reconstruction; five
+cottage frames/window masks; continuous presentation at day/night boundaries;
+clock ownership; old palette fallback/cache invalidation; unchanged imported
+pixels; imported cottage window ownership; repeated terrain reuse; and static
+water under each quality tier with Reduce Motion. Existing gameplay, movement,
+coastline, save/load and accessibility checks remain in the same gate.
+
+`./tools/review_monsoon.sh /absolute/output` uses verified temporary user data
+and the actual GL Compatibility renderer. It records scene/camera/time/settings
+in a manifest and measures cold/cached construction plus High/Medium/Low frame
+intervals, draw calls and texture memory. Combat fixtures require actual damage
+and the water-keeper fixture records real watering. Read the log and inspect the
+PNGs; an exit code alone is insufficient. The harness freezes residents/enemies
+for equivalent environmental framing and temporarily slows combat for captures.
+Its frame statistics describe that fixture, not a mobile or combat stress test.
+
+Results and limitations are recorded in [the delivery report](MONSOON_AFTERGLOW_REPORT.md).
+
+The Monsoon delivery adds 38 checks to the protected main baseline. These also
+cover legacy `authored_tree` and forest foliage overrides, static window ownership
+for imported cottages, and immediate pause/resume of the existing boat tween
+when quality or Reduce Motion changes.
+
+Final Monsoon verification (2026-10-24, Linux Godot 4.7.2): **562 checks, PASS**,
+exit 0, with no failure/script/error markers. Native deep audit: **63 checks,
+0 failures**. Fresh-copy editor: **27 checks, 0 failures**, separate runtime
+restart PASS. The real-renderer tour captures 26 paired scenarios, with verified
+coastal/dungeon damage and actual watering. Full measurements and limits are in
+`MONSOON_AFTERGLOW_REPORT.md`.

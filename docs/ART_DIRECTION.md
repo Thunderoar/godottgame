@@ -1,29 +1,118 @@
-# Pantai: sun-kissed Malaysian coastal fantasy
+# Monsoon Afterglow
 
-Warm sand and timber meet cool turquoise water, terracotta roofs, painted shutters,
-flowering sill boxes and fresh grass. Dark cool foliage shadows frame readable
-heroes and enemies. Paths keep the original access network and gain warm material
-contrast. BESUT and the turtle retain their established positions and identity.
+A Malaysian seaside settlement after gentle rain: layered jade forest, mint
+leaf tips, turquoise shallows, creamy sand, warm timber and clay roofs. Golden
+windows become the evening focal points. The style combines the environmental
+layering of Monsoon Cinema, Seaglass Reverie's cool/warm material separation and
+Lanterns of the Tide's small inviting lights.
 
-`data/palettes/coast.tres` is the default semantic WorldPalette;
-`forest.tres` is an area variant, `original.tres` is the baseline comparison.
-World and UI dictionaries are separate. Terrain, water, selected foliage,
-procedural gardens, houses and new props consume semantic roles. Independent
-imported raster assets preserve their authored colours. New art is original code
-or user-provided imported imagery; the original TX pack is not overwritten.
+## Shape, pixels and hierarchy
 
-The base terrain is shared by runtime and map preview through WorldTerrain.
-Composition uses broad coherent meadow fields, sparse clustered blades, connected
-paths, pale beach and depth-separated water. Buildings retain their collision
-and silhouette footprints, adding painted shutters, warm eaves and planter boxes.
+One art pixel is `PixelArt.PX` (1/32 world unit). Use nearest sampling, lossless
+PNG, no mipmaps and transparent sprite margins. Keep movement and the camera
+continuous; rounding physics coordinates is never a pixel-art technique.
 
-Priority: player/threat silhouettes, then destinations and landmarks, then ambient
-detail. No bloom or extra full-screen lights. Permanent daytime remains. Reduce
-Motion removes optional pose motion; quality settings retain batched vegetation.
+Design silhouette and broad masses first. Use connected pointed leaf sprays,
+stepped edges and selective underside shadows; avoid scattered isolated dots.
+Ground has quiet broad four-pixel colour regions. Dense detail belongs at tree
+bases, gardens and workspaces. Paths, character feet, entrances and enemy attack
+telegraphs take priority over decoration. Existing collision footprints remain.
 
-The studio World Palette tab compares original/revised swatches. Save resources
-to persist edits; Preview updates the studio and invalidates generated caches.
+The five forest families are broadleaf, spreading rain-tree inspired, upright
+leafy, flowering and coconut. They are stylised original designs, not botanical
+species diagrams. Their different frame proportions, branches and crown masses
+are authored in `scripts/creative/monsoon_art.gd`. Separate seeded leaf clusters
+never consume the world's placement RNG. Split crowns and trunks preserve a
+single bottom-centre attachment pivot. Dappled ground shadows belong to each tree
+and fall/disappear with it; they add no dynamic lights or per-leaf nodes.
 
-Dungeon floors use small staggered flagstones derived from semantic stone and sea
-roles plus portal theme colour. Bevels and sparse cracks retain pixel density
-without altering pillar/wall collision or adding lighting effects.
+## Semantic palette
+
+`data/palettes/monsoon_afterglow.tres` is the shipped village palette. World and
+UI dictionaries remain separate. Previous `coast`, `forest` and `original`
+resources remain usable; new roles derive from old roles when absent. Shared
+resources are read only during play. Switching a palette clears generated art
+and the cached UI theme. Imported PNGs retain their original colours.
+
+| Material | Dark → body → light |
+|---|---|
+| Forest | `#34695F` → `#4E9988` → `#8FD6B6`, selective `#B9DC88` |
+| Meadow | `#5B9583` → `#83B993` → `#A1CFA0` |
+| Sea | `#28627E` → `#42A9B7` → `#79DCD6`, foam `#ECF8E9` |
+| Timber | `#725448` → `#AD7959`, apricot `#F1B477` |
+| Sand/path | wet `#D8B983`, path `#DDC38E`, dry `#F2D9A2` |
+| Roof/garden | clay `#CE766A`, coral `#EE8491`, cream `#FFF0C8` |
+| Atmosphere | shadow `#34445F`, outline `#273B50`, lantern `#F6C778` |
+
+Do not round resource colours to six decimal places: RGBA8 conversion can
+truncate a channel by one. Retain sufficient precision for exact paint swatches.
+No palette substitution is silently applied to independent registered art.
+
+## Terrain and water
+
+Terrain and Map Studio share WorldTerrain. Meadows use discrete broad material
+regions with quiet short grass near homes, fern/banana-like silhouettes in the
+east, clover near the cottage and salty blades near shore. Leaf litter is limited
+to forest terrain. Existing path centre lines remain connected; irregular edges,
+small compact-earth clusters and ruts replace white speckles.
+
+The original coast function and two-pixel column sampling remain authoritative
+for sand, water and collision. Depth shelves, shell groups and broken crests are
+baked into the terrain, so Low and Reduce Motion retain complete water. The
+optional shader changes colour inside the mask only; it never displaces the
+coastline. Crests use two-pixel sampling, no sparkle particles or smooth screen
+reflection. Water receives the same canvas ambience as the landscape at night.
+
+## Architecture and workspaces
+
+Homes share long lapped-clay roofs, deep overhanging eaves, ventilated timber
+facades, painted shutters, short stilts and a central stair. Each of the five
+levels refines the same structure: repaired veranda, flower boxes, porch planting
+and finally lantern fittings. Dimensions and interaction/collision anchors retain
+the existing contract. This is an original kampung-inspired interpretation,
+not a replica of a heritage building.
+
+Market stalls share woven timber counters and sloping cloth awnings. Herbs,
+forge coals, pet supplies, timber samples and water-service tools communicate
+occupation. Fishing nets, baskets, stacked wood and watering buckets sit beside
+existing routines. Shop baskets follow the movable shop group. Decorative props
+never introduce hidden collision. BESUT, turtle, jetty and coast remain in place.
+
+## Characters, threats and interface
+
+Preserve the 32×48 hero frame and the three-direction/seven-frame import contract.
+Qayyim remains teal, Farhan rust and Ayiz green with an indigo cloak for separation.
+The shared cool outline anchors actors against the fresh meadow. Outdoor workers
+gain woven hats; work aprons and water-keeper accents identify other occupations.
+Ember remains warm orange. None of these changes retime movement, strikes or AI.
+
+Fire monsters retain an ember silhouette; urchins retain spines and gain small
+pollution fragments. Existing telegraphs and pooled hit accents remain readable.
+Portal themes retain their individual ramps with recessed runes and damp jade
+seams. Dungeons continue the stone palette with grouped mineral accents. Teal UI
+foundations, warm sand text and apricot borders retain existing controls/layouts.
+
+## Light and comfort
+
+`MonsoonLighting` is a pure mapping from the existing GameState world time.
+Day stays fresh; the final 47 daytime seconds warm gradually. The first 13 night
+seconds cool toward jade/indigo, and the last 20 seconds lift toward dawn. The
+180-second gameplay phases, night waves and persistence are unchanged.
+
+Lantern strength rises across dusk and fades at dawn. Existing small PointLight2D
+sources are disabled during daylight and on Low. Separate unshaded window pixels
+provide a warm static equivalent on every quality tier. An imported house override
+receives no procedural window mask. Trees use baked contact/dappled shadows.
+Reduce Motion stops optional wind, water animation and decorative gestures;
+static silhouettes, colour, windows and gameplay telegraphs remain.
+
+## Research translated into implementation
+
+- [Godot 2D lighting](https://docs.godotengine.org/en/stable/tutorials/2d/2d_lights_and_shadows.html): retain CanvasModulate with bounded local lights; use baked artwork for persistent canopy shading.
+- [Godot CanvasItem shaders](https://docs.godotengine.org/en/stable/tutorials/shaders/shader_reference/canvas_item_shader.html): sample in texture pixels and preserve mask alpha; compile on the installed Compatibility renderer.
+- [Godot TileMaps](https://docs.godotengine.org/en/stable/tutorials/2d/using_tilemaps.html): retain the existing TileMapLayer batching for authored terrain.
+- [Saint11's original tutorials](https://saint11.art/blog/pixel-art-tutorials/): organise value and silhouette before texture; foliage is connected leaf masses rather than uniform noise. No source pixels were copied.
+- [Muzium Negara: Istana Satu](https://www.muziumnegara.gov.my/ms/struktur-istana-satu): reference Terengganu timber architecture and structural supports respectfully. The small village homes borrow material/construction cues without copying a palace or ornamental programme.
+
+See [asset workflow](ASSET_WORKFLOW.md), [QA and delivery](MONSOON_AFTERGLOW_REPORT.md)
+and the actual paired captures in `evidence/monsoon/`.

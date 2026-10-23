@@ -11,28 +11,32 @@ static func _make_terrain_texture() -> Texture2D:
 	var w := int(MAP_RECT.size.x * 32.0)
 	var h := int(MAP_RECT.size.y * 32.0)
 	var img := PixelArt.image(w, h)
-	# Broad authored-looking meadow bands replace the repeating olive atlas.
+	# Four-pixel clusters of discrete colours: broad quiet regions, no smooth
+	# gradients or per-pixel noise. This is also the Map Studio base renderer.
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 4771
 	var grass := WorldPalette.color("grass")
 	var sun := WorldPalette.color("grass_light")
 	var shade := WorldPalette.color("grass_shadow")
-	for y in h:
-		for x in w:
-			var field := sin(float(x) * 0.009 + sin(float(y) * 0.013)) * 0.5 + sin(float(y) * 0.017 + float(x) * 0.004) * 0.3
-			var col := grass.lerp(sun, maxf(0.0, field) * 0.20)
-			if x > 46 * 32:
-				col = col.lerp(shade, smoothstep(46.0 * 32, 62.0 * 32, float(x)) * 0.24)
-			img.set_pixel(x, y, col)
-	# Sparse clumps with contact shadows and individual blades, not white noise.
-	for i in 1800:
-		var x := rng.randi_range(3, w - 4)
-		var y := rng.randi_range(3, h - 4)
-		if sin(float(x) * 0.013) + cos(float(y) * 0.019) < -0.7:
-			continue
-		PixelArt.hline(img, x - 2, y + 1, 5, grass.darkened(0.06))
-		PixelArt.line(img, x, y, x - 1, y - 2, sun.darkened(0.08))
-		PixelArt.line(img, x + 1, y, x + 2, y - 1, grass.lightened(0.09))
+	for y in range(0, h, 4):
+		for x in range(0, w, 4):
+			var field := sin(x * 0.009 + sin(y * 0.013)) * 0.5 + sin(y * 0.017 + x * 0.004) * 0.3
+			var level := floorf(field * 3.0) / 3.0
+			var col := grass.lerp(sun, maxf(0.0, level) * 0.24)
+			if x > 45 * 32:
+				col = col.lerp(shade, 0.12 + maxf(0.0, -level) * 0.3)
+			img.fill_rect(Rect2i(x, y, 4, 4), col)
+	# Low foliage grouped along coherent meadow regions; not confetti.
+	for i in 850:
+		var x := rng.randi_range(6, w - 8)
+		var y := rng.randi_range(6, h - 8)
+		if sin(x * 0.013) + cos(y * 0.019) < 0.15: continue
+		var forest := x > 46 * 32
+		var ink := grass.lerp(shade, 0.35) if forest else grass.lerp(sun, 0.28)
+		PixelArt.rect(img, x - 3, y, 5, 2, ink)
+		PixelArt.rect(img, x, y - 2, 3, 2, ink)
+		if forest and i % 3 == 0:
+			PixelArt.line(img, x, y, x + 5, y - 3, WorldPalette.color("wood").lerp(grass, 0.55))
 	# Path network.
 	_paint_path(img, [Vector2(34, 24), Vector2(30, 23.2), Vector2(27, 22.6), Vector2(23.8, 22.2)], 0.72)
 	_paint_path(img, [Vector2(33.2, 23.5), Vector2(31.5, 20.5), Vector2(29.5, 16.5), Vector2(27, 12.2), Vector2(24, 10.2)], 0.62)
@@ -47,17 +51,6 @@ static func _make_terrain_texture() -> Texture2D:
 	# A few stone patches around the house.
 	for p in [Vector2(31.5, 22.5), Vector2(37, 23.4), Vector2(33.2, 25.4)]:
 		_blend_ellipse(img, int(p.x * 32), int(p.y * 32), 26, 15, WorldPalette.color("stone"), 0.25)
-	# Grass fringe and tiny flowers.
-	for i in 460:
-		var x := rng.randi_range(2, w - 3)
-		var y := rng.randi_range(2, h - 3)
-		var shore := _coast_pixel_y(x)
-		if y > shore - 7:
-			continue
-		var color := WorldPalette.color("grass_shadow") if i % 5 != 0 else WorldPalette.color("gold")
-		img.set_pixel(x, y, color)
-		if i % 7 == 0:
-			img.set_pixel(x + 1, y, color.lightened(0.1))
 	var tex := ImageTexture.create_from_image(img)
 	PixelArt.CACHE[key] = tex
 	return tex
@@ -87,10 +80,12 @@ static func _paint_coast(img: Image, rng: RandomNumberGenerator) -> void:
 		img.fill_rect(Rect2i(x, sand_top, 2, mini(shore, img.get_height()) - sand_top), sand)
 		if shore >= img.get_height():
 			continue
-		img.fill_rect(Rect2i(x, shore, 2, img.get_height() - shore), water_near)
-		# A second darker water band further out.
-		var deep_start := mini(img.get_height() - 1, shore + 96)
-		img.fill_rect(Rect2i(x, deep_start, 2, img.get_height() - deep_start), water_far)
+		# Discrete sea-glass depth shelves; Low retains the full static design.
+		for band in range(0, img.get_height() - shore, 8):
+			var depth := clampf(float(band) / 144.0, 0.0, 1.0)
+			var mid := WorldPalette.color("sea_mid")
+			var col := water_near.lerp(mid, minf(1.0, depth * 2.0)) if depth < 0.5 else mid.lerp(water_far, (depth - 0.5) * 2.0)
+			img.fill_rect(Rect2i(x, shore + band, 2, mini(8, img.get_height() - shore - band)), col)
 		# Wet sand line.
 		img.fill_rect(Rect2i(x, shore - 4, 2, 4), sand_dark)
 		# Dithered grass-to-sand transition at the inland edge of the beach.
@@ -105,24 +100,28 @@ static func _paint_coast(img: Image, rng: RandomNumberGenerator) -> void:
 			img.set_pixel(x, shore, foam)
 			if x % 6 == 0:
 				img.set_pixel(x, shore + 1, foam)
-	# Pebbles on the sand.
-	for i in 180:
-		var x := rng.randi_range(1, max_x - 1)
+	# Airy sand: shell pairs, drift marks and small grounded pebbles.
+	for i in 65:
+		var x := rng.randi_range(4, max_x - 8)
 		var shore := _coast_pixel_y(x)
-		var top := maxi(0, shore - 90)
-		if top >= img.get_height():
-			continue
-		var y := rng.randi_range(top, mini(img.get_height() - 1, maxi(top, shore - 5)))
-		img.set_pixel(x, y, sand_dark if i % 2 == 0 else WorldPalette.color("sand"))
+		var top := maxi(0, shore - 84)
+		if top >= img.get_height() - 6: continue
+		var y := rng.randi_range(top, mini(img.get_height() - 6, maxi(top, shore - 14)))
+		if i % 4 == 0:
+			PixelArt.hline(img, x - 2, y + 2, 7, sand_dark)
+			PixelArt.rect(img, x - 1, y - 1, 4, 3, WorldPalette.color("cream"))
+			PixelArt.rect(img, x + 3, y + 2, 2, 2, WorldPalette.color("coral").lerp(sand, 0.5))
+		else:
+			PixelArt.hline(img, x, y, 4 + i % 6, sand.lerp(sand_dark, 0.28))
 	# Wave highlights.
-	for i in 260:
+	for i in 160:
 		var x := rng.randi_range(1, max_x - 1)
 		var shore := _coast_pixel_y(x)
 		if shore >= img.get_height() - 8:
 			continue
 		var y := rng.randi_range(shore + 12, img.get_height() - 2)
 		var length := rng.randi_range(2, 9)
-		var col := WorldPalette.color("foam") if i % 3 else WorldPalette.color("sea_shallow")
+		var col := WorldPalette.color("foam").lerp(water_near, 0.7) if i % 3 else WorldPalette.color("sea_mid").lightened(0.12)
 		for xx in length:
 			if x + xx < max_x and y >= _coast_pixel_y(x + xx):
 				img.set_pixel(x + xx, y, col)
@@ -164,8 +163,10 @@ static func _paint_path(img: Image, points: Array, width_units: float) -> void:
 					img.set_pixel(x, y, base)
 					if d > width_px * 0.5 - 4:
 						img.set_pixel(x, y, edge)
-					elif (x * 7 + y * 13) % 29 == 0:
-						img.set_pixel(x, y, light)
+					elif (int(x / 6) * 7 + int(y / 3) * 13) % 43 == 0:
+						img.set_pixel(x, y, base.lerp(light, 0.32))
+					elif d < 3.0 and int(y / 8) % 5 == 0:
+						img.set_pixel(x, y, base.lerp(edge, 0.16))
 
 
 static func _distance_to_segment(p: Vector2, a: Vector2, b: Vector2) -> float:

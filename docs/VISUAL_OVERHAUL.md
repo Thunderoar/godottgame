@@ -1,3 +1,7 @@
+> Historical visual/movement repair. The current Monsoon Afterglow environment
+> extends the merged main baseline; see [art direction](ART_DIRECTION.md) and
+> [delivery evidence](MONSOON_AFTERGLOW_REPORT.md) for the new default artwork.
+
 # Visual & Feel Overhaul — Design Doc
 
 Status: repaired on `visual-overhaul-merge-2`. Engine: Godot 4.7.2, GL Compatibility,

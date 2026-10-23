@@ -8,7 +8,7 @@ extends RefCounted
 ## recoloured or animated without shipping another atlas.
 
 const PX := 1.0 / 32.0
-const OUTLINE := Color("#241a1c")
+const OUTLINE := Color("#273b50")
 static var CACHE: Dictionary = {}
 
 # ------------------------------------------------------------------ utils
@@ -327,8 +327,8 @@ static func character_texture(character_id: String, facing: int, frame: int = 0)
                                 pants = Color("#2e2a26")
                         "ayiz":
                                 hair = Color("#3a2b22")
-                                tunic = Color("#4f6b3e")
-                                cloak = Color("#31452a")
+                                tunic = Color("#4e7667")
+                                cloak = Color("#2c4350")
                                 pants = Color("#34332f")
                         _:
                                 hair = Color("#513326")
@@ -664,6 +664,10 @@ static func enemy_texture(kind: String, boss: bool = false, frame: int = 0) -> T
                                 ellipse(img, 14, 16 + bob, 6, 5, Color("#665381"))
                                 rect(img, 11, 17 + bob, 3, 2, Color("#f4df8a"))
                                 rect(img, 19, 17 + bob, 3, 2, Color("#f4df8a"))
+                                # A crushed can caught in the spines; eyes remain the focal point.
+                                rect(img, 5, 21 + bob, 5, 4, Color("#90aeb4"))
+                                hline(img, 5, 22 + bob, 5, Color("#cf7a75"))
+                                rect(img, 23, 11 + bob, 3, 5, Color("#429c9e"))
                         "fire":
                                 ellipse(img, 16, 27, 12, 4, Color("#432c26"))
                                 _fill_polygon(img, [Vector2i(4, 26), Vector2i(7, 12 + bob), Vector2i(12, 17), Vector2i(16, 2 + bob), Vector2i(20, 15), Vector2i(26, 9), Vector2i(29, 26)], Color("#e95720"))
@@ -786,6 +790,18 @@ static func npc_texture(kind: String) -> Texture2D:
                         px(img, 19, 24, Color("#d8d0ba"))
                 elif kind == "pet":
                         ellipse(img, 19, 29, 3, 2, Color("#b9a3cf"))
+                if kind in ["fisher", "farmer", "gardener"]:
+                        # Low woven sun hat distinguishes outdoor workers.
+                        rect(img, 4, 7, 16, 3, WorldPalette.color("wood_shadow"))
+                        rect(img, 7, 3, 10, 5, WorldPalette.color("sand"))
+                        hline(img, 3, 7, 18, WorldPalette.color("cream"))
+                elif kind in ["carpenter", "equipment", "woodcutter"]:
+                        rect(img, 8, 25, 9, 9, WorldPalette.color("wood_shadow"))
+                        rect(img, 10, 27, 5, 2, WorldPalette.color("wood"))
+                elif kind == "water_keeper":
+                        rect(img, 7, 5, 11, 3, WorldPalette.color("cream"))
+                        rect(img, 19, 27, 4, 6, WorldPalette.color("sea_shallow"))
+                        hline(img, 19, 27, 4, WorldPalette.color("foam"))
                 return img)
 
 
@@ -797,13 +813,17 @@ static func stall_texture(kind: String) -> Texture2D:
                         "pet": [Color("#594078"), Color("#b992d3"), Color("#d9b76a")],
                         "house": [Color("#555d63"), Color("#c9b98d"), Color("#91b6c4")],
                 }.get(kind, [Color("#4f5e5e"), Color("#a5b9b5"), Color("#d2b276")])
-                var wood: Color = palette[0]
+                var wood := WorldPalette.color("wood")
                 var cloth: Color = palette[1]
                 var trim: Color = palette[2]
                 var img := image(112, 96)
                 # Shadow.
                 ellipse(img, 56, 88, 45, 8, Color(0, 0, 0, 0.22))
-                # Back posts.
+                # Sheltered timber backdrop and paired supports.
+                rect(img, 16, 29, 80, 31, WorldPalette.color("wood_shadow"))
+                for x in range(18, 94, 9):
+                        vline(img, x, 31, 27, wood.darkened(0.25))
+                hline(img, 17, 38, 77, wood.lightened(0.12))
                 rect(img, 12, 22, 5, 64, Color("#3a271c"))
                 rect(img, 95, 22, 5, 64, Color("#3a271c"))
                 # Counter.
@@ -813,14 +833,39 @@ static func stall_texture(kind: String) -> Texture2D:
                         hline(img, x, 66, 8, wood.darkened(0.4))
                         hline(img, x, 72, 8, wood.darkened(0.28))
                 hline(img, 9, 60, 94, trim.darkened(0.2))
-                # Awning stripes.
-                for i in 7:
-                        var x := 5 + i * 15
-                        var color := cloth if i % 2 == 0 else Color("#eee3c2")
-                        rect(img, x, 15, 15, 13, color)
-                        rect(img, x, 26, 15, 4, color.darkened(0.18))
-                        hline(img, x, 15, 15, color.lightened(0.15))
-                rect(img, 4, 13, 104, 4, Color("#35251c"))
+                # Sloping cloth canopy with shaded hanging scallops.
+                for y in range(10, 34):
+                        var inset := int((34 - y) * 0.22)
+                        for x in range(4 + inset, 108 - inset):
+                                var stripe := int((x - 4) / 15) % 2
+                                var ink := cloth if stripe == 0 else WorldPalette.color("cream")
+                                if y > 28: ink = ink.darkened(0.17)
+                                elif y % 8 == 0: ink = ink.lightened(0.08)
+                                px(img, x, y, ink)
+                for x in range(5, 108, 15):
+                        rect(img, x + 2, 34, 11, 3, cloth.darkened(0.24) if int(x / 15) % 2 == 0 else WorldPalette.color("sand"))
+                rect(img, 8, 8, 96, 3, WorldPalette.color("wood_shadow"))
+                # Woven apron: broad panels rather than bright horizontal stripes.
+                for x in range(14, 101, 12):
+                        vline(img, x, 65, 13, wood.darkened(0.24))
+                        hline(img, x + 2, 76, 8, wood.lightened(0.15))
+                # Occupation-specific hanging goods sit inside the existing footprint.
+                if kind == "potion":
+                        for x in [19, 86]:
+                                vline(img, x, 36, 10, WorldPalette.color("wood_shadow"))
+                                ellipse(img, x, 46, 5, 4, WorldPalette.color("leaf_deep"))
+                                ellipse(img, x - 1, 44, 4, 3, WorldPalette.color("leaf_mint"))
+                elif kind == "equipment":
+                        rect(img, 78, 39, 13, 17, WorldPalette.color("outline"))
+                        rect(img, 81, 47, 7, 6, WorldPalette.color("roof"))
+                        rect(img, 83, 50, 3, 3, WorldPalette.color("lantern"))
+                elif kind == "pet":
+                        for x in [21, 85]:
+                                line(img, x - 5, 40, x + 5, 49, WorldPalette.color("sand"))
+                                line(img, x + 5, 40, x - 5, 49, WorldPalette.color("sand"))
+                elif kind == "house":
+                        for x in range(82, 96, 4):
+                                rect(img, x, 40, 3, 18, wood.lightened(0.17))
                 # Goods.
                 match kind:
                         "potion":
@@ -1081,6 +1126,14 @@ static func portal_frame_texture(theme_id: String, locked := false) -> Texture2D
                                                 px(img, x, y + int(sin(float(x) * 0.3) * 2.0), Color("#7d8590"))
                         hline(img, 24, 47, 32, Color("#6a727c"))
                         hline(img, 24, 66, 32, Color("#6a727c"))
+                # Recessed stepped runes and damp jade mineral seams.
+                for x in [16, 59]:
+                        for y in [44, 70, 91]:
+                                rect(img, x - 2, y - 2, 6, 8, stone_dark)
+                                line(img, x, y, x + 2, y + 2, sigil)
+                                line(img, x + 2, y + 2, x, y + 4, sigil)
+                        rect(img, x - 3, 99, 5, 3, WorldPalette.color("leaf_deep"))
+                        hline(img, x - 2, 98, 4, WorldPalette.color("leaf"))
                 # Steps.
                 rect(img, 6, 101, 68, 7, stone_dark)
                 rect(img, 12, 96, 56, 7, stone)
@@ -1135,130 +1188,7 @@ static func portal_emblem_texture(theme_id: String) -> Texture2D:
 
 
 static func house_texture(level: int) -> Texture2D:
-        return cached_texture("house_%d" % level, func() -> Image:
-                var lvl := clampi(level, 1, 5)
-                var img := image(224, 176)
-                var width := 102 + (lvl - 1) * 15
-                var wall_h := 55 + (lvl - 1) * 6
-                var base_y := 151
-                var wall_top := base_y - wall_h
-                var roof_h := 38 + (lvl - 1) * 4
-                var roof_top := wall_top - roof_h
-                var left := 112 - width / 2
-                var right := left + width
-                var shadow_alpha := 0.26
-                ellipse(img, 112, base_y + 4, width / 2 + 12, 10, Color(0, 0, 0, shadow_alpha))
-                var wall := WorldPalette.color("wood") if lvl > 1 else WorldPalette.color("wood").darkened(0.18)
-                var wall_dark := WorldPalette.color("wood").darkened(0.48)
-                var wall_light := WorldPalette.color("sand").darkened(0.12)
-                var roof := WorldPalette.color("roof") if lvl % 2 == 1 else WorldPalette.color("sea_deep").lightened(0.12)
-                var roof_dark := WorldPalette.color("shadow")
-                var roof_light := WorldPalette.color("sand")
-                # Foundation / porch.
-                rect(img, left - 4, base_y - 7, width + 8, 8, wall_dark)
-                rect(img, left, base_y - 10, width, 4, wall_light.darkened(0.3))
-                # Wall body.
-                rect(img, left, wall_top, width, wall_h, wall_dark)
-                rect(img, left + 2, wall_top + 2, width - 4, wall_h - 3, wall)
-                for y in range(wall_top + 5, base_y - 7, 6):
-                        hline(img, left + 2, y, width - 4, wall_dark)
-                        if lvl >= 3:
-                                hline(img, left + 3, y + 1, width - 6, wall_light.darkened(0.15))
-                # Vertical corner beams.
-                rect(img, left, wall_top, 5, wall_h, wall_dark)
-                rect(img, right - 5, wall_top, 5, wall_h, wall_dark)
-                # Roof silhouette: stepped gable with shingles.
-                for row in range(roof_h):
-                        var span := int(round(float(width + 20) * (float(row) / float(roof_h))))
-                        var rx := 112 - span / 2
-                        var y := roof_top + row
-                        hline(img, rx, y, span, roof_dark)
-                        if row >= 2:
-                                hline(img, rx + 2, y, maxi(1, span - 4), roof)
-                        if row % 4 == 0 and row > 3:
-                                hline(img, rx + 4, y, maxi(1, span - 8), roof_light.darkened(0.18))
-                hline(img, left - 10, wall_top - 1, width + 20, roof_dark)
-                # Door.
-                var door_w := 18 if lvl < 4 else 22
-                var door_h := mini(wall_h - 10, 34 if lvl < 4 else 40)
-                rect(img, 112 - door_w / 2, base_y - door_h - 5, door_w, door_h, Color("#2b1c17"))
-                rect(img, 112 - door_w / 2 + 2, base_y - door_h - 4, door_w - 4, door_h - 2, Color("#6e4529"))
-                rect(img, 112 - 1, base_y - door_h / 2 - 5, 2, 2, Color("#e4bb62"))
-                if lvl == 1:
-                        # Board over the door, missing shingles.
-                        rect(img, 102, base_y - 26, 24, 4, Color("#8a633c"))
-                        for p in [Vector2i(63, roof_top + 15), Vector2i(78, roof_top + 19), Vector2i(141, roof_top + 22), Vector2i(154, roof_top + 14)]:
-                                rect(img, p.x, p.y, 5, 3, Color(0, 0, 0, 0))
-                # Windows.
-                var window_y := wall_top + 16
-                for wx in [left + 16, right - 28]:
-                        rect(img, wx, window_y, 13, 13, Color("#2d1e18"))
-                        var glass := Color("#e8c56b") if lvl >= 3 else Color("#3e5559")
-                        rect(img, wx + 2, window_y + 2, 9, 9, glass)
-                        hline(img, wx + 6, window_y + 2, 2, Color("#3a2b22"))
-                        vline(img, wx + 2, window_y + 6, 2, Color("#3a2b22"))
-                        rect(img, wx - 2, window_y + 13, 17, 3, wall_light)
-                # Painted shutters, carved eaves and flowering sill boxes.
-                for wx in [left + 16, right - 28]:
-                        rect(img, wx - 4, window_y + 1, 3, 11, WorldPalette.color("sea_shallow"))
-                        rect(img, wx + 14, window_y + 1, 3, 11, WorldPalette.color("sea_shallow"))
-                        rect(img, wx - 2, window_y + 15, 17, 4, wall_dark)
-                        for fx in [wx + 1, wx + 6, wx + 11]:
-                                vline(img, fx, window_y + 12, 4, WorldPalette.color("grass_shadow"))
-                                rect(img, fx - 1, window_y + 11, 3, 2, WorldPalette.color("flower"))
-                hline(img, left - 8, wall_top + 1, width + 16, WorldPalette.color("gold"))
-                # Porch deck and posts.
-                if lvl >= 2:
-                        rect(img, 112 - 31, base_y - 9, 62, 6, WorldPalette.color("wood"))
-                        for x in range(112 - 30, 112 + 31, 7):
-                                vline(img, x, base_y - 8, 5, Color("#6f4c2d"))
-                        rect(img, 112 - 34, base_y - 12, 6, 12, wall_dark)
-                        rect(img, 112 + 28, base_y - 12, 6, 12, wall_dark)
-                        # Steps.
-                        rect(img, 100, base_y + 4, 24, 3, Color("#8b643f"))
-                        rect(img, 96, base_y + 7, 32, 3, Color("#6f4c2d"))
-                # Chimney and smoke.
-                if lvl >= 3:
-                        rect(img, right - 24, roof_top + 2, 12, 22, Color("#4b403b"))
-                        rect(img, right - 21, roof_top - 6, 7, 11, Color("#5f5148"))
-                        rect(img, right - 22, roof_top - 8, 9, 4, Color("#2b2825"))
-                        for i in 3:
-                                ellipse(img, right - 18 + i * 3, roof_top - 14 - i * 7, 3 + i, 2 + i, Color(0.75, 0.8, 0.78, 0.10 + i * 0.03))
-                # Flower boxes and garden.
-                if lvl >= 3:
-                        for wx in [left + 14, right - 30]:
-                                rect(img, wx, window_y + 15, 17, 4, Color("#6f4a2d"))
-                                for i in 3:
-                                        px(img, wx + 3 + i * 5, window_y + 13, Color("#e7b955"))
-                                        px(img, wx + 4 + i * 5, window_y + 12, Color("#e57171"))
-                if lvl >= 4:
-                        # White fence.
-                        for x in range(left - 22, right + 23, 9):
-                                rect(img, x, base_y + 5, 3, 12, Color("#d8d0b8"))
-                                px(img, x + 1, base_y + 4, Color("#eee7d2"))
-                        hline(img, left - 22, base_y + 9, width + 45, Color("#c9bea2"))
-                        # Garden bushes.
-                        for p in [Vector2i(left - 18, base_y + 2), Vector2i(right + 14, base_y + 1), Vector2i(right + 26, base_y + 4)]:
-                                ellipse(img, p.x, p.y, 6, 4, Color("#3e673f"))
-                                ellipse(img, p.x - 1, p.y - 2, 4, 3, Color("#56834e"))
-                if lvl >= 5:
-                        # Lanterns on the porch and fresh paint details.
-                        for x in [left + 9, right - 13]:
-                                vline(img, x, roof_top + 14, 4, Color("#2e2a24"))
-                                rect(img, x - 3, roof_top + 18, 7, 8, Color("#2e2a24"))
-                                rect(img, x - 2, roof_top + 19, 5, 6, Color("#ffd77a"))
-                        rect(img, 108, base_y - 4, 8, 3, Color("#e7c56a"))
-                        hline(img, left + 2, wall_top + 3, width - 4, Color("#b58454"))
-                # Weeds / damage for level 1.
-                if lvl == 1:
-                        for p in [Vector2i(left + 6, base_y - 4), Vector2i(right - 12, base_y - 6), Vector2i(left + 34, base_y - 3), Vector2i(right - 42, base_y - 8)]:
-                                line(img, p.x, p.y, p.x - 2, p.y - 6, Color("#6b7343"))
-                                line(img, p.x, p.y, p.x + 2, p.y - 5, Color("#8b8a4f"))
-                        # Crack in the wall.
-                        line(img, left + 7, wall_top + 12, left + 12, wall_top + 20, Color("#2d2119"))
-                        line(img, left + 12, wall_top + 20, left + 9, wall_top + 27, Color("#2d2119"))
-                # Warm window light at night is handled by the scene with a glow sprite.
-                return img)
+        return cached_texture("house_%d" % level, func() -> Image: return MonsoonArt.house(level))
 
 
 static func ship_texture() -> Texture2D:
@@ -1669,25 +1599,8 @@ static func coastal_prop(kind: String) -> Texture2D:
 
 
 static func coastal_grass(variant: int) -> Texture2D:
-        return cached_texture("coastal_grass_%d" % variant, func() -> Image:
-                var img := image(20, 16)
-                var base := WorldPalette.color("grass_shadow").lerp(WorldPalette.color("grass"), 0.65)
-                var tip := WorldPalette.color("grass_light")
-                for at in [Vector2i(5, 13), Vector2i(10, 12), Vector2i(15, 13)]:
-                        var height: int = 4 + (variant + at.x) % 4
-                        line(img, at.x, at.y, at.x - 2, at.y - height, base)
-                        line(img, at.x + 1, at.y, at.x + 2, at.y - height + 1, tip)
-                if variant % 3 == 0:
-                        rect(img, 10, 5, 3, 2, WorldPalette.color("flower"))
-                        px(img, 11, 5, WorldPalette.color("gold"))
-                return img)
+        return cached_texture("coastal_grass_%d" % variant, func() -> Image: return MonsoonArt.undergrowth(variant))
 
 
 static func authored_tree_texture() -> Texture2D:
-        return cached_texture("authored_tree", func() -> Image:
-                var upper := (load("res://assets/sprites/TX Plant__TX Tree T1 Upper.tres") as Texture2D).get_image()
-                var lower := (load("res://assets/sprites/TX Plant__TX Tree T1 Lower.tres") as Texture2D).get_image()
-                var img := image(maxi(upper.get_width(), lower.get_width()), upper.get_height() + lower.get_height())
-                img.blit_rect(upper, Rect2i(Vector2i.ZERO, upper.get_size()), Vector2i(int((img.get_width() - upper.get_width()) / 2), 0))
-                img.blit_rect(lower, Rect2i(Vector2i.ZERO, lower.get_size()), Vector2i(int((img.get_width() - lower.get_width()) / 2), upper.get_height()))
-                return img)
+        return cached_texture("authored_tree", func() -> Image: return MonsoonArt.tree_texture(0).get_image())

@@ -46,3 +46,37 @@ sharing imported art; the plugin cannot determine a license automatically.
 Evidence: `evidence/creative/studio/asset-library.png`, `pixel-editor.png` and
 `authored-runtime.png`. The automated editor runner performs import, grid setup,
 editing, reimport and runtime reload in a disposable copy of the source project.
+
+## Monsoon Afterglow source artwork
+
+`assets/authored/monsoon/` contains 36 original, transparent, production-sized PNGs
+plus `manifest.json` recording dimensions, attachment pivots and nearest sampling.
+These are editable exports of the reproducible master generators in
+`MonsoonArt` and `PixelArt`, not images copied from a screenshot. Runtime uses the
+palette-aware generators through `PixelArt.cached_texture`; the PNG exports are
+ready for Pixel & Animation or explicit Asset Library registration. They do not
+silently override another artist's registered image.
+
+Tree keys are `monsoon/tree/<0..4>/<whole|upper|lower>`, props are
+`monsoon/props/<kind>`, cottages remain `house_<1..5>` and stalls remain
+`stall_<kind>`. Preserve the split tree's bottom-centre pivot and the cottage's
+224×176 frame / (112,176) attachment anchor when overriding. A custom cottage
+owns its own window treatment; the runtime omits the procedural window mask.
+
+Regenerate PNGs only with an explicit output path and isolated user data:
+
+```sh
+asset_run=$(mktemp -d /tmp/tidesworn-art-XXXXXXXX)
+TIDESWORN_TEST_ROOT="$asset_run" XDG_DATA_HOME="$asset_run/userdata" \
+MONSOON_ASSET_OUTPUT="$PWD/assets/authored/monsoon" \
+timeout 45 godot --headless --path . res://tools/export_monsoon_assets.tscn
+```
+
+Reimport after editing PNGs, use lossless compression/no mipmaps/nearest filtering,
+and register an explicit override to make edited raster artwork authoritative.
+The default palette is `monsoon_afterglow.tres`. World Palette has quick buttons
+for Monsoon Afterglow, Previous coast and Original; previews stay reversible until
+explicit Save. Runtime development previews also accept
+`-- --palette=res://data/palettes/coast.tres` (with isolated user data). This previews
+previous colours on the new geometry; exact historical appearance is in the
+before captures and reference commit, not reconstructed by a colour switch.
