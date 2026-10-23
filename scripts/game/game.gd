@@ -37,10 +37,12 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if is_instance_valid(world) and not _game_over:
+		GameState.advance_world_clock(delta)
 	if world is Dungeon and GameState.expedition_active():
 		if not _emergency_triggered:
 			_portal_elapsed += delta
-			if _portal_elapsed >= EMERGENCY_DELAY:
+			if _portal_elapsed >= EMERGENCY_DELAY and GameState.is_night():
 				_emergency_triggered = true
 				GameState.start_emergency(3)
 		if GameState.emergency_active():
@@ -51,6 +53,7 @@ func _process(delta: float) -> void:
 
 
 func _connect_hud() -> void:
+	hud.village_services_panel.closed.connect(_on_modal_closed)
 	hud.shop_panel.closed.connect(_on_modal_closed)
 	hud.inventory_panel.closed.connect(_on_modal_closed)
 	hud.portal_panel.closed.connect(_on_modal_closed)
@@ -96,6 +99,8 @@ func _on_continue_requested() -> void:
 		return
 	_remove_title()
 	hud.visible = true
+	if GameState.mission_step() < MissionDB.STEPS.size():
+		hud.start_tutorial()
 	if GameState.expedition_active():
 		var portal_id := GameState.expedition_portal()
 		_load_dungeon(portal_id, false)
@@ -115,6 +120,8 @@ func _remove_title() -> void:
 # ------------------------------------------------------------------ world switching
 
 func _clear_world() -> void:
+	if is_instance_valid(world) and world is Lobby and world.journey_serial == GameState.journey_serial:
+		GameState.store_home_monsters(world.capture_monsters())
 	if world and is_instance_valid(world):
 		world.queue_free()
 	world = null
@@ -191,6 +198,7 @@ func enter_portal(portal_id: String) -> void:
 		return
 	if not GameState.start_expedition(portal_id):
 		return
+	GameState.record_mission_event("portal")
 	_defeat_pending = false
 	_portal_elapsed = 0.0
 	_emergency_triggered = false
@@ -315,6 +323,7 @@ func open_shop(kind: String, keeper: String) -> void:
 func open_house() -> void:
 	if world is Dungeon:
 		return
+	GameState.record_mission_event("house")
 	_input_locked = true
 	_apply_input_lock()
 	hud.house_panel.open_house()
@@ -352,6 +361,14 @@ func open_menu() -> void:
 	hud.menu_panel.open_menu()
 
 
+func open_village_services(repairs: bool = false) -> void:
+	if not world is Lobby or _game_over:
+		return
+	_input_locked = true
+	_apply_input_lock()
+	hud.village_services_panel.open_services(repairs)
+
+
 func open_settings() -> void:
 	if _game_over:
 		return
@@ -380,6 +397,14 @@ func _on_game_over(reason: String) -> void:
 	if p != null:
 		p.controls_locked = true
 	hud.hide_modals()
+	if world is Lobby:
+		var ruined_world := world as Lobby
+		hud.visible = false
+		ruined_world.begin_devastation()
+		await get_tree().create_timer(Lobby.DEVASTATION_SECONDS).timeout
+		if world != ruined_world or not _game_over:
+			return
+		hud.visible = true
 	hud.game_over_panel.show_game_over(reason)
 
 
@@ -406,6 +431,7 @@ func return_to_title(from_game_over: bool = false) -> void:
 func open_inventory() -> void:
 	if _input_locked and not hud.inventory_panel.visible:
 		return
+	GameState.record_mission_event("inventory")
 	_input_locked = true
 	_apply_input_lock()
 	hud.inventory_panel.open_inventory()

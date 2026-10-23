@@ -200,8 +200,9 @@ static func run(game: Node, check: Callable) -> void:
 	customer.take_attack_damage(1)
 	check.call(customer.shopping_state == Resident.Shopping.ROUTINE and (reserved == null or reserved._customer == null), "audit: directly frightened customer releases its shop reservation")
 	customer.queue_free()
-	# Sprite layers must participate in the same actor depth comparison.
-	check.call(_effective_z(shop.sprite) == _effective_z(lobby.player._visual), "audit: merchant and player sprites share the y-sorted actor layer")
+	# Merchants are now seated behind the stall counter rather than outside it.
+	var counter_art := shop.get_parent().get_children().filter(func(node: Node) -> bool: return node is Sprite2D)[0] as Sprite2D
+	check.call(shop.position.y < 0 and _effective_z(shop.sprite) < _effective_z(counter_art), "audit: merchant is inside the stall behind its counter art")
 	# Low->high must work without rebuilding the dungeon.
 	var old_quality := GameSettings.effects_quality()
 	var old_motion := GameSettings.reduce_motion()

@@ -55,6 +55,7 @@ func interact(_player: Node) -> void:
 		GameState.toast_requested.emit("Your pack is too full for driftwood.", "bad")
 		return
 	_cooldown_left = cooldown
+	GameState.record_mission_event("gather")
 	prompt = "Gather driftwood"
 	if _label:
 		_label.modulate = Color(0.55, 0.6, 0.58, 0.7)

@@ -40,6 +40,7 @@ func _ready() -> void:
 	_check(GameState.equipped_item("weapon") == "rusty_sword", "starter sword equipped")
 	_check(GameState.active_pet_id() == "ember", "starter pet active")
 	_check(GameState.has_living_pet(), "starter pet alive")
+	_check(GameState.water_keeper_count() == 2, "new journeys start with two water keepers")
 	_check(game.call("player").get_node_or_null("VitalHud") is PlayerVitalHud, "player keeps its world HP/MP indicator")
 	_check(not _has_label(hud, "VITALS") and hud.get("_health_bar") == null and hud.get("_pet_bar") == null, "obsolete top-right VITALS construction is removed")
 	_check(hud.get("_minimap") == null, "no minimap exists")
@@ -51,9 +52,10 @@ func _ready() -> void:
 	_check(hud.get("_inventory_button").action == "open_inventory", "backpack touch action exists")
 	_check(hud.get("_inventory_button").position.x < 200 and hud.get("_inventory_button").position.y < 200, "backpack sits away from movement/combat controls")
 	_check(hud.get("_build_button").action == "toggle_build", "settlement Build button exists")
-	_check(GameState.time_string() == "DAYTIME", "the world is locked in permanent daytime")
+	_check(not GameState.is_night() and GameState.time_string().begins_with("DAY"), "new journeys begin with a peaceful three-minute day")
+	_check(game.world.capture_monsters().is_empty(), "no home monsters spawn on the first day")
 	_check(hud.tutorial_guide.visible, "New Journey tutorial starts on a new game")
-	_check(hud.tutorial_guide.get("STEPS").size() == 8, "New Journey tutorial has eight steps")
+	_check(hud.tutorial_guide.get("STEPS").size() == 10, "New Journey teaches ten sequential actions")
 	hud.tutorial_guide.call("_skip")
 	var interactables := get_tree().get_nodes_in_group("interactable")
 	_check(interactables.size() >= 10, "lobby interactions present (%d)" % interactables.size())
@@ -64,6 +66,7 @@ func _ready() -> void:
 	var pet_xp_bar := hud.get("_pet_xp_bar") as SegmentedBar
 	_check(xp_bar != null and xp_bar.maximum == int(GameState.data.xp_next), "player XP bar shows the next-level requirement")
 	_check(pet_xp_bar != null and pet_xp_bar.maximum == PetDB.xp_for_level(2), "pet XP bar shows the next-level requirement")
+	await _test_day_night()
 	await _test_settlement_expansion()
 	var resident_count := 0
 	var defender_count := 0
@@ -112,6 +115,9 @@ func _ready() -> void:
 	await _test_save_load()
 	await _test_build_editor()
 	await _test_character_styles()
+	await _test_village_systems()
+	await _test_forest_restoration()
+	await _test_pet_shop_close()
 	await _test_forest_game_over()
 
 	GameState.delete_save()
@@ -129,6 +135,63 @@ func _test_movement() -> void:
 	_check(p.global_position.x > start.x + 0.2, "keyboard/action movement works")
 	p.global_position = Lobby.SPAWN
 	await get_tree().process_frame
+
+
+func _test_day_night() -> void:
+	game.set_process(false)
+	var lobby := game.world as Lobby
+	GameState.advance_world_clock(179.0 - float(GameState.data.get("world_time", 0.0)))
+	_check(not GameState.is_night() and lobby.capture_monsters().is_empty(), "first day stays peaceful before 180 seconds")
+	lobby._spawn_forest_monsters(5)
+	lobby._spawn_emergency_monsters(3)
+	lobby._rubbish_system.on_rubbish_beached(null)
+	_check(lobby.spawn_sea_urchin(Vector2(17, 29)) == null and lobby.capture_monsters().is_empty(), "all fire, beach and emergency spawn paths reject daytime")
+	GameState.advance_world_clock(1.0)
+	_check(GameState.is_night() and GameState.time_string() == "NIGHT 3:00", "night begins exactly at three minutes")
+	_check(lobby._forest_monsters.size() == Lobby.FIRE_MONSTER_COUNT, "night spawns twenty-four fire monsters")
+	_check(lobby.capture_monsters().size() == Lobby.FIRE_MONSTER_COUNT + Lobby.NIGHT_URCHIN_COUNT, "night also spawns sea urchins at the beach")
+	for enemy in lobby.get_children():
+		if enemy is Enemy:
+			enemy.set_physics_process(false)
+	var fire := lobby._forest_monsters[0]
+	fire.hp = 11
+	var count := lobby.capture_monsters().size()
+	GameState.advance_world_clock(180.0)
+	_check(not GameState.is_night() and GameState.time_string() == "DAY 3:00", "day returns after three minutes of night")
+	_check(is_instance_valid(fire) and fire.hp == 11 and lobby.capture_monsters().size() == count, "dawn preserves living monsters and their HP")
+	var tree := lobby._forest_trees[0]
+	var hp_before := tree.health
+	fire._target = tree
+	fire.global_position = tree.global_position + Vector2(0.7, 0)
+	fire._hit_dealt = false
+	fire._attack_active(0.0)
+	_check(tree.health < hp_before, "surviving fire monsters continue attacking trees in daytime")
+	tree.water(tree.max_health)
+	GameState.save_game()
+	_check(GameState.load_game() and not GameState.is_night(), "day/night phase survives save/load")
+	game.call("_load_lobby", false)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	lobby = game.world as Lobby
+	_check(lobby.capture_monsters().size() == count and lobby._forest_monsters[0].hp == 11, "returning home in daytime restores survivors without a new wave")
+	for enemy in lobby.get_children():
+		if enemy is Enemy:
+			enemy.set_physics_process(false)
+	lobby._forest_monsters[0].take_damage(99999)
+	_check(lobby.capture_monsters().size() == count - 1, "killed monsters stay absent during the day")
+	GameState.advance_world_clock(180.0)
+	_check(GameState.is_night() and lobby.capture_monsters().size() == count, "the next night replenishes killed monsters")
+	lobby._on_day_phase_changed(true, true)
+	_check(lobby.capture_monsters().size() == count, "a night wave cannot spawn twice during the same night")
+	# Remove this test's sea threats before the separate peaceful shopping fixtures.
+	for enemy in lobby.get_children():
+		if enemy is Enemy and enemy.kind == "urchin":
+			enemy.queue_free()
+	await get_tree().process_frame
+	for enemy in lobby.get_children():
+		if enemy is Enemy:
+			enemy.set_physics_process(false)
+	game.set_process(true)
 
 
 func _test_settlement_expansion() -> void:
@@ -169,8 +232,8 @@ func _test_settlement_expansion() -> void:
 		var sees_player := bool(forest_monster.call("_can_see_player"))
 		forest_monster.set("_saw_player", false)
 		forest_monster.call("_update_forest_target")
-		_check(sees_player, "forest monsters detect the player in line of sight")
-		_check(bool(forest_monster.get("_saw_player")) and bool(forest_monster.get("_charging")), "forest monsters immediately target and charge a seen player")
+		_check(not sees_player, "fire monsters ignore players in line of sight")
+		_check(forest_monster.get("_target") is ForestTree and not bool(forest_monster.get("_charging")), "fire monsters target trees without charging the player")
 		test_player.global_position = old_player_pos
 		forest_monster.global_position = old_monster_pos
 	_check(get_tree().get_nodes_in_group("resident_house").size() >= 7, "more residents' houses stand around the village (%d)" % get_tree().get_nodes_in_group("resident_house").size())
@@ -203,12 +266,8 @@ func _test_settlement_expansion() -> void:
 	_check(not bool(GameState.pet_battle_state(duel_ids[1]).get("unlocked", false)), "later pet duels unlock in order")
 	await get_tree().process_frame
 	hud.call("_update_mission_guide")
-	var arrows := hud.get("_mission_arrows") as Array
-	var visible_arrows := 0
-	for arrow in arrows:
-		if arrow is MissionArrow and arrow.visible:
-			visible_arrows += 1
-	_check(visible_arrows >= 1, "mission guidance arrows point toward objectives")
+	_check(hud.get("_mission_panel") == null and hud.get("_mission_arrows").is_empty(), "bottom mission notifications are removed")
+	_check(game.world.get_children().any(func(node: Node) -> bool: return node is MissionPath), "dashed mission path lives in the world")
 	var player := game.call("player") as Player
 	_check(player != null and player.get_node_or_null("VitalHud") is PlayerVitalHud, "player has a floating Health/Mana dashboard")
 	var special_npc: UniszaStudent = null
@@ -454,12 +513,16 @@ func _test_pet_battle_portal() -> void:
 	_check(panel.get("_player_bar") != null and panel.get("_enemy_bar") != null, "pet duel displays both health bars")
 	var skill_buttons := panel.get("_skill_buttons") as Array
 	_check(skill_buttons.size() == 2, "the player pet has two skill buttons")
-	_check(is_equal_approx(float(panel.get("_turn_timer")), 2.0), "each skill window lasts two seconds")
+	var idle_player := int(panel.get("_player_hp"))
+	var idle_enemy := int(panel.get("_opponent_hp"))
+	panel.call("_process", 30.0)
+	panel.call("_resolve_turn")
+	_check(int(panel.get("_player_hp")) == idle_player and int(panel.get("_opponent_hp")) == idle_enemy and int(panel.get("_turn_number")) == 1, "both pets wait indefinitely when no action is chosen")
 	_check(PetBattlePanel.SKILLS.has(str(panel.get("_enemy_choice"))), "the enemy pet chooses from Attack or Defend")
 	var enemy_before := int(panel.get("_opponent_hp"))
 	var player_before := int(panel.get("_player_hp"))
-	panel.call("choose_skill", "attack")
 	panel.set("_enemy_choice", "attack")
+	panel.call("choose_skill", "attack")
 	panel.set("_turn_timer", 0.0)
 	panel.call("_process", 0.01)
 	_check(int(panel.get("_opponent_hp")) < enemy_before and int(panel.get("_player_hp")) < player_before, "both pets execute their actions simultaneously")
@@ -470,8 +533,8 @@ func _test_pet_battle_portal() -> void:
 	_check(hit_fx >= 2, "pet hits create scratch/punch impact effects")
 	panel.call("_process", 0.95)
 	panel.set("_opponent_hp", 1)
-	panel.call("choose_skill", "attack")
 	panel.set("_enemy_choice", "defend")
+	panel.call("choose_skill", "attack")
 	panel.set("_turn_timer", 0.0)
 	panel.call("_process", 0.01)
 	var shield_fx := false
@@ -521,7 +584,7 @@ func _test_rubbish_system() -> void:
 	_check(GameState.gold() == gold_after_catch, "beached rubbish does not grant the +1 catch reward")
 	var rubbish_monster: Enemy = null
 	for enemy in get_tree().get_nodes_in_group("enemies"):
-		if str(enemy.kind) == "rubbish":
+		if str(enemy.kind) == "urchin":
 			rubbish_monster = enemy
 			break
 	_check(rubbish_monster != null, "beached rubbish transforms into a monster")
@@ -665,7 +728,7 @@ func _test_emergency_attack() -> void:
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if bool(enemy.get("settlement_mode")):
 			raider_hp_after += enemy.hp
-	_check(not GameState.emergency_active() or raider_hp_after < raider_hp_before, "defenders help damage the raiders")
+	_check(game.world._residents.any(func(npc: Resident) -> bool: return npc.sheltered or npc._frightened), "residents seek houses instead of fighting sea urchins")
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if bool(enemy.get("settlement_mode")):
 			enemy.call("take_damage", 99999, Vector2.ZERO, game.call("player"))
@@ -695,6 +758,11 @@ func _test_defeat_and_recovery() -> void:
 	_check(p.global_position.distance_to(Lobby.SPAWN) < 0.6, "player respawns at the cottage")
 	_check(GameState.recovery_active(), "recovery remains active at home")
 	_check(pet_was_alive, "pet remains available after respawn")
+	# Check containment while recovery is active, before a level-five ward can
+	# finish its two-second heal during the subsequent rate measurement.
+	p.global_position = Lobby.RECOVERY_CENTER + Vector2(12, 0)
+	game.world._tick_recovery(0.0)
+	_check(p.global_position.distance_to(Lobby.RECOVERY_CENTER) <= Lobby.RECOVERY_RADIUS + 0.1, "recovery ward prevents leaving early")
 	var hp_before := GameState.health()
 	await get_tree().create_timer(1.0).timeout
 	_check(GameState.health() > hp_before, "health regenerates inside the recovery ward")
@@ -703,9 +771,6 @@ func _test_defeat_and_recovery() -> void:
 	# 8.0 s clock (~12.5% per second). Respawn health is <= 12% of max, so a
 	# full second of healing gains at least 25% of max only under the fixed rate.
 	_check(GameState.health() - hp_before >= int(GameState.health_max() * 0.25), "recovery ward heals at the HouseDB rate for the cottage level")
-	p.global_position = Lobby.RECOVERY_CENTER + Vector2(12, 0)
-	await get_tree().create_timer(0.2).timeout
-	_check(p.global_position.distance_to(Lobby.RECOVERY_CENTER) <= Lobby.RECOVERY_RADIUS + 0.1, "recovery ward prevents leaving early")
 	GameState.set_health(GameState.health_max())
 	await get_tree().create_timer(0.3).timeout
 	_check(not GameState.recovery_active(), "full health releases the player from recovery")
@@ -852,26 +917,288 @@ func _test_single_style(character_id: String, starter_weapon: String, style: Str
 	dummy.queue_free()
 
 
+func _test_pet_shop_close() -> void:
+	var window := get_window()
+	var original_scale := window.content_scale_size
+	var original_size := window.size
+	GameState.add_gold(10000)
+	for id in PetDB.shop_stock():
+		if GameState.get_pet(id).is_empty():
+			GameState.purchase_pet(id)
+	for dimensions in [Vector2i(1280, 720), Vector2i(832, 480)]:
+		window.content_scale_size = dimensions
+		window.size = dimensions
+		await get_tree().create_timer(0.1).timeout
+		game.open_shop("pet", "Nia")
+		await get_tree().create_timer(0.2).timeout
+		var shop := hud.shop_panel as ShopPanel
+		var close_rect := shop._close_button.get_global_rect()
+		_check(get_viewport().get_visible_rect().encloses(close_rect), "pet shop Close stays on screen at %dx%d with every purchasable pet owned" % [dimensions.x, dimensions.y])
+		_check(not shop.body.get_h_scroll_bar().visible, "pet cards fit without sideways scrolling")
+		shop.body.scroll_vertical = 999999
+		await get_tree().process_frame
+		for pressed in [true, false]:
+			var click := InputEventMouseButton.new()
+			click.position = close_rect.get_center()
+			click.button_index = MOUSE_BUTTON_LEFT
+			click.pressed = pressed
+			Input.parse_input_event(click)
+			await get_tree().process_frame
+		_check(not shop.visible and not game.player().controls_locked, "clicking Close after scrolling dismisses the pet shop and unlocks movement")
+		game.open_shop("pet", "Nia")
+		shop.close_panel()
+		await get_tree().process_frame
+		await get_tree().process_frame
+		_check(not shop.visible and shop.content.get_child_count() == 0, "fast reopen and close cannot rebuild a closed pet shop")
+	window.content_scale_size = original_scale
+	window.size = original_size
+	await get_tree().process_frame
+
+
 func _test_forest_game_over() -> void:
 	if not game.world is Lobby:
 		game.call("_load_lobby", false)
 		await get_tree().create_timer(0.35).timeout
 	var trees := get_tree().get_nodes_in_group("forest_tree")
+	var lobby := game.world as Lobby
+	for resident in lobby._residents:
+		resident.set_physics_process(false)
+	for enemy in lobby._forest_monsters:
+		if is_instance_valid(enemy):
+			enemy.set_physics_process(false)
 	_check(not trees.is_empty(), "living forest trees remain before the game-over test")
+	var sapling := trees[0] as ForestTree
+	sapling.take_attack_damage(9999)
+	_check(sapling.replant(), "last-stand sapling can be planted while other trees survive")
 	for node in trees:
 		if node is ForestTree:
 			var tree := node as ForestTree
+			if tree == sapling:
+				continue
 			if tree.is_alive():
+				tree._process(ForestTree.GROW_SECONDS)
 				tree.max_health = 10
 				tree.health = 10
 				tree.take_attack_damage(99)
-	await get_tree().create_timer(0.35).timeout
-	_check(GameState.game_over_active, "destroying every tree triggers game over")
+	_check(not GameState.game_over_active, "a planted sapling prevents game over even with no mature trees")
+	sapling._process(ForestTree.GROW_SECONDS)
+	sapling.take_attack_damage(9999)
+	_check(GameState.game_over_active, "losing all mature trees and saplings triggers game over")
+	await get_tree().create_timer(Lobby.DEVASTATION_SECONDS + 0.3).timeout
+	_check(lobby.devastation_progress >= 0.99, "game over animates the orange dry terrain to completion")
+	_check(lobby.get_node_or_null("PoisonedSea") != null, "game over adds the dark green poisoned sea")
+	_check(lobby.get_node("StrandedSeaLife").get_child_count() == 20, "dead fish and crabs appear on the sand")
 	_check(hud.game_over_panel.visible, "game over screen appears when the forest is lost")
 	_check(bool(game.get("_game_over")), "game flow enters the locked game-over state")
 	game.call("return_to_title", true)
 	await get_tree().create_timer(0.2).timeout
 	_check(game.title_screen != null and not hud.visible, "game over returns to the title screen")
+
+
+func _test_village_systems() -> void:
+	if not GameState.is_night():
+		GameState.advance_world_clock(GameState.DAY_PHASE_SECONDS)
+	var lobby := game.world as Lobby
+	for enemy in lobby._forest_monsters:
+		if is_instance_valid(enemy):
+			enemy.set_physics_process(false)
+	for npc in lobby._residents:
+		npc.set_physics_process(false)
+	_check(lobby._forest_monsters.size() >= 24, "forest has at least twenty-four fire monsters")
+	_check(float(Resident.WATER_HEAL) / Resident.WATER_INTERVAL <= 4.0, "water power is reduced to four HP per second")
+	_check(get_tree().get_nodes_in_group("shop_signs").size() == 5, "all five shops have shop-name signs")
+	var merchants_inside := true
+	for merchant in get_tree().get_nodes_in_group("ambient_shop"):
+		merchants_inside = merchants_inside and merchant.position.y < 0.0 and merchant.interact_radius >= 2.5
+	_check(merchants_inside, "merchants stand inside stalls and remain reachable from the counter")
+	var original_mission := GameState.mission_step()
+	hud.tutorial_guide._advance()
+	_check(GameState.mission_step() == original_mission, "Next cannot bypass a mission's required action")
+	var wrong_event := "move" if original_mission != 0 else "boss"
+	GameState.record_mission_event(wrong_event)
+	_check(GameState.mission_step() == original_mission, "out-of-order actions do not advance the lesson")
+	while GameState.mission_step() < MissionDB.STEPS.size():
+		var before := GameState.mission_step()
+		GameState.record_mission_event(str(MissionDB.step(before).get("event", "")))
+		_check(GameState.mission_step() == before + 1, "mission %d advances exactly one step" % before)
+	GameState.add_gold(-GameState.gold())
+	_check(not GameState.hire_water_keeper().ok and GameState.water_keeper_count() == 2, "unaffordable recruitment does not add a keeper")
+	GameState.add_gold(2500)
+	for count in [3, 4, 5]:
+		_check(GameState.hire_water_keeper().ok and GameState.water_keeper_count() == count, "paid recruitment adds keeper %d" % count)
+	var balance := GameState.gold()
+	_check(not GameState.hire_water_keeper().ok and GameState.gold() == balance, "keeper cap rejects purchase without charging")
+	for npc in lobby._residents:
+		npc.set_physics_process(false)
+	var fire := lobby._forest_monsters[0]
+	var player_hp := GameState.health()
+	fire._target = lobby.player
+	fire._hit_dealt = false
+	fire._attack_active(0.0)
+	_check(GameState.health() == player_hp, "fire attack cannot damage the player even with a stale target")
+	fire._update_forest_target()
+	_check(fire._target is ForestTree, "fire retargets mature trees rather than the nearby player")
+	var fence: SettlementTarget
+	var house: SettlementTarget
+	for node in get_tree().get_nodes_in_group("structures"):
+		if node.structure_kind == "fence":
+			fence = node
+		elif node.structure_id == "cottage":
+			house = node
+	_check(fence != null and house != null, "fences and houses have individual damage targets")
+	fence.take_attack_damage(9999)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	_check(not fence.is_intact(), "sea damage can completely destroy a fence")
+	var collider_disabled := true
+	for child in fence.get_parent().get_children():
+		if child is StaticBody2D:
+			collider_disabled = collider_disabled and child.collision_layer == 0
+	_check(collider_disabled, "destroyed fence releases its collision bodies")
+	var repair: StructureRepairPoint
+	for point in get_tree().get_nodes_in_group("structure_repairs"):
+		if point.target == fence:
+			repair = point
+			break
+	_check(repair != null and repair.is_interactable_available(), "damaged fence has a nearby Betulkan interaction")
+	var gold_before := GameState.gold()
+	var p := game.player() as Player
+	p.global_position = repair.global_position + Vector2(5, 0)
+	repair.interact(p)
+	_check(not fence.is_intact(), "distant repair interaction cannot restore the fence")
+	p.global_position = repair.global_position + Vector2(0, 0.4)
+	repair.interact(p)
+	_check(fence.is_intact() and GameState.gold() == gold_before, "nearby Betulkan restores a destroyed fence immediately for free")
+	_check(not repair.is_interactable_available() and not GameState.repair_structure(fence.structure_id).ok, "intact structures hide repairs and reject duplicate work")
+	house.take_attack_damage(10)
+	_check(GameState.repair_structure(house.structure_id).ok and house.is_intact() and GameState.gold() == gold_before, "partially damaged houses can also be repaired without payment")
+	var urchin := Enemy.new()
+	urchin.kind = "urchin"
+	urchin.position = fence.attack_position(Vector2.ZERO)
+	lobby.add_child(urchin)
+	urchin.set_physics_process(false)
+	_check(urchin._choose_urchin_target() == fence, "sea urchin chooses a nearby intact fence")
+	urchin._target = house
+	urchin.global_position = house.shelter_position() + Vector2(0, 1.05)
+	urchin._state = Enemy.State.CHASE
+	urchin._attack_timer = 0.0
+	urchin._chase(1.0 / 60.0)
+	_check(urchin._state == Enemy.State.WINDUP, "sea urchin attacks a stationary house from the approach band instead of stalling")
+	var tree := lobby._forest_trees[0]
+	if tree.fallen:
+		tree.replant()
+	if tree.growth_remaining > 0.0:
+		tree._process(ForestTree.GROW_SECONDS)
+	tree.water(tree.max_health)
+	var hp := tree.health
+	urchin.global_position = tree.global_position + Vector2(0.8, 0)
+	urchin._target = tree
+	urchin._hit_dealt = false
+	urchin._attack_active(0.0)
+	_check(tree.health < hp and not tree.burning, "sea urchin damages a mature tree without igniting it")
+	var resident := lobby._residents[0]
+	resident.global_position = house.shelter_position()
+	resident._shelter_house = house
+	urchin.global_position = resident.global_position + Vector2(1, 0)
+	resident._seek_shelter(0.02)
+	_check(resident.sheltered and not resident.visible, "resident enters an intact house when a sea urchin approaches")
+	var resident_hp := GameState.resident_health(resident.resident_name)
+	resident.take_attack_damage(999)
+	_check(GameState.resident_health(resident.resident_name) == resident_hp, "intact shelter protects resident health")
+	for node in get_tree().get_nodes_in_group("structures"):
+		if node.structure_kind == "house":
+			node.take_attack_damage(9999)
+	resident._seek_shelter(0.02)
+	_check(not resident.sheltered and resident.visible, "destroyed houses leave residents exposed")
+	resident.take_attack_damage(999)
+	_check(resident.dead and not resident.is_in_group("settlement_target"), "an exposed resident can die and leaves combat targeting")
+	urchin.queue_free()
+	for node in get_tree().get_nodes_in_group("structures"):
+		if not node.is_intact():
+			GameState.repair_structure(node.structure_id)
+	GameState.save_game()
+	GameState.load_game()
+	_check(GameState.water_keeper_count() == 5 and GameState.resident_health(resident.resident_name) == 0 and GameState.mission_step() == MissionDB.STEPS.size(), "purchased keepers, resident death and mission progress survive save/load")
+	_check(house.is_intact() and fence.is_intact(), "repaired structures survive save/load")
+	await get_tree().process_frame
+
+
+func _test_forest_restoration() -> void:
+	var lobby := game.world as Lobby
+	var keepers: Array[Resident] = []
+	for resident in lobby._residents:
+		resident.set_physics_process(false)
+		resident._release_tree_task()
+		if resident.water_power:
+			keepers.append(resident)
+	_check(keepers.size() == GameState.water_keeper_count(), "water keeper population matches purchased capacity")
+	_check(keepers.all(func(npc: Resident) -> bool: return npc.role == "water_keeper" and npc._sprite.texture == PixelArt.npc_texture("water_keeper")), "water keepers wear distinct blue clothes")
+	for enemy in lobby._forest_monsters:
+		if is_instance_valid(enemy):
+			enemy.set_physics_process(false)
+	_check(lobby._forest_monsters.all(func(enemy: Enemy) -> bool: return not is_instance_valid(enemy) or enemy.kind == "fire"), "woodland attackers are fire monsters")
+	var tree := lobby._forest_trees[0]
+	if tree.growth_remaining > 0.0:
+		tree._process(ForestTree.GROW_SECONDS)
+	if tree.fallen:
+		tree.replant()
+		tree._process(ForestTree.GROW_SECONDS)
+	var attacker := lobby._forest_monsters[0]
+	var attacker_position := attacker.position
+	attacker.global_position = tree.global_position + Vector2(0.8, 0)
+	attacker._target = tree
+	attacker._hit_dealt = false
+	attacker._attack_active(0.0)
+	_check(tree.burning and tree.health < tree.max_health, "fire monster's active attack frame damages and ignites a mature tree")
+	tree.water(tree.max_health)
+	attacker.position = attacker_position
+	tree.take_attack_damage(35)
+	_check(tree.burning and tree.health < tree.max_health, "attacking a mature tree ignites it and reduces HP")
+	var hp := tree.health
+	tree._process(ForestTree.BURN_INTERVAL)
+	_check(tree.health == hp - ForestTree.BURN_DAMAGE, "fire continues damaging an unwatered tree")
+	var keeper := keepers[0]
+	keeper.global_position = tree.global_position + Vector2(0, 1.5)
+	keeper._tree_task = tree
+	tree.caretaker = keeper
+	keeper._care_for_forest(Resident.WATER_INTERVAL)
+	_check(tree.health > hp and keeper._watering, "nearby blue NPC channels water and restores tree HP")
+	for i in 10:
+		keeper._care_for_forest(Resident.WATER_INTERVAL)
+	_check(tree.health == tree.max_health and not tree.burning, "watering extinguishes fire after restoring full HP")
+	keeper._release_tree_task()
+	tree.take_attack_damage(9999)
+	_check(tree.fallen and not tree.burning, "zero HP fells the tree and stops its fire")
+	keeper._tree_task = tree
+	tree.caretaker = keeper
+	keeper._care_for_forest(Resident.PLANT_SECONDS)
+	_check(not tree.fallen and tree.growth_remaining == 30.0, "NPC plants a replacement with exactly 30 seconds of growth")
+	var sapling_hp := tree.health
+	tree.take_attack_damage(99)
+	attacker.global_position = tree.global_position + Vector2(0.8, 0)
+	attacker._target = tree
+	attacker._hit_dealt = false
+	attacker._attack_active(0.0)
+	attacker.position = attacker_position
+	_check(tree.health == sapling_hp and not tree.burning and not tree.is_attackable(), "growing saplings reject fire attacks and ignition")
+	var monster := lobby._forest_monsters[0]
+	_check(monster._nearest_forest_tree() != tree, "fire monster targeting skips growing saplings")
+	GameState.save_game()
+	GameState.load_game()
+	_check(GameState.forest_tree_growth(tree.tree_id) > 29.0, "sapling growth survives save and load")
+	var restored := ForestTree.new()
+	restored.tree_id = tree.tree_id
+	lobby.add_child(restored)
+	_check(not restored.is_attackable() and restored.growth_remaining > 29.0, "reconstructed sapling retains its protected growth phase")
+	restored.queue_free()
+	tree._process(29.0)
+	_check(not tree.is_attackable() and tree.growth_remaining > 0.0, "sapling stays protected before the full 30 seconds")
+	tree._process(1.1)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	_check(tree.is_attackable() and tree.is_in_group("settlement_target") and tree.get_node("Body").collision_layer == 1, "mature tree regains targeting and trunk collision after 30 seconds")
+	tree.take_attack_damage(1)
+	_check(tree.burning, "a fully grown replacement can burn again")
 
 
 func _find_loot(root: Node) -> LootDrop:
@@ -1021,7 +1348,8 @@ func _test_visual_repairs() -> void:
 		resident.set_physics_process(false)
 		resident._end_visit()
 	var start := p.global_position
-	p.global_position = Vector2(31, 28)
+	# Keep this movement fixture clear of the new water-keeper shop counter.
+	p.global_position = Vector2(32, 25)
 	p.reset_physics_interpolation()
 	p.velocity = Vector2.ZERO
 	var previous := p.global_position

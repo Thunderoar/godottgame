@@ -59,8 +59,8 @@ hero's weapon discipline while sharing armour and shields.
 
 ## Settlement systems
 
-### Permanent daytime
-The world is locked in permanent daytime. There is no day/night cycle or timer.
+### Day and night
+A journey starts with a peaceful 180-second day, followed by a 180-second night. The HUD counts down each phase. Fire monsters and sea urchins spawn only at night. Survivors keep fighting after sunrise, including after returning home or loading a save.
 
 ### Lively residential village
 The fenced settlement contains three shops, Bram's cottage service, six garden
@@ -81,13 +81,28 @@ the area and saved. Press **Done** to resume play.
 While the player is in a portal, raiders may attack from **both the sea and the
 forest**. The persistent emergency HUD marks the danger. The player is never
 teleported and portal combat is never forcibly interrupted. Returning through
-the Shore Gate spawns the raiders, residents flee or fight according to their
-role, defenders automatically attack, and buildings and resident cottages take
+the Shore Gate spawns sea urchins, residents seek intact houses for shelter,
+and buildings and resident cottages take
 visible damage. The **73 forest trees have persistent HP**: forest monsters
-strike them with leaf/shake VFX and synthesized impact SFX, damaged trees show
-an HP bar, a tree falls when its health reaches zero, and losing every tree
-triggers a locked game-over screen. Eight forest monsters patrol the woodland
-outside raids, with three more joining during an emergency.
+ignite mature trees with visible flames and ongoing fire damage. Damaged trees
+show an HP bar and disappear at zero health. Two blue-clothed water keepers
+start with the village; up to five can be hired at the Water Keeper Shop
+(80/140/200 Gold for the additional helpers). They heal 5 HP every 1.25 seconds
+and replant fallen trees. Fire monsters only attack mature trees, never players.
+Saplings grow for 30 seconds and cannot be attacked until mature. Losing all
+mature trees with no planted saplings triggers a dry-orange terrain animation,
+dark green sea and stranded dead sea life before the locked game-over screen.
+Night replenishes the woodland to twenty-four fire monsters and the beach to six sea urchins. Raids can raise the fire population to thirty. Existing survivors remain active throughout the day.
+
+Beached sea rubbish becomes sea urchins, which attack trees, fences, houses and
+exposed residents. Houses and fence runs have persistent individual HP. During
+danger, residents walk into an intact house and become protected; loss of all
+shelters leaves them vulnerable to permanent death for that journey. Approach any damaged house or fence and press E / Use (Betulkan) to restore it immediately, for free. Damage, recruitment and resident deaths survive saves.
+
+Every merchant stands inside a named shop. Click or touch the stall to open it directly; the keyboard interaction also remains available. New
+players receive one of ten action-based missions at a time. Dotted arrows on
+the ground follow paths around obstacles; the old bottom arrow notification bar
+is removed. A tutorial spotlight dims the rest of the screen and points at the exact action to take. Mission progress resumes after Continue; tips can be reopened in Menu.
 
 Forest monsters attack trees without waiting for the player. As soon as the
 player enters a monster's line of sight, it immediately targets the player,
@@ -141,8 +156,7 @@ Two gates stand side by side on the north path:
   ten regular monsters and one boss. Boss ability sets include punches,
   projectiles, charges, area slams and a combined projectile-charge pattern.
 - **Pet Battle Portal** — opens a five-level 1v1 companion tournament. Both pets
-  choose from **Attack, Guard and Recover** during a two-second window; when the
-  timer ends, both chosen skills execute simultaneously. A victory grants Gold,
+  choose from **Attack and Defend**. Neither pet acts until the player selects an action, then both resolve together. Every subsequent round waits again. A victory grants Gold,
   pet XP, unlocks the next duel and always raises the companion's level.
 
 ![Paired battle portals](docs/screenshots/tide_lobby_portal.png)
@@ -252,10 +266,12 @@ see [`docs/ANDROID_BUILD.md`](docs/ANDROID_BUILD.md).
 
 - Music and ambient audio are not implemented; gameplay cues use generated SFX.
 - Android signing and device profiling still need to be run.
-- Building damage is visible after an emergency but has no repair interaction yet.
+- Damaged houses and fences can be repaired for free through their nearby Betulkan interaction.
 - Boss abilities are implemented as one primary pattern per boss rather than
   full multi-phase move sets.
 - Pet duels are resolved in an animated arena panel rather than a separate
   walkable world scene.
 - Additional resident dialogue and ambient animal species can follow.
 # godottgame
+
+House upgrade levels are clickable previews: inspect any Level 1-5 design before deciding to buy the next upgrade. Pet duels wait for an explicit Attack or Defend each round. Five supplied battle backgrounds have per-duel paths configured, but the attachment downloads were blocked here; importing those local images remains pending.

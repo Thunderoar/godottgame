@@ -7,6 +7,7 @@ const LEVELS := {
 	"pet_duel_1": {
 		"order": 1,
 		"name": "Clover Ring",
+		"background": "res://assets/pet_battles/bg haiwan fight rumah.png",
 		"subtitle": "First Duel",
 		"lore": "A friendly sparring circle behind the cottage. Every champion starts here.",
 		"pet_level": 1,
@@ -22,6 +23,7 @@ const LEVELS := {
 	"pet_duel_2": {
 		"order": 2,
 		"name": "Bramble Court",
+		"background": "res://assets/pet_battles/bg haiwan fight.png",
 		"subtitle": "Second Duel",
 		"lore": "Marsh cats duel among the brambles. Patience wins more bouts than speed.",
 		"pet_level": 2,
@@ -37,6 +39,7 @@ const LEVELS := {
 	"pet_duel_3": {
 		"order": 3,
 		"name": "Moonlit Ring",
+		"background": "res://assets/pet_battles/bg haiwan fight pantai.jpg",
 		"subtitle": "Third Duel",
 		"lore": "The moth's wings scatter pale light across the sand. Keep your footing.",
 		"pet_level": 3,
@@ -52,6 +55,7 @@ const LEVELS := {
 	"pet_duel_4": {
 		"order": 4,
 		"name": "Storm Terrace",
+		"background": "res://assets/pet_battles/bg haiwan fight.jpg",
 		"subtitle": "Fourth Duel",
 		"lore": "A storm fox guards the high terrace. Its paws crackle before every lunge.",
 		"pet_level": 4,
@@ -67,6 +71,7 @@ const LEVELS := {
 	"pet_duel_5": {
 		"order": 5,
 		"name": "Tideworn Crown",
+		"background": "res://assets/pet_battles/bg haiwan fight universe.webp",
 		"subtitle": "Final Duel",
 		"lore": "The tide-cat waits at the crown of the arena. Only a max-level companion can answer.",
 		"pet_level": 5,

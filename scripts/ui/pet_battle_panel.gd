@@ -1,8 +1,8 @@
 class_name PetBattlePanel
 extends ModalBase
 ## Five-level 1v1 companion tournament with simultaneous turns.
-## Both pets choose Attack or Defend during a two-second window; when it
-## expires, both actions resolve together. A victory always grants a pet level.
+## Both pets wait for an explicit player choice, then resolve together.
+## A victory always grants a pet level.
 
 const SKILLS := {
 	"attack": {"name": "Attack", "description": "Deal full attack damage this turn."},
@@ -75,7 +75,7 @@ func _rebuild() -> void:
 	add_body_text("Active companion: %s  •  Lv %d  •  HP %d/%d" % [PetDB.name_of(pet_id), pet_level, int(pet.get("hp", 0)), int(pet.get("hp_max", 0))], GameUI.TEXT, 17)
 	var xp_text := "PET XP MAX" if bool(xp.get("max", false)) else "Pet XP %d/%d" % [int(xp.get("xp", 0)), int(xp.get("next", 1))]
 	add_body_text("%s  •  Gold %d" % [xp_text, GameState.gold()], GameUI.PURPLE, 14)
-	add_body_text("Choose a duel. Both pets pick Attack or Defend during a two-second window; actions then resolve at the same time.", GameUI.MUTED, 13)
+	add_body_text("Choose a duel. Nothing happens until you press Attack or Defend. Both pets then act together.", GameUI.MUTED, 13)
 	content.add_child(GameUI.spacer(2))
 	for level_id in PetBattleDB.ordered_ids():
 		_add_level_card(level_id)
@@ -170,12 +170,6 @@ func _process(delta: float) -> void:
 			_awaiting_next = false
 			_begin_turn()
 		return
-	if not _turn_active:
-		return
-	_turn_timer = maxf(0.0, _turn_timer - delta)
-	_update_timer_ui()
-	if _turn_timer <= 0.0:
-		_resolve_turn()
 
 
 var _arena_frame_timer := 0.0
@@ -200,7 +194,7 @@ func _begin_turn() -> void:
 		return
 	_player_choice = ""
 	_enemy_choice = _choose_enemy_skill()
-	_turn_timer = 2.0
+	_turn_timer = 0.0
 	_turn_active = true
 	for button in _skill_buttons:
 		if is_instance_valid(button):
@@ -208,9 +202,9 @@ func _begin_turn() -> void:
 	if _timer_bar != null:
 		_timer_bar.value = 2.0
 	if _timer_label != null:
-		_timer_label.text = "Choose a skill — both pets act when the timer reaches zero."
+		_timer_label.text = "Your turn - press Attack or Defend. No time limit."
 	if _status != null:
-		_status.text = "Round %d. Rival is choosing." % _turn_number
+		_status.text = "Round %d. Waiting for your choice." % _turn_number
 	_update_timer_ui()
 
 
@@ -225,16 +219,17 @@ func choose_skill(skill_id: String) -> void:
 			button.disabled = true
 	Sfx.play("select", -9.0)
 	if _timer_label != null:
-		_timer_label.text = "Locked in: %s. Waiting for the 2-second window." % str(SKILLS[skill_id].name)
+		_timer_label.text = "Chosen: %s." % str(SKILLS[skill_id].name)
 	if _status != null:
-		_status.text = "Your companion prepares %s while the rival chooses." % str(SKILLS[skill_id].name)
+		_status.text = "Your companion uses %s." % str(SKILLS[skill_id].name)
+	_resolve_turn()
 
 
 func _resolve_turn() -> void:
-	if not _turn_active:
+	if not _turn_active or _player_choice.is_empty():
 		return
 	_turn_active = false
-	var player_action := _player_choice if _player_choice != "" else "attack"
+	var player_action := _player_choice
 	var enemy_action := _enemy_choice if _enemy_choice != "" else _choose_enemy_skill()
 	var player_damage := _player_damage if player_action == "attack" else 0
 	var enemy_damage := _enemy_damage if enemy_action == "attack" else 0
@@ -333,7 +328,7 @@ func _update_timer_ui() -> void:
 	if _timer_bar != null:
 		_timer_bar.value = _turn_timer
 	if _timer_label != null and _turn_active and _player_choice == "":
-		_timer_label.text = "Choose a skill — action window %.1fs" % _turn_timer
+		_timer_label.text = "Waiting for Attack or Defend - no time limit."
 
 
 func _render_battle() -> void:
@@ -342,11 +337,24 @@ func _render_battle() -> void:
 	_skill_buttons.clear()
 	var def := PetBattleDB.get_level(_battle_level)
 	add_section("%s  •  %s" % [str(def.get("name", "Pet Duel")), str(def.get("subtitle", "Duel"))], GameUI.GOLD)
-	add_body_text("Both pets choose Attack or Defend. When the 2-second timer ends, both actions execute simultaneously.", GameUI.MUTED, 13)
+	add_body_text("Press Attack or Defend to act. Both pets wait for your choice every round.", GameUI.MUTED, 13)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 26)
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	content.add_child(row)
+	var arena := PanelContainer.new()
+	arena.name = "BattleArena"
+	arena.clip_contents = true
+	content.add_child(arena)
+	var background_path := str(def.get("background", ""))
+	if not background_path.is_empty() and ResourceLoader.exists(background_path):
+		var backdrop := TextureRect.new()
+		backdrop.name = "ArenaBackground"
+		backdrop.texture = load(background_path) as Texture2D
+		backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		arena.add_child(backdrop)
+	arena.add_child(row)
 	var left := _battle_card(_player_pet_id, PetDB.name_of(_player_pet_id), "Your companion  •  Lv %d" % _player_level, Color.WHITE)
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(left)
@@ -380,6 +388,7 @@ func _render_battle() -> void:
 	_timer_bar.value = 2.0
 	_timer_bar.show_percentage = false
 	_timer_bar.custom_minimum_size = Vector2(780, 14)
+	_timer_bar.visible = false
 	_timer_bar.add_theme_stylebox_override("background", GameUI.style(Color("#102126"), Color("#3e5c62"), 1, 0))
 	_timer_bar.add_theme_stylebox_override("fill", GameUI.style(GameUI.PURPLE, GameUI.PURPLE.lightened(0.25), 1, 0))
 	content.add_child(_timer_bar)
@@ -405,7 +414,7 @@ func _render_battle() -> void:
 
 
 func _battle_card(pet_id: String, display_name: String, subtitle: String, tint: Color) -> PanelContainer:
-	var card := GameUI.panel(Color("#14262c"), Color("#4a6a70"))
+	var card := GameUI.panel(Color(0.04, 0.08, 0.10, 0.62), Color("#4a6a70"))
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 4)
 	card.add_child(box)
