@@ -13,6 +13,7 @@ extends Node
 ##   mute_all                 bool                     default false
 ##   fullscreen               bool                     default false
 ##   ui_scale                 int    75..130           default 100  (percent)
+##   camera_zoom              float  32..80            default 64  (magnification)
 ##   touch_controls           String auto|always|hidden default "always"
 ##   screen_shake             bool                     default true
 ##   auto_pause_on_focus_loss bool                     default true
@@ -47,6 +48,7 @@ const DEFAULTS := {
         "mute_all": false,
         "fullscreen": false,
         "ui_scale": 100,
+        "camera_zoom": 64.0,
         "touch_controls": "always",
         "screen_shake": true,
         "auto_pause_on_focus_loss": true,
@@ -123,6 +125,8 @@ func _sanitize_value(key: String, value: Variant) -> Variant:
                         return clampi(int(value), 0, 100)
                 "ui_scale":
                         return clampi(int(value), UI_SCALE_MIN, UI_SCALE_MAX)
+                "camera_zoom":
+                        return clampf(float(value), 32.0, 80.0)
                 "touch_controls":
                         var mode := str(value).to_lower()
                         return mode if TOUCH_MODES.has(mode) else str(DEFAULTS["touch_controls"])
@@ -222,6 +226,14 @@ func ui_scale() -> int:
 
 func set_ui_scale(value: int, persist: bool = true) -> void:
         set_value("ui_scale", value, persist)
+
+
+func camera_zoom() -> float:
+        return float(_values.get("camera_zoom", 64.0))
+
+
+func set_camera_zoom(value: float, persist: bool = true) -> void:
+        set_value("camera_zoom", value, persist)
 
 
 func touch_controls() -> String:

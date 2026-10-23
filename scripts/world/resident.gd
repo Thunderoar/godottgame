@@ -110,8 +110,10 @@ func _move_route(delta: float) -> void:
 		_wait = 0.0
 		if _shopping:
 			_shopping = false
-			if _tool:
-				_tool.texture = PixelArt.icon(_tool_icon())
+		if _tool:
+			var travel_icon := "backpack" if shops_at_waypoints else _tool_icon()
+			if _tool.texture != PixelArt.icon(travel_icon):
+				_tool.texture = PixelArt.icon(travel_icon)
 		if _sprite:
 			_sprite.flip_h = delta_pos.x < 0.0
 		if _frightened and delta_pos.length() < 2.5 and not _threat_notified:
@@ -126,8 +128,9 @@ func _move_route(delta: float) -> void:
 				_tool.texture = PixelArt.icon("gold")
 		else:
 			_shopping = false
-			if _tool and _tool.texture != PixelArt.icon(_tool_icon()):
-				_tool.texture = PixelArt.icon(_tool_icon())
+			var travel_icon := "backpack" if shops_at_waypoints else _tool_icon()
+			if _tool and _tool.texture != PixelArt.icon(travel_icon):
+				_tool.texture = PixelArt.icon(travel_icon)
 		if _wait >= wait_duration:
 			_wait = 0.0
 			_index = (_index + 1) % maxi(1, waypoints.size())

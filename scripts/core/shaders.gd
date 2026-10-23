@@ -152,9 +152,7 @@ void fragment() {
 	float crest = smoothstep(0.86, 1.0, band);
 	float depth = smoothstep(0.0, 1.0, UV.y);
 	vec4 col = mix(shallow, deep, depth);
-	float sparkle = step(0.985, sin(UV.x * 220.0 + TIME * 2.2) * sin(UV.y * 140.0 - TIME * 1.7));
 	vec3 rgb = mix(col.rgb, foam.rgb, crest * 0.85);
-	rgb += sparkle * 0.35 * (1.0 - depth * 0.6);
 	COLOR = vec4(rgb, mix(col.a, 1.0, crest * 0.5) * mask_a);
 }
 "
