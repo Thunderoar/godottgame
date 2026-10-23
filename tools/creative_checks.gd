@@ -62,8 +62,9 @@ static func run(game: Game, check: Callable) -> void:
 	map.objects.append({"id": "override_" + base_tree.tree_id, "base_id": base_tree.tree_id, "position": base_position + Vector2(0.8, 0)})
 	var before := map.snapshot()
 	map.paint("Terrain", Vector2i(28, 31), "sand")
+	map.seed_value = 99
 	map.restore(before)
-	check.call(map.cell("Terrain", Vector2i(28, 31)) == "grass_light", "map snapshot restores authored paint")
+	check.call(map.cell("Terrain", Vector2i(28, 31)) == "grass_light" and map.seed_value == 4771, "map snapshot restores authored paint and decoration seed")
 	check.call(ResourceSaver.save(map, "user://creative-map.tres") == OK, "versioned map resource saves")
 	var loaded := ResourceLoader.load("user://creative-map.tres", "", ResourceLoader.CACHE_MODE_IGNORE) as AuthoredMap
 	check.call(loaded.objects[0].id == "test_stable_tree" and loaded.cell("Water", Vector2i(30, 33)) == "sea_deep", "map reload preserves object identities and terrain layers")

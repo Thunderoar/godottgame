@@ -129,6 +129,7 @@ func _import_file(path: String) -> void:
 	while FileAccess.file_exists(dest):
 		dest = directory.path_join(base + "_%d.png" % suffix)
 		suffix += 1
+	image.convert(Image.FORMAT_RGBA8)
 	var result := image.save_png(dest)
 	if result != OK:
 		studio.report("Import failed: " + error_string(result))

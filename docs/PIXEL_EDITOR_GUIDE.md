@@ -24,6 +24,9 @@ filename. Save As / Export sheet writes a horizontal PNG strip plus
 `.png.frames.json` containing version, dimensions and durations. Open a saved sheet
 with its frame dimensions to restore the animation. Save retains its existing
 path. Unsaved edits require an explicit discard choice when replacing a document.
+Disabling/reloading the plugin retains recovery drafts under the dedicated
+`user://tidesworn_studio_recovery/` directory; reopening the studio restores them
+as unsaved work without overwriting source art.
 
 Register saved artwork adds the actual saved image to the persistent catalog,
 with frame dimensions/count/durations. To use it, enter the returned asset ID on

@@ -23,3 +23,7 @@ Motion removes optional pose motion; quality settings retain batched vegetation.
 
 The studio World Palette tab compares original/revised swatches. Save resources
 to persist edits; Preview updates the studio and invalidates generated caches.
+
+Dungeon floors use small staggered flagstones derived from semantic stone and sea
+roles plus portal theme colour. Bevels and sparse cracks retain pixel density
+without altering pillar/wall collision or adding lighting effects.

@@ -150,6 +150,8 @@ static func run(studio: Control) -> void:
 	check(not flag.called and confirmation != null, "unsaved documents require an explicit discard choice")
 	if confirmation: confirmation.canceled.emit()
 	await tree.process_frame
+	pixel.document.checkpoint()
+	pixel.document.dot(Vector2i(2, 2), Color.MAGENTA)
 	EditorInterface.set_plugin_enabled("tidesworn_creative_tools", false)
 	await tree.process_frame
 	await tree.process_frame
@@ -157,6 +159,9 @@ static func run(studio: Control) -> void:
 	EditorInterface.set_plugin_enabled("tidesworn_creative_tools", true)
 	await tree.process_frame
 	check(EditorInterface.is_plugin_enabled("tidesworn_creative_tools"), "plugin enables again in the same editor session")
+	var recovered: Control = EditorInterface.get_editor_main_screen().get_node("TideswornCreativeStudio")
+	check(recovered.pixel_panel.document.dirty and recovered.pixel_panel.document.image().get_pixel(2, 2).is_equal_approx(Color.MAGENTA), "plugin reload recovers unsaved pixel work without overwriting source art")
+	recovered.pixel_panel.document.dirty = false
 	# Tool UI resources hold temporary palette copies; release process-static refs on exit.
 	AssetRegistry.catalog = null
 	WorldPalette.active = null

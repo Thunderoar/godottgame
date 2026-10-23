@@ -89,31 +89,34 @@ func _make_dungeon_texture() -> Texture2D:
 	# (no random per-cell tile soup -> no visible grid maze), sparse accent
 	# tiles, smooth large-scale shading, and real wall faces with depth. The
 	# per-theme palette comes from PixelArt.portal_theme_palette.
-	var key := "dungeon_v2_%s" % portal_id
+	var key := "dungeon_v3_%s" % portal_id
 	if PixelArt.CACHE.has(key):
 		return PixelArt.CACHE[key]
 	var w := int(map_rect.size.x * 32.0)
 	var h := int(map_rect.size.y * 32.0)
 	var img := PixelArt.image(w, h)
-	var stone_tex := load("res://assets/textures/TX Tileset Stone Ground.png") as Texture2D
-	var src := stone_tex.get_image()
-	var origins := [
-		Vector2i(0, 0), Vector2i(32, 0), Vector2i(64, 0),
-		Vector2i(0, 32), Vector2i(32, 32), Vector2i(64, 32),
-		Vector2i(0, 64), Vector2i(32, 64), Vector2i(64, 64),
-	]
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 8812 + portal_id.hash()
 	var palette := PixelArt.portal_theme_palette(_theme())
-	# A deterministic base tile keeps the floor seamless; accents stay rare.
-	var base: Vector2i = origins[(portal_id.hash() + 3) % origins.size()]
-	var accent: Vector2i = origins[(portal_id.hash() + 7) % origins.size()]
-	for gy in int(map_rect.size.y):
-		for gx in int(map_rect.size.x):
-			var tile := base
-			if rng.randf() < 0.06:
-				tile = accent
-			img.blit_rect(src, Rect2i(tile, Vector2i(32, 32)), Vector2i(gx * 32, gy * 32))
+	# Small staggered, bevelled flagstones preserve the world's 32px scale.
+	# Material hue comes from the semantic stone role plus this portal's theme.
+	var tint: Color = palette["glow"]
+	var stone := WorldPalette.color("stone").lerp(WorldPalette.color("sea_deep"), 0.38).lerp(tint, 0.08)
+	var mortar := stone.darkened(0.23)
+	img.fill(mortar)
+	for row in int(ceil(h / 16.0)):
+		var shift := 16 if row % 2 else 0
+		for column in range(-1, int(ceil(w / 32.0)) + 1):
+			var x := column * 32 + shift
+			var y := row * 16
+			var material := stone.lightened(rng.randf_range(-0.025, 0.045))
+			PixelArt.rect(img, x + 1, y + 1, 30, 14, material)
+			PixelArt.hline(img, x + 2, y + 1, 28, material.lightened(0.065))
+			PixelArt.vline(img, x + 1, y + 2, 12, material.lightened(0.03))
+			PixelArt.hline(img, x + 2, y + 14, 28, material.darkened(0.07))
+			if rng.randf() < 0.13:
+				PixelArt.line(img, x + 18, y + 5, x + 21, y + 8, material.darkened(0.12))
+				PixelArt.line(img, x + 21, y + 8, x + 19, y + 10, material.darkened(0.12))
 	# Smooth, large-scale light variation instead of per-block tinting. Kept
 	# very soft so it never reads as circular smudges on the floor.
 	var glow: Color = palette["glow"]

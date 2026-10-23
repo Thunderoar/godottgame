@@ -248,7 +248,7 @@ data-driven.
 
 `./tools/test_creative_editor.sh` is the authoring gate. It copies the entire source
 into a verified temporary root without `.godot`, imports afresh, launches the actual
-editor, tests 23 native-tool workflow checks, then starts a second runtime process
+editor, tests 24 native-tool workflow checks, then starts a second runtime process
 to verify saved assets, edited PNG colours, the authored map and water collision.
 It never imports test art into the normal project. A GUI display is provided with
 Xvfb. Review emitted PNGs as well as logs; passing model checks are not a visual

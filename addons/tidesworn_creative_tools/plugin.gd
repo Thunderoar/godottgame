@@ -17,6 +17,7 @@ func _enter_tree() -> void:
 
 func _exit_tree() -> void:
 	if is_instance_valid(studio):
+		studio.save_recovery_draft()
 		studio.queue_free()
 
 func _has_main_screen() -> bool:

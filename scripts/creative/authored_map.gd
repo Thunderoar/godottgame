@@ -29,9 +29,10 @@ func paint(layer: String, at: Vector2i, material: String) -> void:
 	emit_changed()
 
 func snapshot() -> Dictionary:
-	return {"layers": layers.duplicate(true), "objects": objects.duplicate(true)}
+	return {"layers": layers.duplicate(true), "objects": objects.duplicate(true), "seed": seed_value}
 
 func restore(state: Dictionary) -> void:
+	seed_value = int(state.get("seed", seed_value))
 	layers = state.layers.duplicate(true)
 	objects.assign(state.objects.duplicate(true))
 	emit_changed()

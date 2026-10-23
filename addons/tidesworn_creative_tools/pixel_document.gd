@@ -163,6 +163,7 @@ func reorder(direction: int) -> void:
 func load_png(path: String, frame_size := Vector2i.ZERO) -> Error:
 	var source := Image.load_from_file(ProjectSettings.globalize_path(path))
 	if source == null or source.is_empty(): return ERR_FILE_CORRUPT
+	source.convert(Image.FORMAT_RGBA8)
 	if source.get_width() > 4096 or source.get_height() > 4096: return ERR_OUT_OF_MEMORY
 	if frame_size == Vector2i.ZERO: frame_size = source.get_size()
 	if frame_size.x < 1 or frame_size.y < 1 or frame_size.x > 512 or frame_size.y > 512: return ERR_INVALID_PARAMETER
@@ -188,6 +189,7 @@ func load_png(path: String, frame_size := Vector2i.ZERO) -> Error:
 	return OK
 
 func save_png(path: String) -> Error:
+	if image().get_width() * frames.size() > 16384: return ERR_OUT_OF_MEMORY
 	var sheet := Image.create_empty(image().get_width() * frames.size(), image().get_height(), false, Image.FORMAT_RGBA8)
 	for i in frames.size():
 		sheet.blit_rect(frames[i], Rect2i(Vector2i.ZERO, frames[i].get_size()), Vector2i(i * image().get_width(), 0))

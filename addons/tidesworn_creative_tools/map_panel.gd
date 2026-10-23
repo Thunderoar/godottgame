@@ -56,6 +56,8 @@ func _ready() -> void:
 	terrain_choice = W.option(bar, AuthoredMap.MATERIALS)
 	tool = W.option(bar, ["Pencil", "Eraser", "Rectangle", "Fill", "Eyedropper", "Select", "Move", "Place object", "Select object", "Move object"])
 	brush = W.number(bar, "Brush", 1, 1, 8)
+	tool.item_selected.connect(func(index: int) -> void:
+		if index == 7: _lock_base_properties(false))
 	bar = W.row(self)
 	locked = W.check(bar, "Lock layer")
 	shown = W.check(bar, "Visible", true)
@@ -258,14 +260,7 @@ func _select_object(at: Vector2i) -> void:
 	if selected_object < 0: return
 	var data: Dictionary = map.objects[selected_object]
 	var is_base := data.has("base_id")
-	asset.editable = not is_base
-	object_label.editable = not is_base
-	scale_value.editable = not is_base
-	footprint_x.editable = not is_base
-	footprint_y.editable = not is_base
-	blocking.disabled = is_base
-	interactive.disabled = is_base
-	metadata.editable = not is_base
+	_lock_base_properties(is_base)
 	asset.text = data.get("asset", "flowers")
 	object_label.text = data.get("label", "")
 	depth.value = data.get("depth", 5)
@@ -410,3 +405,14 @@ func _preview_objects() -> Array[Dictionary]:
 			if not overridden: result.append(object)
 	result.append_array(map.objects)
 	return result
+
+
+func _lock_base_properties(is_base: bool) -> void:
+	asset.editable = not is_base
+	object_label.editable = not is_base
+	scale_value.editable = not is_base
+	footprint_x.editable = not is_base
+	footprint_y.editable = not is_base
+	blocking.disabled = is_base
+	interactive.disabled = is_base
+	metadata.editable = not is_base
