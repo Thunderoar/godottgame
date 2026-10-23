@@ -59,6 +59,7 @@ func _ready() -> void:
 	_build_portals()
 	_build_gathering()
 	_build_dock_and_ship()
+	_build_beached_turtle()
 	_build_forest()
 	_build_forest_monsters()
 	_build_scatter()
@@ -299,19 +300,22 @@ func _build_water_layer() -> void:
 
 
 func _make_water_mask_texture() -> Texture2D:
-	var key := "water_mask_lobby"
+	var key := "water_mask_lobby_v2"
 	if PixelArt.CACHE.has(key):
 		return PixelArt.CACHE[key]
 	var w := 1024
 	var h := 640
 	var img := PixelArt.image(w, h)
-	for x in w:
+	img.fill(Color(0, 0, 0, 0))
+	# Terrain coast art only paints sea through x=25.2 world units. Keep the
+	# rest of this full-map mask transparent so the shader never covers land.
+	var water_width := mini(w, int(25.2 * 16.0))
+	for x in water_width:
 		var shore := _coast_pixel_y(x * 2) / 2.0
 		for y in h:
 			if float(y) < shore:
 				continue
 			var depth := clampf((float(y) - shore) / 90.0, 0.0, 1.0)
-			# Sea shape with a soft foam lip at the shoreline.
 			var a := 0.55 + depth * 0.45
 			if float(y) - shore < 3.0:
 				a = 0.75
@@ -373,7 +377,7 @@ func _build_ambient_life() -> void:
 	pollen.amount = 12
 	pollen.lifetime = 5.0
 	pollen.preprocess = 2.5
-	pollen.texture = PixelArt.icon("spark", 16)
+	pollen.texture = PixelArt.light_texture()
 	pollen.scale_amount_min = 0.18
 	pollen.scale_amount_max = 0.35
 	pollen.color = Color(1.0, 0.95, 0.75, 0.28)
@@ -391,7 +395,14 @@ func _build_ambient_life() -> void:
 	# Butterflies fluttering near the flower borders.
 	for i in 3:
 		var butterfly := Sprite2D.new()
-		butterfly.texture = PixelArt.icon("spark", 16)
+		butterfly.texture = PixelArt.cached_texture("ambient_butterfly_16", func() -> Image:
+			var img := PixelArt.image(16, 12)
+			PixelArt.ellipse(img, 4, 4, 3, 3, Color("#f2d68c"))
+			PixelArt.ellipse(img, 11, 4, 3, 3, Color("#a9dfe0"))
+			PixelArt.ellipse(img, 4, 8, 2, 2, Color("#e8b2cb"))
+			PixelArt.ellipse(img, 11, 8, 2, 2, Color("#f0e2a5"))
+			PixelArt.line(img, 7, 3, 8, 9, Color("#43534a"))
+			return img)
 		butterfly.scale = Vector2(0.022, 0.022)
 		butterfly.modulate = [Color("#ffd47b"), Color("#a8e8ff"), Color("#ffb0c8")][i]
 		butterfly.z_index = 8
@@ -764,6 +775,49 @@ func _build_dock_and_ship() -> void:
 	_markers.append({"position": Vector2(8, 30), "color": Color("#77aeb5"), "size": 3.0, "shape": "disc"})
 
 
+func _build_beached_turtle() -> void:
+	var turtle := Node2D.new()
+	turtle.name = "BeachedTurtle"
+	turtle.position = Vector2(7.8, 23.3)
+	turtle.add_to_group("beached_turtle")
+	add_child(turtle)
+	var shadow := Sprite2D.new()
+	shadow.name = "Shadow"
+	shadow.texture = PixelArt.light_texture()
+	shadow.scale = Vector2(0.014, 0.007)
+	shadow.modulate = Color(0.02, 0.03, 0.03, 0.24)
+	shadow.position = Vector2(0.06, 0.08)
+	shadow.z_index = -1
+	turtle.add_child(shadow)
+	var shell := Sprite2D.new()
+	shell.name = "TurtleArt"
+	shell.texture = PixelArt.cached_texture("beached_turtle_32x24", func() -> Image:
+		var img := PixelArt.image(32, 24)
+		PixelArt.ellipse(img, 15, 12, 10, 7, Color("#314b31"))
+		PixelArt.ellipse(img, 15, 11, 8, 5, Color("#819c52"))
+		PixelArt.line(img, 10, 7, 10, 15, Color("#506b3d"))
+		PixelArt.line(img, 15, 6, 15, 16, Color("#506b3d"))
+		PixelArt.line(img, 20, 8, 20, 15, Color("#506b3d"))
+		PixelArt.line(img, 10, 11, 20, 11, Color("#506b3d"))
+		PixelArt.ellipse(img, 26, 12, 4, 3, Color("#8ead62"))
+		PixelArt.ellipse(img, 9, 6, 3, 2, Color("#67884b"))
+		PixelArt.ellipse(img, 9, 17, 3, 2, Color("#67884b"))
+		PixelArt.ellipse(img, 21, 17, 3, 2, Color("#67884b"))
+		PixelArt.ellipse(img, 21, 6, 3, 2, Color("#67884b"))
+		PixelArt.px(img, 27, 11, Color("#1c2c25"))
+		PixelArt.px(img, 28, 11, Color("#f4e9bd"))
+		return img)
+	shell.centered = true
+	shell.scale = Vector2(PixelArt.PX, PixelArt.PX)
+	shell.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	shell.z_index = 1
+	turtle.add_child(shell)
+	if not GameSettings.reduce_motion():
+		var breathe := turtle.create_tween().set_loops()
+		breathe.tween_property(shell, "rotation", 0.025, 1.8).set_trans(Tween.TRANS_SINE)
+		breathe.tween_property(shell, "rotation", -0.025, 1.8).set_trans(Tween.TRANS_SINE)
+
+
 # ------------------------------------------------------------------ forest
 
 func _build_forest() -> void:
@@ -873,21 +927,24 @@ func _add_tree(at: Vector2, upper_path: String, lower_path: String, scale_mul: f
 	var lower_size := lower.get_size()
 	var total_h := upper_size.y + lower_size.y
 	var shadow := Sprite2D.new()
+	shadow.name = "Shadow"
 	shadow.texture = PixelArt.light_texture()
 	shadow.scale = Vector2(0.021 * scale_mul, 0.011 * scale_mul)
 	shadow.modulate = Color(0, 0, 0, 0.33)
 	shadow.position = Vector2(0, -0.03)
 	shadow.z_index = -1
-	add_child(shadow)
+	holder.add_child(shadow)
 	var lower_sprite := Sprite2D.new()
+	lower_sprite.name = "LowerSprite"
 	lower_sprite.texture = lower
 	lower_sprite.centered = false
 	lower_sprite.offset = Vector2(-lower_size.x * 0.5, -lower_size.y)
 	lower_sprite.scale = Vector2(PixelArt.PX, PixelArt.PX) * scale_mul
 	lower_sprite.modulate = Color(0.76, 0.9, 0.74)
 	lower_sprite.z_index = 3
-	add_child(lower_sprite)
+	holder.add_child(lower_sprite)
 	var upper_sprite := Sprite2D.new()
+	upper_sprite.name = "UpperSprite"
 	upper_sprite.texture = upper
 	upper_sprite.material = Shaders.wind_material() if GameSettings.effects_at_least("med") else null
 	upper_sprite.centered = false
@@ -895,7 +952,7 @@ func _add_tree(at: Vector2, upper_path: String, lower_path: String, scale_mul: f
 	upper_sprite.scale = Vector2(PixelArt.PX, PixelArt.PX) * scale_mul
 	upper_sprite.modulate = Color(0.76, 0.9, 0.74)
 	upper_sprite.z_index = 3
-	add_child(upper_sprite)
+	holder.add_child(upper_sprite)
 	holder.register_visual(lower_sprite)
 	holder.register_visual(upper_sprite)
 	var body := StaticBody2D.new()
@@ -907,7 +964,7 @@ func _add_tree(at: Vector2, upper_path: String, lower_path: String, scale_mul: f
 	shape.shape = circle
 	shape.position = Vector2(0, -0.2)
 	body.add_child(shape)
-	add_child(body)
+	holder.add_child(body)
 
 
 func _build_scatter() -> void:
@@ -992,6 +1049,23 @@ func _add_decor_placeable(id: String, path: String, at: Vector2, scale_mul: floa
 	sprite.scale = Vector2(PixelArt.PX, PixelArt.PX) * scale_mul
 	sprite.z_index = z
 	group.add_child(sprite)
+	if id == "signpost":
+		var sign_text := Label.new()
+		sign_text.name = "BesutSignText"
+		sign_text.add_to_group("besut_sign")
+		sign_text.text = "BESUT"
+		sign_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		sign_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		sign_text.add_theme_font_size_override("font_size", 8)
+		sign_text.add_theme_color_override("font_color", Color("#f7e5ad"))
+		sign_text.add_theme_color_override("font_outline_color", Color("#26342c"))
+		sign_text.add_theme_constant_override("outline_size", 2)
+		sign_text.size = Vector2(64, 16)
+		sign_text.position = Vector2(-1.0, -1.8)
+		sign_text.scale = Vector2(PixelArt.PX, PixelArt.PX)
+		sign_text.z_index = z + 5
+		sign_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		group.add_child(sign_text)
 
 
 func _add_wind_decor(path: String, at: Vector2, scale_mul: float, z: int) -> void:
@@ -1182,6 +1256,9 @@ func _build_residential_life() -> void:
 	_add_resident("Amir", "stablehand", "Tending the horses", Vector2(36.8, 30.2), [Vector2(36.8, 30.2), Vector2(38.2, 30.7), Vector2(35.7, 30.7)], Vector2(33.8, 23.4))
 	_add_resident("Laila", "gardener", "Watering the new gardens", Vector2(36.4, 27.0), [Vector2(36.4, 27.0), Vector2(44.0, 20.8), Vector2(19.8, 27.4)], Vector2(33.5, 23.2))
 	_add_resident("Zara", "resident", "Visiting the west cottages", Vector2(15.0, 19.4), [Vector2(15.0, 19.4), Vector2(23.0, 23.0), Vector2(30.5, 24.5)], Vector2(34.0, 23.2))
+	# Shoppers pause with a coin cue; they do not alter player currency or stock.
+	_add_resident("Mira", "trader", "Browsing the village shops", Vector2(22.8, 24.0), [Vector2(22.8, 24.0), Vector2(23.8, 23.7), Vector2(22.0, 21.0)], Vector2(33.8, 23.4), false, 8, 4.2, true)
+	_add_resident("Fikri", "trader", "Buying village goods", Vector2(27.0, 20.4), [Vector2(27.0, 20.4), Vector2(27.4, 18.9), Vector2(26.0, 17.8)], Vector2(33.8, 23.4), false, 8, 4.2, true)
 
 
 func _add_resident_house(house_name: String, at: Vector2, level: int) -> void:
@@ -1388,7 +1465,7 @@ func _add_animal(kind: String, at: Vector2, animal_scale: float = 1.25) -> void:
 	tween.tween_property(animal, "position:y", at.y, 0.8).set_ease(Tween.EASE_IN_OUT)
 
 
-func _add_resident(resident_name: String, role: String, activity: String, start: Vector2, points: Array, shelter: Vector2, combat: bool = false, damage: int = 8, distance: float = 4.2) -> void:
+func _add_resident(resident_name: String, role: String, activity: String, start: Vector2, points: Array, shelter: Vector2, combat: bool = false, damage: int = 8, distance: float = 4.2, shopper: bool = false) -> void:
 	var resident := Resident.new()
 	resident.resident_name = resident_name
 	resident.role = role
@@ -1398,6 +1475,7 @@ func _add_resident(resident_name: String, role: String, activity: String, start:
 	resident.combat_enabled = combat
 	resident.combat_damage = damage
 	resident.combat_range = distance
+	resident.shops_at_waypoints = shopper
 	var typed_points: Array[Vector2] = []
 	for p in points:
 		typed_points.append(p)

@@ -8,6 +8,9 @@ extends Node2D
 @export var activity := "Tending the settlement"
 @export var speed := 0.9
 @export var waypoints: Array[Vector2] = []
+@export var shops_at_waypoints := false
+
+const SHOPPING_STOP_SECONDS := 1.6
 @export var shelter := Vector2(34, 23)
 @export var combat_enabled := false
 @export var combat_damage := 8
@@ -22,10 +25,13 @@ var _bob := 0.0
 var _frightened := false
 var _threat_notified := false
 var _attack_timer := 0.0
+var _shopping := false
 
 
 func _ready() -> void:
 	add_to_group("settlement_target")
+	if shops_at_waypoints:
+		add_to_group("shopper")
 	_build()
 	GameState.emergency_changed.connect(_on_emergency_changed)
 	if GameState.emergency_active():
@@ -98,8 +104,14 @@ func _move_route(delta: float) -> void:
 		return
 	var delta_pos: Vector2 = target - global_position
 	if delta_pos.length() > 0.12:
+		# Travel continuously through world space; never snap to tiles or skip frames.
 		var step := minf(delta * (3.2 if _frightened else speed), delta_pos.length())
 		global_position += delta_pos.normalized() * step
+		_wait = 0.0
+		if _shopping:
+			_shopping = false
+			if _tool:
+				_tool.texture = PixelArt.icon(_tool_icon())
 		if _sprite:
 			_sprite.flip_h = delta_pos.x < 0.0
 		if _frightened and delta_pos.length() < 2.5 and not _threat_notified:
@@ -107,7 +119,16 @@ func _move_route(delta: float) -> void:
 			GameState.toast_requested.emit("%s is running for shelter!" % resident_name, "bad")
 	elif not _frightened:
 		_wait += delta
-		if _wait >= 3.0:
+		var wait_duration := SHOPPING_STOP_SECONDS if shops_at_waypoints else 3.0
+		if shops_at_waypoints and _wait < SHOPPING_STOP_SECONDS:
+			_shopping = true
+			if _tool and _tool.texture != PixelArt.icon("gold"):
+				_tool.texture = PixelArt.icon("gold")
+		else:
+			_shopping = false
+			if _tool and _tool.texture != PixelArt.icon(_tool_icon()):
+				_tool.texture = PixelArt.icon(_tool_icon())
+		if _wait >= wait_duration:
 			_wait = 0.0
 			_index = (_index + 1) % maxi(1, waypoints.size())
 

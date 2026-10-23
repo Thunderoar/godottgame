@@ -97,7 +97,7 @@ func _build_visual() -> void:
 	_attack_sprite = Sprite2D.new()
 	_attack_sprite.name = "Slash"
 	_attack_sprite.texture = PixelArt.slash_texture()
-	_attack_sprite.scale = Vector2(0.034, 0.034)
+	_attack_sprite.scale = Vector2(0.026, 0.026)
 	_attack_sprite.visible = false
 	_attack_sprite.z_as_relative = false
 	_attack_sprite.z_index = 900
