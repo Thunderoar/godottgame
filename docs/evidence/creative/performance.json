@@ -20,5 +20,29 @@
     "procedural_cache_entries": 105,
     "renderer": false,
     "texture_bytes": 45757143.0
+  },
+  "delivery_repeat": {
+    "baseline": {
+      "build_ms": 616.112,
+      "draw_calls_mean": 285.727777777778,
+      "frame_ms_mean": 33.8577833333333,
+      "frame_ms_p95": 57.051,
+      "nodes": 1307.0,
+      "physics_ms_mean": 3.1244,
+      "procedural_cache_entries": 86,
+      "renderer": false,
+      "texture_bytes": 45514771.0
+    },
+    "final": {
+      "build_ms": 1128.577,
+      "draw_calls_mean": 286.827777777778,
+      "frame_ms_mean": 32.7420055555556,
+      "frame_ms_p95": 42.454,
+      "nodes": 1331.0,
+      "physics_ms_mean": 2.71568888888889,
+      "procedural_cache_entries": 105,
+      "renderer": false,
+      "texture_bytes": 45757143.0
+    }
   }
 }

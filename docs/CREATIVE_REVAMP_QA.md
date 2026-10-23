@@ -93,7 +93,14 @@ The extra initial work is material-aware terrain/foliage generation. Textures ar
 cached across world reconstruction when the palette is unchanged. Average frame
 interval increased about 2.9%; no real-device 60 FPS promise is made. New terrain
 layers are batched, collision runs merge, and imported clips preload frames.
-Raw values: `performance.json`; reproducible harness: `tools/creative_benchmark.tscn`.
+A delivery repeat on the final source measured baseline/revised means of
+33.86/32.74 ms, 95th percentiles of 57.05/42.45 ms, construction of
+616.11/1,128.58 ms and draw calls of 285.73/286.83. The first pair above precedes
+the final shared-image ownership repair; the repeat uses the final source. This
+variation is larger than the small frame-time difference, so neither pair
+establishes a hardware speedup or a sustained frame-rate guarantee. The extra
+cold-construction cost is consistent. Raw values: `performance.json`; reproducible
+harness: `tools/creative_benchmark.tscn`.
 
 ## Findings repaired during QA
 

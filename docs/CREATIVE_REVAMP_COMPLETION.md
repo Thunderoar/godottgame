@@ -82,9 +82,10 @@ crops and numeric analysis: `motion/`. Logs and measured performance are alongsi
 them. Detailed results, repaired failures and limitations:
 [CREATIVE_REVAMP_QA.md](CREATIVE_REVAMP_QA.md).
 
-The software-renderer comparison measured 25.79 → 26.54 ms mean frame interval
+The first software-renderer comparison measured 25.79 → 26.54 ms mean frame interval
 and 350.89 → 1,133.41 ms first village construction. The latter is a cold-generation
-cost; cached terrain is reused while the palette is unchanged. Real Windows and
+cost; cached terrain is reused while the palette is unchanged. A delivery repeat measured 33.86 → 32.74 ms; this variation exceeds the small
+frame-time difference and does not establish a hardware speedup. Real Windows and
 Android devices, mobile performance and soak testing remain unverified. Advanced
 pixel layers/tags/Aseprite parsing are outside the focused editor. Existing service
 placement and the fixed village envelope remain protected architecture boundaries.
