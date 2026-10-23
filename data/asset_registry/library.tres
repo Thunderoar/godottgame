@@ -1,4 +1,18 @@
-[gd_resource type="Resource" script_class="AssetCatalog" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="AssetCatalog" format=3]
+
 [ext_resource type="Script" path="res://scripts/creative/asset_catalog.gd" id="1"]
+
 [resource]
 script = ExtResource("1")
+entries = {
+"coastal/planter": {
+"category": "Props",
+"columns": 1,
+"fps": 8,
+"frame_size": Vector2i(32, 32),
+"frames": 1,
+"license": "Original Tidesworn project artwork",
+"path": "res://assets/authored/props/harbour_planter.png",
+"source": "Created with TidePixelDocument"
+}
+}

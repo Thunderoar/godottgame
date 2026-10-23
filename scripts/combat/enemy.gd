@@ -160,14 +160,14 @@ func _physics_process(delta: float) -> void:
 	_bob += animation_delta
 	_move_phase += delta
 	_state_time -= delta
-	_frame_timer += animation_delta
+	_frame_timer += animation_delta * clampf(get_real_velocity().length() / maxf(0.1, speed), 0.0, 2.0)
 	if _frame_timer >= 0.35:
 		_frame_timer -= 0.35
 		_frame = 1 - _frame
 		if sprite and _state not in [State.WINDUP, State.STAGGER]:
 			sprite.texture = PixelArt.enemy_texture(kind, is_boss, _frame)
 	if sprite and _state not in [State.WINDUP]:
-		sprite.position.y = -float(64 if is_boss else 32) * 0.5 * PixelArt.PX + sin(_bob * 4.0) * 0.03
+		sprite.position.y = -float(64 if is_boss else 32) * 0.5 * PixelArt.PX + (sin(_bob * 4.0) * (0.022 if get_real_velocity().length() > 0.1 else 0.008) if not GameSettings.reduce_motion() else 0.0)
 	if _hit_flash > 0.0:
 		_hit_flash = maxf(0.0, _hit_flash - delta)
 		if sprite:

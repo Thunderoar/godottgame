@@ -87,19 +87,34 @@ func _ready() -> void:
 		add_child(tile_layer)
 		if layer == "Water": _add_cell_collisions(cells)
 	for data in definition.objects:
-		var holder := Node2D.new()
+		if data.has("base_id"):
+			_apply_base_override(data)
+			continue
+		var is_tree: bool = str(data.get("asset", "")) == "tree" and data.get("kind", "prop") != "decoration"
+		var holder: Node2D = ForestTree.new() if is_tree else Node2D.new()
+		if holder is ForestTree:
+			holder.tree_id = str(data.get("id", ""))
+			holder.max_health = int(data.get("metadata", {}).get("health", 100))
 		holder.name = str(data.get("id", "AuthoredObject"))
 		holder.position = data.get("position", Vector2.ZERO)
 		holder.set_meta("authored_id", data.get("id", ""))
 		holder.set_meta("metadata", data.get("metadata", {}))
 		holder.z_index = int(data.get("depth", 5))
-		var sprite := Sprite2D.new()
-		sprite.texture = object_texture(str(data.get("asset", "")))
+		holder.rotation = float(data.get("rotation", 0.0))
+		var sprite := AuthoredSprite.new()
+		sprite.configure(str(data.get("asset", "")))
 		sprite.scale = Vector2.ONE * PixelArt.PX * float(data.get("scale", 1.0))
-		if sprite.texture:
-			sprite.offset.y = -sprite.texture.get_height() * 0.5
 		holder.add_child(sprite)
+		if holder is ForestTree:
+			holder.register_visual(sprite)
+			var lobby := get_parent() as Lobby
+			if lobby:
+				lobby._forest_trees.append(holder)
+				holder.felled.connect(lobby._on_forest_tree_felled)
+		if data.get("blocking", false):
+			_add_collision(Vector2.ZERO, data.get("footprint", Vector2(0.7, 0.5)), holder)
 		add_child(holder)
+		holder.z_index = int(data.get("depth", 5))
 		if data.get("interactive", false):
 			var interaction := AuthoredInteraction.new()
 			interaction.speaker = str(data.get("label", "Village detail"))
@@ -107,8 +122,13 @@ func _ready() -> void:
 			interaction.lines = [str(data.get("metadata", {}).get("description", "A handcrafted detail of the seaside village."))]
 			interaction.show_marker = false
 			holder.add_child(interaction)
-		if data.get("blocking", false):
-			_add_collision(holder.position, data.get("footprint", Vector2(0.7, 0.5)))
+		if str(data.get("kind", "")) == "shop":
+			var merchant := ShopNPC.new()
+			merchant.shop_type = str(data.get("metadata", {}).get("shop_type", "potion"))
+			merchant.npc_kind = "builder" if merchant.shop_type == "house" else merchant.shop_type
+			merchant.npc_name = str(data.get("label", "Market neighbour"))
+			merchant.position = Vector2(0, 0.7)
+			holder.add_child(merchant)
 		if str(data.get("kind", "")) in ["route", "spawn"]:
 			holder.add_to_group("authored_" + str(data.kind))
 			if data.kind == "route":
@@ -121,16 +141,18 @@ static func object_texture(id: String) -> Texture2D:
 	if imported:
 		return imported
 	match id:
-		"tree": return load("res://assets/sprites/TX Plant__TX Tree T1 Upper.tres") as Texture2D
+		"tree": return PixelArt.authored_tree_texture()
 		"house": return PixelArt.house_texture(1)
+		"shop": return PixelArt.stall_texture("potion")
 		"flowers", "bush", "bench", "rock": return PixelArt.coastal_prop(id)
 		"fence": return PixelArt.fence_texture()
 		"garden": return PixelArt.garden_texture()
 		"sign": return PixelArt.besut_sign_texture()
 		_: return PixelArt.icon(id)
 
-func _add_collision(at: Vector2, size: Vector2) -> void:
+func _add_collision(at: Vector2, size: Vector2, owner_node: Node = null) -> void:
 	var body := StaticBody2D.new()
+	body.name = "Body"
 	body.collision_layer = 1
 	body.position = at
 	var shape := CollisionShape2D.new()
@@ -138,7 +160,7 @@ func _add_collision(at: Vector2, size: Vector2) -> void:
 	rectangle.size = size
 	shape.shape = rectangle
 	body.add_child(shape)
-	add_child(body)
+	(owner_node if owner_node != null else self).add_child(body)
 
 
 func _add_cell_collisions(cells: Dictionary) -> void:
@@ -152,3 +174,18 @@ func _add_cell_collisions(cells: Dictionary) -> void:
 			var start := x
 			while x < definition.size.x and cells.has(Vector2i(x, y)): x += 1
 			_add_collision(Vector2(start + (x - start) * 0.5, y + 0.5), Vector2(x - start, 1))
+
+
+func _apply_base_override(data: Dictionary) -> void:
+	var id := str(data.base_id)
+	# Player layout has precedence over developer base placement.
+	if GameState.data.get("settlement_layout", {}).has(id): return
+	if id == "house" or id.begins_with("shop_"): return
+	for group in ["placeable", "forest_tree"]:
+		for node in get_tree().get_nodes_in_group(group):
+			var source_id := str(node.placeable_id) if node is SettlementPlaceable else str(node.tree_id)
+			if source_id != id: continue
+			node.position = data.get("position", node.position)
+			node.z_index = int(data.get("depth", node.z_index))
+			node.rotation = float(data.get("rotation", 0.0))
+			return

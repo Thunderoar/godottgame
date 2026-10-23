@@ -20,7 +20,7 @@ static func _make_terrain_texture() -> Texture2D:
 	for y in h:
 		for x in w:
 			var field := sin(float(x) * 0.009 + sin(float(y) * 0.013)) * 0.5 + sin(float(y) * 0.017 + float(x) * 0.004) * 0.3
-			var col := grass.lerp(sun, maxf(0.0, field) * 0.33)
+			var col := grass.lerp(sun, maxf(0.0, field) * 0.20)
 			if x > 46 * 32:
 				col = col.lerp(shade, smoothstep(46.0 * 32, 62.0 * 32, float(x)) * 0.24)
 			img.set_pixel(x, y, col)

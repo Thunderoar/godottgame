@@ -30,6 +30,7 @@ func _ready() -> void:
 
 
 func register_visual(node: CanvasItem) -> void:
+	node.set_meta("rest_modulate", node.modulate)
 	_visuals.append(node)
 
 
@@ -57,7 +58,7 @@ func _process(delta: float) -> void:
 	if _flash_timer <= 0.0 and not fallen:
 		for visual in _visuals:
 			if is_instance_valid(visual):
-				visual.modulate = Color(0.76, 0.9, 0.74)
+				visual.modulate = visual.get_meta("rest_modulate", Color.WHITE)
 
 
 func _spawn_impact_feedback() -> void:

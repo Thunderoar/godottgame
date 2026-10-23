@@ -122,3 +122,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		_cancel()
 		get_viewport().set_input_as_handled()
+
+
+func _fit_panel() -> void:
+	if panel == null:
+		return
+	var viewport_size := get_viewport_rect().size
+	var fitted := PANEL_SIZE.min((viewport_size - Vector2(32, 32)).max(Vector2(320, 200)))
+	panel.offset_left = -fitted.x * 0.5
+	panel.offset_top = -fitted.y * 0.5
+	panel.offset_right = fitted.x * 0.5
+	panel.offset_bottom = fitted.y * 0.5

@@ -11,6 +11,8 @@ const MATERIALS := ["grass", "grass_light", "grass_shadow", "path", "sand", "sea
 @export var layers: Dictionary = {}
 @export var objects: Array[Dictionary] = []
 @export var palette: WorldPalette
+@export var editor_hidden: Dictionary = {}
+@export var editor_locked: Dictionary = {}
 
 func cell(layer: String, at: Vector2i) -> String:
 	return str(layers.get(layer, {}).get(at, ""))
@@ -55,4 +57,28 @@ func warnings() -> PackedStringArray:
 			for point in critical:
 				if Vector2(at).distance_to(point) < 2.0:
 					result.append(layer + ": painted over protected destination " + str(point))
+	# Reachability for authored geometry catches walls that do not touch a landmark.
+	var blocked := {}
+	for layer in ["Water", "Collision"]:
+		for at in layers.get(layer, {}): blocked[at] = true
+	for object in objects:
+		if not object.get("blocking", false): continue
+		var center: Vector2 = object.get("position", Vector2.ZERO)
+		var footprint: Vector2 = object.get("footprint", Vector2(0.7, 0.5))
+		var area := Rect2(center - footprint * 0.5 - Vector2.ONE * 0.25, footprint + Vector2.ONE * 0.5)
+		for y in range(int(floor(area.position.y)), int(ceil(area.end.y))):
+			for x in range(int(floor(area.position.x)), int(ceil(area.end.x))): blocked[Vector2i(x, y)] = true
+	var start := Vector2i(34, 24)
+	var reached := {start: true}
+	var todo: Array[Vector2i] = [start]
+	while not todo.is_empty():
+		var at: Vector2i = todo.pop_back()
+		for direction in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			var next: Vector2i = at + direction
+			if Rect2i(Vector2i.ZERO, size).has_point(next) and not blocked.has(next) and not reached.has(next):
+				reached[next] = true
+				todo.append(next)
+	for point in critical:
+		if not reached.has(Vector2i(point)):
+			result.append("Authored geometry disconnects destination " + str(point))
 	return result

@@ -1647,3 +1647,28 @@ static func coastal_prop(kind: String) -> Texture2D:
                                 ellipse(img, 24, 19, 15, 5, WorldPalette.color("sea_deep"))
                                 ellipse(img, 24, 17, 12, 4, WorldPalette.color("sea_shallow"))
                 return img)
+
+
+static func coastal_grass(variant: int) -> Texture2D:
+        return cached_texture("coastal_grass_%d" % variant, func() -> Image:
+                var img := image(20, 16)
+                var base := WorldPalette.color("grass_shadow").lerp(WorldPalette.color("grass"), 0.65)
+                var tip := WorldPalette.color("grass_light")
+                for at in [Vector2i(5, 13), Vector2i(10, 12), Vector2i(15, 13)]:
+                        var height: int = 4 + (variant + at.x) % 4
+                        line(img, at.x, at.y, at.x - 2, at.y - height, base)
+                        line(img, at.x + 1, at.y, at.x + 2, at.y - height + 1, tip)
+                if variant % 3 == 0:
+                        rect(img, 10, 5, 3, 2, WorldPalette.color("flower"))
+                        px(img, 11, 5, WorldPalette.color("gold"))
+                return img)
+
+
+static func authored_tree_texture() -> Texture2D:
+        return cached_texture("authored_tree", func() -> Image:
+                var upper := (load("res://assets/sprites/TX Plant__TX Tree T1 Upper.tres") as Texture2D).get_image()
+                var lower := (load("res://assets/sprites/TX Plant__TX Tree T1 Lower.tres") as Texture2D).get_image()
+                var img := image(maxi(upper.get_width(), lower.get_width()), upper.get_height() + lower.get_height())
+                img.blit_rect(upper, Rect2i(Vector2i.ZERO, upper.get_size()), Vector2i(int((img.get_width() - upper.get_width()) / 2), 0))
+                img.blit_rect(lower, Rect2i(Vector2i.ZERO, lower.get_size()), Vector2i(int((img.get_width() - lower.get_width()) / 2), upper.get_height()))
+                return img)

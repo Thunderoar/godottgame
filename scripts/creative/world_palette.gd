@@ -30,6 +30,8 @@ static func current() -> WorldPalette:
 static func color(role: String) -> Color:
 	return current().world.get(role, Color.MAGENTA)
 
-static func use_palette(palette: WorldPalette) -> void:
+static func use_palette(palette: WorldPalette, force := false) -> void:
+	if active == palette and not force: return
 	active = palette
 	generation += 1
+	PixelArt.CACHE.clear()

@@ -442,3 +442,12 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		if GameState.autosave_enabled:
 			GameState.save_game()
+
+
+func _exit_tree() -> void:
+	# Resource-owning static caches otherwise keep their own script resources alive.
+	PersonalityProfile._default = null
+	WorldPalette.active = null
+	AssetRegistry.catalog = null
+	AssetRegistry._cache.clear()
+	PixelArt.CACHE.clear()
