@@ -259,3 +259,15 @@ see [`docs/ANDROID_BUILD.md`](docs/ANDROID_BUILD.md).
   walkable world scene.
 - Additional resident dialogue and ambient animal species can follow.
 # godottgame
+
+## Creative Studio
+
+Open the **Tidesworn** main workspace in Godot 4.7.2 for Asset Library, Map Studio,
+Pixel & Animation and World Palette. The coastal revamp retains the real runtime
+and player save format while adding authored asset/map resources.
+
+See [delivery](docs/CREATIVE_REVAMP_COMPLETION.md),
+[asset workflow](docs/ASSET_WORKFLOW.md), [map guide](docs/MAP_EDITOR_GUIDE.md),
+[pixel guide](docs/PIXEL_EDITOR_GUIDE.md) and [QA evidence](docs/CREATIVE_REVAMP_QA.md).
+Run `./tools/test_isolated.sh` for gameplay and `./tools/test_creative_editor.sh`
+for the isolated editor/import/save/restart workflow.

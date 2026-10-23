@@ -51,6 +51,8 @@ static func water_material() -> ShaderMaterial:
 		shader.code = WATER_CODE
 		_water = ShaderMaterial.new()
 		_water.shader = shader
+	_water.set_shader_parameter("shallow", WorldPalette.color("sea_shallow"))
+	_water.set_shader_parameter("deep", WorldPalette.color("sea_deep"))
 	return _water
 
 
@@ -139,12 +141,14 @@ const WATER_CODE := "
 shader_type canvas_item;
 render_mode unshaded;
 uniform float speed = 0.32;
+uniform vec4 shallow : source_color = vec4(0.35, 0.72, 0.76, 1.0);
+uniform vec4 deep : source_color = vec4(0.15, 0.4, 0.5, 1.0);
 void fragment() {
 	vec4 mask = texture(TEXTURE, UV);
 	float depth = mask.r;
 	float phase = UV.y * 100.0 + sin(UV.x * 85.0 + TIME * speed) * 0.5 - TIME * speed;
 	float crest = smoothstep(0.93, 1.0, sin(phase));
-	vec3 water = mix(vec3(0.43, 0.66, 0.65), vec3(0.24, 0.48, 0.53), depth);
+	vec3 water = mix(shallow.rgb, deep.rgb, depth);
 	float lip = (1.0 - smoothstep(0.0, 0.055, depth)) * 0.3;
 	vec3 rgb = mix(water, vec3(0.86, 0.91, 0.87), max(crest * 0.12, lip));
 	COLOR = vec4(rgb, mask.a * 0.42);

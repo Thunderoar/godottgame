@@ -177,7 +177,7 @@ func _follow(delta: float) -> void:
 
 
 func _animate(delta: float, owner_player: Node2D) -> void:
-	var moving := _follow_velocity.length() > 0.55
+	var moving := get_real_velocity().length() > 0.15
 	if owner_player.get("sleeping") == true:
 		if _frame != 5:
 			_frame = 5
@@ -195,7 +195,7 @@ func _animate(delta: float, owner_player: Node2D) -> void:
 		var cycle := clampf(0.34 - _follow_velocity.length() * 0.03, 0.14, 0.34)
 		if _frame_timer >= cycle:
 			_frame_timer = 0.0
-			_frame = 3 if _frame in [0, 2] else (0 if _frame != 0 else 1)
+			_frame = 1 if _frame == 3 else 3
 			_apply_texture()
 		if _sprite:
 			_sprite.flip_h = _follow_velocity.x < -0.1
@@ -205,7 +205,7 @@ func _animate(delta: float, owner_player: Node2D) -> void:
 		_idle_behaviour_timer -= delta
 		if _idle_behaviour_timer <= 0.0:
 			_idle_behaviour_timer = randf_range(1.6, 3.2)
-			_idle_behaviour = randi() % 3
+			_idle_behaviour = randi() % 5
 			if _idle_behaviour == 1:
 				_sniff_offset = Vector2(randf_range(-0.3, 0.3), randf_range(-0.15, 0.2))
 		if _idle_behaviour == 1:
@@ -219,7 +219,15 @@ func _animate(delta: float, owner_player: Node2D) -> void:
 		if _sprite and _pose_lock <= 0.0:
 			_sprite.flip_h = (owner_player.global_position.x - global_position.x) < -0.1
 	if _sprite:
-		_sprite.position = Vector2(0, -0.5 + sin(_bob * (7.0 if moving else 3.2)) * (0.035 if moving else 0.018)) + _pose_offset
+		var bob := sin(_bob * (7.0 if moving else 3.2)) * (0.022 if moving else 0.009)
+		if not moving and _pose_lock <= 0.0:
+			if _idle_behaviour == 2: _sprite.rotation = sin(_idle_time * 2.0) * 0.06
+			if _idle_behaviour == 3: bob -= maxf(0.0, sin(_idle_time * 3.0)) * 0.055
+			if _idle_behaviour == 4: _sprite.rotation = -0.08 * sin(_idle_time * 1.5)
+		if GameSettings.reduce_motion():
+			bob = 0.0
+			_sprite.rotation = 0.0
+		_sprite.position = Vector2(0, -0.5 + bob) + _pose_offset
 
 
 func _apply_texture() -> void:

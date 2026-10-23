@@ -35,6 +35,11 @@ var _bob := 0.0
 var _frightened := false
 var _threat_notified := false
 var _attack_timer := 0.0
+var expression := MicroAction.new()
+var _social_clock := 0.0
+var _greeting_cooldown := 0.0
+var _stride := 0.0
+var _occupation: Dictionary = {}
 
 
 func _ready() -> void:
@@ -50,7 +55,16 @@ func _ready() -> void:
 	add_child(shape)
 	_shopping_rng.seed = absi(resident_name.hash())
 	_visit_clock = _shopping_rng.randf_range(7.0, 22.0)
+	_occupation = PersonalityProfile.current().occupations.get(role, {"action": "rest", "line": activity})
+	speed *= 0.94 + float(absi(resident_name.hash()) % 13) * 0.01
 	_build()
+	var conversation := AuthoredInteraction.new()
+	conversation.speaker = resident_name
+	conversation.lines = [_occupation.get("line", activity)]
+	conversation.prompt = "Talk to " + resident_name
+	conversation.show_marker = false
+	conversation.interact_radius = 1.1
+	add_child(conversation)
 	GameState.emergency_changed.connect(_on_emergency_changed)
 	if GameState.emergency_active():
 		_frightened = true
@@ -67,7 +81,7 @@ func _build() -> void:
 	_sprite.z_index = 0
 	add_child(_sprite)
 	_tool = Sprite2D.new()
-	_tool.texture = PixelArt.icon(_tool_icon())
+	_tool.texture = PixelArt.occupation_tool(str(_occupation.get("tool", _tool_icon())))
 	_tool.scale = Vector2(0.028, 0.028)
 	_tool.position = Vector2(0.28, -0.62)
 	_tool.z_index = 0
@@ -84,11 +98,8 @@ func _physics_process(delta: float) -> void:
 		pass
 	else:
 		_move_route(delta)
-	if _sprite:
-		_sprite.position.y = sin(_bob * 5.0) * 0.02
-	if _tool:
-		_tool.position.y = -0.62 + sin(_bob * 4.0) * 0.02
-		_tool.visible = not _frightened
+	_update_personality(delta)
+
 
 
 func _fight(delta: float) -> void:
@@ -337,3 +348,39 @@ func _end_visit() -> void:
 func _exit_tree() -> void:
 	if is_instance_valid(_shop):
 		_shop.release_customer(self)
+
+
+func _update_personality(delta: float) -> void:
+	var actual := get_real_velocity()
+	_stride += actual.length() * delta * 8.0
+	_greeting_cooldown = maxf(0.0, _greeting_cooldown - delta)
+	_social_clock -= delta
+	if _frightened:
+		expression.request("alert")
+	elif shopping_state in [Shopping.BROWSE, Shopping.PURCHASE]:
+		expression.request("shop")
+	elif actual.length() < 0.08 and _wait > 0.4:
+		expression.request(str(_occupation.get("action", "rest")))
+	if _social_clock <= 0.0 and not _frightened:
+		_social_clock = 0.7
+		if _greeting_cooldown <= 0.0 and shopping_state == Shopping.ROUTINE:
+			for other in get_tree().get_nodes_in_group("residents"):
+				if other == self or not is_instance_valid(other) or other._frightened: continue
+				if global_position.distance_to(other.global_position) < 1.35:
+					expression.request("greet")
+					other.expression.request("greet")
+					_greeting_cooldown = 12.0
+					other._greeting_cooldown = 12.0
+					break
+	expression.tick(delta, GameSettings.reduce_motion())
+	if _sprite:
+		_sprite.rotation = expression.tilt * 0.35
+		_sprite.position.y = -expression.lift
+		if actual.length() > 0.08 and not GameSettings.reduce_motion():
+			_sprite.position.y -= absf(sin(_stride)) * PixelArt.PX
+	if _tool:
+		_tool.visible = not _frightened
+		_tool.rotation = expression.tilt * (5.0 if role == "carpenter" else 2.0)
+		_tool.position.y = -0.62 - expression.lift
+		if role == "gardener" and expression.state == "work":
+			_tool.rotation += 0.35 if not GameSettings.reduce_motion() else 0.0

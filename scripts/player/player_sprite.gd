@@ -18,6 +18,7 @@ var facing := 0
 var moving := false
 var pose := Pose.IDLE
 
+var motion_ratio := 0.0
 var _frame := 0
 var _timer := 0.0
 var _bob := 0.0
@@ -34,6 +35,14 @@ func set_facing(new_facing: int, is_moving: bool) -> void:
 	if new_facing >= 0:
 		facing = new_facing
 	moving = is_moving
+	_apply()
+
+
+func set_motion(actual: Vector2, nominal_speed: float) -> void:
+	motion_ratio = clampf(actual.length() / maxf(0.1, nominal_speed), 0.0, 1.8)
+	moving = actual.length() > 0.08
+	if not moving:
+		_timer = 0.0
 	_apply()
 
 
@@ -60,7 +69,7 @@ func _process(delta: float) -> void:
 		return
 	if moving:
 		pose = Pose.WALK
-		_timer += delta
+		_timer += delta * motion_ratio
 		if _timer >= frame_duration:
 			_timer -= frame_duration
 			_frame = (_frame + 1) % 4
@@ -83,10 +92,14 @@ func _process(delta: float) -> void:
 			_apply()
 	# Secondary squash on the walk, preserving the pixel baseline.
 	if moving and not GameSettings.reduce_motion():
-		var breathe := 1.0 + sin(_bob * 11.0) * 0.02
+		var profile: Dictionary = PersonalityProfile.current().heroes.get(character_id, {})
+		var temperament := float(profile.get("stride", 1.0))
+		var breathe := 1.0 + sin(_bob * 11.0 * temperament) * 0.008
 		scale = Vector2(base_scale.x, base_scale.y * breathe)
 	else:
 		scale = base_scale
+	var profile: Dictionary = PersonalityProfile.current().heroes.get(character_id, {})
+	rotation = sin(_bob * 1.6) * float(profile.get("rest", 0.0)) if not moving and not GameSettings.reduce_motion() else 0.0
 
 
 func _apply() -> void:

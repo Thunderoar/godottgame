@@ -1,0 +1,109 @@
+[gd_resource type="Resource" script_class="AuthoredMap" format=3]
+
+[ext_resource type="Resource" path="res://data/palettes/coast.tres" id="1_818ck"]
+[ext_resource type="Script" path="res://scripts/creative/authored_map.gd" id="2_5fqvp"]
+
+[resource]
+script = ExtResource("2_5fqvp")
+title = "Creative Studio practice garden"
+layers = {
+"Paths": {
+Vector2i(27, 32): "path",
+Vector2i(28, 32): "path",
+Vector2i(29, 33): "path",
+Vector2i(30, 33): "path",
+Vector2i(31, 34): "path"
+},
+"Terrain": {
+Vector2i(27, 32): "grass_light",
+Vector2i(27, 33): "grass_light",
+Vector2i(27, 34): "grass_light",
+Vector2i(27, 35): "grass_light",
+Vector2i(28, 32): "grass_light",
+Vector2i(28, 33): "grass_light",
+Vector2i(28, 34): "grass_light",
+Vector2i(28, 35): "grass_light",
+Vector2i(29, 32): "grass_light",
+Vector2i(29, 33): "grass_light",
+Vector2i(29, 34): "grass_light",
+Vector2i(29, 35): "grass_light",
+Vector2i(30, 32): "grass_light",
+Vector2i(30, 33): "grass_light",
+Vector2i(30, 34): "grass_light",
+Vector2i(30, 35): "grass_light",
+Vector2i(31, 32): "grass_light",
+Vector2i(31, 33): "grass_light",
+Vector2i(31, 34): "grass_light",
+Vector2i(31, 35): "grass_light",
+Vector2i(32, 32): "grass_light",
+Vector2i(32, 33): "grass_light",
+Vector2i(32, 34): "grass_light",
+Vector2i(32, 35): "grass_light"
+},
+"Water": {
+Vector2i(25, 34): "sea_shallow",
+Vector2i(25, 35): "sea_shallow",
+Vector2i(25, 36): "sea_shallow",
+Vector2i(26, 34): "sea_deep",
+Vector2i(26, 35): "sea_deep",
+Vector2i(26, 36): "sea_deep",
+Vector2i(27, 34): "sea_shallow",
+Vector2i(27, 35): "sea_shallow",
+Vector2i(27, 36): "sea_shallow"
+}
+}
+objects = Array[Dictionary]([{
+"asset": "coastal/planter",
+"blocking": false,
+"depth": 6,
+"id": "planter_0",
+"label": "Harbour flowers",
+"position": Vector2(31.5, 24.6),
+"scale": 1.0
+}, {
+"asset": "coastal/planter",
+"blocking": false,
+"depth": 6,
+"id": "planter_1",
+"label": "Harbour flowers",
+"position": Vector2(37.5, 25.7),
+"scale": 1.0
+}, {
+"asset": "coastal/planter",
+"blocking": false,
+"depth": 6,
+"id": "planter_2",
+"label": "Harbour flowers",
+"position": Vector2(29.4, 21.5),
+"scale": 1.0
+}, {
+"asset": "coastal/planter",
+"blocking": false,
+"depth": 6,
+"id": "planter_3",
+"label": "Harbour flowers",
+"position": Vector2(39, 18.2),
+"scale": 1.0
+}, {
+"asset": "bench",
+"blocking": false,
+"depth": 5,
+"id": "beach_bench_1",
+"interactive": true,
+"label": "A seat by the sea",
+"metadata": {
+"description": "The breeze carries the scent of salt and warm timber. A good place to rest."
+},
+"position": Vector2(16, 27),
+"scale": 1.0
+}, {
+"asset": "tree",
+"blocking": true,
+"depth": 5,
+"footprint": Vector2(0.7, 0.5),
+"id": "practice_tree",
+"label": "Practice tree",
+"position": Vector2(32, 34),
+"scale": 1.0
+}])
+palette = ExtResource("1_818ck")

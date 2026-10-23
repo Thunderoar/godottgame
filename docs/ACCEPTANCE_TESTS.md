@@ -236,3 +236,20 @@ Inspect these captures:
 - `tide_game_over.png` - locked all-trees-destroyed game-over screen
 
 No NPC name labels or toast banners should be visible in any capture.
+
+## Creative Studio regressions
+
+`CreativeChecks.run()` adds palette/cache, transparent pixel editing/history,
+frame-duration PNG round-trip, registry atlas/diagnostics, authored map persistence,
+real collision/navigation, TileMapLayer batching, imported runtime art, stable
+base-tree movement, action priority/cleanup/Reduce Motion and velocity-driven
+walk-cycle checks. The verified revamp gate is **438 checks, PASS**; counts remain
+data-driven.
+
+`./tools/test_creative_editor.sh` is the authoring gate. It copies the entire source
+into a verified temporary root without `.godot`, imports afresh, launches the actual
+editor, tests 27 native-tool workflow checks, then starts a second runtime process
+to verify saved assets, edited PNG colours, the authored map and water collision.
+It never imports test art into the normal project. A GUI display is provided with
+Xvfb. Review emitted PNGs as well as logs; passing model checks are not a visual
+review. See `docs/CREATIVE_REVAMP_QA.md` and the workflow guides.

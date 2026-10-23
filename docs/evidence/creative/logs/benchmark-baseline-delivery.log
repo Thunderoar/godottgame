@@ -1,0 +1,9 @@
+Godot Engine v4.7.2.stable.arch_linux.ed1daf0bf (2026-08-17 01:18:38 UTC) - https://godotengine.org
+WARNING: Failed to create wd.xic as the input method or its xim server may not have started yet.
+     at: _create_xic (platform/linuxbsd/x11/display_server_x11.cpp:6347)
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 4.6 (Core Profile) Mesa 26.2.4-arch3.1 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 23.1.1, 256 bits)
+
+Verified isolated user data: /tmp/tidesworn-creative-benchmark/userdata-baseline-final/godot/app_userdata/Save The World
+CREATIVE_BENCHMARK {"build_ms":616.112,"draw_calls_mean":285.727777777778,"frame_ms_mean":33.8577833333333,"frame_ms_p95":57.051,"nodes":1307.0,"physics_ms_mean":3.1244,"procedural_cache_entries":86,"renderer":false,"texture_bytes":45514771.0}

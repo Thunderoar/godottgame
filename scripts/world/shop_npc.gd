@@ -11,6 +11,9 @@ extends Interactable
 var sprite: Sprite2D
 var _customer: WeakRef
 var ambient_sales := 0
+var expression := MicroAction.new()
+var _greet_clock := 0.0
+var _was_near := false
 
 
 func _ready() -> void:
@@ -63,7 +66,19 @@ func release_customer(resident: Resident) -> void:
 func ambient_purchase() -> void:
 	# Ambient exchange only. Never call GameState buy_item or open the player UI.
 	ambient_sales += 1
-	if sprite and not GameSettings.reduce_motion():
-		var tween := sprite.create_tween()
-		tween.tween_property(sprite, "rotation", 0.08, 0.15)
-		tween.tween_property(sprite, "rotation", 0.0, 0.2)
+	expression.request("shop")
+
+
+func _physics_process(delta: float) -> void:
+	_greet_clock -= delta
+	if _greet_clock <= 0.0:
+		_greet_clock = 0.5
+		var game := get_tree().get_first_node_in_group("game")
+		var player: Node2D = game.call("player") if game and game.has_method("player") else null
+		var nearby := is_instance_valid(player) and player.global_position.distance_to(global_position) < 2.8
+		if nearby and not _was_near: expression.request("greet")
+		_was_near = nearby
+	expression.tick(delta, GameSettings.reduce_motion())
+	if sprite:
+		sprite.rotation = expression.tilt
+		sprite.position.y = -expression.lift

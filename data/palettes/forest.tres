@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="WorldPalette" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/creative/world_palette.gd" id="1"]
+[resource]
+script = ExtResource("1")
+title = "Rimba • cool woodland"
+world = {
+"grass": Color(0.427451, 0.658824, 0.407843, 1),
+"grass_light": Color(0.600000, 0.780392, 0.482353, 1),
+"grass_shadow": Color(0.247059, 0.400000, 0.345098, 1),
+"grass_warm": Color(0.776471, 0.721569, 0.435294, 1),
+"sea_shallow": Color(0.349020, 0.721569, 0.760784, 1),
+"sea_deep": Color(0.145098, 0.403922, 0.501961, 1),
+"sand": Color(0.952941, 0.839216, 0.603922, 1),
+"wet_sand": Color(0.811765, 0.682353, 0.462745, 1),
+"path": Color(0.850980, 0.717647, 0.494118, 1),
+"path_edge": Color(0.717647, 0.596078, 0.407843, 1),
+"wood": Color(0.658824, 0.435294, 0.290196, 1),
+"stone": Color(0.709804, 0.654902, 0.560784, 1),
+"coral": Color(0.952941, 0.482353, 0.396078, 1),
+"gold": Color(0.960784, 0.776471, 0.431373, 1),
+"flower": Color(0.945098, 0.635294, 0.749020, 1),
+"shadow": Color(0.156863, 0.215686, 0.286275, 1),
+"foam": Color(0.905882, 0.960784, 0.905882, 1),
+"roof": Color(0.772549, 0.427451, 0.321569, 1)
+}

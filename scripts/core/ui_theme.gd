@@ -3,12 +3,12 @@ extends RefCounted
 ## Shared palette and tiny theme factory for the HUD and menus.
 
 const INK := Color("#0b1519")
-const PANEL := Color("#12242a")
-const PANEL_RAISED := Color("#1a3037")
-const BORDER := Color("#38545a")
-const BORDER_LIGHT := Color("#5b7c80")
-const TEXT := Color("#f0e6cd")
-const MUTED := Color("#9cafab")
+const PANEL := Color("#203c43")
+const PANEL_RAISED := Color("#2e4d51")
+const BORDER := Color("#a88858")
+const BORDER_LIGHT := Color("#ceb782")
+const TEXT := Color("#fff1d8")
+const MUTED := Color("#b3c7ba")
 const GOLD := Color("#f2c45a")
 const DIAMOND := Color("#8fe8f7")
 const TEAL := Color("#62c7ba")
@@ -54,6 +54,10 @@ static func theme() -> Theme:
 
 static func style(fill: Color, border: Color = BORDER, width: int = 2, radius: int = 0, alpha: float = 1.0) -> StyleBoxFlat:
         var box := StyleBoxFlat.new()
+        var materials := WorldPalette.current().ui
+        if fill == PANEL: fill = materials.get("panel", PANEL)
+        if fill == PANEL_RAISED: fill = materials.get("raised", PANEL_RAISED)
+        if border == BORDER: border = materials.get("border", BORDER)
         box.bg_color = Color(fill.r, fill.g, fill.b, fill.a * alpha)
         box.border_color = border
         box.set_border_width_all(width)
@@ -69,7 +73,7 @@ static func label(text: String, size: int = 18, color: Color = TEXT) -> Label:
         var l := Label.new()
         l.text = text
         l.add_theme_font_size_override("font_size", size)
-        l.add_theme_color_override("font_color", color)
+        l.add_theme_color_override("font_color", WorldPalette.current().ui.get("text", TEXT) if color == TEXT else color)
         return l
 
 

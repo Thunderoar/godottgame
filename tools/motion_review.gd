@@ -3,6 +3,9 @@ extends Node
 ## --write-movie OUTPUT.avi --fixed-fps 60 to retain every rendered frame.
 var game: Node
 var samples: Array = []
+var stage := "initial"
+var tracked_enemy: Enemy
+var tracked_resident: Resident
 
 func _ready() -> void:
 	if not TestEnvironment.require_isolation():
@@ -31,7 +34,9 @@ func _ready() -> void:
 	enemy.speed = 1.2
 	enemy.damage = 0
 	lobby.add_child(enemy)
+	tracked_enemy = enemy
 	for direction in [["move_right"], ["move_down"], ["move_left"], ["move_up"], ["move_right", "move_down"], ["move_left", "move_down"], ["move_left", "move_up"], ["move_right", "move_up"]]:
+		stage = "+".join(direction)
 		for action in direction:
 			Input.action_press(action)
 		for frame in 24:
@@ -50,10 +55,63 @@ func _ready() -> void:
 	Input.action_release("move_left")
 	for frame in 25:
 		await _sample_frame(p, lobby)
+	Input.action_press("move_right")
 	for zoom_value in [28, 64, 38]:
+		stage = "moving_zoom_%d" % zoom_value
 		GameSettings.set_camera_zoom(zoom_value, false)
 		for frame in 45:
 			await _sample_frame(p, lobby)
+	Input.action_release("move_right")
+	# Explicit scenario initialization, followed by continuous collision-aware travel.
+	stage = "obstacle_corner"
+	p.position = Vector2(35, 28)
+	p.reset_physics_interpolation()
+	lobby.pet.position = Vector2(29, 28)
+	lobby.pet.reset_physics_interpolation()
+	enemy.position = Vector2(28, 27)
+	enemy.reset_physics_interpolation()
+	var barrier := StaticBody2D.new()
+	barrier.position = Vector2(32, 28)
+	barrier.collision_layer = 1
+	var collider := CollisionShape2D.new()
+	var box := RectangleShape2D.new()
+	box.size = Vector2(1, 2.5)
+	collider.shape = box
+	barrier.add_child(collider)
+	lobby.add_child(barrier)
+	tracked_resident = Resident.new()
+	tracked_resident.resident_name = "Motion gardener"
+	tracked_resident.role = "gardener"
+	tracked_resident.position = Vector2(29, 27.5)
+	tracked_resident.waypoints = [Vector2(35, 27.5), Vector2(29, 27.5)]
+	lobby.add_child(tracked_resident)
+	await get_tree().physics_frame
+	lobby.invalidate_resident_routes()
+	for frame in 360:
+		await _sample_frame(p, lobby)
+	stage = "shop_approach"
+	barrier.queue_free()
+	tracked_resident.queue_free()
+	tracked_resident = Resident.new()
+	tracked_resident.resident_name = "Motion customer"
+	var shop := get_tree().get_nodes_in_group("ambient_shop")[0] as ShopNPC
+	tracked_resident.position = shop.customer_position() + Vector2(0, 1.4)
+	tracked_resident.waypoints = [tracked_resident.position]
+	lobby.add_child(tracked_resident)
+	for seed_value in 100:
+		var random := RandomNumberGenerator.new()
+		random.seed = seed_value
+		random.randf_range(24.0, 50.0)
+		if random.randi_range(0, get_tree().get_nodes_in_group("ambient_shop").size() - 1) == 0:
+			tracked_resident._shopping_rng.seed = seed_value
+			break
+	tracked_resident.begin_shop_visit()
+	p.position = shop.customer_position() + Vector2(3, 1)
+	p.reset_physics_interpolation()
+	lobby.camera.position = p.position - Vector2(0, 1)
+	lobby.camera.reset_physics_interpolation()
+	for frame in 240:
+		await _sample_frame(p, lobby)
 	var args := OS.get_cmdline_user_args()
 	if args.size() >= 2 and args[0] == "--samples":
 		var file := FileAccess.open(args[1], FileAccess.WRITE)
@@ -68,4 +126,4 @@ func _ready() -> void:
 
 func _sample_frame(p: Player, lobby: Lobby) -> void:
 	await get_tree().physics_frame
-	samples.append({"frame": Engine.get_physics_frames(), "player": [p.position.x, p.position.y], "pet": [lobby.pet.position.x, lobby.pet.position.y], "camera": [lobby.camera.position.x, lobby.camera.position.y]})
+	samples.append({"stage": stage, "frame": Engine.get_physics_frames(), "enemy": [tracked_enemy.position.x, tracked_enemy.position.y] if is_instance_valid(tracked_enemy) else [], "resident": [tracked_resident.position.x, tracked_resident.position.y] if is_instance_valid(tracked_resident) else [], "player": [p.position.x, p.position.y], "pet": [lobby.pet.position.x, lobby.pet.position.y], "camera": [lobby.camera.position.x, lobby.camera.position.y]})

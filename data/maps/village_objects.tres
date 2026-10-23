@@ -1,0 +1,879 @@
+[gd_resource type="Resource" script_class="AuthoredMap" format=3]
+
+[ext_resource type="Script" path="res://scripts/creative/authored_map.gd" id="1_4rnf2"]
+
+[resource]
+script = ExtResource("1_4rnf2")
+title = "Village base objects — fixed-seed reference"
+objects = Array[Dictionary]([{
+"asset": "house",
+"base_id": "house",
+"blocking": false,
+"depth": 6,
+"id": "base_house",
+"label": "house",
+"metadata": {},
+"position": Vector2(34, 21.4),
+"protected": true,
+"scale": 1.0
+}, {
+"asset": "shop",
+"base_id": "shop_potion",
+"blocking": false,
+"depth": 6,
+"id": "base_shop_potion",
+"label": "shop_potion",
+"metadata": {},
+"position": Vector2(23.8, 22.2),
+"protected": true,
+"scale": 1.0
+}, {
+"asset": "shop",
+"base_id": "shop_equipment",
+"blocking": false,
+"depth": 6,
+"id": "base_shop_equipment",
+"label": "shop_equipment",
+"metadata": {},
+"position": Vector2(21.2, 19.2),
+"protected": true,
+"scale": 1.0
+}, {
+"asset": "shop",
+"base_id": "shop_pet",
+"blocking": false,
+"depth": 6,
+"id": "base_shop_pet",
+"label": "shop_pet",
+"metadata": {},
+"position": Vector2(26.8, 17.8),
+"protected": true,
+"scale": 1.0
+}, {
+"asset": "shop",
+"base_id": "shop_house",
+"blocking": false,
+"depth": 6,
+"id": "base_shop_house",
+"label": "shop_house",
+"metadata": {},
+"position": Vector2(41.2, 16.2),
+"protected": true,
+"scale": 1.0
+}, {
+"asset": "fence",
+"base_id": "fence_south",
+"blocking": false,
+"depth": 6,
+"id": "base_fence_south",
+"label": "fence_south",
+"metadata": {},
+"position": Vector2(31.85, 29.8),
+"protected": false,
+"scale": 1.0
+}, {
+"asset": "fence",
+"base_id": "fence_north",
+"blocking": false,
+"depth": 6,
+"id": "base_fence_north",
+"label": "fence_north",
+"metadata": {},
+"position": Vector2(31.85, 13.8),
+"protected": false,
+"scale": 1.0
+}, {
+"asset": "fence",
+"base_id": "fence_west",
+"blocking": false,
+"depth": 6,
+"id": "base_fence_west",
+"label": "fence_west",
+"metadata": {},
+"position": Vector2(18.5, 21.75),
+"protected": false,
+"scale": 1.0
+}, {
+"asset": "fence",
+"base_id": "fence_east",
+"blocking": false,
+"depth": 6,
+"id": "base_fence_east",
+"label": "fence_east",
+"metadata": {},
+"position": Vector2(45.4, 21.75),
+"protected": false,
+"scale": 1.0
+}, {
+"asset": "garden",
+"base_id": "garden_1",
+"blocking": false,
+"depth": 6,
+"id": "base_garden_1",
+"label": "garden_1",
+"metadata": {},
+"position": Vector2(39.4, 24.7),
+"protected": false,
+"scale": 1.0
+}, {
+"asset": "garden",
+"base_id": "garden_2",
+"blocking": false,
+"depth": 6,
+"id": "base_garden_2",
+"label": "garden_2",
+"metadata": {},
+"position": Vector2(41.8, 24.7),
+"protected": false,
+"scale": 1.0
+}, {
+"asset": "garden",
+"base_id": "garden_3",
+"blocking": false,
+"depth": 6,
+"id": "base_garden_3",
+"label": "garden_3",
+"metadata": {},
+"position": Vector2(44.2, 24.7),
+"protected": false,
+"scale": 1.0
+}, {
+"asset": "garden",
+"base_id": "garden_4",
+"blocking": false,
+"depth": 6,
+"id": "base_garden_4",
+"label": "garden_4",
+"metadata": {},
+"position": Vector2(36.4, 27.8),
+"protected": false,
+"scale": 1.0
+}, {
+"asset": "garden",
+"base_id": "garden_5",
+"blocking": false,
+"depth": 6,
+"id": "base_garden_5",
+"label": "garden_5",
+"metadata": {},
+"position": Vector2(19.2, 27),
+"protected": false,
+"scale": 1.0
+}, {
+"asset": "garden",
+"base_id": "garden_6",
+"blocking": false,
+"depth": 6,
+"id": "base_garden_6",
+"label": "garden_6",
+"metadata": {},
+"position": Vector2(44.3, 20),
+"protected": false,
+"scale": 1.0
+}, {
+"asset": "bench",
+"base_id": "crate_1",
+"blocking": false,
+"depth": 6,
+"id": "base_crate_1",
+"label": "crate_1",
+"metadata": {},
+"position": Vector2(31.9, 25.1),
+"protected": false,
+"scale": 1.0
+}, {
+"asset": "bench",
+"base_id": "barrel_3",
+"blocking": false,
+"depth": 6,
+"id": "base_barrel_3",
+"label": "barrel_3",
+"metadata": {},
+"position": Vector2(45, 18.8),
+"protected": false,
+"scale": 1.0
+}, {
+"asset": "bench",
+"base_id": "crate_2",
+"blocking": false,
+"depth": 6,
+"id": "base_crate_2",
+"label": "crate_2",
+"metadata": {},
+"position": Vector2(22.4, 28.6),
+"protected": false,
+"scale": 1.0
+}, {
+"asset": "bench",
+"base_id": "barrel_1",
+"blocking": false,
+"depth": 6,
+"id": "base_barrel_1",
+"label": "barrel_1",
+"metadata": {},
+"position": Vector2(28.8, 23.8),
+"protected": false,
+"scale": 1.0
+}, {
+"asset": "bench",
+"base_id": "barrel_2",
+"blocking": false,
+"depth": 6,
+"id": "base_barrel_2",
+"label": "barrel_2",
+"metadata": {},
+"position": Vector2(40.2, 22.8),
+"protected": false,
+"scale": 1.0
+}, {
+"asset": "bench",
+"base_id": "signpost",
+"blocking": false,
+"depth": 6,
+"id": "base_signpost",
+"label": "signpost",
+"metadata": {},
+"position": Vector2(25.7, 22.1),
+"protected": false,
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_0",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_0",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(59.524773, 10.2),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_1",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_1",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(51.73536, 13.6),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_2",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_2",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(59.912216, 17.2),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_3",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_3",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(59.400814, 20.7),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_4",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_4",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(60.462173, 24),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_5",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_5",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(51.273975, 27.6),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_6",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_6",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(58.87616, 34.8),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_7",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_7",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(4.7488766, 4.833124),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_8",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_8",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(9.602542, 4.631802),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_9",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_9",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(13.197937, 4.7072544),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_10",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_10",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(19.478886, 3.4262862),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_11",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_11",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(30.387703, 4.740229),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_12",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_12",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(37.841915, 4.092862),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_13",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_13",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(46.622135, 5.5782557),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_14",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_14",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(60.65873, 4.5140944),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_15",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_15",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(5, 12.8),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_16",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_16",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(8.2, 7.2),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_17",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_17",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(2.7, 18.2),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_18",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_18",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(45.8, 26.8),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_19",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_19",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(45.2, 24.8),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_20",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_20",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(46.4, 20.6),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_21",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_21",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(43.2, 28.8),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_22",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_22",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(39.8, 31.2),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_23",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_23",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(29.6, 14.5),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_24",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_24",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(20.6, 15.4),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_25",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_25",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(19, 24.4),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_26",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_26",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(44.6, 15.7),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_27",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_27",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(27.2, 27.5),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_28",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_28",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(49.03435, 3.8104482),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_29",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_29",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(52.149292, 3.1667724),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_30",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_30",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(53.62689, 3.851708),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_31",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_31",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(57.3013, 3.8502822),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_32",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_32",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(47.2296, 7.0683103),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_33",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_33",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(49.35663, 6.933609),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_34",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_34",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(61.59947, 7.548445),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_35",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_35",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(47.382755, 11.731978),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_36",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_36",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(49.52596, 11.890938),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_37",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_37",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(52.469368, 11.716337),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_38",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_38",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(54.154915, 12.080927),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_39",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_39",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(61.975494, 11.254751),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_40",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_40",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(52.344776, 15.29678),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_41",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_41",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(54.105743, 15.3367),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_42",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_42",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(56.735065, 14.433406),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_43",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_43",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(58.876717, 15.598562),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_44",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_44",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(61.876472, 14.731508),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_45",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_45",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(53.862755, 18.213001),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_46",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_46",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(56.674305, 19.559385),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_47",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_47",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(58.57333, 18.266266),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_48",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_48",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(61.54019, 18.139061),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_49",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_49",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(49.835407, 23.039152),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_50",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_50",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(51.480778, 22.58913),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_51",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_51",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(54.08065, 22.147108),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_52",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_52",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(57.32772, 22.54861),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_53",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_53",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(61.827206, 22.05617),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_54",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_54",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(51.19741, 25.615976),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_55",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_55",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(54.199463, 26.670853),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_56",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_56",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(56.432796, 26.215435),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_57",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_57",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(58.897686, 26.674398),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_58",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_58",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(61.83105, 26.537655),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_59",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_59",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(46.864433, 30.076857),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_60",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_60",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(59.355156, 30.704607),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_61",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_61",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(61.040497, 29.390366),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_62",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_62",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(47.14938, 34.337784),
+"scale": 1.0
+}, {
+"asset": "tree",
+"base_id": "forest_63",
+"blocking": true,
+"depth": 6,
+"id": "base_forest_63",
+"label": "Forest tree",
+"metadata": {},
+"position": Vector2(61.43193, 33.19915),
+"scale": 1.0
+}])
