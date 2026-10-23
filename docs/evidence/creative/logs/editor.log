@@ -25,6 +25,8 @@ Tidesworn Studio: Saved runtime override: demo/character
 [TOOL OK] asset opens as editable animation frames
 Tidesworn Studio: PNG + frame durations saved: res://assets/authored/characters/new_character_sheet.png
 [TOOL OK] PNG edits update imported texture after editor reimport
+[TOOL OK] base village object catalog loads in the editor
+[TOOL OK] existing village objects are included in the map viewport
 [TOOL OK] map pencil interpolates cell strokes
 [TOOL OK] rectangle paints authored water
 [TOOL OK] native EditorUndoRedoManager undoes map stroke
@@ -32,6 +34,7 @@ Tidesworn Studio: PNG + frame durations saved: res://assets/authored/characters/
 [TOOL OK] object placement preserves stable identity and collision properties
 Tidesworn Studio: Saved map: res://data/maps/editor_workflow.tres
 [TOOL OK] map save/reload preserves object IDs and dirty state
+[TOOL OK] base cottage art is present in the rendered map canvas
 [TOOL OK] unsaved documents require an explicit discard choice
 Tidesworn Studio: Unsaved studio edits retained as recovery drafts for the next editor session.
 [TOOL OK] plugin disables and removes its workspace
@@ -39,4 +42,4 @@ Tidesworn Studio: Editor-time authoring • source maps stay separate from playe
 Tidesworn Studio: Recovered unsaved studio drafts. Review them and Save or explicitly discard changes.
 [TOOL OK] plugin enables again in the same editor session
 [TOOL OK] plugin reload recovers unsaved pixel work without overwriting source art
---- creative tools: 24 checks, 0 failures ---
+--- creative tools: 27 checks, 0 failures ---

@@ -1469,7 +1469,7 @@ func invalidate_resident_routes() -> void:
 
 func _fresh_foliage(path: String) -> Texture2D:
 	return PixelArt.cached_texture("foliage/" + path, func() -> Image:
-		var img := (load(path) as Texture2D).get_image()
+		var img := (load(path) as Texture2D).get_image().duplicate() as Image
 		for y in img.get_height():
 			for x in img.get_width():
 				var col := img.get_pixel(x, y)

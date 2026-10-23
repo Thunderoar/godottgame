@@ -130,7 +130,7 @@ func _layer() -> String:
 func refresh() -> void:
 	if canvas == null or map == null: return
 	if _base == null or _base_generation != WorldPalette.generation:
-		_base = WorldTerrain._make_terrain_texture().get_image()
+		_base = WorldTerrain._make_terrain_texture().get_image().duplicate() as Image
 		_base.resize(map.size.x * CELL, map.size.y * CELL, Image.INTERPOLATE_NEAREST)
 		_base_generation = WorldPalette.generation
 	var image := _base.duplicate() as Image
@@ -143,7 +143,7 @@ func refresh() -> void:
 	for data in _preview_objects():
 		var texture := AuthoredMapRenderer.object_texture(str(data.get("asset", "")))
 		if texture == null: continue
-		var img := texture.get_image()
+		var img := texture.get_image().duplicate() as Image
 		var target_size := Vector2i(Vector2(img.get_size()) * (float(CELL) / 32.0) * float(data.get("scale", 1.0))).max(Vector2i.ONE)
 		img.resize(target_size.x, target_size.y, Image.INTERPOLATE_NEAREST)
 		var p: Vector2 = data.get("position", Vector2.ZERO)

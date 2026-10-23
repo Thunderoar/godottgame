@@ -68,7 +68,7 @@ static func run(studio: Control) -> void:
 	var original := Image.create_empty(96, 32, false, Image.FORMAT_RGBA8)
 	original.fill(Color.TRANSPARENT)
 	for i in 3:
-		var frame := PixelArt.coastal_prop("flowers").get_image()
+		var frame := PixelArt.coastal_prop("flowers").get_image().duplicate() as Image
 		frame.resize(32, 32, Image.INTERPOLATE_NEAREST)
 		original.blit_rect(frame, Rect2i(0, 0, 32, 32), Vector2i(i * 32, 0))
 	var external := root.path_join("new_character_sheet.png")
@@ -99,6 +99,8 @@ static func run(studio: Control) -> void:
 	await screenshot(studio, output.path_join("asset-library.png"))
 	var map_panel: Control = studio.map_panel
 	studio.tabs.current_tab = 1
+	check(map_panel.base != null and map_panel.base.objects.size() >= 60, "base village object catalog loads in the editor")
+	check(map_panel._preview_objects().size() >= 60, "existing village objects are included in the map viewport")
 	map_panel.map = AuthoredMap.new()
 	map_panel.path = "res://data/maps/editor_workflow.tres"
 	map_panel.dirty = false
@@ -131,14 +133,18 @@ static func run(studio: Control) -> void:
 	map_panel._release(Vector2i(32, 34) * 8)
 	map_panel.asset.text = "demo/character"
 	map_panel.blocking.button_pressed = false
-	map_panel._press(Vector2i(30, 31) * 8)
-	map_panel._release(Vector2i(30, 31) * 8)
+	map_panel._press(Vector2i(34, 30) * 8)
+	map_panel._release(Vector2i(34, 30) * 8)
 	check(map_panel.map.objects.size() == 2 and map_panel.map.objects[0].blocking, "object placement preserves stable identity and collision properties")
 	var identity: String = map_panel.map.objects[0].id
 	map_panel._save(map_panel.path)
 	var loaded := ResourceLoader.load(map_panel.path, "", ResourceLoader.CACHE_MODE_IGNORE) as AuthoredMap
 	check(loaded.objects[0].id == identity and not map_panel.dirty, "map save/reload preserves object IDs and dirty state")
 	map_panel.refresh()
+	var preview_image: Image = map_panel.canvas.image_texture.get_image()
+	preview_image.save_png(output.path_join("map-canvas.png"))
+	var house_pixel := preview_image.get_pixel(34 * 8, 20 * 8)
+	check(house_pixel.r > house_pixel.g, "base cottage art is present in the rendered map canvas")
 	await screenshot(studio, output.path_join("map-editor.png"))
 	studio.tabs.current_tab = 3
 	await screenshot(studio, output.path_join("palette-editor.png"))

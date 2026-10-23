@@ -13,7 +13,7 @@ saves were never deleted, restored or overwritten.
 | Final isolated gameplay gate | **438 checks, PASS**, no script errors/failures | `evidence/creative/logs/acceptance.log` |
 | Native graphical regressions | **63 checks, 0 failures** | `logs/native-ui.log` |
 | Fresh source import | PASS; plugin loaded without parse/missing-resource errors | `logs/clean-import.log` |
-| Native authoring workspace | **24 checks, 0 failures** | `logs/editor.log` |
+| Native authoring workspace | **27 checks, 0 failures** | `logs/editor.log` |
 | Editor output in a new runtime process | **PASS**: saved registry, edited PNG, authored map and live water collision | `logs/restart.log`, `studio/authored-runtime.png` |
 | Exported resource pack | **EXPORTED_RUNTIME PASS**: actual game/player and imported planter load with editor code excluded | `logs/export-runtime.log` |
 | Before/after tour | 53 fresh final captures; selected comparable views retained | `before/`, `after/` |
@@ -104,6 +104,12 @@ configuration; `_ready` and bounds guards now disable static-clip processing.
 Tool screenshot capture now explicitly draws instead of waiting indefinitely for
 an editor redraw signal. Floating-point SpinBox defaults are configured before
 setting values so footprints and scale are not silently rounded.
+
+The final pixel-level map review caught shared image data being resized while
+building object previews. Preview and foliage transforms now duplicate image data
+before editing it, and a rendered-canvas regression verifies the cottage remains
+visible after repeated painting. The map grid also uses world-cell spacing at the
+default zoom.
 
 ## Limits
 

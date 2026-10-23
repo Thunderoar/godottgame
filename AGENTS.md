@@ -343,4 +343,4 @@ or EditorPlugin from gameplay scripts. The main workspace is **Tidesworn**.
 
 Workflows, current evidence and limits are in `docs/CREATIVE_REVAMP_COMPLETION.md`
 and `docs/CREATIVE_REVAMP_QA.md`. The verified gameplay tally is 438 checks; the
-native editor workflow has 24 checks plus a separate runtime restart verification.
+native editor workflow has 27 checks plus a separate runtime restart verification.

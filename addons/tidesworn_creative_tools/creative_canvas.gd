@@ -60,7 +60,7 @@ func _draw() -> void:
 		for x in range(0, int(dimensions.x), 8):
 			draw_rect(Rect2(pan + Vector2(x, y) * zoom, Vector2(minf(8, dimensions.x - x), minf(8, dimensions.y - y)) * zoom), Color("52606a") if (int(x / 8) + int(y / 8)) % 2 else Color("414e58"))
 	draw_texture_rect(image_texture, bounds, false)
-	if grid and zoom >= 5.0:
+	if grid and zoom * grid_step >= 5.0:
 		for x in range(0, int(dimensions.x) + 1, grid_step):
 			draw_line(pan + Vector2(x * zoom, 0), pan + Vector2(x * zoom, dimensions.y * zoom), Color(0, 0, 0, 0.15))
 		for y in range(0, int(dimensions.y) + 1, grid_step):

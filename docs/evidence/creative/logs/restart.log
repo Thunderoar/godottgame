@@ -5,5 +5,5 @@ WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by 
      at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
 OpenGL API 4.6 (Core Profile) Mesa 26.2.4-arch3.1 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 23.1.1, 256 bits)
 
-Verified isolated user data: /tmp/tidesworn-studio-CyMuzOiz/userdata/godot/app_userdata/Save The World
+Verified isolated user data: /tmp/tidesworn-studio-gs71bawW/userdata/godot/app_userdata/Save The World
 --- creative restart: PASS ---

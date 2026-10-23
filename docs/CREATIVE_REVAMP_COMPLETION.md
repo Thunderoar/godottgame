@@ -69,7 +69,7 @@ Full workflows: [assets](ASSET_WORKFLOW.md), [maps](MAP_EDITOR_GUIDE.md),
 
 ## Verification and evidence
 
-**438 gameplay checks PASS; 63 native UI checks pass; 24 editor checks pass;
+**438 gameplay checks PASS; 63 native UI checks pass; 27 editor checks pass;
 separate editor-output restart PASS; exported resource-pack runtime PASS.**
 The suite adds 30 checks to the verified 408-check source baseline. A fresh
 source-copy import verifies the plugin without relying on the local `.godot`

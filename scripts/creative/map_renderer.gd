@@ -19,7 +19,7 @@ static func tile_image(material: String, at: Vector2i, map: AuthoredMap, layer: 
 	img.fill(color)
 	if layer in ["Decoration", "Vegetation", "Foreground"]:
 		img.fill(Color.TRANSPARENT)
-		var prop := PixelArt.coastal_prop("flowers" if material == "flower" else "bush").get_image()
+		var prop := PixelArt.coastal_prop("flowers" if material == "flower" else "bush").get_image().duplicate() as Image
 		prop.resize(32, 32, Image.INTERPOLATE_NEAREST)
 		return prop
 	# Deterministic material grain, then feathered edges toward existing neighbours.
