@@ -758,16 +758,12 @@ func trigger_game_over(reason: String) -> void:
 
 
 func gui_scale() -> float:
-	var settings: Dictionary = data.get("settings", {})
-	return clampf(float(settings.get("gui_scale", 1.0)), 0.75, 1.3)
+	# Compatibility API: device settings survive new journeys and save deletion.
+	return float(GameSettings.ui_scale()) / 100.0
 
 
-func set_gui_scale(value: float) -> void:
-	var settings: Dictionary = data.get("settings", {})
-	settings.gui_scale = clampf(value, 0.75, 1.3)
-	data.settings = settings
-	data_changed.emit()
-	save_game()
+func set_gui_scale(value: float, persist: bool = true) -> void:
+	GameSettings.set_ui_scale(roundi(value * 100.0), persist)
 
 
 func control_layout() -> Dictionary:
@@ -1052,6 +1048,21 @@ func leave_portal_safely() -> Dictionary:
 	var banked := bank_expedition_loot()
 	_save_if_needed()
 	return banked
+
+
+func defeat_at_home() -> void:
+	# Home has no expedition loot to lose. Reuse the existing recovery rules
+	# without the portal's second player_defeated notification.
+	data.deaths = int(data.get("deaths", 0)) + 1
+	data.shield = 0
+	data.hp = maxi(1, int(round(float(health_max()) * 0.10)))
+	data.mana = int(round(float(mana_max()) * 0.5))
+	data.recovery_active = true
+	revive_active_pet()
+	_save_if_needed()
+	data_changed.emit()
+	pet_changed.emit()
+	recovery_changed.emit(true, recovery_progress())
 
 
 func kills() -> int:

@@ -8,14 +8,17 @@ reviewers working on **Save The World - Tidesworn** in Godot 4.x.
 Run from `GAME_COMP_RPG-Godot/`:
 
 ```sh
-# Parse/import every script and report warnings as failures.
-godot --headless --path . --editor --quit
+# Safe Linux gate. Uses a fresh XDG_DATA_HOME, verifies user:// before deletion,
+# enforces a timeout and inspects errors as well as exit status.
+./tools/test_isolated.sh
 
-# Full acceptance suite. Expect: 314 checks, PASS.
-godot --headless --path . res://tools/tide_test.tscn
+# Import/parse in separate temporary user data.
+review_dir=$(mktemp -d /tmp/tidesworn-review-XXXXXXXX)
+XDG_DATA_HOME="$review_dir/userdata" timeout 90 godot --headless --path . --editor --quit
+XDG_DATA_HOME="$review_dir/userdata" TIDESWORN_TEST_ROOT="$review_dir" timeout 180 godot --path . res://tools/visual_review.tscn -- --shots "$review_dir/shots"
 
-# Visual capture harness (writes PNGs).
-godot --path . res://tools/tide_capture.tscn -- --shots C:/path/to/shots
+# Every rendered motion frame (AVI), plus per-physics-tick position samples.
+XDG_DATA_HOME="$review_dir/movie-userdata" TIDESWORN_TEST_ROOT="$review_dir" timeout 180 godot --path . --write-movie "$review_dir/motion.avi" --fixed-fps 60 res://tools/motion_review.tscn -- --samples "$review_dir/motion.json"
 ```
 
 On Windows with the portable console binary, use the equivalent path to
@@ -111,7 +114,8 @@ new screenshots at 1280×720.
   player's head.
 - The top-right `MenuButton` opens the in-game menu.
 - Settings opens from the menu.
-- GUI scale changes apply to the HUD root and persist in `GameState`.
+- GUI scale persists in GameSettings, applies to independently anchored HUD elements
+  and leaves HUDRoot and camera zoom unchanged. No top-right VITALS panel remains.
 - Control X/Y/size changes apply immediately to the touch controls and reset to
   the default responsive layout.
 
@@ -150,6 +154,50 @@ suite (`_test_visual_overhaul_contracts` and updated attack waits):
 - Quality tiers: `low` drops ambient life, wind sway and hit-stop; reduce
   motion disables shake, look-ahead and bending.
 
+## Visual repair regressions
+
+`_test_visual_repairs()` verifies tree sprite/body ownership, local/world placement
+(including the small hit shake), independent damage feedback, persistent HP and
+loaded-fallen collision; full water-mask coverage and eastern bounds; absence of
+star placeholders; turtle sand placement; BESUT lettering metadata/art; no VITALS
+and preserved PlayerVitalHud; all three quality tiers with Reduce Motion; camera
+zoom limits, isotropy, interpolation, file persistence and world inheritance;
+GUI min/default/max, independent scale and viewport bounds; fractional player
+motion, normalized diagonals, braking, far-behind pet catch-up, enemy chase,
+projectile speed and settling loot; repeated shopping state progression, busy
+counter exclusion, reservation cleanup and isolated player gold/inventory.
+
+The VITALS removal intentionally replaces its obsolete segmented-panel checks
+with checks for its absence and the preserved PlayerVitalHud. Gameplay assertions
+for health/mana, potions, pet support, combat, tree falling and game-over remain.
+
+Fresh review captures add coast west/turtle/east, BESUT, eastern forest, all six
+quality/motion combinations, GUI 75/100/130% at 1280×720 and 832×480, Settings at
+both sizes, zoom 28/38/64, all shopping states, and a movement strip. Inspect actual
+images and consecutive movie frames; file existence is not a visual check.
+
+## Deep audit regressions
+
+`DeepAuditChecks.run()` is part of the acceptance gate. It exercises joystick
+local/viewport coordinate handling; input release on hide/removal; actual-size
+layout reset; route invalidation and collision-clear detours; strict shop endpoint
+accessibility and fear cancellation; shared actor depth; live dungeon quality
+changes; VFX lifetime during deferred deletion; effects-independent simulation;
+persisted GUI migration; world-scaled outlines; and home-death recovery without
+inventory/currency/progression loss or duplicate transitions.
+
+`tools/deep_audit_test.tscn` additionally checks native GUI input dispatch and
+44-physical-pixel control sizes at 1280×720, 832×468 and 832×480 with GUI
+75/100/130%. Resizing alone must refresh these sizes. Home defeat uses critical
+HP/half mana and the existing recovery ward; it does not discard expedition loot
+or replace the forest-loss game-over rule. The loot test must touch all drops,
+including the randomly generated extra gem, before requiring an empty floor.
+
+All mutating review scenes require verified `TIDESWORN_TEST_ROOT` plus isolated
+`XDG_DATA_HOME`. The safe runner must reject a zero-exit engine that never prints
+its PASS summary. See [DEEP_AUDIT_REPORT.md](DEEP_AUDIT_REPORT.md) for current
+results, negative probes and visual evidence.
+
 ## Regression rules for agents
 
 1. **Do not reintroduce timed toast pop-ups or floating NPC names.** Use the HUD,
@@ -163,8 +211,8 @@ suite (`_test_visual_overhaul_contracts` and updated attack waits):
 5. **Use typed locals** where Godot's warnings-as-errors would reject inference.
 6. **Update the suite and this document** when an acceptance rule changes. The
    README, QA report and capture list must stay in sync.
-7. **Delete test saves and temporary logs** before handoff. The suite deletes
-   `user://tidesworn_save.json` at the start and end.
+7. **Keep test data isolated and evidence outside the repository.** The suite deletes
+   `user://tidesworn_save.json` at the start and end; preserve requested review logs/captures.
 
 ## Visual review checklist
 

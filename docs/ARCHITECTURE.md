@@ -27,7 +27,7 @@ audio assets are required.
 `GameSettings` (added by the visual overhaul) is the third autoload. It owns
 device-level preferences in `user://settings.cfg`, independent of the save
 file: volumes, mute, fullscreen, UI scale, touch layout mode, screen shake,
-`reduce_motion` and `effects_quality` (low/med/high). The Settings panel reads
+`camera_zoom` (28–64, default 38), `reduce_motion` and `effects_quality` (low/med/high). The Settings panel reads
 and writes it; visual systems call `GameSettings.effects_at_least()` /
 `reduce_motion()` before spawning ambient layers.
 
@@ -49,7 +49,7 @@ and writes it; visual systems call `GameSettings.effects_at_least()` /
 - settlement layout (saved editable-object positions),
 - persistent per-tree forest health,
 - sea-cleaning count,
-- GUI scale and custom touch-control layout,
+- custom touch-control layout (GUI scale delegates to GameSettings),
 - in-game play time and counters.
 
 The world is intentionally locked in **permanent daytime**; there is no phase
@@ -121,6 +121,9 @@ the journal and modal screens.
 - `register_rubbish_cleaned()` adds exactly +1 Gold and increments sea-cleaning.
 - `defeat_in_portal()` discards unbanked loot, activates recovery and restores
   the pet; it never permanently kills the pet.
+- `defeat_at_home()` starts the same critical-health recovery without losing
+  inventory, currencies or progression. `Game` rebuilds the home after the death
+  animation and guards duplicate signals; forest game over still takes priority.
 
 Currency is deducted only after validation and never becomes negative.
 
@@ -140,7 +143,9 @@ Currency is deducted only after validation and never becomes negative.
 
 ## Pets
 
-`Pet` follows the player and has no `PointLight2D`. In combat, while any enemy is
+`Pet` is a collision-aware CharacterBody2D with bounded acceleration and catch-up,
+using obstacle paths when the direct follow line is blocked. It never teleports
+at a distance threshold and has no `PointLight2D`. In combat, while any enemy is
 within 7 units, it:
 - heals the player on a data-driven interval,
 - attacks the nearest enemy on a data-driven interval,
@@ -196,7 +201,7 @@ in the top-left HUD panel and use `GameState.data.xp_next` and
   Positions save under `settlement_layout` and survive lobby reloads.
 - `SettlementTarget` marks the cottage, shop stalls and resident cottages.
   `ForestTree` marks the 64 protected trees in the eastern woodland. Every tree
-  has persistent HP, shakes/flashes, emits leaf/spark VFX and plays `tree_hit`.
+  has persistent HP, shakes/flashes, emits small leaf VFX and plays `tree_hit`.
   At zero HP it falls and leaves the target group. When all trees are dead,
   `Lobby` calls `GameState.trigger_game_over()`.
 - `Lobby` spawns eight persistent `forest_mode` monsters and three extra during
@@ -230,10 +235,17 @@ in the top-left HUD panel and use `GameState.data.xp_next` and
   and MP above the player's head.
 - `GameHUD.MenuButton` emits `menu_requested`. `MenuPanel` opens Settings or
   returns to title.
-- `SettingsPanel` controls `GameState.settings.gui_scale` and
-  `settings.control_layout`. `GameHUD` applies GUI scale to its root and absolute
-  X/Y/size overrides to the touch controls; Reset restores the original responsive
-  anchors.
+- `SettingsPanel` controls device-level `GameSettings.ui_scale` and `camera_zoom`,
+  and per-save `GameState.settings.control_layout`. GameState's GUI methods are
+  compatibility delegates; legacy scale migrates only when settings.cfg has none.
+  GUI sliders preview without saving each tick and commit on release/focus/close.
+  HUDRoot stays unscaled. Individual controls scale around their own anchors,
+  with responsive fitting and a 44-physical-pixel touch minimum. Full-screen
+  modals and fades keep their responsive viewport geometry. VITALS is removed.
+- `FollowCamera` follows in physics updates with exponential smoothing; Godot
+  interpolates physics rendering. Nearest filtering remains on; manual art-grid
+  camera rounding and both canvas pixel-snapping flags are off. Logical actor
+  positions are never rounded. Camera limits stay world-specific.
 - `GameOverPanel` is a locked modal. `GameState.trigger_game_over()` disables
   autosave, `Game` deletes the failed save and the panel can only return to title.
 
@@ -250,7 +262,7 @@ in the top-left HUD panel and use `GameState.data.xp_next` and
   from `MODEL_MATRIX` plus a per-instance `INSTANCE_CUSTOM` seed (MultiMesh
   safe), and bends grass away from up to four "benders" pushed through
   shader globals. The water shader renders the sea mask with moving bands,
-  foam crests and sparkle while respecting the mask alpha.
+  subtle crests while respecting the full-resolution, ocean-bounded mask alpha.
 - **`scripts/data/attack_db.gd`** - weapon attack chains
   (anticipation/active/recovery per step). Damage is applied on the active
   frame; `attack_cooldown` restarts at each hit frame, preserving DPS.
@@ -280,10 +292,22 @@ in the top-left HUD panel and use `GameState.data.xp_next` and
   variant) with per-instance colour jitter and phase seeds, using a dedicated
   seeded RNG so the tree-id sequence never changes. Flowers stay individual
   sprites (the `flowers` group is an acceptance contract).
-- **Ambient life** - `Lobby._build_ambient_life()` (cloud shadows, pollen,
-  butterflies, forest light shafts, eastern grade, chimney smoke) and
-  `_update_ambient()` (bender push, falling leaves, ward motes), all gated
-  behind `effects_quality >= med` and `reduce_motion == false`.
+- **Ambient life** - optional small chimney/ruin smoke at high quality; no star
+  pollen, butterfly placeholders, growth-aura sparkles or random leaf rain.
+  `_update_ambient()` pushes wind benders and restrained recovery ward cues.
+  Settings update water fallback, wind, smoke, animal motion and extra lights live.
+- **World ownership** - each ForestTree owns its shadow, two registered sprites
+  and trunk Body before ready, so persisted fallen trees disable their collider.
+  The existing generation RNG and tree ID order are preserved. Cottages, ruins,
+  rubble and smoke likewise use their intended holder-local coordinates.
+- **Shopping** - Resident is a CharacterBody2D with ROUTINE → WALK_TO_SHOP →
+  BROWSE → PURCHASE → LEAVE states. ShopNPC holds one weak customer reservation;
+  exchanges animate locally without calling player transactions. Missing/unreachable
+  shops and visit timeouts release reservations. Emergency/unload cancels visits.
+  ResidentRoutes samples collision layer 1 into an AStarGrid2D planning graph;
+  actual movement uses acceleration, arrival tolerances and move_and_slide through
+  floating-point coordinates, not cell assignments. Editor completion invalidates
+  the shared planner. Pets can reuse the same planner.
 
 ## Save format
 

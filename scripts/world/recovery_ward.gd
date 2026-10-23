@@ -8,6 +8,9 @@ var active := false
 var _t := 0.0
 var _label: Label
 
+const OUTER_WIDTH := 2.0 * PixelArt.PX
+const INNER_WIDTH := PixelArt.PX
+
 
 func _ready() -> void:
 	z_index = 2
@@ -32,7 +35,8 @@ func set_active(value: bool) -> void:
 
 
 func _process(delta: float) -> void:
-	_t += delta
+	if not GameSettings.reduce_motion():
+		_t += delta
 	queue_redraw()
 
 
@@ -40,8 +44,8 @@ func _draw() -> void:
 	if not active:
 		return
 	var pulse := 0.65 + sin(_t * 2.0) * 0.18
-	draw_arc(Vector2.ZERO, radius, 0, TAU, 96, Color(0.45, 0.95, 0.72, 0.28 * pulse), 2.0, true)
-	draw_arc(Vector2.ZERO, radius - 0.15, 0, TAU, 96, Color(0.7, 1.0, 0.86, 0.18), 1.0, true)
+	draw_arc(Vector2.ZERO, radius, 0, TAU, 96, Color(0.45, 0.95, 0.72, 0.28 * pulse), OUTER_WIDTH, true)
+	draw_arc(Vector2.ZERO, radius - 0.15, 0, TAU, 96, Color(0.7, 1.0, 0.86, 0.18), INNER_WIDTH, true)
 	for i in 8:
 		var a := float(i) / 8.0 * TAU + _t * 0.15
 		var p := Vector2(cos(a), sin(a)) * radius

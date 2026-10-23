@@ -1,5 +1,5 @@
 class_name Pet
-extends Node2D
+extends CharacterBody2D
 ## Companion follower with three support abilities: gradual healing, automatic
 ## attacks and periodic shields. Pets are never permanently lost.
 ##
@@ -7,7 +7,7 @@ extends Node2D
 ## sliding under the player's feet), walk/idle/blink animation with idle
 ## behaviours (sit, sniff, glance), species-specific ability VFX, a visible
 ## shield bubble while shield points remain, cosmetic growth tiers from PetDB,
-## and a "dazed" downed state with orbiting stars instead of vanishing.
+## and a restrained sleeping pose while downed.
 
 const LEASH_DISTANCE := 6.0
 const CATCHUP_DISTANCE := 2.6
@@ -21,7 +21,6 @@ var body_radius := 0.3
 var _sprite: Sprite2D
 var _shadow: Sprite2D
 var _level_label: Label
-var _stars: Array[Sprite2D] = []
 var _shield_bubble: Sprite2D
 var _frame_timer := 0.0
 var _frame := 0
@@ -36,13 +35,24 @@ var _idle_behaviour := 0
 var _idle_behaviour_timer := 0.0
 var _sniff_offset := Vector2.ZERO
 var _pose_lock := 0.0
-var _aura_timer := 0.0
+var _pose_offset := Vector2.ZERO
+var _pose_tween: Tween
+var _follow_path := PackedVector2Array()
+var _route_timer := 0.0
+var _route_planner: ResidentRoutes
 var _last_level := 1
 
 
 func _ready() -> void:
 	add_to_group("pet")
-	z_index = 5
+	z_index = 6
+	collision_layer = 0
+	collision_mask = 1
+	var shape := CollisionShape2D.new()
+	var circle := CircleShape2D.new()
+	circle.radius = 0.18
+	shape.shape = circle
+	add_child(shape)
 	_build()
 	GameState.pet_changed.connect(_refresh)
 	_refresh()
@@ -66,7 +76,7 @@ func _build() -> void:
 	_sprite.texture = PixelArt.pet_texture(GameState.active_pet_id())
 	_sprite.scale = Vector2(PixelArt.PX, PixelArt.PX) * 1.12
 	_sprite.position = Vector2(0, -0.5)
-	_sprite.z_index = 6
+	_sprite.z_index = 0
 	_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	add_child(_sprite)
 
@@ -87,27 +97,17 @@ func _build() -> void:
 	_shield_bubble.name = "ShieldBubble"
 	_shield_bubble.texture = PixelArt.light_texture()
 	_shield_bubble.modulate = Color(0.55, 0.9, 1.0, 0.0)
-	_shield_bubble.scale = Vector2(0.045, 0.05)
+	_shield_bubble.scale = Vector2(0.018, 0.021)
 	_shield_bubble.z_as_relative = false
 	_shield_bubble.z_index = 690
 	add_child(_shield_bubble)
 
-	# Dazed stars for the downed state.
-	for i in 3:
-		var star := Sprite2D.new()
-		star.texture = PixelArt.icon("spark", 16)
-		star.scale = Vector2(0.028, 0.028)
-		star.modulate = Color("#ffe28a")
-		star.visible = false
-		star.z_as_relative = false
-		star.z_index = 720
-		add_child(star)
-		_stars.append(star)
 
 
-func _process(delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if not is_instance_valid(player):
-		player = get_tree().get_first_node_in_group("player")
+		var game := get_tree().get_first_node_in_group("game")
+		player = game.call("player") if game != null else null
 		if not is_instance_valid(player):
 			return
 	var pet := GameState.get_active_pet()
@@ -116,8 +116,6 @@ func _process(delta: float) -> void:
 		_process_downed(delta)
 		return
 	_down_timer = 0.0
-	for star in _stars:
-		star.visible = false
 	_bob += delta
 	if _pose_lock > 0.0:
 		_pose_lock = maxf(0.0, _pose_lock - delta)
@@ -141,22 +139,41 @@ func _follow(delta: float) -> void:
 	var side := -1.0 if player.facing.x >= 0.0 else 1.0
 	var desired := player.global_position + Vector2(0.95 * side, 0.5) + _sniff_offset
 	var offset := desired - global_position
-	var distance := offset.length()
-	if distance > LEASH_DISTANCE:
-		global_position = desired
-		_follow_velocity = Vector2.ZERO
-		return
-	# Spring-damper: snappy on short distances, springs harder when far behind.
-	var sprint := 1.0
-	if distance > CATCHUP_DISTANCE:
-		sprint = 1.65
-	var accel := offset * (FOLLOW_STIFFNESS * sprint) - _follow_velocity * FOLLOW_DAMPING
-	_follow_velocity += accel * delta
-	global_position += _follow_velocity * delta
-	# Never slide under the player's feet.
-	var to_player := global_position - player.global_position
-	if to_player.length() < FEET_CLEARANCE and to_player.length() > 0.001:
-		global_position = player.global_position + to_player.normalized() * FEET_CLEARANCE
+	_route_timer -= delta
+	if _route_timer <= 0.0:
+		_route_timer = 0.5
+		var ray := PhysicsRayQueryParameters2D.create(global_position, desired, 1)
+		if not get_world_2d().direct_space_state.intersect_ray(ray).is_empty():
+			var lobby := get_parent() as Lobby
+			if lobby:
+				_follow_path = lobby.resident_path(global_position, desired)
+			else:
+				if _route_planner == null:
+					var world_bounds: Rect2 = get_parent().map_rect if get_parent() is Dungeon else Rect2(0, 0, 64, 40)
+					_route_planner = ResidentRoutes.new(get_parent(), world_bounds)
+				_follow_path = _route_planner.path(global_position, desired)
+		else:
+			_follow_path.clear()
+	while not _follow_path.is_empty() and global_position.distance_to(_follow_path[0]) < 0.25:
+		_follow_path.remove_at(0)
+	if not _follow_path.is_empty():
+		offset = _follow_path[0] - global_position
+	var distance := global_position.distance_to(desired)
+	var max_speed := 9.0 if distance > LEASH_DISTANCE else (6.5 if distance > CATCHUP_DISTANCE else 4.5)
+	# Approach velocity with braking distance; a bounded acceleration handles turns.
+	var wanted := offset.normalized() * minf(max_speed, offset.length() * (3.0 if _follow_path.is_empty() else 8.0))
+	var away := global_position - player.global_position
+	if away.length() < FEET_CLEARANCE + 0.3 and away.length() > 0.001:
+		var normal := away.normalized()
+		# Remove inward travel near the feet; steer tangentially toward the slot.
+		var inward := wanted.dot(normal)
+		if inward < 0.0:
+			wanted -= normal * inward
+		wanted += normal * maxf(0.0, FEET_CLEARANCE + 0.05 - away.length()) * 5.0
+	_follow_velocity = _follow_velocity.move_toward(wanted, 22.0 * delta)
+	velocity = _follow_velocity
+	move_and_slide()
+	_follow_velocity = velocity
 
 
 func _animate(delta: float, owner_player: Node2D) -> void:
@@ -202,7 +219,7 @@ func _animate(delta: float, owner_player: Node2D) -> void:
 		if _sprite and _pose_lock <= 0.0:
 			_sprite.flip_h = (owner_player.global_position.x - global_position.x) < -0.1
 	if _sprite:
-		_sprite.position.y = -0.5 + sin(_bob * (7.0 if moving else 3.2)) * (0.035 if moving else 0.018)
+		_sprite.position = Vector2(0, -0.5 + sin(_bob * (7.0 if moving else 3.2)) * (0.035 if moving else 0.018)) + _pose_offset
 
 
 func _apply_texture() -> void:
@@ -211,7 +228,7 @@ func _apply_texture() -> void:
 
 
 func _process_downed(delta: float) -> void:
-	# Dazed instead of invisible: curled pose with orbiting stars, then a happy
+	# Dazed instead of invisible: curled resting pose, then a happy
 	# recovery pop when the revive timer completes.
 	visible = true
 	_down_timer += delta
@@ -222,12 +239,6 @@ func _process_downed(delta: float) -> void:
 		_sprite.position.y = -0.30 + sin(_bob * 2.0) * 0.02
 	if _shadow:
 		_shadow.scale = Vector2(0.012, 0.007)
-	for i in _stars.size():
-		var star := _stars[i]
-		star.visible = GameSettings.effects_at_least("med")
-		var angle := _bob * 2.6 + TAU * float(i) / 3.0
-		star.position = Vector2(cos(angle) * 0.45, -0.42 + sin(angle) * 0.12)
-		star.rotation = angle
 	if _level_label:
 		_level_label.text = "..."
 	if _down_timer >= 5.0:
@@ -244,9 +255,11 @@ func _celebrate() -> void:
 	_pose_lock = 0.8
 	Vfx.pop(global_position + Vector2(0, -0.9), "heart", Color("#ff8c8c"))
 	if not GameSettings.reduce_motion() and _sprite:
-		var tween := create_tween().set_loops(2)
-		tween.tween_property(_sprite, "position:y", -0.72, 0.14).set_trans(Tween.TRANS_SINE)
-		tween.tween_property(_sprite, "position:y", -0.5, 0.14).set_trans(Tween.TRANS_SINE)
+		if _pose_tween and _pose_tween.is_valid():
+			_pose_tween.kill()
+		_pose_tween = create_tween().set_loops(2)
+		_pose_tween.tween_property(self, "_pose_offset:y", -0.16, 0.14).set_trans(Tween.TRANS_SINE)
+		_pose_tween.tween_property(self, "_pose_offset:y", 0.0, 0.14).set_trans(Tween.TRANS_SINE)
 
 
 # ------------------------------------------------------------------ abilities
@@ -283,7 +296,6 @@ func _ability_heal_fx() -> void:
 	# stays as a small secondary cue.
 	Vfx.ring(player.global_position + Vector2(0, -0.5), 0.9, Color(0.7, 1.0, 0.8, 0.6), 0.5)
 	Vfx.pop(player.global_position + Vector2(0.25, -1.4), "heart", Color("#ff8c8c"))
-	_ability_icon("heart", Color("#ff8c8c"), player.global_position + Vector2(-0.25, -1.5))
 
 
 func _ability_attack_fx(id: String, at: Vector2, dir: Vector2) -> void:
@@ -301,17 +313,18 @@ func _ability_attack_fx(id: String, at: Vector2, dir: Vector2) -> void:
 			Vfx.ring(at, 0.5, Color(0.7, 0.95, 1.0, 0.9), 0.28)
 	# Small lunge toward the strike.
 	if _sprite and not GameSettings.reduce_motion():
-		var base := _sprite.position
-		var tween := _sprite.create_tween()
-		tween.tween_property(_sprite, "position", base + dir * 0.3, 0.1)
-		tween.tween_property(_sprite, "position", base, 0.16)
+		if _pose_tween and _pose_tween.is_valid():
+			_pose_tween.kill()
+		_pose_tween = create_tween()
+		_pose_tween.tween_property(self, "_pose_offset", dir * 0.18, 0.1)
+		_pose_tween.tween_property(self, "_pose_offset", Vector2.ZERO, 0.16)
 		_pose_lock = 0.25
 		_frame = 4
 		_apply_texture()
 
 
 func _ability_shield_fx() -> void:
-	Vfx.ring(player.global_position + Vector2(0, -0.5), 1.2, Color(0.6, 0.92, 1.0, 0.7), 0.55)
+	Vfx.ring(player.global_position + Vector2(0, -0.5), 0.65, Color(0.6, 0.92, 1.0, 0.7), 0.55)
 	_ability_icon("shield", Color("#8fe8f7"), player.global_position + Vector2(0, -1.7))
 
 
@@ -322,14 +335,14 @@ func _update_shield_bubble(delta: float, _level: int) -> void:
 	if shield > 0:
 		_shield_bubble.visible = true
 		_shield_bubble.global_position = player.global_position + Vector2(0, -0.55)
-		_shield_bubble.rotation += delta * 1.4
+		_shield_bubble.rotation += delta * (0.0 if GameSettings.reduce_motion() else 0.2)
 		var strength := clampf(float(shield) / 20.0, 0.25, 1.0)
-		_shield_bubble.modulate = Color(0.55, 0.9, 1.0, 0.28 + strength * 0.25)
+		_shield_bubble.modulate = Color(0.55, 0.9, 1.0, 0.08 + strength * 0.08)
 	else:
 		_shield_bubble.visible = false
 
 
-func _update_growth_aura(delta: float, pet: Dictionary) -> void:
+func _update_growth_aura(_delta: float, pet: Dictionary) -> void:
 	# Cosmetic growth tiers from PetDB (optional "tiers" key, safe defaults).
 	var def := PetDB.get_pet(str(pet.get("id", "ember")))
 	var tiers: Dictionary = def.get("tiers", {"aura": 3, "glow": 5})
@@ -339,12 +352,6 @@ func _update_growth_aura(delta: float, pet: Dictionary) -> void:
 		_sprite.modulate = accent.lerp(Color.WHITE, 0.72)
 	elif _sprite:
 		_sprite.modulate = Color.WHITE
-	if level >= int(tiers.get("aura", 3)) and GameSettings.effects_at_least("med"):
-		_aura_timer -= delta
-		if _aura_timer <= 0.0:
-			_aura_timer = randf_range(0.8, 1.8)
-			var accent: Color = def.get("accent", Color("#ffd27a"))
-			Vfx.pop(global_position + Vector2(randf_range(-0.3, 0.3), -randf_range(0.4, 0.9)), "spark", accent)
 
 
 func _nearest_enemy(max_distance: float) -> Node2D:

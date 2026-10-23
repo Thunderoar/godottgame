@@ -15,6 +15,7 @@ const CONTROL_ROWS := [
 
 var _rows: Dictionary = {}
 var _scale_label: Label
+var _zoom_label: Label
 
 
 func open_settings() -> void:
@@ -37,7 +38,7 @@ func _rebuild() -> void:
 	slider.max_value = 1.30
 	slider.step = 0.05
 	slider.value = hud.get_gui_scale()
-	slider.custom_minimum_size = Vector2(360, 32)
+	slider.custom_minimum_size = Vector2(260, 32)
 	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scale_row.add_child(slider)
 	_scale_label = GameUI.label("%d%%" % int(round(slider.value * 100.0)), 16, GameUI.GOLD)
@@ -45,8 +46,34 @@ func _rebuild() -> void:
 	scale_row.add_child(_scale_label)
 	slider.value_changed.connect(func(value: float) -> void:
 		_scale_label.text = "%d%%" % int(round(value * 100.0))
-		hud.set_gui_scale(value))
+		hud.set_gui_scale(value, false))
+	slider.drag_ended.connect(func(_changed: bool) -> void: GameSettings.save_settings())
+	slider.focus_exited.connect(GameSettings.save_settings)
 	content.add_child(scale_row)
+
+	add_section("CAMERA ZOOM", GameUI.GOLD)
+	var zoom_row := HBoxContainer.new()
+	zoom_row.add_theme_constant_override("separation", 12)
+	zoom_row.add_child(GameUI.label("World zoom", 14, GameUI.TEXT))
+	var zoom_slider := HSlider.new()
+	zoom_slider.name = "CameraZoomSlider"
+	zoom_slider.min_value = GameSettings.CAMERA_ZOOM_MIN
+	zoom_slider.max_value = GameSettings.CAMERA_ZOOM_MAX
+	zoom_slider.step = 1
+	zoom_slider.value = GameSettings.camera_zoom()
+	zoom_slider.custom_minimum_size = Vector2(260, 32)
+	zoom_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	zoom_row.add_child(zoom_slider)
+	_zoom_label = GameUI.label("%d%%" % roundi(zoom_slider.value / FollowCamera.ZOOM_SCALE * 100.0), 16, GameUI.GOLD)
+	_zoom_label.custom_minimum_size.x = 70
+	zoom_row.add_child(_zoom_label)
+	zoom_slider.value_changed.connect(func(value: float) -> void:
+		_zoom_label.text = "%d%%" % roundi(value / FollowCamera.ZOOM_SCALE * 100.0)
+		GameSettings.set_camera_zoom(value, false))
+	zoom_slider.drag_ended.connect(func(_changed: bool) -> void: GameSettings.save_settings())
+	zoom_slider.focus_exited.connect(GameSettings.save_settings)
+	content.add_child(zoom_row)
+	add_body_text("Zoom out for a wider view or in for detail. Interface size is independent.", GameUI.MUTED, 13)
 
 	add_section("EFFECTS & COMFORT", GameUI.GOLD)
 	var effects_row := HBoxContainer.new()
@@ -139,3 +166,8 @@ func _apply_row(control_id: String) -> void:
 	var y_spin := values.get("y") as SpinBox
 	var size_spin := values.get("size") as SpinBox
 	hud.set_control_layout(control_id, x_spin.value, y_spin.value, size_spin.value)
+
+
+func close_panel() -> void:
+	GameSettings.save_settings()
+	super.close_panel()

@@ -56,7 +56,7 @@ func _build_visuals(palette: Dictionary, shown_title: String, is_pet: bool) -> v
 	_pool = Sprite2D.new()
 	_pool.texture = PixelArt.light_texture()
 	_pool.modulate = Color((palette["glow"] as Color).r, (palette["glow"] as Color).g, (palette["glow"] as Color).b, 0.16)
-	_pool.scale = Vector2(0.055, 0.026)
+	_pool.scale = Vector2(0.025, 0.013)
 	_pool.position = Vector2(0, -0.1)
 	_pool.z_index = 1
 	add_child(_pool)
@@ -84,26 +84,26 @@ func _build_visuals(palette: Dictionary, shown_title: String, is_pet: bool) -> v
 
 	_glow = PointLight2D.new()
 	_glow.texture = PixelArt.light_texture()
-	_glow.texture_scale = 0.055
-	_glow.energy = 0.8
+	_glow.texture_scale = 0.032
+	_glow.energy = 0.22
 	_glow.color = palette["glow"] if gate_kind == "pet" else (palette["glow_light"] as Color).lerp(Color.WHITE, 0.25)
 	_glow.position = Vector2(0, -1.45)
 	add_child(_glow)
 
 	# Orbiting motes (CPUParticles2D, Compatibility-safe, capped).
 	_motes = CPUParticles2D.new()
-	_motes.amount = 10
+	_motes.amount = 4
 	_motes.lifetime = 1.6
 	_motes.preprocess = 1.2
-	_motes.texture = PixelArt.icon("spark", 16)
-	_motes.scale_amount_min = 0.4
-	_motes.scale_amount_max = 0.9
+	_motes.texture = PixelArt.mote_texture()
+	_motes.scale_amount_min = 0.03
+	_motes.scale_amount_max = 0.05
 	_motes.color = palette["mote"]
 	_motes.direction = Vector2(0, -1)
 	_motes.spread = 30.0
-	_motes.gravity = Vector2(0, -4)
-	_motes.initial_velocity_min = 8.0
-	_motes.initial_velocity_max = 20.0
+	_motes.gravity = Vector2(0, -0.05)
+	_motes.initial_velocity_min = 0.12
+	_motes.initial_velocity_max = 0.3
 	_motes.position = Vector2(0, -2.2)
 	_motes.z_as_relative = false
 	_motes.z_index = 660
@@ -113,7 +113,7 @@ func _build_visuals(palette: Dictionary, shown_title: String, is_pet: bool) -> v
 	_aura = Sprite2D.new()
 	_aura.texture = PixelArt.light_texture()
 	_aura.modulate = Color(1.0, 0.85, 0.45, 0.0)
-	_aura.scale = Vector2(0.08, 0.05)
+	_aura.scale = Vector2(0.035, 0.028)
 	_aura.position = Vector2(0, -1.6)
 	_aura.z_as_relative = false
 	_aura.z_index = 665
@@ -144,22 +144,22 @@ func _process(delta: float) -> void:
 	_time += delta
 	var unlocked := available or gate_kind == "pet"
 	# Swirl animation only when the gate is live.
-	if unlocked:
+	if unlocked and not GameSettings.reduce_motion():
 		_swirl_timer += delta
 		if _swirl_timer >= 1.0 / SWIRL_FPS:
 			_swirl_timer = 0.0
 			_swirl_frame = (_swirl_frame + 1) % 8
 			_swirl.texture = PixelArt.portal_swirl_texture(_theme, _swirl_frame)
 	if _glow:
-		_glow.energy = (0.72 + sin(_time * 1.7) * 0.12) * (1.0 if unlocked else 0.3)
+		_glow.energy = (0.18 + (sin(_time * 1.7) * 0.025 if not GameSettings.reduce_motion() else 0.0)) * (1.0 if unlocked and GameSettings.effects_at_least("med") else 0.0)
 	if _frame:
 		_frame.modulate = Color(1, 1, 1, 1) if unlocked else Color(0.55, 0.58, 0.62, 0.9)
 	if _motes:
-		_motes.emitting = unlocked and GameSettings.effects_at_least("med") and not GameSettings.reduce_motion()
+		_motes.emitting = unlocked and GameSettings.effects_at_least("high") and not GameSettings.reduce_motion()
 	if _pool:
-		_pool.modulate.a = (0.13 + absf(sin(_time * 1.1)) * 0.08) if unlocked else 0.04
+		_pool.modulate.a = (0.06) if unlocked else 0.04
 	if _aura:
-		_aura.modulate.a = 0.22 + absf(sin(_time * 2.0)) * 0.12 if _cleared else 0.0
+		_aura.modulate.a = 0.07 if _cleared else 0.0
 	# Approach wake: the portal ignites once as the player comes near.
 	if not _awake and unlocked:
 		var p := get_tree().get_first_node_in_group("player")

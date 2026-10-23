@@ -78,6 +78,7 @@ var _hit_dealt := false
 
 func _ready() -> void:
 	add_to_group("enemies")
+	z_index = 6
 	if forest_mode:
 		add_to_group("forest_monsters")
 	collision_layer = 4
@@ -122,7 +123,7 @@ func _build() -> void:
 	sprite.texture = PixelArt.enemy_texture(kind, is_boss, 0)
 	sprite.scale = Vector2(PixelArt.PX, PixelArt.PX)
 	sprite.position = Vector2(0, -float(size) * 0.5 * PixelArt.PX)
-	sprite.z_index = 6
+	sprite.z_index = 0
 	add_child(sprite)
 
 	# Telegraph decal: a pulsing disc under the body while winding up.
@@ -144,20 +145,22 @@ func _build() -> void:
 
 
 func apply_hit_stop(seconds: float) -> void:
-	# HitFeedback contract: freeze logic for a beat without pausing the tree.
+	# HitFeedback holds only the animation pose. Presentation settings must not
+	# change attack timers, AI transitions, movement or collision simulation.
 	_freeze = maxf(_freeze, seconds)
 
 
 func _physics_process(delta: float) -> void:
 	if dead:
 		return
+	var animation_delta := delta
 	if _freeze > 0.0:
-		_freeze -= delta
-		return
-	_bob += delta
+		_freeze = maxf(0.0, _freeze - delta)
+		animation_delta = 0.0
+	_bob += animation_delta
 	_move_phase += delta
 	_state_time -= delta
-	_frame_timer += delta
+	_frame_timer += animation_delta
 	if _frame_timer >= 0.35:
 		_frame_timer -= 0.35
 		_frame = 1 - _frame
@@ -313,7 +316,7 @@ func _chase(delta: float) -> void:
 	if distance > stop * 1.25:
 		var dir := to_target.normalized()
 		dir = _apply_personality(dir)
-		velocity = dir * speed
+		velocity = velocity.move_toward(dir * speed, delta * 8.0)
 		_separate(delta)
 		move_and_slide()
 	else:
@@ -669,7 +672,7 @@ func _die() -> void:
 	var tween := create_tween().set_parallel(true)
 	tween.tween_property(self, "modulate:a", 0.0, 0.9)
 	tween.tween_property(self, "scale", Vector2(1.15, 0.8), 0.9)
-	tween.tween_property(self, "position", global_position + _knockback.limit_length(1.2) * 0.2, 0.9)
+	tween.tween_property(self, "global_position", global_position + _knockback.limit_length(1.2) * 0.2, 0.9)
 	tween.chain().tween_callback(queue_free)
 
 
@@ -685,7 +688,7 @@ func _spawn_reward() -> void:
 	var gold_drop := LootDrop.new()
 	gold_drop.kind = "gold"
 	gold_drop.amount = gold
-	gold_drop.position = global_position + Vector2(rng.randf_range(-0.35, 0.35), 0.0)
+	gold_drop.position = parent.to_local(global_position + Vector2(rng.randf_range(-0.35, 0.35), 0.0))
 	# Loot "spits" out of the body in a short arc.
 	gold_drop.pop_velocity = Vector2(rng.randf_range(-1.6, 1.6), -rng.randf_range(1.2, 2.4))
 	parent.call_deferred("add_child", gold_drop)
@@ -693,7 +696,7 @@ func _spawn_reward() -> void:
 		var gem := LootDrop.new()
 		gem.kind = "diamond"
 		gem.amount = 1
-		gem.position = global_position + Vector2(0.45, -0.2)
+		gem.position = parent.to_local(global_position + Vector2(0.45, -0.2))
 		gem.pop_velocity = Vector2(rng.randf_range(0.8, 1.8), -rng.randf_range(1.4, 2.2))
 		parent.call_deferred("add_child", gem)
 

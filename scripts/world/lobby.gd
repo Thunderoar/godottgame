@@ -8,6 +8,7 @@ const SPAWN := Vector2(34.0, 24.3)
 const HOUSE_BASE := Vector2(34.0, 21.4)
 const MONSTER_GATE := Vector2(30.8, 11.3)
 const PET_GATE := Vector2(37.2, 11.3)
+const OCEAN_WIDTH_PIXELS := 806
 const CONSTRUCTION_SHOP := Vector2(41.2, 16.2)
 
 var zone_name := "Seaside Home"
@@ -31,9 +32,11 @@ var _recovery_heal_accum := 0.0
 var _rubbish_system: RubbishSystem
 var _coastal_guard: CoastalGuard
 var _residents: Array[Resident] = []
+var _resident_routes: ResidentRoutes
 var _emergency_monsters: Array[Enemy] = []
 var _forest_monsters: Array[Enemy] = []
 var _shop_stalls: Array[Sprite2D] = []
+var _local_lights: Array[PointLight2D] = []
 var _tree_positions: Array[Vector2] = []
 var _forest_trees: Array[ForestTree] = []
 var _house_positions: Array[Vector2] = []
@@ -60,17 +63,17 @@ func _ready() -> void:
 	_build_gathering()
 	_build_dock_and_ship()
 	_build_forest()
+	_build_beach_landmarks()
 	_build_forest_monsters()
 	_build_scatter()
 	_build_coastal_system()
-	_build_ambient_life()
 	_build_recovery_ward()
 	_build_settlement_editor()
 	_build_player_and_pet()
 	_build_camera()
 	call_deferred("_check_forest_game_over")
 	Vfx.ensure_pool(self)
-	Shaders.apply_default_breeze()
+	_on_presentation_changed("")
 	GameState.house_changed.connect(_on_house_upgraded)
 	GameState.data_changed.connect(_on_data_changed)
 	GameState.pet_changed.connect(_on_pet_changed)
@@ -110,7 +113,7 @@ func _build_background() -> void:
 
 
 func _make_terrain_texture() -> Texture2D:
-	var key := "terrain_lobby_v3"
+	var key := "terrain_lobby_v5"
 	if PixelArt.CACHE.has(key):
 		return PixelArt.CACHE[key]
 	var w := int(MAP_RECT.size.x * 32.0)
@@ -167,6 +170,9 @@ func _make_terrain_texture() -> Texture2D:
 func _coast_pixel_y(x: int) -> int:
 	var u := clampf(float(x) / (25.0 * 32.0), 0.0, 1.0)
 	var world_y := lerpf(21.0, 37.0, smoothstep(0.0, 1.0, u)) + sin(float(x) / 31.0) * 0.55
+	# Turn the final coast down beyond the map edge instead of cutting the sea
+	# and sand off in a vertical rectangle. The rest of the beach is unchanged.
+	world_y += smoothstep(22.0 * 32.0, float(OCEAN_WIDTH_PIXELS - 2), float(x)) * 7.0
 	return int(world_y * 32.0)
 
 
@@ -176,13 +182,15 @@ func _paint_coast(img: Image, rng: RandomNumberGenerator) -> void:
 	var sand := Color("#d8c49a")
 	var sand_dark := Color("#bea77c")
 	var foam := Color("#dbe8df")
-	var max_x := int(25.2 * 32.0)
+	var max_x := OCEAN_WIDTH_PIXELS
 	for x in range(0, max_x, 2):
 		var shore := _coast_pixel_y(x)
+		var sand_top := clampi(shore - 94, 0, img.get_height())
+		if sand_top >= img.get_height():
+			continue
+		img.fill_rect(Rect2i(x, sand_top, 2, mini(shore, img.get_height()) - sand_top), sand)
 		if shore >= img.get_height():
 			continue
-		var sand_top := maxi(0, shore - 94)
-		img.fill_rect(Rect2i(x, sand_top, 2, shore - sand_top), sand)
 		img.fill_rect(Rect2i(x, shore, 2, img.get_height() - shore), water_near)
 		# A second darker water band further out.
 		var deep_start := mini(img.get_height() - 1, shore + 96)
@@ -203,14 +211,16 @@ func _paint_coast(img: Image, rng: RandomNumberGenerator) -> void:
 				img.set_pixel(x, shore + 1, foam)
 	# Pebbles on the sand.
 	for i in 180:
-		var x := rng.randi_range(0, max_x)
+		var x := rng.randi_range(1, max_x - 1)
 		var shore := _coast_pixel_y(x)
 		var top := maxi(0, shore - 90)
-		var y := rng.randi_range(top, maxi(top + 1, shore - 5))
+		if top >= img.get_height():
+			continue
+		var y := rng.randi_range(top, mini(img.get_height() - 1, maxi(top, shore - 5)))
 		img.set_pixel(x, y, sand_dark if i % 2 == 0 else Color("#e7d7b1"))
 	# Wave highlights.
 	for i in 260:
-		var x := rng.randi_range(0, max_x)
+		var x := rng.randi_range(1, max_x - 1)
 		var shore := _coast_pixel_y(x)
 		if shore >= img.get_height() - 8:
 			continue
@@ -218,11 +228,11 @@ func _paint_coast(img: Image, rng: RandomNumberGenerator) -> void:
 		var length := rng.randi_range(2, 9)
 		var col := Color("#b1d3c8") if i % 3 else Color("#8ec0b8")
 		for xx in length:
-			if x + xx < img.get_width():
+			if x + xx < max_x and y >= _coast_pixel_y(x + xx):
 				img.set_pixel(x + xx, y, col)
 	# Reeds at the water edge.
 	for i in 38:
-		var x := rng.randi_range(0, max_x)
+		var x := rng.randi_range(1, max_x - 1)
 		var shore := _coast_pixel_y(x)
 		if shore <= 30 or shore >= img.get_height() - 5:
 			continue
@@ -281,44 +291,60 @@ func _blend_ellipse(img: Image, cx: int, cy: int, rx: int, ry: int, color: Color
 
 
 func _build_water_layer() -> void:
-	# Animated sea on top of the baked terrain: a half-resolution water mask
-	# drives the shape; the shared water shader supplies the moving bands, foam
-	# crests and sparkle. Bobbing props keep their own sprites above this.
-	if not GameSettings.effects_at_least("med") or GameSettings.reduce_motion():
-		return
-	var mask := _make_water_mask_texture()
 	var water := Sprite2D.new()
 	water.name = "WaterLayer"
-	water.texture = mask
+	water.texture = _make_water_mask_texture()
 	water.centered = false
-	water.scale = Vector2(PixelArt.PX * 2.0, PixelArt.PX * 2.0)
+	water.scale = Vector2.ONE * PixelArt.PX
 	water.z_as_relative = false
 	water.z_index = -999
 	water.material = Shaders.water_material()
 	add_child(water)
+	GameSettings.changed.connect(_on_presentation_changed)
+	_on_presentation_changed("")
 
 
 func _make_water_mask_texture() -> Texture2D:
-	var key := "water_mask_lobby"
-	if PixelArt.CACHE.has(key):
-		return PixelArt.CACHE[key]
-	var w := 1024
-	var h := 640
-	var img := PixelArt.image(w, h)
-	for x in w:
-		var shore := _coast_pixel_y(x * 2) / 2.0
-		for y in h:
-			if float(y) < shore:
+	return PixelArt.cached_texture("water_mask_lobby_v3", func() -> Image:
+		var img := PixelArt.image(int(MAP_RECT.size.x / PixelArt.PX), int(MAP_RECT.size.y / PixelArt.PX))
+		for x in OCEAN_WIDTH_PIXELS:
+			# Painted coast uses two-art-pixel columns. Sample the same column.
+			var shore := _coast_pixel_y(x - x % 2)
+			for y in range(shore, img.get_height()):
+				var depth := clampf(float(y - shore) / 96.0, 0.0, 1.0)
+				img.set_pixel(x, y, Color(depth, 0.0, 0.0, 1.0))
+		return img)
+
+
+func _on_presentation_changed(_key: String) -> void:
+	if _key not in ["", "effects_quality", "reduce_motion"]:
+		return
+	for group in ["ambient_smoke", "animals"]:
+		for node in get_tree().get_nodes_in_group(group):
+			if not is_ancestor_of(node) or not node.has_meta("ambient_tween"):
 				continue
-			var depth := clampf((float(y) - shore) / 90.0, 0.0, 1.0)
-			# Sea shape with a soft foam lip at the shoreline.
-			var a := 0.55 + depth * 0.45
-			if float(y) - shore < 3.0:
-				a = 0.75
-			img.set_pixel(x, y, Color(1, 1, 1, a))
-	var tex := ImageTexture.create_from_image(img)
-	PixelArt.CACHE[key] = tex
-	return tex
+			var motion: Tween = node.get_meta("ambient_tween")
+			var enabled: bool = not GameSettings.reduce_motion() and (group == "animals" or GameSettings.effects_at_least("high"))
+			if group == "ambient_smoke":
+				node.visible = enabled
+			if enabled:
+				motion.play()
+			else:
+				motion.pause()
+	for lamp in _local_lights:
+		lamp.enabled = GameSettings.effects_at_least("med")
+	var water := get_node_or_null("WaterLayer") as Sprite2D
+	if water:
+		water.visible = GameSettings.effects_at_least("med") and not GameSettings.reduce_motion()
+	Shaders.set_wind(Vector2(1.0, 0.12), 0.45 if GameSettings.effects_at_least("med") and not GameSettings.reduce_motion() else 0.0)
+	if not GameSettings.effects_at_least("med") or GameSettings.reduce_motion():
+		Shaders.clear_benders()
+	var ambient := get_node_or_null("AmbientLife")
+	if ambient:
+		remove_child(ambient)
+		ambient.queue_free()
+	if is_node_ready() or is_instance_valid(house_sprite):
+		_build_ambient_life()
 
 
 func _update_ambient(delta: float) -> void:
@@ -333,13 +359,6 @@ func _update_ambient(delta: float) -> void:
 		if is_instance_valid(pet):
 			benders.append(pet.global_position)
 		Shaders.push_benders(benders)
-	_leaf_timer -= delta
-	if _leaf_timer <= 0.0:
-		_leaf_timer = randf_range(0.8, 1.9)
-		if not _forest_trees.is_empty():
-			var tree: ForestTree = _forest_trees[randi() % _forest_trees.size()]
-			if is_instance_valid(tree) and tree.is_alive():
-				Vfx.leaves(tree.global_position + Vector2(randf_range(-0.4, 0.4), -randf_range(1.6, 2.6)), 2)
 	_ward_mote_timer -= delta
 	if _ward_mote_timer <= 0.0 and GameState.recovery_active():
 		_ward_mote_timer = 0.7
@@ -350,89 +369,20 @@ func _build_ambient_life() -> void:
 	# Cloud shadows, pollen, butterflies, forest light shafts, the eastern
 	# danger grade and chimney smoke. Everything is a handful of sprites and
 	# one capped CPU particle emitter; low quality drops the whole layer.
-	if not GameSettings.effects_at_least("med") or GameSettings.reduce_motion():
+	if not GameSettings.effects_at_least("high") or GameSettings.reduce_motion() or GameState.house_level() < 3:
 		return
 	var holder := Node2D.new()
 	holder.name = "AmbientLife"
 	add_child(holder)
-	# Drifting cloud shadows over the meadow.
-	for i in 3:
-		var cloud := Sprite2D.new()
-		cloud.texture = PixelArt.light_texture()
-		cloud.modulate = Color(0.16, 0.22, 0.26, 0.10)
-		cloud.scale = Vector2(0.55 + float(i) * 0.2, 0.3)
-		cloud.z_as_relative = false
-		cloud.z_index = 1
-		cloud.position = Vector2(randf_range(4.0, 50.0), randf_range(8.0, 30.0))
-		holder.add_child(cloud)
-		var drift := cloud.create_tween().set_loops()
-		drift.tween_property(cloud, "position:x", cloud.position.x + randf_range(14.0, 22.0), randf_range(30.0, 46.0)).set_trans(Tween.TRANS_SINE)
-		drift.tween_property(cloud, "position:x", cloud.position.x, randf_range(30.0, 46.0)).set_trans(Tween.TRANS_SINE)
-	# Pollen motes over the meadow.
-	var pollen := CPUParticles2D.new()
-	pollen.amount = 12
-	pollen.lifetime = 5.0
-	pollen.preprocess = 2.5
-	pollen.texture = PixelArt.icon("spark", 16)
-	pollen.scale_amount_min = 0.18
-	pollen.scale_amount_max = 0.35
-	pollen.color = Color(1.0, 0.95, 0.75, 0.28)
-	pollen.direction = Vector2(0.4, -0.2)
-	pollen.spread = 180.0
-	pollen.gravity = Vector2.ZERO
-	pollen.initial_velocity_min = 0.4
-	pollen.initial_velocity_max = 1.2
-	pollen.position = Vector2(32.0, 22.0)
-	pollen.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	pollen.emission_rect_extents = Vector2(26.0, 16.0)
-	pollen.z_as_relative = false
-	pollen.z_index = 680
-	holder.add_child(pollen)
-	# Butterflies fluttering near the flower borders.
-	for i in 3:
-		var butterfly := Sprite2D.new()
-		butterfly.texture = PixelArt.icon("spark", 16)
-		butterfly.scale = Vector2(0.022, 0.022)
-		butterfly.modulate = [Color("#ffd47b"), Color("#a8e8ff"), Color("#ffb0c8")][i]
-		butterfly.z_index = 8
-		butterfly.position = Vector2(randf_range(18.0, 44.0), randf_range(16.0, 30.0))
-		holder.add_child(butterfly)
-		var flutter := butterfly.create_tween().set_loops()
-		for j in 4:
-			var to := butterfly.position + Vector2(randf_range(-2.5, 2.5), randf_range(-1.4, 1.4))
-			flutter.tween_property(butterfly, "position", to, randf_range(1.4, 2.4)).set_trans(Tween.TRANS_SINE)
-	# Light shafts through the eastern canopy.
-	for i in 2:
-		var shaft := Sprite2D.new()
-		shaft.texture = PixelArt.light_texture()
-		shaft.modulate = Color(1.0, 0.95, 0.7, 0.09)
-		shaft.scale = Vector2(0.30, 0.85)
-		shaft.rotation = 0.5
-		shaft.z_as_relative = false
-		shaft.z_index = 2
-		shaft.position = Vector2(51.0 + float(i) * 4.5, 16.0 + float(i) * 6.0)
-		holder.add_child(shaft)
-		var breathe := shaft.create_tween().set_loops()
-		breathe.tween_property(shaft, "modulate:a", 0.13, 2.2).set_trans(Tween.TRANS_SINE)
-		breathe.tween_property(shaft, "modulate:a", 0.08, 2.2).set_trans(Tween.TRANS_SINE)
-	# Eastern danger grade: the woodland reads darker toward the horizon.
-	var grade := Sprite2D.new()
-	grade.texture = PixelArt.light_texture()
-	grade.modulate = Color(0.08, 0.12, 0.18, 0.16)
-	grade.scale = Vector2(1.1, 1.0)
-	grade.z_as_relative = false
-	grade.z_index = 2
-	grade.position = Vector2(56.5, 20.0)
-	holder.add_child(grade)
 	# Chimney smoke once the cottage has one (level 3+).
 	if GameState.house_level() >= 3:
 		var smoke := CPUParticles2D.new()
-		smoke.amount = 8
+		smoke.amount = 4
 		smoke.lifetime = 3.2
 		smoke.preprocess = 1.5
 		smoke.texture = PixelArt.light_texture()
-		smoke.scale_amount_min = 0.10
-		smoke.scale_amount_max = 0.22
+		smoke.scale_amount_min = 0.003
+		smoke.scale_amount_max = 0.007
 		smoke.color = Color(0.75, 0.8, 0.8, 0.16)
 		smoke.direction = Vector2(0.15, -1)
 		smoke.spread = 12.0
@@ -462,10 +412,11 @@ func _build_bounds() -> void:
 	add_child(sea)
 	var poly := CollisionPolygon2D.new()
 	var points := PackedVector2Array()
-	points.append(Vector2(0, 21.0))
-	for x in range(0, 805, 32):
-		points.append(Vector2(float(x) / 32.0, float(_coast_pixel_y(x)) / 32.0 + 0.18))
-	points.append(Vector2(25.2, 40))
+	for x in range(0, OCEAN_WIDTH_PIXELS, 16):
+		var shore := float(_coast_pixel_y(x)) * PixelArt.PX + 0.18
+		points.append(Vector2(float(x) * PixelArt.PX, minf(40.0, shore)))
+		if shore >= 40.0:
+			break
 	points.append(Vector2(0, 40))
 	poly.polygon = points
 	sea.add_child(poly)
@@ -487,6 +438,7 @@ func _build_house() -> void:
 	house.name = "Cottage"
 	house.placeable_id = "house"
 	house.category = "house"
+	house.z_index = 6
 	house.selection_size = Vector2(10.2, 7.2)
 	house.position = GameState.placeable_position("house", HOUSE_BASE)
 	add_child(house)
@@ -510,6 +462,7 @@ func _build_house() -> void:
 	house_glow.color = Color("#ffc970")
 	house_glow.position = Vector2(0.4, -1.7)
 	house.add_child(house_glow)
+	_local_lights.append(house_glow)
 	var body := StaticBody2D.new()
 	body.name = "HouseSolid"
 	body.collision_layer = 1
@@ -550,7 +503,7 @@ func _on_house_upgraded(level: int) -> void:
 	var tween := create_tween()
 	tween.tween_property(house_sprite, "modulate", Color.WHITE, 0.65)
 	if level >= 4:
-		house_glow.texture_scale = 0.9
+		house_glow.texture_scale = 0.04
 		house_glow.energy = 0.38
 	var game := get_tree().get_first_node_in_group("game")
 	if game != null and game.has_method("refresh_world_ui"):
@@ -572,6 +525,8 @@ func _add_shop(kind: String, at: Vector2, npc_name: String, color: Color) -> voi
 	shop.name = "%sShop" % kind.capitalize()
 	shop.placeable_id = "shop_%s" % kind
 	shop.category = "shop"
+	shop.z_index = 6
+	shop.y_sort_enabled = true
 	shop.selection_size = Vector2(4.3, 4.7)
 	shop.position = GameState.placeable_position(shop.placeable_id, at)
 	add_child(shop)
@@ -582,9 +537,19 @@ func _add_shop(kind: String, at: Vector2, npc_name: String, color: Color) -> voi
 	stall.centered = false
 	stall.offset = Vector2(-56, -96)
 	stall.scale = Vector2(PixelArt.PX, PixelArt.PX)
-	stall.z_index = 5
+	stall.z_index = 0
 	shop.add_child(stall)
 	_shop_stalls.append(stall)
+	var counter := StaticBody2D.new()
+	counter.name = "CounterBody"
+	counter.collision_layer = 1
+	var counter_shape := CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(3.2, 0.65)
+	counter_shape.shape = rect
+	counter_shape.position = Vector2(0, -0.4)
+	counter.add_child(counter_shape)
+	shop.add_child(counter)
 	var target := SettlementTarget.new()
 	target.name = "%sTarget" % kind.capitalize()
 	target.target_name = "%s stall" % kind.capitalize()
@@ -600,11 +565,12 @@ func _add_shop(kind: String, at: Vector2, npc_name: String, color: Color) -> voi
 	# A small warm lamp under each awning.
 	var lamp := PointLight2D.new()
 	lamp.texture = PixelArt.light_texture()
-	lamp.texture_scale = 0.34
-	lamp.energy = 0.22
+	lamp.texture_scale = 0.028
+	lamp.energy = 0.12
 	lamp.color = color.lightened(0.35)
 	lamp.position = Vector2(0, -1.3)
 	shop.add_child(lamp)
+	_local_lights.append(lamp)
 
 
 func _build_special_npc() -> void:
@@ -649,6 +615,7 @@ func _build_portals() -> void:
 
 
 func _on_forest_tree_felled(_tree: ForestTree) -> void:
+	call_deferred("invalidate_resident_routes")
 	GameState.save_game()
 	_check_forest_game_over()
 
@@ -746,7 +713,7 @@ func _build_dock_and_ship() -> void:
 		var lamp := PointLight2D.new()
 		lamp.texture = PixelArt.light_texture()
 		lamp.texture_scale = 0.024
-		lamp.energy = 0.22
+		lamp.energy = 0.12
 		lamp.color = Color("#ffd483")
 		lamp.position = Vector2(x, 29.5)
 		add_child(lamp)
@@ -864,7 +831,6 @@ func _add_tree(at: Vector2, upper_path: String, lower_path: String, scale_mul: f
 	holder.position = at
 	_tree_serial += 1
 	holder.felled.connect(_on_forest_tree_felled)
-	add_child(holder)
 	_forest_trees.append(holder)
 	_tree_positions.append(at)
 	var upper := load(upper_path) as Texture2D
@@ -878,24 +844,24 @@ func _add_tree(at: Vector2, upper_path: String, lower_path: String, scale_mul: f
 	shadow.modulate = Color(0, 0, 0, 0.33)
 	shadow.position = Vector2(0, -0.03)
 	shadow.z_index = -1
-	add_child(shadow)
+	holder.add_child(shadow)
 	var lower_sprite := Sprite2D.new()
 	lower_sprite.texture = lower
 	lower_sprite.centered = false
 	lower_sprite.offset = Vector2(-lower_size.x * 0.5, -lower_size.y)
 	lower_sprite.scale = Vector2(PixelArt.PX, PixelArt.PX) * scale_mul
 	lower_sprite.modulate = Color(0.76, 0.9, 0.74)
-	lower_sprite.z_index = 3
-	add_child(lower_sprite)
+	lower_sprite.z_index = 0
+	holder.add_child(lower_sprite)
 	var upper_sprite := Sprite2D.new()
 	upper_sprite.texture = upper
-	upper_sprite.material = Shaders.wind_material() if GameSettings.effects_at_least("med") else null
+	upper_sprite.material = Shaders.wind_material()
 	upper_sprite.centered = false
 	upper_sprite.offset = Vector2(-upper_size.x * 0.5, -total_h)
 	upper_sprite.scale = Vector2(PixelArt.PX, PixelArt.PX) * scale_mul
 	upper_sprite.modulate = Color(0.76, 0.9, 0.74)
-	upper_sprite.z_index = 3
-	add_child(upper_sprite)
+	upper_sprite.z_index = 0
+	holder.add_child(upper_sprite)
 	holder.register_visual(lower_sprite)
 	holder.register_visual(upper_sprite)
 	var body := StaticBody2D.new()
@@ -903,11 +869,12 @@ func _add_tree(at: Vector2, upper_path: String, lower_path: String, scale_mul: f
 	body.collision_layer = 1
 	var shape := CollisionShape2D.new()
 	var circle := CircleShape2D.new()
-	circle.radius = 0.45
+	circle.radius = 0.45 * scale_mul
 	shape.shape = circle
 	shape.position = Vector2(0, -0.2)
 	body.add_child(shape)
-	add_child(body)
+	holder.add_child(body)
+	add_child(holder)
 
 
 func _build_scatter() -> void:
@@ -997,7 +964,7 @@ func _add_decor_placeable(id: String, path: String, at: Vector2, scale_mul: floa
 func _add_wind_decor(path: String, at: Vector2, scale_mul: float, z: int) -> void:
 	# Scatter sprite that joins the shared wind sway (med quality and above).
 	var sprite := _add_decor_sprite(path, at, scale_mul, z)
-	if sprite != null and GameSettings.effects_at_least("med"):
+	if sprite != null:
 		sprite.material = Shaders.wind_material()
 
 
@@ -1044,6 +1011,7 @@ func _build_grass_fields(grass_paths: Array) -> void:
 		var mesh := QuadMesh.new()
 		mesh.size = tex.get_size()
 		var mm := MultiMesh.new()
+		mm.mesh = mesh
 		mm.transform_format = MultiMesh.TRANSFORM_2D
 		mm.use_colors = true
 		mm.use_custom_data = true
@@ -1072,7 +1040,7 @@ func _build_grass_fields(grass_paths: Array) -> void:
 		field.multimesh = mm
 		field.texture = tex
 		field.z_index = 2
-		field.material = Shaders.wind_material() if GameSettings.effects_at_least("med") else null
+		field.material = Shaders.wind_material()
 		field.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		add_child(field)
 
@@ -1187,6 +1155,7 @@ func _build_residential_life() -> void:
 func _add_resident_house(house_name: String, at: Vector2, level: int) -> void:
 	var holder := Node2D.new()
 	holder.name = house_name
+	holder.z_index = 6
 	holder.position = at
 	holder.add_to_group("resident_house")
 	add_child(holder)
@@ -1195,21 +1164,22 @@ func _add_resident_house(house_name: String, at: Vector2, level: int) -> void:
 	art.centered = false
 	art.offset = Vector2(-112, -176)
 	art.scale = Vector2(PixelArt.PX, PixelArt.PX) * 0.78
-	art.z_index = 7
-	add_child(art)
+	art.z_index = 0
+	holder.add_child(art)
 	var glow := PointLight2D.new()
 	glow.texture = PixelArt.light_texture()
-	glow.texture_scale = 0.4
-	glow.energy = 0.2
+	glow.texture_scale = 0.026
+	glow.energy = 0.10
 	glow.color = Color("#ffd58c")
 	glow.position = Vector2(0, -1.2)
-	add_child(glow)
+	holder.add_child(glow)
+	_local_lights.append(glow)
 	var target := SettlementTarget.new()
 	target.name = "ResidentHouseTarget"
 	target.target_name = "Resident cottage"
 	target.damage_scale = 0.25
 	target.position = Vector2(0, -0.8)
-	add_child(target)
+	holder.add_child(target)
 	var body := StaticBody2D.new()
 	body.collision_layer = 1
 	var shape := CollisionShape2D.new()
@@ -1218,7 +1188,7 @@ func _add_resident_house(house_name: String, at: Vector2, level: int) -> void:
 	shape.shape = rect
 	shape.position = Vector2(0, -0.55)
 	body.add_child(shape)
-	add_child(body)
+	holder.add_child(body)
 	_house_positions.append(at)
 	_markers.append({"position": at, "color": Color("#e4c571"), "size": 3.5, "shape": "square"})
 
@@ -1226,6 +1196,7 @@ func _add_resident_house(house_name: String, at: Vector2, level: int) -> void:
 func _add_ruin_house(house_name: String, at: Vector2, state: String) -> void:
 	var holder := Node2D.new()
 	holder.name = house_name
+	holder.z_index = 6
 	holder.position = at
 	holder.add_to_group("ruin_house")
 	add_child(holder)
@@ -1234,8 +1205,8 @@ func _add_ruin_house(house_name: String, at: Vector2, state: String) -> void:
 	art.centered = false
 	art.offset = Vector2(-112, -176)
 	art.scale = Vector2(PixelArt.PX, PixelArt.PX) * 0.74
-	art.z_index = 6
-	add_child(art)
+	art.z_index = 0
+	holder.add_child(art)
 	match state:
 		"abandoned":
 			art.modulate = Color(0.58, 0.58, 0.52)
@@ -1255,7 +1226,7 @@ func _add_ruin_house(house_name: String, at: Vector2, state: String) -> void:
 				rubble.rotation = randf_range(-0.8, 0.8)
 				rubble.position = Vector2(randf_range(-2.0, 2.0), randf_range(-0.4, 0.3))
 				rubble.modulate = Color("#8a6a47")
-				add_child(rubble)
+				holder.add_child(rubble)
 			_add_smoke(holder, Vector2(0.0, -2.0))
 	var body := StaticBody2D.new()
 	body.collision_layer = 1
@@ -1265,26 +1236,28 @@ func _add_ruin_house(house_name: String, at: Vector2, state: String) -> void:
 	shape.shape = rect
 	shape.position = Vector2(0, -0.5)
 	body.add_child(shape)
-	add_child(body)
+	holder.add_child(body)
 	_ruin_positions.append(at)
 	_markers.append({"position": at, "color": Color("#8b7b62"), "size": 3.0, "shape": "square"})
 
 
 func _add_smoke(holder: Node2D, at: Vector2) -> void:
-	for i in 3:
+	for i in 2:
 		var smoke := Sprite2D.new()
 		smoke.texture = PixelArt.light_texture()
-		smoke.scale = Vector2(0.012, 0.012)
-		smoke.modulate = Color(0.45, 0.43, 0.4, 0.35)
+		smoke.scale = Vector2(0.004, 0.004)
+		smoke.modulate = Color(0.45, 0.43, 0.4, 0.16)
 		smoke.position = at + Vector2(float(i) * 0.25, 0)
 		smoke.z_index = 7
-		add_child(smoke)
+		holder.add_child(smoke)
+		smoke.add_to_group("ambient_smoke")
 		var tween := smoke.create_tween().set_loops()
 		tween.tween_property(smoke, "position:y", smoke.position.y - 1.2, 2.4 + float(i) * 0.2)
 		tween.parallel().tween_property(smoke, "modulate:a", 0.0, 2.4)
 		tween.tween_callback(func() -> void:
 			smoke.position = at + Vector2(float(i) * 0.25, 0)
-			smoke.modulate = Color(0.45, 0.43, 0.4, 0.35))
+			smoke.modulate = Color(0.45, 0.43, 0.4, 0.16))
+		smoke.set_meta("ambient_tween", tween)
 
 
 func _add_garden(id: String, at: Vector2) -> void:
@@ -1386,6 +1359,7 @@ func _add_animal(kind: String, at: Vector2, animal_scale: float = 1.25) -> void:
 	var tween := animal.create_tween().set_loops()
 	tween.tween_property(animal, "position:y", at.y - 0.08, 0.8).set_ease(Tween.EASE_IN_OUT)
 	tween.tween_property(animal, "position:y", at.y, 0.8).set_ease(Tween.EASE_IN_OUT)
+	animal.set_meta("ambient_tween", tween)
 
 
 func _add_resident(resident_name: String, role: String, activity: String, start: Vector2, points: Array, shelter: Vector2, combat: bool = false, damage: int = 8, distance: float = 4.2) -> void:
@@ -1430,7 +1404,6 @@ func _build_recovery_ward() -> void:
 
 
 var _wind_push_timer := 0.0
-var _leaf_timer := 1.4
 var _ward_mote_timer := 0.0
 
 
@@ -1608,3 +1581,39 @@ func get_player() -> Player:
 func refresh_house() -> void:
 	if house_sprite:
 		house_sprite.texture = PixelArt.house_texture(GameState.house_level())
+
+
+func resident_path(from: Vector2, to: Vector2, allow_nearest_goal: bool = true) -> PackedVector2Array:
+	if _resident_routes == null:
+		_resident_routes = ResidentRoutes.new(self, MAP_RECT)
+	return _resident_routes.path(from, to, allow_nearest_goal)
+
+
+func _build_beach_landmarks() -> void:
+	var turtle := BeachTurtle.new()
+	turtle.name = "BeachTurtle"
+	# Use the same two-art-pixel coastline columns as terrain and mask.
+	var coast_x := 14 * 32
+	turtle.position = Vector2(float(coast_x) * PixelArt.PX, float(_coast_pixel_y(coast_x)) * PixelArt.PX - 1.3)
+	add_child(turtle)
+	var sign := Node2D.new()
+	sign.name = "BesutSign"
+	sign.position = Vector2(30.4, 26.8)
+	sign.z_index = 6
+	sign.add_to_group("besut_sign")
+	add_child(sign)
+	var art := Sprite2D.new()
+	art.texture = PixelArt.besut_sign_texture()
+	art.scale = Vector2.ONE * PixelArt.PX
+	art.offset = Vector2(0, -25)
+	sign.add_child(art)
+	sign.set_meta("text", "BESUT")
+
+
+func resident_routes_revision() -> int:
+	return _resident_routes.revision if _resident_routes != null else 0
+
+
+func invalidate_resident_routes() -> void:
+	if _resident_routes != null:
+		_resident_routes.invalidate()

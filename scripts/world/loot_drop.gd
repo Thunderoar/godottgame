@@ -39,6 +39,8 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_t += delta
+	if _t >= 0.4:
+		pop_velocity = Vector2.ZERO
 	if pop_velocity.length_squared() > 0.0005:
 		# Short spit-arc out of a defeated body, decaying quickly.
 		global_position += pop_velocity * delta

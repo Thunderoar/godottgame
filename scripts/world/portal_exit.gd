@@ -47,7 +47,7 @@ func _process(delta: float) -> void:
 	super._process(delta)
 	_time += delta
 	_swirl_timer += delta
-	if _swirl_timer >= 0.13:
+	if _swirl_timer >= 0.13 and not GameSettings.reduce_motion():
 		_swirl_timer = 0.0
 		_swirl_frame = (_swirl_frame + 1) % 8
 		var swirl: Sprite2D = get_meta("swirl") if has_meta("swirl") else null

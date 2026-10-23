@@ -12,7 +12,7 @@ var _outline: Line2D
 func _ready() -> void:
 	add_to_group("placeable")
 	_outline = Line2D.new()
-	_outline.width = 2.0
+	_outline.width = 2.0 * PixelArt.PX
 	_outline.default_color = Color("#f2d36b")
 	_outline.closed = true
 	_outline.z_as_relative = false

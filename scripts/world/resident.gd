@@ -1,5 +1,5 @@
 class_name Resident
-extends Node2D
+extends CharacterBody2D
 ## Ambient settlement resident with a daily route. During an emergency the
 ## resident drops their routine and runs for shelter.
 
@@ -14,6 +14,19 @@ extends Node2D
 @export var combat_range := 4.2
 @export var combat_interval := 1.15
 
+enum Shopping { ROUTINE, WALK_TO_SHOP, BROWSE, PURCHASE, LEAVE }
+var shopping_state := Shopping.ROUTINE
+var shopping_visits := 0
+var _shop: ShopNPC
+var _shopping_timer := 0.0
+var _visit_clock := 0.0
+var _shopping_rng := RandomNumberGenerator.new()
+var _purchase_icon: Sprite2D
+var _path := PackedVector2Array()
+var _path_goal := Vector2(INF, INF)
+var _path_index := 0
+var _path_revision := -1
+var _stuck_time := 0.0
 var _sprite: Sprite2D
 var _tool: Sprite2D
 var _index := 0
@@ -26,6 +39,17 @@ var _attack_timer := 0.0
 
 func _ready() -> void:
 	add_to_group("settlement_target")
+	add_to_group("residents")
+	z_index = 6
+	collision_layer = 0
+	collision_mask = 1
+	var shape := CollisionShape2D.new()
+	var circle := CircleShape2D.new()
+	circle.radius = 0.22
+	shape.shape = circle
+	add_child(shape)
+	_shopping_rng.seed = absi(resident_name.hash())
+	_visit_clock = _shopping_rng.randf_range(7.0, 22.0)
 	_build()
 	GameState.emergency_changed.connect(_on_emergency_changed)
 	if GameState.emergency_active():
@@ -40,22 +64,24 @@ func _build() -> void:
 	_sprite.centered = false
 	_sprite.offset = Vector2(-tex.get_width() * 0.5, -tex.get_height())
 	_sprite.scale = Vector2(PixelArt.PX, PixelArt.PX)
-	_sprite.z_index = 7
+	_sprite.z_index = 0
 	add_child(_sprite)
 	_tool = Sprite2D.new()
 	_tool.texture = PixelArt.icon(_tool_icon())
 	_tool.scale = Vector2(0.028, 0.028)
 	_tool.position = Vector2(0.28, -0.62)
-	_tool.z_index = 8
+	_tool.z_index = 0
 	add_child(_tool)
 
 
-func _process(delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	_bob += delta
 	if _attack_timer > 0.0:
 		_attack_timer = maxf(0.0, _attack_timer - delta)
 	if GameState.emergency_active() and combat_enabled:
 		_fight(delta)
+	elif not _frightened and _update_shopping(delta):
+		pass
 	else:
 		_move_route(delta)
 	if _sprite:
@@ -72,7 +98,7 @@ func _fight(delta: float) -> void:
 		return
 	var to_enemy: Vector2 = enemy.global_position - global_position
 	if to_enemy.length() > combat_range:
-		global_position += to_enemy.normalized() * minf(delta * 2.4, to_enemy.length())
+		_walk_to(enemy.global_position, 2.4, delta)
 		if _sprite:
 			_sprite.flip_h = to_enemy.x < 0.0
 	elif _attack_timer <= 0.0 and enemy.has_method("take_damage"):
@@ -96,20 +122,20 @@ func _move_route(delta: float) -> void:
 	var target: Variant = shelter if _frightened else _current_waypoint()
 	if target == null:
 		return
-	var delta_pos: Vector2 = target - global_position
-	if delta_pos.length() > 0.12:
-		var step := minf(delta * (3.2 if _frightened else speed), delta_pos.length())
-		global_position += delta_pos.normalized() * step
-		if _sprite:
-			_sprite.flip_h = delta_pos.x < 0.0
-		if _frightened and delta_pos.length() < 2.5 and not _threat_notified:
-			_threat_notified = true
-			GameState.toast_requested.emit("%s is running for shelter!" % resident_name, "bad")
-	elif not _frightened:
+	var arrived := _walk_to(target, 3.2 if _frightened else speed, delta)
+	if arrived and not _frightened:
 		_wait += delta
 		if _wait >= 3.0:
 			_wait = 0.0
 			_index = (_index + 1) % maxi(1, waypoints.size())
+	elif _path.is_empty() and not _frightened:
+		# Unreachable edited routes are skipped after a short wait, without resets.
+		_wait += delta
+		if _wait >= 5.0:
+			_wait = 0.0
+			_index = (_index + 1) % maxi(1, waypoints.size())
+	else:
+		_wait = 0.0
 
 
 func _nearest_raider(max_distance: float) -> Enemy:
@@ -150,11 +176,13 @@ func _tool_icon() -> String:
 		"trader":
 			return "gold"
 		_:
-			return "spark"
+			return "wood"
 
 
 func _on_emergency_changed(active: bool, _remaining: int, _damage: int) -> void:
 	_frightened = active
+	if active:
+		_end_visit()
 	if active:
 		Vfx.pop(global_position + Vector2(0, -1.4), "close", Color("#ff9c6b"))
 	if not active:
@@ -162,9 +190,150 @@ func _on_emergency_changed(active: bool, _remaining: int, _damage: int) -> void:
 
 
 func take_attack_damage(_amount: int) -> void:
+	if shopping_state != Shopping.ROUTINE:
+		_end_visit()
 	if not _frightened:
 		_frightened = true
 		if combat_enabled:
 			GameState.toast_requested.emit("%s joins the village defence!" % resident_name, "bad")
 		else:
 			GameState.toast_requested.emit("%s is in danger! Monsters are attacking the residents!" % resident_name, "bad")
+
+
+func _walk_to(destination: Vector2, pace: float, delta: float) -> bool:
+	var lobby := get_parent() as Lobby
+	var revision := lobby.resident_routes_revision() if lobby else 0
+	if destination.distance_to(_path_goal) > 0.3 or revision != _path_revision:
+		_path_goal = destination
+		_path_index = 0
+		_path = lobby.resident_path(global_position, destination, shopping_state != Shopping.WALK_TO_SHOP) if lobby else PackedVector2Array([destination])
+		_path_revision = lobby.resident_routes_revision() if lobby else 0
+	if _path.is_empty():
+		velocity = velocity.move_toward(Vector2.ZERO, delta * 8.0)
+		move_and_slide()
+		return false
+	while _path_index < _path.size() - 1 and global_position.distance_to(_path[_path_index]) < 0.16:
+		_path_index += 1
+	var offset := _path[_path_index] - global_position
+	var final := _path_index == _path.size() - 1
+	var wanted := offset.normalized() * minf(pace, offset.length() * (4.0 if final else 8.0))
+	velocity = velocity.move_toward(wanted, delta * 8.0)
+	var before := global_position
+	move_and_slide()
+	if wanted.length() > 0.1 and global_position.distance_to(before) < wanted.length() * delta * 0.1:
+		_stuck_time += delta
+		if _stuck_time > 0.75:
+			if lobby:
+				lobby.invalidate_resident_routes()
+			_path_goal = Vector2(INF, INF)
+			_stuck_time = 0.0
+	else:
+		_stuck_time = 0.0
+	if _sprite and absf(velocity.x) > 0.05:
+		_sprite.flip_h = velocity.x < 0.0
+	return final and offset.length() < 0.16
+
+
+func _update_shopping(delta: float) -> bool:
+	if shopping_state == Shopping.ROUTINE:
+		_visit_clock -= delta
+		if _visit_clock <= 0.0:
+			begin_shop_visit()
+		return shopping_state != Shopping.ROUTINE
+	if not is_instance_valid(_shop) or _shop.is_queued_for_deletion():
+		_end_visit()
+		return false
+	_shopping_timer += delta
+	if _shopping_timer > 60.0:
+		_end_visit()
+		return false
+	match shopping_state:
+		Shopping.WALK_TO_SHOP:
+			if _walk_to(_shop.customer_position(), maxf(speed, 1.35), delta):
+				shopping_state = Shopping.BROWSE
+				_shopping_timer = 0.0
+		Shopping.BROWSE:
+			velocity = velocity.move_toward(Vector2.ZERO, delta * 8.0)
+			move_and_slide()
+			if _tool:
+				_tool.rotation = sin(_shopping_timer * 3.0) * 0.12
+			if _shopping_timer >= 1.8:
+				shopping_state = Shopping.PURCHASE
+				_shopping_timer = 0.0
+				_shop.ambient_purchase()
+				_show_exchange()
+		Shopping.PURCHASE:
+			if _shopping_timer >= 1.0:
+				shopping_visits += 1
+				shopping_state = Shopping.LEAVE
+				_shopping_timer = 0.0
+				# Resume the nearest routine point by walking there, never reset position.
+				var nearest := INF
+				for i in waypoints.size():
+					var distance := global_position.distance_squared_to(waypoints[i])
+					if distance < nearest:
+						nearest = distance
+						_index = i
+		Shopping.LEAVE:
+			var point: Variant = _current_waypoint()
+			if point == null or _walk_to(point, maxf(speed, 1.35), delta):
+				_end_visit()
+	return true
+
+
+func begin_shop_visit() -> bool:
+	if shopping_state != Shopping.ROUTINE or GameState.emergency_active():
+		return false
+	_visit_clock = _shopping_rng.randf_range(24.0, 50.0)
+	var shops := get_tree().get_nodes_in_group("ambient_shop")
+	if shops.is_empty():
+		return false
+	var start := _shopping_rng.randi_range(0, shops.size() - 1)
+	for i in shops.size():
+		var shop := shops[(start + i) % shops.size()] as ShopNPC
+		if not is_instance_valid(shop) or shop.is_queued_for_deletion():
+			continue
+		var lobby := get_parent() as Lobby
+		if lobby == null or lobby.resident_path(global_position, shop.customer_position(), false).is_empty():
+			continue
+		if shop.reserve_customer(self):
+			_shop = shop
+			shopping_state = Shopping.WALK_TO_SHOP
+			_shopping_timer = 0.0
+			_path_goal = Vector2(INF, INF)
+			return true
+	return false
+
+
+func _show_exchange() -> void:
+	if _purchase_icon == null:
+		_purchase_icon = Sprite2D.new()
+		_purchase_icon.texture = PixelArt.icon("gold")
+		_purchase_icon.scale = Vector2.ONE * PixelArt.PX
+		_purchase_icon.z_index = 2
+		add_child(_purchase_icon)
+	_purchase_icon.texture = PixelArt.icon("gold")
+	_purchase_icon.position = Vector2(0.2, -0.6)
+	_purchase_icon.modulate.a = 1.0
+	_purchase_icon.visible = true
+	var tween := _purchase_icon.create_tween()
+	tween.tween_property(_purchase_icon, "position", Vector2(0.1, -0.95), 0.35)
+	tween.tween_callback(func() -> void: _purchase_icon.texture = PixelArt.icon("food"))
+	tween.tween_interval(0.35)
+	tween.tween_property(_purchase_icon, "modulate:a", 0.0, 0.25)
+
+
+func _end_visit() -> void:
+	if is_instance_valid(_shop):
+		_shop.release_customer(self)
+	_shop = null
+	shopping_state = Shopping.ROUTINE
+	_visit_clock = _shopping_rng.randf_range(24.0, 50.0)
+	_path_goal = Vector2(INF, INF)
+	if _tool:
+		_tool.rotation = 0.0
+
+
+func _exit_tree() -> void:
+	if is_instance_valid(_shop):
+		_shop.release_customer(self)

@@ -217,7 +217,6 @@ func _portal_entry_transition(portal_id: String) -> void:
 			tween.tween_property(visual, "scale", Vector2(PixelArt.PX * 0.15, PixelArt.PX * 0.15), 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 			tween.tween_property(visual, "rotation", 4.5, 0.3)
 			tween.tween_property(visual, "modulate:a", 0.1, 0.3)
-		p.global_position = p.global_position.move_toward(_nearest_gate_center(p.global_position), 0.5)
 	await get_tree().create_timer(0.28).timeout
 	_portal_fx_active = false
 	_load_dungeon(portal_id, true)
@@ -262,6 +261,28 @@ func handle_portal_defeat() -> void:
 func _on_player_defeated() -> void:
 	if world is Dungeon:
 		handle_portal_defeat()
+	elif world is Lobby:
+		handle_home_defeat()
+
+
+func handle_home_defeat() -> void:
+	if _defeat_pending or _game_over:
+		return
+	_defeat_pending = true
+	var home := world
+	_input_locked = true
+	_apply_input_lock()
+	# Let Player.take_damage finish its collapse before rebuilding the ward.
+	await get_tree().create_timer(0.7).timeout
+	while _transitioning and world == home and not _game_over:
+		await get_tree().process_frame
+	if world != home or _game_over:
+		_defeat_pending = false
+		return
+	hud.hide_modals()
+	GameState.defeat_at_home()
+	await _load_lobby(true)
+	_defeat_pending = false
 
 
 func show_victory(summary: Dictionary, portal_id: String) -> void:

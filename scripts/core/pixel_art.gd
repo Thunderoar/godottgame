@@ -1491,3 +1491,91 @@ static func animal_texture(kind: String, frame: int = 0) -> Texture2D:
                 else:
                         ellipse(img, 10, 12, 7, 5, Color("#c2a77c"))
                 return img)
+
+
+static func leaf_texture() -> Texture2D:
+        return cached_texture("leaf_small", func() -> Image:
+                var img := image(5, 3)
+                line(img, 0, 2, 4, 0, Color("#688b43"))
+                rect(img, 1, 0, 3, 2, Color("#a1bb60"))
+                px(img, 2, 1, Color("#537541"))
+                return img)
+
+
+static func mote_texture() -> Texture2D:
+        return cached_texture("mote_small", func() -> Image:
+                var img := image(3, 3)
+                rect(img, 1, 1, 1, 1, Color.WHITE)
+                return img)
+
+
+static func turtle_texture() -> Texture2D:
+        return cached_texture("beach_turtle", func() -> Image:
+                var img := image(42, 30)
+                # Broad flippers, olive shell, sandy highlights and a quiet resting head.
+                for at in [Vector2i(9, 7), Vector2i(9, 23), Vector2i(28, 6), Vector2i(28, 24)]:
+                        ellipse(img, at.x, at.y, 6, 3, OUTLINE)
+                        ellipse(img, at.x, at.y - 1, 5, 2, Color("#7f9862"))
+                ellipse(img, 35, 15, 6, 4, OUTLINE)
+                ellipse(img, 35, 14, 5, 3, Color("#94ad72"))
+                line(img, 37, 13, 39, 13, OUTLINE)
+                ellipse(img, 19, 15, 15, 11, OUTLINE)
+                ellipse(img, 19, 14, 14, 10, Color("#526844"))
+                ellipse(img, 18, 12, 11, 7, Color("#7e8c50"))
+                for x in [12, 19, 26]:
+                        line(img, x, 7, x - 2, 14, Color("#465b3c"))
+                        line(img, x - 2, 14, x + 1, 21, Color("#465b3c"))
+                line(img, 7, 14, 31, 14, Color("#465b3c"))
+                line(img, 12, 7, 23, 6, Color("#b4b56c"))
+                return img)
+
+
+static func besut_sign_texture() -> Texture2D:
+        return cached_texture("besut_sign_board", func() -> Image:
+                var img := image(104, 54)
+                rect(img, 18, 24, 7, 30, OUTLINE)
+                rect(img, 79, 24, 7, 30, OUTLINE)
+                rect(img, 20, 25, 3, 28, Color("#765339"))
+                rect(img, 81, 25, 3, 28, Color("#765339"))
+                rect(img, 1, 1, 102, 32, OUTLINE)
+                rect(img, 3, 3, 98, 28, Color("#775136"))
+                hline(img, 4, 4, 96, Color("#b58a53"))
+                hline(img, 4, 29, 96, Color("#503c2b"))
+                for x in [6, 96]:
+                        px(img, x, 7, Color("#d4ba86"))
+                        px(img, x, 26, Color("#d4ba86"))
+                var letters := [
+                        ["11110", "10001", "10001", "11110", "10001", "10001", "11110"],
+                        ["11111", "10000", "10000", "11110", "10000", "10000", "11111"],
+                        ["01111", "10000", "10000", "01110", "00001", "00001", "11110"],
+                        ["10001", "10001", "10001", "10001", "10001", "10001", "01110"],
+                        ["11111", "00100", "00100", "00100", "00100", "00100", "00100"],
+                ]
+                for letter in letters.size():
+                        for y in 7:
+                                for x in 5:
+                                        if letters[letter][y][x] == "1":
+                                                rect(img, 23 + letter * 12 + x * 2, 9 + y * 2, 2, 2, Color("#fff0c2"))
+                return img)
+
+
+static func interaction_marker_texture() -> Texture2D:
+        return cached_texture("interaction_chevron", func() -> Image:
+                var img := image(9, 5)
+                line(img, 1, 0, 4, 3, OUTLINE)
+                line(img, 4, 3, 7, 0, OUTLINE)
+                line(img, 2, 0, 4, 2, Color("#e0d6b2"))
+                line(img, 4, 2, 6, 0, Color("#e0d6b2"))
+                return img)
+
+
+static func net_texture() -> Texture2D:
+        return cached_texture("coastal_net", func() -> Image:
+                var img := image(16, 16)
+                ellipse_outline(img, 8, 6, 5, 5, Color("#90bcc0"))
+                for x in [5, 8, 11]:
+                        line(img, x, 3, x, 9, Color("#62868d"))
+                for y in [4, 7]:
+                        line(img, 4, y, 12, y, Color("#62868d"))
+                line(img, 8, 10, 8, 15, Color("#80603e"))
+                return img)

@@ -4,6 +4,9 @@ extends Node2D
 
 @export var building_area := Rect2(18.8, 13.8, 26.8, 16.2)
 
+const BORDER_WIDTH := 2.0 * PixelArt.PX
+const GRID_WIDTH := PixelArt.PX
+
 var active := false
 var placeables: Array[SettlementPlaceable] = []
 
@@ -45,6 +48,9 @@ func _enter() -> void:
 
 
 func _exit() -> void:
+	var lobby := get_parent() as Lobby
+	if lobby:
+		lobby.invalidate_resident_routes()
 	_finish_drag()
 	var player := get_tree().get_first_node_in_group("player")
 	if player != null and not bool(player.get("dead")):
@@ -129,6 +135,9 @@ func _finish_drag() -> void:
 		GameState.set_placeable_position(_selected.placeable_id, _selected.global_position)
 		_selected.set_selected(false)
 		_selected = null
+		var lobby := get_parent() as Lobby
+		if lobby:
+			lobby.invalidate_resident_routes()
 	_dragging = false
 
 
@@ -144,12 +153,12 @@ func _draw() -> void:
 	if not active:
 		return
 	draw_rect(building_area, Color(0.20, 0.65, 0.38, 0.14))
-	draw_rect(building_area, Color(0.55, 0.95, 0.68, 0.82), false, 2.0)
+	draw_rect(building_area, Color(0.55, 0.95, 0.68, 0.82), false, BORDER_WIDTH)
 	var x := building_area.position.x
 	while x <= building_area.end.x:
-		draw_line(Vector2(x, building_area.position.y), Vector2(x, building_area.end.y), Color(0.55, 0.9, 0.68, 0.08), 1.0)
+		draw_line(Vector2(x, building_area.position.y), Vector2(x, building_area.end.y), Color(0.55, 0.9, 0.68, 0.08), GRID_WIDTH)
 		x += 1.0
 	var y := building_area.position.y
 	while y <= building_area.end.y:
-		draw_line(Vector2(building_area.position.x, y), Vector2(building_area.end.x, y), Color(0.55, 0.9, 0.68, 0.08), 1.0)
+		draw_line(Vector2(building_area.position.x, y), Vector2(building_area.end.x, y), Color(0.55, 0.9, 0.68, 0.08), GRID_WIDTH)
 		y += 1.0

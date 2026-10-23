@@ -7,7 +7,7 @@ Authors: Qayyim, Farhan and Ayiz.
 - Engine on this machine: `/usr/bin/godot` → `4.7.2.stable.arch_linux.ed1daf0bf` (exact match)
 - ~14,500 lines GDScript: 61 files / ~11,100 lines under `scripts/`, 8 tools / ~3,400 lines under `tools/`
 - Main scene: `res://scenes/game.tscn` (`project.godot:15`) — **6 lines, one root node, everything else built in code**
-- **There is no git repo here.** No history, no diff, no revert. Copy a file before a large rewrite.
+- This is a Git repository. Repair branch: `visual-overhaul-merge-2`; known-good reference: `main`. Preserve user changes and do not replace the repair branch with main.
 - Three autoloads: `GameState`, `Sfx`, then `GameSettings` (`project.godot:21-23`). GameSettings owns device prefs (`user://settings.cfg`) incl. reduce_motion and effects_quality.
 
 Deep research backing this document (read on demand, not by default):
@@ -27,15 +27,15 @@ godot --path .                 # or open project.godot in Godot 4.7.2 and press 
 godot --headless --path . --import
 
 # The only real gate
-timeout 600 godot --headless --path . res://tools/tide_test.tscn ; echo "EXIT=$?"
+./tools/test_isolated.sh
 ```
 
-**BASELINE ON `visual-overhaul`: GREEN. `314 checks, PASS`, exit 0** (the
-main-branch history below is kept for context). The tree decision was resolved
-by the owner: trees have persistent HP, fall at zero and all-dead triggers a
-locked game-over; the suite, ACCEPTANCE_TESTS and the README all agree now.
-Attack-timing checks wait for the active frame (AttackDB wind-ups), which is a
-documented rule change, not a weakened assertion.
+**Deep audit verification (2026-10-23): 408 checks, PASS, exit 0** on
+`visual-overhaul-merge-2`. The incoming baseline was 314 checks, PASS despite
+visual regressions. The follow-up native graphical audit passes 63 checks.
+See `docs/DEEP_AUDIT_REPORT.md` for evidence, fixes and limits.
+Use `./tools/test_isolated.sh`; the raw acceptance scene deletes its save and
+now refuses to run without a verified `TIDESWORN_TEST_ROOT` and isolated XDG data.
 
 A clean run must end `PASS` and exit 0. Nothing else is a green build.
 
@@ -46,18 +46,12 @@ A clean run must end `PASS` and exit 0. Nothing else is a green build.
 
 ---
 
-## 2. The former tree product decision (RESOLVED on this branch)
+## 2. Tree rule (resolved)
 
-Docs and one test say forest trees are invulnerable; the code says otherwise:
-
-- `scripts/world/forest_tree.gd:39` → `health = maxi(0, health - maxi(1, amount))`, and `:48-49` fells at 0.
-- `tools/tide_test.gd:147` asserts health is unchanged.
-- `README.md:86`, `docs/ACCEPTANCE_TESTS.md:67`, `docs/ARCHITECTURE.md:182`,
-  `docs/QA_REPORT.md:69`, `docs/COMPLETION_REPORT.md:71` all claim invulnerability.
-
-Either re-introduce invulnerability in `forest_tree.gd` **or** update the assertion plus
-those five doc passages. **Ask the owner before choosing** — it is a product rule, not a
-bug fix. Until it is settled, every "the suite passes" claim in this repo is false.
+Trees retain persistent HP, react to damage, fall at zero and trigger game over
+when all are lost. The visual repair preserves that rule and the existing tree
+creation RNG/order/IDs. Never restore the obsolete invulnerability assertion.
+Each ForestTree now owns both sprites, shadow and Body before its ready callback.
 
 ---
 
@@ -268,9 +262,9 @@ adding an earlier `_rng` call rebinds every saved tree's health. Do not repeat t
 5. **`emergency_damage` is cosmetic.** `_apply_emergency_damage` only tints sprites
    (`lobby.gd:1159-1169`); nothing is destroyed and the run cannot fail from it. It also
    only resets at the *next* raid (`game_state.gd:1098`).
-6. **Death in the lobby is unhandled** — `player_defeated` has listeners only for the
-   dungeon path (`game.gd:206-208`, `dungeon.gd:48`), so a player killed at home stays dead
-   and locked with no respawn.
+6. **Death in the lobby — FIXED by the deep audit.** The guarded home-defeat
+   handler returns a living player to the recovery ward. Home recovery preserves
+   inventory/currency/progression and never overrides forest game over.
 7. **`player_defeated` is emitted twice per portal defeat** and has two listeners. It only
    works because of the `_defeat_pending` guard and an `expedition_active()` early-out.
    Preserve both (`game.gd:189-203`, `dungeon.gd:347-355`).
@@ -316,9 +310,10 @@ Read in this order; older docs lie in a consistent direction ("250 checks, PASS"
 ## 10. Definition of done
 
 1. `godot --headless --path . --import` ran (fresh checkout only).
-2. `timeout 600 godot --headless --path . res://tools/tide_test.tscn` → `0 FAILURE(S)`, exit 0.
+2. `./tools/test_isolated.sh` → `PASS`, exit 0, with a verified temporary user-data path.
 3. Stdout grepped for `[FAIL]`, `SCRIPT ERROR`, `ERROR:` — clean.
 4. Any doc you made false is updated in the same change; if the change alters a game rule,
    `tools/tide_test.gd` and `docs/ACCEPTANCE_TESTS.md` changed together.
 5. Working tree has no stray output (`res://shots`, rebuilt `build/`) unless intended.
-6. The player's save was backed up before running the suite and restored after.
+6. Tests used verified isolated data. Back up the real save first; never overwrite
+   ongoing user progress by restoring an older backup after a concurrent live session.

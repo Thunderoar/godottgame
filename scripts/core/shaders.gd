@@ -137,24 +137,16 @@ void vertex() {
 
 const WATER_CODE := "
 shader_type canvas_item;
-uniform vec4 shallow : source_color = vec4(0.43, 0.66, 0.65, 0.85);
-uniform vec4 deep : source_color = vec4(0.24, 0.48, 0.53, 0.92);
-uniform vec4 foam : source_color = vec4(0.86, 0.91, 0.87, 0.9);
-uniform float band_scale = 42.0;
-uniform float speed = 0.55;
-
+render_mode unshaded;
+uniform float speed = 0.32;
 void fragment() {
-	// The texture is a shape mask: sea where alpha > 0, foam lip at the shore.
-	float mask_a = texture(TEXTURE, UV).a;
-	float wave = sin(UV.x * band_scale + TIME * speed) * 0.5
-		+ sin(UV.x * band_scale * 0.53 - TIME * speed * 0.8) * 0.5;
-	float band = fract(UV.y * 7.0 + wave * 0.18 + TIME * 0.06);
-	float crest = smoothstep(0.86, 1.0, band);
-	float depth = smoothstep(0.0, 1.0, UV.y);
-	vec4 col = mix(shallow, deep, depth);
-	float sparkle = step(0.985, sin(UV.x * 220.0 + TIME * 2.2) * sin(UV.y * 140.0 - TIME * 1.7));
-	vec3 rgb = mix(col.rgb, foam.rgb, crest * 0.85);
-	rgb += sparkle * 0.35 * (1.0 - depth * 0.6);
-	COLOR = vec4(rgb, mix(col.a, 1.0, crest * 0.5) * mask_a);
+	vec4 mask = texture(TEXTURE, UV);
+	float depth = mask.r;
+	float phase = UV.y * 100.0 + sin(UV.x * 85.0 + TIME * speed) * 0.5 - TIME * speed;
+	float crest = smoothstep(0.93, 1.0, sin(phase));
+	vec3 water = mix(vec3(0.43, 0.66, 0.65), vec3(0.24, 0.48, 0.53), depth);
+	float lip = (1.0 - smoothstep(0.0, 0.055, depth)) * 0.3;
+	vec3 rgb = mix(water, vec3(0.86, 0.91, 0.87), max(crest * 0.12, lip));
+	COLOR = vec4(rgb, mask.a * 0.42);
 }
 "

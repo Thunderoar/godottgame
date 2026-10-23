@@ -85,5 +85,5 @@ func on_rubbish_beached(piece: RubbishPiece) -> void:
 	monster.gold_reward = 7
 	monster.diamond_chance = 0.0
 	monster.body_radius = 0.4
-	monster.position = spawn_at
+	monster.position = get_parent().to_local(spawn_at)
 	get_parent().add_child(monster)

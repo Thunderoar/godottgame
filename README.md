@@ -154,7 +154,7 @@ banking, defeat/reset and safe Shore Gate returns.
 
 ## Visual & feel overhaul
 
-The `visual-overhaul` branch adds a presentation layer on top of the same
+The `visual-overhaul-merge-2` branch repairs and extends a presentation layer on top of the same
 rules (see `docs/VISUAL_OVERHAUL.md` for the design decisions):
 
 - **Shops with people.** Every shop opens onto an illustrated storefront band
@@ -174,12 +174,22 @@ rules (see `docs/VISUAL_OVERHAUL.md` for the design decisions):
   frames while locked, golden auras once cleared, and a pull-in transition on
   entry. Dungeon floors are coherent stone with real wall faces, themed
   dressing, flickering torches and a boss-arena emblem.
-- **A living meadow.** Grass renders in clustered MultiMesh fields that sway
-  in a shared wind shader and bend away from walking characters; the sea
-  carries animated bands, foam and sparkle; cloud shadows, pollen,
-  butterflies, light shafts, chimney smoke and falling leaves keep the world
-  breathing. (The old washed-out look was every PointLight2D being ~13x
-  oversized; lights are now real local pools.)
+- **A clear seaside village.** Trees, cottages and ruins own their correctly
+  placed visuals and collision bodies. Grass uses working MultiMesh fields;
+  masked water follows the painted shore, including its rounded eastern end.
+  A turtle rests on sand and a wooden BESUT sign marks the village path.
+  Ambient star placeholders, water sparkles and broad light washes are removed.
+- **Residents go shopping.** Customers reserve a counter, walk around obstacles,
+  browse, exchange a coin for goods, leave and resume their routes. These ambient
+  transactions never touch the player's economy.
+- **Continuous movement.** Physics bodies move through floating-point positions;
+  pets catch up smoothly and can route around obstacles. Physics interpolation
+  and an unsnapped camera retain nearest-filtered art without grid movement.
+- **Independent interface and world scale.** Menu → Settings has separate GUI
+  and camera zoom sliders. Zoom spans 28–64 (38 default), with smooth changes
+  and device-level persistence. The anchored HUD scales without moving controls
+  off-screen; touch targets retain at least 44 physical pixels. The top-right
+  VITALS panel is removed; the player's world HP/MP indicator and XP bars remain.
 - **Comfort settings.** Settings gains Effects quality (low/med/high) and
   Reduce motion. Touch buttons show keycap hints on keyboard layouts, a
   cooldown sweep on Strike, count badges on potions and a context-sensitive
@@ -202,7 +212,7 @@ scripts/
   world/                    lobby, dungeon, residents, rubbish, editor, defence
   ui/                       HUD, joystick, touch buttons, tutorial, modals
 tools/
-  tide_test.tscn            end-to-end acceptance test (250 checks)
+  tide_test.tscn            end-to-end acceptance test (dynamic check count)
   tide_capture.tscn         screenshot harness
 docs/
   ACCEPTANCE_TESTS.md
@@ -216,28 +226,25 @@ docs/
 ## Verify
 
 ```sh
-godot --headless --path . res://tools/tide_test.tscn
-godot --path . res://tools/tide_capture.tscn
+# Linux: isolated user://, timeout, failure/error-log checks.
+./tools/test_isolated.sh
+
+# Graphical review: always isolate user data; captures never go into res://shots.
+review_dir=$(mktemp -d /tmp/tidesworn-review-XXXXXXXX)
+XDG_DATA_HOME="$review_dir/userdata" TIDESWORN_TEST_ROOT="$review_dir" godot --path . res://tools/visual_review.tscn -- --shots "$review_dir/shots"
 ```
 
-Latest result on the `visual-overhaul` branch: **314 checks, PASS**. The suite
-must always end with `PASS` and exit 0; the tally itself is data-driven and
-drifts as catalogue data changes. The suite covers title/credits, tutorial,
-three weapons, permanent daytime, no NPC labels or pop-ups, XP bars, Pet Food,
-three-skill simultaneous pet turns, guaranteed victory level-up, paired battle
-portals, persistent tree HP with the forest game-over, forest-monster
-line-of-sight charges, SFX/VFX,
-the dedicated Construction Shop, resident cottages, horses,
-flowers/gardens/decorations, sea-cleaning progress, auto-heal, pet support,
-auto-loot, emergency persistence, sea/forest attacks, defender participation,
-death/recovery, ten monster portals, boss abilities, save/load and settlement
-editing persistence. Agent-facing acceptance guidance is in
-[`docs/ACCEPTANCE_TESTS.md`](docs/ACCEPTANCE_TESTS.md).
+The raw acceptance scene deletes its save. Never run it against real user data.
+The suite must report PASS, exit 0 and have no SCRIPT ERROR / ERROR output; the
+count is data-driven. The deep audit passes 408 acceptance checks and 63 native
+graphical checks. See [the audit report](docs/DEEP_AUDIT_REPORT.md) for
+actual results, root causes, files and visual evidence, and
+[acceptance guidance](docs/ACCEPTANCE_TESTS.md) for the contracts.
 
 ## Android
 
 Configured for 1280×720 landscape, canvas-items stretch, expand aspect, nearest
-textures, pixel snapping and GL Compatibility. Touch controls are implemented.
+textures, physics interpolation and GL Compatibility. Touch controls are implemented.
 Export/signing and physical-device performance testing remain machine-specific;
 see [`docs/ANDROID_BUILD.md`](docs/ANDROID_BUILD.md).
 

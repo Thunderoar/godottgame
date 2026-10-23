@@ -32,12 +32,12 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if event.pressed and not _active:
 			_touch_id = event.index
-			_begin(_local(event.position))
+			_begin(event.position)
 			accept_event()
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed and not _active:
 			_mouse_active = true
-			_begin(_local(event.position))
+			_begin(event.position)
 			accept_event()
 		elif not event.pressed and _mouse_active:
 			_end()
@@ -51,6 +51,9 @@ func _input(event: InputEvent) -> void:
 		_move(_local(event.position))
 		get_viewport().set_input_as_handled()
 	elif event is InputEventScreenTouch and not event.pressed and event.index == _touch_id:
+		_end()
+		get_viewport().set_input_as_handled()
+	elif event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT and _mouse_active:
 		_end()
 		get_viewport().set_input_as_handled()
 	elif event is InputEventMouseMotion and _mouse_active:
@@ -144,3 +147,19 @@ func _draw() -> void:
 	draw_circle(knob_pos + Vector2(0, -knob_radius * 0.45), 2.0, Color(0.71, 0.93, 0.88, 0.35))
 	if _active:
 		draw_arc(centre, ring + 6.0, 0, TAU, 64, Color(0.94, 0.78, 0.38, 0.38), 2.0, true)
+
+
+func cancel() -> void:
+	if _active:
+		_end()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED and not is_visible_in_tree():
+		cancel()
+	elif what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		cancel()
+
+
+func _exit_tree() -> void:
+	cancel()

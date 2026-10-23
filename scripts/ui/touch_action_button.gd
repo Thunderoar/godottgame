@@ -173,7 +173,7 @@ func _draw() -> void:
 	# Icon at an integer multiple of its 32px source: no fractional stretching.
 	var icon_px := 32 if d < 96.0 else 64
 	var tex := PixelArt.icon(icon_kind, 32)
-	var icon_rect := Rect2(centre - Vector2(icon_px, icon_px * 0.55) * _press_scale - Vector2(0, 6), Vector2(icon_px, icon_px) * _press_scale)
+	var icon_rect := Rect2(centre - Vector2.ONE * icon_px * 0.5 * _press_scale - Vector2(0, d * 0.12), Vector2(icon_px, icon_px) * _press_scale)
 	if not _enabled:
 		draw_texture_rect(tex, icon_rect, true, Color(0.55, 0.6, 0.62, 0.8))
 	else:
@@ -208,3 +208,14 @@ func _draw() -> void:
 	if _pulse > 0.05:
 		var flash_r := draw_r + 4.0 + (1.0 - _pulse) * 10.0
 		draw_arc(centre, flash_r, 0, TAU, 48, Color(accent.r, accent.g, accent.b, _pulse * 0.5), 2.5, true)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED and not is_visible_in_tree():
+		cancel()
+	elif what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		cancel()
+
+
+func _exit_tree() -> void:
+	cancel()

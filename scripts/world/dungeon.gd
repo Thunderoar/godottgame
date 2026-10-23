@@ -307,21 +307,26 @@ func _build_decor() -> void:
 	for i in 6:
 		var a := TAU * float(i) / 6.0
 		var brazier := Sprite2D.new()
-		brazier.texture = PixelArt.icon("spark", 16)
+		brazier.texture = PixelArt.mote_texture()
 		brazier.scale = Vector2(0.05, 0.05)
 		brazier.position = Vector2(24 + cos(a) * 4.2, 7.4 + sin(a) * 2.0)
 		brazier.modulate = glow.lightened(0.2)
 		brazier.z_index = 2
 		add_child(brazier)
-	# Ambient dust motes drifting through the room.
-	if GameSettings.effects_at_least("med") and not GameSettings.reduce_motion():
+	set_process(true)
+
+
+func _build_ambient() -> void:
+	var glow: Color = PixelArt.portal_theme_palette(_theme())["glow"]
+	# Created lazily so low -> high applies without re-entering the world.
+	if _ambient == null:
 		_ambient = CPUParticles2D.new()
-		_ambient.amount = 14
+		_ambient.amount = 6
 		_ambient.lifetime = 4.0
 		_ambient.preprocess = 2.0
-		_ambient.texture = PixelArt.icon("spark", 16)
-		_ambient.scale_amount_min = 0.25
-		_ambient.scale_amount_max = 0.5
+		_ambient.texture = PixelArt.mote_texture()
+		_ambient.scale_amount_min = 0.025
+		_ambient.scale_amount_max = 0.04
 		_ambient.color = Color(glow.r, glow.g, glow.b, 0.35)
 		_ambient.direction = Vector2(0.3, -1)
 		_ambient.spread = 180.0
@@ -332,16 +337,21 @@ func _build_decor() -> void:
 		_ambient.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
 		_ambient.emission_rect_extents = Vector2(22, 14)
 		add_child(_ambient)
-	set_process(true)
 
 
 func _process(_delta: float) -> void:
+	var ambient_enabled := GameSettings.effects_at_least("high") and not GameSettings.reduce_motion()
+	if ambient_enabled and _ambient == null:
+		_build_ambient()
+	if _ambient:
+		_ambient.visible = ambient_enabled
+		_ambient.emitting = GameSettings.effects_at_least("high") and not GameSettings.reduce_motion()
 	# Independent torch flicker: cheap sine mix, no RNG churn.
 	_flicker_time += _delta
 	for i in _flicker_lamps.size():
 		var lamp := _flicker_lamps[i]
 		if lamp != null and is_instance_valid(lamp):
-			lamp.energy = 0.30 + absf(sin(_flicker_time * (5.0 + float(i) * 1.7) + float(i) * 2.4)) * 0.09
+			lamp.energy = 0.22 + (absf(sin(_flicker_time * (2.0 + float(i) * 0.3))) * 0.025 if not GameSettings.reduce_motion() else 0.0)
 
 
 func _build_player_and_pet() -> void:

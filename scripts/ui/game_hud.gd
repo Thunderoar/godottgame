@@ -12,7 +12,7 @@ const DEFAULT_CONTROL_LAYOUT := {
 	"interact": {"x": 1156.0, "y": 486.0, "size": 82.0},
 	"inventory": {"x": 24.0, "y": 160.0, "size": 64.0},
 	"build": {"x": 96.0, "y": 160.0, "size": 64.0},
-	"health_potion": {"x": 1122.0, "y": 540.0, "size": 58.0},
+	"health_potion": {"x": 1055.0, "y": 510.0, "size": 58.0},
 	"mana_potion": {"x": 1054.0, "y": 608.0, "size": 58.0},
 }
 
@@ -31,18 +31,14 @@ var settings_panel: SettingsPanel
 var dialogue_panel: DialoguePanel
 var game_over_panel: GameOverPanel
 
+var _gui_layout: Dictionary = {}
 var _root: Control
 var _gold_label: Label
 var _diamond_label: Label
 var _identity_label: Label
 var _clock_label: Label
-var _health_bar: SegmentedBar
-var _mana_bar: SegmentedBar
 var _xp_bar: SegmentedBar
-var _pet_bar: SegmentedBar
 var _pet_xp_bar: SegmentedBar
-var _pet_name: Label
-var _pet_icon: TextureRect
 var _objectives_box: VBoxContainer
 var _emergency_panel: PanelContainer
 var _emergency_label: Label
@@ -88,22 +84,22 @@ func _ready() -> void:
 	_build_root()
 	_build_menu_button()
 	_build_currency_panel()
-	_build_vitals_panel()
 	_build_objectives()
 	_build_mission_guide()
 	_build_emergency_panel()
 	_build_build_mode_panel()
 	_build_boss_bar()
 	_build_controls()
-	_apply_saved_settings()
 	_build_prompt()
 	_build_sleep_panel()
 	_build_recovery_panel()
 	_build_tutorial()
 	_build_modals()
 	_build_fade()
-	_root.resized.connect(func() -> void:
-		_root.pivot_offset = _root.size * 0.5)
+	_capture_gui_layout()
+	_apply_saved_settings()
+	_root.resized.connect(_layout_gui)
+	get_window().size_changed.connect(_schedule_gui_layout)
 	GameState.data_changed.connect(refresh_all)
 	GameState.pet_changed.connect(_refresh_pet)
 	GameSettings.changed.connect(_on_setting_changed)
@@ -172,53 +168,6 @@ func _build_currency_panel() -> void:
 	_pet_xp_bar.custom_minimum_size = Vector2(268, 22)
 	box.add_child(_pet_xp_bar)
 
-
-
-func _build_vitals_panel() -> void:
-	var panel := GameUI.panel(Color(0.035, 0.08, 0.09, 0.9), Color("#3a565a"))
-	panel.anchor_left = 1.0
-	panel.anchor_right = 1.0
-	panel.offset_left = -330
-	panel.offset_right = -22
-	panel.offset_top = 64
-	panel.offset_bottom = 218
-	_root.add_child(panel)
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 3)
-	panel.add_child(box)
-	var header := HBoxContainer.new()
-	header.add_child(GameUI.label("VITALS", 11, GameUI.MUTED))
-	var atk := GameUI.label("ATK %d  •  DEF %d" % [GameState.attack_power(), GameState.defense()], 11, GameUI.TEAL)
-	atk.name = "VitalsStats"
-	atk.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	atk.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	header.add_child(atk)
-	box.add_child(header)
-	_health_bar = SegmentedBar.new()
-	_health_bar.setup("HEALTH", GameUI.RED, 10, false)
-	box.add_child(_health_bar)
-	_mana_bar = SegmentedBar.new()
-	_mana_bar.setup("MANA", GameUI.MANA, 10, false)
-	box.add_child(_mana_bar)
-	var pet_row := HBoxContainer.new()
-	pet_row.add_theme_constant_override("separation", 8)
-	box.add_child(pet_row)
-	_pet_icon = TextureRect.new()
-	_pet_icon.custom_minimum_size = Vector2(30, 30)
-	_pet_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_pet_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_pet_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pet_row.add_child(_pet_icon)
-	var pet_info := VBoxContainer.new()
-	pet_info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pet_info.add_theme_constant_override("separation", 0)
-	pet_row.add_child(pet_info)
-	_pet_name = GameUI.label("Ember  Lv 1", 11, GameUI.MUTED)
-	pet_info.add_child(_pet_name)
-	_pet_bar = SegmentedBar.new()
-	_pet_bar.setup("PET", GameUI.GOLD, 5, true)
-	_pet_bar.custom_minimum_size = Vector2(250, 22)
-	pet_info.add_child(_pet_bar)
 
 
 func _build_objectives() -> void:
@@ -372,7 +321,7 @@ func _build_controls() -> void:
 	_interact_button = TouchActionButton.new()
 	_interact_button.action = "interact"
 	_interact_button.caption = "Use"
-	_interact_button.icon_kind = "spark"
+	_interact_button.icon_kind = "talk"
 	_interact_button.accent = Color("#61c9ba")
 	_interact_button.diameter = 82
 	_anchor_bottom_right(_interact_button, Vector2(-124, -234), Vector2(-42, -152))
@@ -402,7 +351,7 @@ func _build_controls() -> void:
 	_health_potion_button.icon_kind = "health_potion"
 	_health_potion_button.accent = Color("#d45a61")
 	_health_potion_button.diameter = 58
-	_anchor_bottom_right(_health_potion_button, Vector2(-158, -180), Vector2(-100, -122))
+	_anchor_bottom_right(_health_potion_button, Vector2(-225, -210), Vector2(-167, -152))
 	_root.add_child(_health_potion_button)
 	_hp_count = GameUI.label("x2", 11, GameUI.TEXT)
 	_hp_count.anchor_left = 1.0
@@ -459,6 +408,7 @@ func _build_controls() -> void:
 			"offset_top": node.offset_top,
 			"offset_right": node.offset_right,
 			"offset_bottom": node.offset_bottom,
+			"size": node.size.max(node.get_combined_minimum_size()),
 		}
 		if node is TouchActionButton:
 			entry["diameter"] = (node as TouchActionButton).diameter
@@ -473,20 +423,68 @@ func _apply_saved_settings() -> void:
 
 
 func get_gui_scale() -> float:
-	return _root.scale.x if _root != null else 1.0
+	return GameState.gui_scale()
 
 
-func set_gui_scale(value: float) -> void:
-	var clamped := clampf(value, 0.75, 1.3)
-	_apply_gui_scale(clamped)
-	GameState.set_gui_scale(clamped)
+func set_gui_scale(value: float, persist: bool = true) -> void:
+	GameState.set_gui_scale(value, persist)
+	_layout_gui()
 
 
-func _apply_gui_scale(value: float) -> void:
+func _capture_gui_layout() -> void:
+	for child in _root.get_children():
+		if child is Control and not child is ModalBase and child != tutorial_guide and child != _fade and child != _vignette:
+			_gui_layout[child] = {"left": child.offset_left, "top": child.offset_top, "size": child.size.max(child.get_combined_minimum_size())}
+
+
+func _apply_gui_scale(_value: float) -> void:
+	_layout_gui()
+
+
+func _layout_gui() -> void:
 	if _root == null:
 		return
-	_root.pivot_offset = _root.size * 0.5
-	_root.scale = Vector2(value, value)
+	# Each element retains its own anchor. Root and full-screen overlays never scale.
+	_root.scale = Vector2.ONE
+	var fit := minf(1.0, minf(_root.size.x / 1280.0, _root.size.y / 720.0))
+	var factor := get_gui_scale() * fit
+	var display_scale := 1.0
+	if DisplayServer.get_name() != "headless":
+		display_scale = minf(float(get_window().size.x) / maxf(1.0, _root.size.x), float(get_window().size.y) / maxf(1.0, _root.size.y))
+	for node: Control in _gui_layout:
+		if not is_instance_valid(node):
+			continue
+		var base: Dictionary = _gui_layout[node]
+		var base_size: Vector2 = base.size
+		var element_factor := factor
+		if node in _control_nodes.values():
+			element_factor = maxf(factor, 44.0 / maxf(1.0, base_size.x * display_scale))
+		elif node == _menu_button:
+			element_factor = maxf(factor, 44.0 / maxf(1.0, base_size.y * display_scale))
+		var left := float(base.left) * factor
+		var top := float(base.top) * factor
+		# Fit center journal and mission guide between edge controls at large scales.
+		if node == _objective_panel:
+			var available_width := maxf(230.0, _root.size.x - 2.0 * 330.0 * factor)
+			element_factor = minf(factor, available_width / base_size.x)
+			left = -base_size.x * element_factor * 0.5
+		if node == _mission_panel:
+			element_factor = minf(factor, maxf(240.0, _root.size.x - 2.0 * 250.0 * factor) / base_size.x)
+			left = -base_size.x * element_factor * 0.5
+		# Custom layouts are screen-space positions, clamped when windows shrink.
+		var origin := Vector2(node.anchor_left, node.anchor_top) * _root.size + Vector2(left, top)
+		origin = origin.clamp(Vector2(6, 6), (_root.size - base_size * element_factor - Vector2(6, 6)).max(Vector2(6, 6)))
+		node.offset_left = origin.x - node.anchor_left * _root.size.x
+		node.offset_top = origin.y - node.anchor_top * _root.size.y
+		node.offset_right = node.offset_left + base_size.x
+		node.offset_bottom = node.offset_top + base_size.y
+		node.pivot_offset = Vector2.ZERO
+		node.scale = Vector2.ONE * element_factor
+
+	if _inventory_button and _build_button and not GameState.control_layout().has("inventory") and not GameState.control_layout().has("build"):
+		var pack_right := _inventory_button.position.x + _inventory_button.size.x * _inventory_button.scale.x
+		var build_left := maxf(_build_button.position.x, pack_right + 8.0 / maxf(0.1, display_scale))
+		_build_button.position.x = build_left
 
 
 func get_control_layout_current() -> Dictionary:
@@ -498,7 +496,8 @@ func get_control_layout_current() -> Dictionary:
 		var node_size := node.size.x
 		if node is TouchActionButton:
 			node_size = (node as TouchActionButton).diameter
-		result[control_id] = {"x": node.position.x, "y": node.position.y, "size": node_size}
+		var base: Dictionary = _gui_layout.get(node, {})
+		result[control_id] = {"x": node.anchor_left * _root.size.x + float(base.get("left", node.offset_left)), "y": node.anchor_top * _root.size.y + float(base.get("top", node.offset_top)), "size": node_size}
 	return result
 
 
@@ -518,6 +517,9 @@ func _restore_default_control_layout() -> void:
 		if node == null:
 			continue
 		var entry: Dictionary = _default_transforms[control_id]
+		var default_size: Vector2 = entry.get("size", Vector2(80, 80))
+		# Lower minimum size before restoring offsets; otherwise old custom sizes clamp them.
+		node.custom_minimum_size = default_size
 		node.anchor_left = float(entry.get("anchor_left", 0.0))
 		node.anchor_top = float(entry.get("anchor_top", 0.0))
 		node.anchor_right = float(entry.get("anchor_right", 0.0))
@@ -536,7 +538,10 @@ func _restore_default_control_layout() -> void:
 			joystick.knob_radius = 30.0
 			joystick.custom_minimum_size = Vector2(190, 190)
 			joystick.queue_redraw()
+		_gui_layout[node] = {"left": node.offset_left, "top": node.offset_top, "size": default_size}
+		node.size = default_size
 		node.queue_redraw()
+	_layout_gui()
 
 
 func _apply_control_layout(saved: Dictionary) -> void:
@@ -568,6 +573,9 @@ func _apply_control(control_id: String, x: float, y: float, control_size: float)
 		joystick.radius = control_size * 0.38
 		joystick.knob_radius = control_size * 0.16
 		joystick.queue_redraw()
+
+	_gui_layout[node] = {"left": x, "top": y, "size": Vector2(control_size, control_size)}
+	_layout_gui()
 
 
 func _build_prompt() -> void:
@@ -747,13 +755,13 @@ func _update_prompt() -> void:
 	if prompt != _last_prompt:
 		_last_prompt = prompt
 		_prompt_panel.visible = prompt != ""
-		_prompt_label.text = "✦  " + prompt
+		_prompt_label.text = prompt
 		if _interact_button:
 			if prompt.length() > 0:
 				var short := prompt.split(" ")[0]
 				_interact_button.set_contextual(short.trim_suffix("."), _prompt_icon_kind(prompt))
 			else:
-				_interact_button.set_contextual("Use", "spark")
+				_interact_button.set_contextual("Use", "talk")
 
 
 func _use_quick_potion(item_id: String) -> void:
@@ -764,7 +772,7 @@ func set_world(w: Node) -> void:
 	world = w
 	_last_prompt = ""
 	if _interact_button:
-		_interact_button.set_contextual("Use", "spark")
+		_interact_button.set_contextual("Use", "talk")
 	_prompt_panel.visible = false
 	_boss_panel.visible = false
 	_sleep_panel.visible = false
@@ -781,8 +789,6 @@ func refresh_all() -> void:
 	_identity_label.text = "%s  •  Lv %d" % [str(GameState.data.character_name), int(GameState.data.level)]
 	_gold_label.text = str(GameState.gold())
 	_diamond_label.text = str(GameState.diamonds())
-	_health_bar.set_values(GameState.health(), GameState.health_max())
-	_mana_bar.set_values(GameState.mana(), GameState.mana_max())
 	_xp_bar.set_values(int(GameState.data.get("xp", 0)), int(GameState.data.get("xp_next", 60)))
 	_refresh_pet()
 	_refresh_objectives()
@@ -797,25 +803,9 @@ func refresh_all() -> void:
 	# The Strike icon follows the active hero's weapon discipline.
 	if _attack_button:
 		_attack_button.set_icon(GameState.character_weapon_style())
-	var vitals := _root.find_child("VitalsStats", true, false)
-	if vitals is Label:
-		vitals.text = "ATK %d  •  DEF %d  •  SH %d" % [GameState.attack_power(), GameState.defense(), GameState.shield()]
 
 
 func _refresh_pet() -> void:
-	var pet := GameState.get_active_pet()
-	if pet.is_empty():
-		_pet_name.text = "No companion"
-		_pet_bar.set_values(0, 1)
-		_pet_xp_bar.set_caption("PET XP")
-		_pet_xp_bar.set_values(0, 1)
-		_pet_icon.texture = null
-		return
-	_pet_icon.texture = PixelArt.pet_texture(str(pet.id))
-	_pet_name.text = "%s  Lv %d  •  %s" % [PetDB.name_of(str(pet.id)), int(pet.level), "Support" if bool(pet.alive) else "RECOVERING"]
-	_pet_name.add_theme_color_override("font_color", GameUI.MUTED if bool(pet.alive) else GameUI.RED)
-	_pet_bar.set_values(int(pet.hp), int(pet.hp_max))
-	_pet_bar.fill_color = GameUI.GOLD if bool(pet.alive) else Color("#5d4a45")
 	var pet_xp := GameState.pet_xp_progress()
 	if bool(pet_xp.get("max", false)):
 		_pet_xp_bar.set_caption("PET XP MAX")
@@ -942,6 +932,8 @@ func _apply_touch_mode() -> void:
 
 
 func _on_setting_changed(key: String) -> void:
+	if key == "ui_scale":
+		_layout_gui()
 	if key == "touch_controls":
 		_apply_touch_mode()
 
@@ -1006,3 +998,8 @@ func fade_from_black(duration: float = 0.3) -> void:
 	await tween.finished
 	_fade.visible = false
 	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
+func _schedule_gui_layout() -> void:
+	# Physical window size can change while the stretched logical viewport stays identical.
+	call_deferred("_layout_gui")

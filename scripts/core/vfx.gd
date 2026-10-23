@@ -8,10 +8,10 @@ extends RefCounted
 
 static func ensure_pool(world: Node) -> VfxPool:
 	# Idempotent: returns the world's existing pool when present.
-	if world == null or not world.is_inside_tree():
+	if not _available(world):
 		return null
 	for node in world.get_children():
-		if node is VfxPool:
+		if node is VfxPool and _available(node):
 			return node
 	var pool := VfxPool.new()
 	pool.name = "VfxPool"
@@ -24,7 +24,7 @@ static func pool() -> VfxPool:
 	if tree == null:
 		return null
 	for node in tree.get_nodes_in_group("vfx_pool"):
-		if is_instance_valid(node):
+		if _available(node):
 			return node as VfxPool
 	return null
 
@@ -77,10 +77,21 @@ static func burst(at: Vector2, color: Color, count: int = 8) -> void:
 
 
 static func hit_stop(nodes: Array, seconds: float) -> void:
-	# Freezes participating nodes' logic for a beat without touching the tree
-	# pause. Skipped entirely under reduce-motion or low effects quality.
+	# Holds participating visual poses briefly, while gameplay simulation continues.
+	# Skipped entirely under reduce-motion or low effects quality.
 	if seconds <= 0.0 or GameSettings.reduce_motion() or not GameSettings.effects_at_least("med"):
 		return
 	for node in nodes:
 		if is_instance_valid(node) and node.has_method("apply_hit_stop"):
 			node.call("apply_hit_stop", seconds)
+
+
+static func _available(node: Node) -> bool:
+	if not is_instance_valid(node) or not node.is_inside_tree():
+		return false
+	var ancestor := node
+	while ancestor != null:
+		if ancestor.is_queued_for_deletion():
+			return false
+		ancestor = ancestor.get_parent()
+	return true

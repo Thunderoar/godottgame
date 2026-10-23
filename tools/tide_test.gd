@@ -10,6 +10,9 @@ var checks := 0
 
 
 func _ready() -> void:
+	if not TestEnvironment.require_isolation():
+		get_tree().quit(1)
+		return
 	GameState.delete_save()
 	game = load("res://scenes/game.tscn").instantiate()
 	add_child(game)
@@ -37,8 +40,8 @@ func _ready() -> void:
 	_check(GameState.equipped_item("weapon") == "rusty_sword", "starter sword equipped")
 	_check(GameState.active_pet_id() == "ember", "starter pet active")
 	_check(GameState.has_living_pet(), "starter pet alive")
-	_check(hud.get("_health_bar").segments == 10, "player health uses 10 segments")
-	_check(hud.get("_pet_bar").segments == 5, "pet health uses 5 segments")
+	_check(game.call("player").get_node_or_null("VitalHud") is PlayerVitalHud, "player keeps its world HP/MP indicator")
+	_check(not _has_label(hud, "VITALS") and hud.get("_health_bar") == null and hud.get("_pet_bar") == null, "obsolete top-right VITALS construction is removed")
 	_check(hud.get("_minimap") == null, "no minimap exists")
 	_check(hud.get("_emergency_panel") != null, "emergency HUD exists")
 	_check(hud.get("_recovery_panel") != null, "recovery HUD exists")
@@ -89,6 +92,8 @@ func _ready() -> void:
 		system.spawn_interval = 99999.0
 		system.set("_timer", 0.0)
 
+	await _test_visual_repairs()
+	await DeepAuditChecks.run(game, _check)
 	await _test_movement()
 	await _test_gathering()
 	await _test_shops()
@@ -383,7 +388,7 @@ func _test_menu_and_settings() -> void:
 	_check(is_equal_approx(hud.get_gui_scale(), 1.10) and is_equal_approx(GameState.gui_scale(), 1.10), "GUI scale setting applies and persists")
 	hud.call("set_control_layout", "attack", 100.0, 500.0, 88.0)
 	var attack := hud.get("_attack_button") as TouchActionButton
-	_check(attack.position.distance_to(Vector2(100, 500)) < 0.5 and is_equal_approx(attack.diameter, 88.0), "button positions and sizes are customizable")
+	_check(attack.get_global_rect().position.distance_to(Vector2(110, 550)) < 0.5 and is_equal_approx(attack.diameter, 88.0), "button positions and sizes are customizable")
 	hud.call("set_gui_scale", old_scale)
 	hud.call("reset_control_layout")
 	hud.settings_panel.close_panel()
@@ -532,6 +537,7 @@ func _test_portal_combat_and_auto_loot() -> void:
 	game.call("enter_portal", "tidebound_grotto")
 	await get_tree().create_timer(0.8).timeout
 	_check(game.world is Dungeon, "portal dungeon loads")
+	_check(game.world.camera.zoom.distance_to(Vector2.ONE * GameSettings.camera_zoom()) < 0.1, "dungeon inherits saved camera zoom")
 	var enemies := get_tree().get_nodes_in_group("enemies")
 	var boss_count := 0
 	for enemy in enemies:
@@ -565,8 +571,12 @@ func _test_portal_combat_and_auto_loot() -> void:
 		_check(target.hp < hp_before, "sword attack damages a monster")
 		target.call("take_damage", 99999, Vector2.ZERO, p)
 	await get_tree().create_timer(0.7).timeout
-	var loot := _find_loot(game.world)
-	if loot != null:
+	# A defeated monster can drop gold AND a random gem. Touch each drop;
+	# collecting only the first made the floor-clear assertion RNG-dependent.
+	for pickup in 16:
+		var loot := _find_loot(game.world)
+		if loot == null:
+			break
 		var p_loot: Player = game.call("player")
 		p_loot.global_position = loot.global_position
 		await get_tree().create_timer(0.2).timeout
@@ -729,6 +739,7 @@ func _test_boss_and_progression() -> void:
 	game.call("return_to_lobby", true)
 	await get_tree().create_timer(0.9).timeout
 	_check(game.world is Lobby, "victory returns to lobby")
+	_check(game.world.camera.zoom.distance_to(Vector2.ONE * GameSettings.camera_zoom()) < 0.1, "returning lobby inherits saved camera zoom")
 	_check(GameState.gold() >= gold_after, "boss rewards retained after return")
 
 
@@ -904,3 +915,247 @@ func _check(condition: bool, label: String) -> void:
 	if not condition:
 		fails += 1
 	print("[%s] %s" % ["OK" if condition else "FAIL", label])
+
+
+func _test_visual_repairs() -> void:
+	var lobby := game.world as Lobby
+	var p := game.call("player") as Player
+	var pet := lobby.pet
+	var trees: Array[ForestTree] = lobby._forest_trees
+	var ids := {}
+	var hierarchy_ok := true
+	var coordinates_ok := true
+	for tree in trees:
+		ids[tree.tree_id] = tree.position
+		var body := tree.get_node_or_null("Body") as StaticBody2D
+		hierarchy_ok = hierarchy_ok and body != null and tree._visuals.size() == 2
+		for visual in tree._visuals:
+			hierarchy_ok = hierarchy_ok and visual.get_parent() == tree
+			coordinates_ok = coordinates_ok and visual.global_position.distance_to(tree.global_position) < 0.08
+		if body:
+			coordinates_ok = coordinates_ok and body.global_position.distance_to(tree.global_position) < 0.01
+	_check(hierarchy_ok, "every tree owns its actual sprites and trunk body")
+	_check(coordinates_ok, "tree sprites and collision inherit their holder world positions")
+	_check(ids.size() == trees.size(), "tree persistence IDs remain unique")
+	var tree := trees[0]
+	var other := trees[1]
+	var other_hp := other.health
+	tree.take_attack_damage(1)
+	_check(tree._visuals[0].modulate.r > 1.0 and other.health == other_hp, "tree hit flashes its own visual without damaging neighbours")
+	_check(GameState.forest_tree_health(tree.tree_id, tree.max_health) == tree.health, "tree damage persists under its original ID")
+	# Load an already-fallen tree with its body present before ready.
+	var fallen := ForestTree.new()
+	fallen.tree_id = "repair_fallen_fixture"
+	fallen.position = Vector2(59, 38)
+	var body := StaticBody2D.new()
+	body.name = "Body"
+	fallen.add_child(body)
+	GameState.set_forest_tree_health(fallen.tree_id, 0, 100)
+	lobby.add_child(fallen)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	_check(fallen.fallen and body.collision_layer == 0, "persisted fallen tree disables its own collider at startup")
+	fallen.queue_free()
+	var mask := lobby._make_water_mask_texture().get_image()
+	var mask_ok := true
+	for x in range(0, mask.get_width(), 13):
+		var shore := lobby._coast_pixel_y(x - x % 2)
+		for y in range(0, mask.get_height(), 17):
+			var wet := x < Lobby.OCEAN_WIDTH_PIXELS and y >= shore
+			mask_ok = mask_ok and (mask.get_pixel(x, y).a > 0.0) == wet
+	_check(mask_ok, "water mask matches the painted sea and is transparent beyond its eastern edge")
+	var water := lobby.get_node("WaterLayer") as Sprite2D
+	_check(water.position == Vector2.ZERO and water.scale.is_equal_approx(Vector2.ONE * PixelArt.PX), "water mask origin and art scale align with terrain")
+	_check(not Shaders.WATER_CODE.contains("sparkle"), "water shader contains no random sparkle term")
+	_check(lobby.get_node_or_null("AmbientLife") == null, "ordinary lobby has no star pollen or butterfly placeholders")
+	var turtle := get_tree().get_first_node_in_group("beach_turtle") as Node2D
+	_check(turtle != null, "beach turtle exists")
+	if turtle:
+		var shore := float(lobby._coast_pixel_y(roundi(turtle.position.x / PixelArt.PX))) * PixelArt.PX
+		_check(turtle.position.x < float(Lobby.OCEAN_WIDTH_PIXELS) * PixelArt.PX and turtle.position.y < shore - 0.5 and turtle.position.y > shore - 2.5, "turtle is grounded on dry beach sand")
+	var sign := get_tree().get_first_node_in_group("besut_sign")
+	_check(sign != null and sign.get_meta("text", "") == "BESUT", "village sign has exact readable BESUT lettering")
+	_check(not _has_label(hud, "VITALS"), "removed VITALS panel is absent")
+	_check(p.get_node_or_null("VitalHud") is PlayerVitalHud, "world-space player HP/MP HUD remains")
+	var old_quality := GameSettings.effects_quality()
+	var old_motion := GameSettings.reduce_motion()
+	for quality in ["low", "med", "high"]:
+		GameSettings.set_effects_quality(quality, false)
+		GameSettings.set_reduce_motion(false, false)
+		_check(water.visible == (quality != "low"), "%s quality applies water visibility immediately" % quality)
+		GameSettings.set_reduce_motion(true, false)
+		_check(not water.visible, "%s reduce motion uses stable painted water fallback" % quality)
+	GameSettings.set_effects_quality(old_quality, false)
+	GameSettings.set_reduce_motion(old_motion, false)
+	var old_zoom := GameSettings.camera_zoom()
+	var old_scale: float = hud.get_gui_scale()
+	for zoom_value in [GameSettings.CAMERA_ZOOM_MIN, GameSettings.CAMERA_ZOOM_DEFAULT, GameSettings.CAMERA_ZOOM_MAX]:
+		GameSettings.set_camera_zoom(zoom_value, false)
+		await get_tree().create_timer(0.6).timeout
+		_check(absf(lobby.camera.zoom.x - zoom_value) < 0.2 and is_equal_approx(lobby.camera.zoom.x, lobby.camera.zoom.y), "camera smoothly approaches isotropic zoom %d" % zoom_value)
+		_check(is_equal_approx(hud.get_gui_scale(), old_scale), "camera zoom leaves GUI scale unchanged")
+	GameSettings.set_camera_zoom(-99, false)
+	_check(GameSettings.camera_zoom() == GameSettings.CAMERA_ZOOM_MIN, "zoom clamps below minimum")
+	GameSettings.set_camera_zoom(999, false)
+	_check(GameSettings.camera_zoom() == GameSettings.CAMERA_ZOOM_MAX, "zoom clamps above maximum")
+	GameSettings.set_camera_zoom(44, true)
+	GameSettings.load_settings()
+	_check(GameSettings.camera_zoom() == 44, "zoom survives settings file reload")
+	for gui in [0.75, 1.0, 1.3]:
+		hud.set_gui_scale(gui, false)
+		await get_tree().process_frame
+		_check(is_equal_approx(GameSettings.ui_scale() / 100.0, gui) and is_equal_approx(GameState.gui_scale(), gui), "GUI scale %.2f has one authoritative value" % gui)
+		_check(hud.get("_root").scale == Vector2.ONE, "HUD root remains unscaled at %.2f" % gui)
+		var in_bounds := true
+		var screen := Rect2(Vector2.ZERO, hud.get("_root").size)
+		for control: Control in hud.get("_control_nodes").values():
+			in_bounds = in_bounds and screen.encloses(control.get_global_rect())
+		_check(in_bounds, "touch controls stay inside viewport at GUI %.2f" % gui)
+		_check(GameSettings.camera_zoom() == 44, "GUI scaling leaves camera zoom unchanged")
+	hud.set_gui_scale(old_scale, true)
+	GameSettings.set_camera_zoom(old_zoom, true)
+	# Preserve normal monsters/routines while using a controlled movement fixture.
+	for monster in lobby._forest_monsters:
+		monster.set_physics_process(false)
+	for resident in lobby._residents:
+		resident.set_physics_process(false)
+		resident._end_visit()
+	var start := p.global_position
+	p.global_position = Vector2(31, 28)
+	p.reset_physics_interpolation()
+	p.velocity = Vector2.ZERO
+	var previous := p.global_position
+	var continuous := true
+	var fractional_samples := 0
+	var max_step := 0.0
+	Input.action_press("move_right")
+	Input.action_press("move_down")
+	for i in 24:
+		await get_tree().physics_frame
+		var step := p.global_position.distance_to(previous)
+		max_step = maxf(max_step, step)
+		continuous = continuous and step < GameState.move_speed() / Engine.physics_ticks_per_second * 1.2
+		if not is_equal_approx(p.global_position.x * 32.0, roundf(p.global_position.x * 32.0)):
+			fractional_samples += 1
+		previous = p.global_position
+	Input.action_release("move_right")
+	Input.action_release("move_down")
+	_check(continuous and max_step > 0.001 and fractional_samples > 8, "player diagonal movement traverses bounded fractional intermediate positions")
+	_check(p.velocity.length() <= GameState.move_speed() + 0.01, "diagonal input has no speed advantage")
+	await get_tree().create_timer(0.3).timeout
+	_check(p.velocity.length() < 0.01, "player decelerates to rest")
+	# Catch-up fixture deliberately begins beyond the old teleport threshold.
+	pet.global_position = p.global_position + Vector2(-8, 0)
+	pet._follow_velocity = Vector2.ZERO
+	pet.reset_physics_interpolation()
+	var distance_before := pet.global_position.distance_to(p.global_position)
+	previous = pet.global_position
+	var pet_continuous := true
+	for i in 60:
+		await get_tree().physics_frame
+		pet_continuous = pet_continuous and pet.global_position.distance_to(previous) < 0.17
+		previous = pet.global_position
+	_check(pet_continuous and pet.global_position.distance_to(p.global_position) < distance_before - 1.0, "far-behind pet catches up continuously without leash teleport")
+	var mover := Enemy.new()
+	mover.position = p.global_position + Vector2(0, -3)
+	mover.damage = 0
+	mover.speed = 1.8
+	lobby.add_child(mover)
+	mover.set_physics_process(false)
+	mover._target = p
+	mover._player = p
+	previous = mover.global_position
+	var enemy_continuous := true
+	var enemy_travel := 0.0
+	for i in 25:
+		await get_tree().physics_frame
+		mover._chase(1.0 / float(Engine.physics_ticks_per_second))
+		var step := mover.global_position.distance_to(previous)
+		enemy_continuous = enemy_continuous and step < 0.05
+		enemy_travel += step
+		previous = mover.global_position
+	_check(enemy_continuous and enemy_travel > 0.15, "enemy chase traverses bounded intermediate positions with collision movement")
+	mover.queue_free()
+	var drop := LootDrop.new()
+	drop.position = Vector2(4, 4)
+	drop.pop_velocity = Vector2(1.3, -1.5)
+	lobby.add_child(drop)
+	previous = drop.global_position
+	var loot_continuous := true
+	for i in 36:
+		await get_tree().physics_frame
+		loot_continuous = loot_continuous and drop.global_position.distance_to(previous) < 0.05
+		previous = drop.global_position
+	_check(loot_continuous and drop.pop_velocity == Vector2.ZERO, "loot pop remains continuous and settles instead of drifting forever")
+	drop.queue_free()
+	var arrow := Arrow.new()
+	arrow.position = Vector2(3, 3)
+	lobby.add_child(arrow)
+	previous = arrow.global_position
+	var arrow_continuous := true
+	var arrow_travel := 0.0
+	for i in 12:
+		await get_tree().physics_frame
+		var step := arrow.global_position.distance_to(previous)
+		arrow_continuous = arrow_continuous and step < arrow.speed / float(Engine.physics_ticks_per_second) * 1.1
+		arrow_travel += step
+		previous = arrow.global_position
+	_check(arrow_continuous and arrow_travel > 1.0, "projectile preserves intentional speed through continuous positions")
+	arrow.queue_free()
+	var gold_before := GameState.gold()
+	var inventory_before: Dictionary = GameState.data.inventory.duplicate(true)
+	var shops := get_tree().get_nodes_in_group("ambient_shop")
+	var shop := shops[0] as ShopNPC
+	var customer := Resident.new()
+	customer.resident_name = "Regression shopper"
+	customer.position = shop.customer_position() + Vector2(0, 1.4)
+	customer.waypoints = [customer.position]
+	lobby.add_child(customer)
+	# Select the first shop reproducibly while still exercising begin_shop_visit.
+	for seed_value in 100:
+		var random := RandomNumberGenerator.new()
+		random.seed = seed_value
+		random.randf_range(24.0, 50.0)
+		if random.randi_range(0, shops.size() - 1) == 0:
+			customer._shopping_rng.seed = seed_value
+			break
+	var sales_before := shop.ambient_sales
+	_check(customer.begin_shop_visit(), "resident reserves an accessible shop")
+	_check(not customer._shop.reserve_customer(lobby._residents[0]), "busy counters reject a simultaneous customer")
+	var states := {}
+	previous = customer.global_position
+	var shopper_continuous := true
+	for i in 720:
+		await get_tree().physics_frame
+		states[customer.shopping_state] = true
+		shopper_continuous = shopper_continuous and customer.global_position.distance_to(previous) < 0.06
+		previous = customer.global_position
+		if customer.shopping_visits > 0 and customer.shopping_state == Resident.Shopping.ROUTINE:
+			break
+	_check(shopper_continuous, "shopper walks through intermediate positions without state-change snaps")
+	_check(states.has(Resident.Shopping.BROWSE) and states.has(Resident.Shopping.PURCHASE) and states.has(Resident.Shopping.LEAVE), "shopping explicitly browses, purchases and leaves")
+	_check(customer.shopping_visits == 1 and shop.ambient_sales == sales_before + 1, "shopping completes one exchange and returns to routine")
+	_check(GameState.gold() == gold_before and GameState.data.inventory == inventory_before, "ambient shopping leaves player gold and inventory unchanged")
+	_check(not hud.shop_panel.visible, "ambient customer never opens player shop UI")
+	for seed_value in 100:
+		var random := RandomNumberGenerator.new()
+		random.seed = seed_value
+		random.randf_range(24.0, 50.0)
+		if random.randi_range(0, shops.size() - 1) == 0:
+			customer._shopping_rng.seed = seed_value
+			break
+	_check(customer.begin_shop_visit(), "customer can reserve a counter for another visit")
+	for i in 720:
+		await get_tree().physics_frame
+		if customer.shopping_visits == 2 and customer.shopping_state == Resident.Shopping.ROUTINE:
+			break
+	_check(customer.shopping_visits == 2 and GameState.gold() == gold_before and GameState.data.inventory == inventory_before, "repeated shopping completes without player economy changes")
+	customer.queue_free()
+	await get_tree().process_frame
+	_check(shop._customer == null or shop._customer.get_ref() == null, "customer frees its counter reservation")
+	p.global_position = start
+	p.reset_physics_interpolation()
+	for monster in lobby._forest_monsters:
+		monster.set_physics_process(true)
+	for resident in lobby._residents:
+		resident.set_physics_process(true)

@@ -1,7 +1,9 @@
 # Visual & Feel Overhaul — Design Doc
 
-Status: in progress on branch `visual-overhaul`. Engine: Godot 4.7.2 (GL Compatibility,
-1280×720 landscape, `canvas_items` stretch, nearest filtering, 2D pixel snapping ON).
+Status: repaired on `visual-overhaul-merge-2`. Engine: Godot 4.7.2, GL Compatibility,
+1280×720 canvas_items with responsive 832×480 support. The repair report at
+`docs/VISUAL_REPAIR_REPORT.md` records current verification. Original design
+intent below is superseded by the following camera, effects and ownership fixes.
 
 ## 1. Art direction
 
@@ -21,26 +23,23 @@ Status: in progress on branch `visual-overhaul`. Engine: Godot 4.7.2 (GL Compati
 - **Icon sizes.** 16×16 (unchanged, existing callers) and a new native 32×32 set.
   Touch buttons draw the 32px icon at an integer scale; inventory/shop cards use 32.
 
-## 2. Pixel-scale decision (the §3B camera question)
+## 2. Camera, pixel art and continuous movement
 
-Current: `FollowCamera.zoom = 38` with `PixelArt.PX = 1/32` ⇒ 1.1875 screen px per
-art px — non-integer, so art columns render 1px/2px unevenly and shimmer while
-panning.
+Default world zoom is 38, matching the wider known-good framing. Settings exposes
+28–64 zoom with percentage feedback relative to 38, live smooth transitions and
+device persistence across restart and world changes. GUI scale is independent.
 
-**Decision: integer 2:1 scale — `zoom = 64`.** One art pixel = exactly 2×2 screen
-pixels; with `snap_2d_transforms_to_pixel` the field is rock solid. Effects:
+Player acceleration/friction and normalized directional input are preserved.
+Residents and pets now use collision-aware physics movement, bounded acceleration
+and fractional positions. Planning cells guide routes but never become position
+assignments. The old pet leash teleport and hard feet-clearance projection are gone.
+Player damage uses velocity knockback instead of a positional nudge.
 
-- The 32×48 hero renders 64×96 — chunky and readable on a phone held at arm's length.
-- View area = 640×360 art px = 20×11.25 world units (vs 33.7×18.9 today). Mission
-  arrows and the journal already guide the player across the larger settlement.
-- Camera adds a small look-ahead in the facing direction (smoothed) and a
-  decaying shake. Camera position snaps to the art grid (multiples of 1/32) so
-  panning never produces sub-pixel wobble.
-- `GameSettings.screen_shake` is now honoured by `FollowCamera.shake()` (the setting
-  existed but nothing read it).
-
-Flagged in "Decisions needed": if the owner prefers the wider view, change
-`FollowCamera.ZOOM` from 64 back to 32 (1:1, hero 32×48) — one constant.
+FollowCamera updates in physics and Godot interpolates rendering. Manual camera
+art-grid rounding and both canvas snapping options are disabled; nearest texture
+filtering remains. Actual rendered baseline images and consecutive 60 FPS movie
+frames were inspected. Non-integer zoom naturally changes raster pixel coverage;
+logical movement remains continuous and unsnapped.
 
 ## 3. Performance budget (Android, GL Compatibility)
 
@@ -63,9 +62,9 @@ Settings panel):
 
 - `reduce_motion` (bool, default false) — disables hit-stop, screen shake, camera
   look-ahead, wind interaction bending and ambient drift.
-- `effects_quality` ("low" | "med" | "high", default "high") — low drops ambient
-  life, wind interaction, extra lights and hit-stop; med keeps wind but drops
-  ambient particles; high keeps everything.
+- `effects_quality` ("low" | "med" | "high", default "high") — low drops optional smoke, wind, extra lobby lights and hit-stop; med keeps
+  subtle water/wind; high adds small portal motes and optional smoke. Random star
+  pollen/butterfly placeholders and water sparkles are removed at every tier.
 
 Telegraphs never rely on colour alone (shape + motion: ground decal + wind-up pose +
 flash). Touch targets stay ≥ 44px. Text contrast stays on the `GameUI` palette.
@@ -81,8 +80,7 @@ shared `HitFeedback`/`Vfx` helpers (flash, sparks, damage numbers, micro-shake).
 
 ## 6. Decisions needed from the owner
 
-1. **Pixel scale** — shipped at 2:1 (`zoom = 64`, hero 64×96). Alternative 1:1 is a
-   one-constant change. See §2.
+1. **Pixel scale** — resolved by the repair: user-adjustable 28–64, default 38. See §2.
 2. **Sword combo chain** — implemented as a 3-step animation chain (swing L→R,
    R→L, thrust) where every hit frame is still gated by `attack_cooldown`, so DPS is
    unchanged; treat as presentation. Flag: `AttackDB.ENABLE_SWORD_COMBO`.
@@ -108,13 +106,10 @@ shared `HitFeedback`/`Vfx` helpers (flash, sparks, damage numbers, micro-shake).
 
 ## 7. Verification
 
-- `tools/tide_test.tscn` remains the only gate: **269 checks, PASS, exit 0** at
-  baseline (the repo moved past the "250 checks / 1 tree failure" state quoted in
-  the task brief). The bar for this branch: no new failures, no `SCRIPT ERROR` /
-  `ERROR:` lines.
-- `tools/visual_review.tscn` (new, non-destructive) renders fixed scenarios
-  (title, lobby, dungeon, each shop, portals, HUD at 1280×720 and 832×480) to PNGs
-  under `/home/z/my-project/shots/` without ever calling `delete_save()`.
-- Attack-timing rule change (damage lands on the active frame, not on button
-  press) is reflected in updated waits inside `tide_test.gd` and documented in
-  `docs/ACCEPTANCE_TESTS.md` in the same change.
+Use `tools/test_isolated.sh`; the raw acceptance scene deletes its save. Never
+share user data with the real game during automated tests. The suite count is
+data-driven; see `DEEP_AUDIT_REPORT.md` for the latest result and additional fixes.
+`tools/visual_review.tscn -- --shots DIR` renders fresh scenarios outside res://;
+`tools/motion_review.tscn` records continuous movement with Godot Movie Maker.
+Both instantiate the actual game and write normal game/settings data, so they
+also require isolated XDG_DATA_HOME and verified TIDESWORN_TEST_ROOT. Existing screenshots are historical only.

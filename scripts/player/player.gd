@@ -55,6 +55,7 @@ var _step_count := 0
 
 func _ready() -> void:
 	add_to_group("player")
+	z_index = 6
 	collision_layer = 2
 	collision_mask = 5
 	_build_body()
@@ -82,7 +83,7 @@ func _build_visual() -> void:
 	_shadow.texture = PixelArt.light_texture()
 	_shadow.scale = Vector2(0.018, 0.009)
 	_shadow.modulate = Color(0.02, 0.02, 0.03, 0.32)
-	_shadow.z_index = 2
+	_shadow.z_index = -1
 	add_child(_shadow)
 
 	_visual = PlayerSprite.new()
@@ -91,7 +92,7 @@ func _build_visual() -> void:
 	_visual.base_scale = Vector2(PixelArt.PX, PixelArt.PX)
 	_visual.scale = Vector2(PixelArt.PX, PixelArt.PX)
 	_visual.offset = Vector2(0, -24)
-	_visual.z_index = 4
+	_visual.z_index = 0
 	add_child(_visual)
 
 	_attack_sprite = Sprite2D.new()
@@ -127,6 +128,8 @@ func _physics_process(delta: float) -> void:
 	if controls_locked:
 		velocity = velocity.move_toward(Vector2.ZERO, FRICTION * delta)
 		move_and_slide()
+		if _visual:
+			_visual.set_facing(-1, velocity.length_squared() > 0.04)
 		_update_nearby()
 		return
 
@@ -150,6 +153,8 @@ func _physics_process(delta: float) -> void:
 		velocity += _lunge_impulse
 		_lunge_impulse = Vector2.ZERO
 	move_and_slide()
+	if _visual:
+		_visual.set_facing(-1, velocity.length_squared() > 0.04)
 
 	if Input.is_action_just_pressed("attack"):
 		try_attack()
@@ -319,7 +324,7 @@ func _fire_arrow(character: Dictionary, arc_kind: String) -> void:
 	arrow.direction = aim
 	arrow.damage = int(round(float(GameState.attack_power()) * float(character.get("attack_mult", 0.95))))
 	arrow.source = self
-	arrow.position = global_position + aim * 0.75 + Vector2(0, -0.65)
+	arrow.position = get_parent().to_local(global_position + aim * 0.75 + Vector2(0, -0.65))
 	get_parent().add_child(arrow)
 	# Muzzle flash at the release.
 	Vfx.sparks(global_position + aim * 0.75 + Vector2(0, -0.65), aim, Color("#ffe7a1"), 3)
@@ -393,7 +398,6 @@ func take_damage(amount: int, from: Vector2 = Vector2.ZERO) -> void:
 	hurt_flash.emit()
 	if from != Vector2.ZERO:
 		var push := (global_position - from).normalized()
-		global_position += push * 0.18
 		velocity += push * 2.2
 	if _visual:
 		_visual.call("play_pose", PlayerSprite.Pose.HURT, 0.28)

@@ -16,7 +16,7 @@ var _t := 0.0
 func setup(p_manager: RubbishSystem, p_guard: CoastalGuard, start: Vector2, p_target: Vector2, lane_speed: float = 0.75) -> void:
 	manager = p_manager
 	guard = p_guard
-	global_position = start
+	position = p_manager.to_local(start)
 	target = p_target
 	speed = lane_speed
 
@@ -41,7 +41,7 @@ func _process(delta: float) -> void:
 	if to_target.length() <= 0.22:
 		_reach_beach()
 		return
-	global_position += to_target.normalized() * speed * delta + Vector2(sin(_t * 2.0) * 0.06, 0)
+	global_position += to_target.normalized() * speed * delta + Vector2(sin(_t * 2.0) * 0.06, 0) * delta
 	if is_instance_valid(guard) and global_position.distance_to(guard.global_position) <= guard.catch_radius:
 		_caught()
 

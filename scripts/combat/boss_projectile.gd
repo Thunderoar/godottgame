@@ -17,7 +17,7 @@ func _ready() -> void:
 	z_index = 640
 	_sprite = Sprite2D.new()
 	_sprite.texture = PixelArt.light_texture()
-	_sprite.scale = Vector2(0.10, 0.10)
+	_sprite.scale = Vector2(0.012, 0.012)
 	_sprite.modulate = tint
 	add_child(_sprite)
 	var core := Sprite2D.new()

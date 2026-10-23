@@ -38,6 +38,9 @@ const SECTION := "settings"
 const SILENCE_DB := -60.0
 const UI_SCALE_MIN := 75
 const UI_SCALE_MAX := 130
+const CAMERA_ZOOM_MIN := 28
+const CAMERA_ZOOM_MAX := 64
+const CAMERA_ZOOM_DEFAULT := 38
 const TOUCH_MODES := ["auto", "always", "hidden"]
 const EFFECT_QUALITIES := ["low", "med", "high"]
 
@@ -47,6 +50,7 @@ const DEFAULTS := {
         "mute_all": false,
         "fullscreen": false,
         "ui_scale": 100,
+        "camera_zoom": CAMERA_ZOOM_DEFAULT,
         "touch_controls": "always",
         "screen_shake": true,
         "auto_pause_on_focus_loss": true,
@@ -69,11 +73,19 @@ func _ready() -> void:
 func load_settings() -> void:
         _values = DEFAULTS.duplicate(true)
         var config := ConfigFile.new()
-        if config.load(config_path) == OK:
+        var load_error := config.load(config_path)
+        if load_error == OK:
                 for key in DEFAULTS.keys():
                         if config.has_section_key(SECTION, key):
                                 _values[key] = _sanitize_value(key, config.get_value(SECTION, key))
+        # Persist migration before a new/deleted journey loses the legacy value.
+        var migrate := not config.has_section_key(SECTION, "ui_scale") and load_error in [OK, ERR_FILE_NOT_FOUND]
+        if migrate:
+                var legacy: Dictionary = GameState.data.get("settings", {})
+                _values["ui_scale"] = _sanitize_value("ui_scale", roundi(float(legacy.get("gui_scale", 1.0)) * 100.0))
         _apply_all()
+        if migrate:
+                save_settings()
 
 
 func save_settings() -> void:
@@ -121,6 +133,8 @@ func _sanitize_value(key: String, value: Variant) -> Variant:
         match key:
                 "master_volume", "effects_volume":
                         return clampi(int(value), 0, 100)
+                "camera_zoom":
+                        return clampi(int(value), CAMERA_ZOOM_MIN, CAMERA_ZOOM_MAX)
                 "ui_scale":
                         return clampi(int(value), UI_SCALE_MIN, UI_SCALE_MAX)
                 "touch_controls":
@@ -268,3 +282,11 @@ func effects_at_least(level: String) -> bool:
         # True when the current quality tier is at or above `level` (low < med < high).
         var order := {"low": 0, "med": 1, "high": 2}
         return int(order.get(effects_quality(), 2)) >= int(order.get(level, 2))
+
+
+func camera_zoom() -> float:
+        return float(_values.get("camera_zoom", CAMERA_ZOOM_DEFAULT))
+
+
+func set_camera_zoom(value: float, persist: bool = true) -> void:
+        set_value("camera_zoom", roundi(value), persist)

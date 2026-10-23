@@ -157,3 +157,17 @@ defence and recovery ward. No NPC name labels or toast notifications appear.
 5. Pet duels use an animated arena panel rather than a walkable scene.
 6. The reusable monster dungeon scene is differentiated by data/palette/boss set
    rather than bespoke geometry.
+
+
+## Visual repair verification — 2026-10-23
+
+The `visual-overhaul-merge-2` repair supersedes older visual claims in this file.
+The incoming suite passed 314 checks while trees, water and presentation were
+broken. The follow-up deep audit passes 408 checks, exit 0, with no SCRIPT ERROR or
+ERROR output, using a verified isolated user-data directory. Fresh GL Compatibility
+captures cover 1280×720 and 832×480, GUI extremes, zoom, coast/turtle/BESUT,
+forest, shopping, combat and all quality/motion combinations. Consecutive 60 FPS
+movie frames were inspected. The native graphical audit also passes 63 checks.
+See [DEEP_AUDIT_REPORT.md](DEEP_AUDIT_REPORT.md)
+for root causes, file list, commands, evidence and remaining limits. Existing
+screenshots were preserved.

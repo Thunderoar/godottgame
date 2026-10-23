@@ -26,16 +26,16 @@ func _process(delta: float) -> void:
 	if marker == null:
 		return
 	_bob += delta
-	marker.position.y = -1.65 + sin(_bob * 2.4) * 0.07
+	marker.position.y = -1.65 + (0.0 if GameSettings.reduce_motion() else sin(_bob * 2.4) * 0.035)
 	marker.visible = available
-	marker.modulate.a = 0.55 + sin(_bob * 2.4) * 0.14
+	marker.modulate.a = 0.65
 
 
 func _make_marker() -> void:
 	marker = Sprite2D.new()
 	marker.name = "InteractionMarker"
-	marker.texture = PixelArt.icon("spark", 16)
-	marker.scale = Vector2(0.040, 0.040)
+	marker.texture = PixelArt.interaction_marker_texture()
+	marker.scale = Vector2.ONE * PixelArt.PX
 	marker.position = Vector2(0, -1.65)
 	marker.z_as_relative = false
 	marker.z_index = 700

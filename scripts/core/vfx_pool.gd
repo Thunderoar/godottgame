@@ -77,7 +77,7 @@ func _ready() -> void:
 func sparks(at: Vector2, dir: Vector2, color: Color, count: int) -> void:
 	if GameSettings.reduce_motion():
 		count = mini(count, 2)
-	var n := mini(count, 10)
+	var n := mini(count, 6 if GameSettings.effects_at_least("med") else 2)
 	for i in n:
 		var s := _acquire(_sparks, _spark_cursor) as Sprite2D
 		_spark_cursor = (_spark_cursor + 1) % _sparks.size()
@@ -85,14 +85,14 @@ func sparks(at: Vector2, dir: Vector2, color: Color, count: int) -> void:
 			return
 		s.visible = true
 		s.texture = PixelArt.icon("spark", 16)
-		s.scale = Vector2(0.030, 0.030)
-		s.modulate = Color(color.r, color.g, color.b, 0.95)
+		s.scale = Vector2(0.012, 0.012)
+		s.modulate = Color(color.r, color.g, color.b, 0.8)
 		s.global_position = at
 		var spread := dir
 		if spread == Vector2.ZERO:
 			spread = Vector2.from_angle(randf() * TAU)
 		var angle := spread.angle() + randf_range(-0.9, 0.9)
-		var dist := randf_range(0.25, 0.85)
+		var dist := randf_range(0.12, 0.4)
 		var tween := s.create_tween().set_parallel(true)
 		_own(s, tween)
 		tween.tween_property(s, "global_position", at + Vector2.from_angle(angle) * dist, 0.28)
@@ -109,12 +109,12 @@ func ring(at: Vector2, radius: float, color: Color, duration: float) -> void:
 	if r == null:
 		return
 	r.visible = true
-	r.modulate = Color(color.r, color.g, color.b, 0.6)
-	r.scale = Vector2(radius * 1.4 / 64.0, radius * 1.4 / 64.0)
+	r.modulate = Color(color.r, color.g, color.b, 0.22)
+	r.scale = Vector2(radius * 0.9 / 64.0, radius * 0.9 / 64.0)
 	r.global_position = at
 	var tween := r.create_tween().set_parallel(true)
 	_own(r, tween)
-	tween.tween_property(r, "scale", Vector2(radius * 2.6 / 64.0, radius * 2.6 / 64.0), duration)
+	tween.tween_property(r, "scale", Vector2(radius * 1.5 / 64.0, radius * 1.5 / 64.0), duration)
 	tween.tween_property(r, "modulate:a", 0.0, duration)
 	tween.chain().tween_callback(func() -> void:
 		if is_instance_valid(r):
@@ -122,7 +122,9 @@ func ring(at: Vector2, radius: float, color: Color, duration: float) -> void:
 
 
 func dust(at: Vector2, count: int, color: Color) -> void:
-	var n := mini(count, 5)
+	if GameSettings.reduce_motion() or not GameSettings.effects_at_least("med"):
+		return
+	var n := mini(count, 2)
 	for i in n:
 		var d := _acquire(_dusts, _dust_cursor) as Sprite2D
 		_dust_cursor = (_dust_cursor + 1) % _dusts.size()
@@ -130,13 +132,15 @@ func dust(at: Vector2, count: int, color: Color) -> void:
 			return
 		d.visible = true
 		d.modulate = color
-		var start := 0.05 + randf() * 0.03
+		d.texture = PixelArt.light_texture()
+		d.rotation = 0.0
+		var start := 0.003 + randf() * 0.002
 		d.scale = Vector2(start, start * 0.8)
 		d.global_position = at + Vector2(randf_range(-0.22, 0.22), randf_range(-0.05, 0.12))
 		var tween := d.create_tween().set_parallel(true)
 		_own(d, tween)
 		tween.tween_property(d, "global_position", d.global_position + Vector2(randf_range(-0.35, 0.35), -randf_range(0.15, 0.45)), 0.45)
-		tween.tween_property(d, "scale", Vector2(start * 2.4, start * 1.8), 0.45)
+		tween.tween_property(d, "scale", Vector2(start * 1.5, start * 1.2), 0.45)
 		tween.tween_property(d, "modulate:a", 0.0, 0.45)
 		tween.chain().tween_callback(func() -> void:
 			if is_instance_valid(d):
@@ -159,7 +163,7 @@ func number(at: Vector2, amount: int, crit: bool, color: Color) -> void:
 	l.visible = true
 	l.text = str(amount) + ("!" if crit else "")
 	l.add_theme_color_override("font_color", color)
-	l.scale = Vector2(0.032, 0.032) * (1.3 if crit else 1.0)
+	l.scale = Vector2(0.023, 0.023) * (1.15 if crit else 1.0)
 	l.rotation = 0.0
 	l.global_position = at - Vector2(0.34, 0.3)
 	var tween := l.create_tween().set_parallel(true)
@@ -186,7 +190,7 @@ func pop(at: Vector2, kind: String, color: Color) -> void:
 	p.global_position = at
 	var tween := p.create_tween().set_parallel(true)
 	_own(p, tween)
-	tween.tween_property(p, "scale", Vector2(0.048, 0.048), 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(p, "scale", Vector2(0.026, 0.026), 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tween.tween_property(p, "global_position", at + Vector2(0, -0.6), 0.55)
 	tween.tween_property(p, "modulate:a", 0.0, 0.55)
 	tween.chain().tween_callback(func() -> void:
@@ -195,18 +199,18 @@ func pop(at: Vector2, kind: String, color: Color) -> void:
 
 
 func leaves(at: Vector2, count: int, color: Color) -> void:
-	if not GameSettings.effects_at_least("med"):
+	if GameSettings.reduce_motion() or not GameSettings.effects_at_least("med"):
 		return
-	var n := mini(count, 4)
+	var n := mini(count, 2)
 	for i in n:
 		var d := _acquire(_dusts, _dust_cursor) as Sprite2D
 		_dust_cursor = (_dust_cursor + 1) % _dusts.size()
 		if d == null:
 			return
 		d.visible = true
-		d.texture = PixelArt.icon("spark", 16)
+		d.texture = PixelArt.leaf_texture()
 		d.modulate = color
-		d.scale = Vector2(0.022, 0.022)
+		d.scale = Vector2.ONE * PixelArt.PX
 		d.global_position = at + Vector2(randf_range(-0.4, 0.4), -randf_range(0.5, 1.4))
 		var drift := Vector2(randf_range(-0.5, 0.5), -randf_range(0.2, 0.6))
 		var tween := d.create_tween().set_parallel(true)
