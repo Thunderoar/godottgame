@@ -3,17 +3,20 @@ extends Node2D
 ## Companion follower with three support abilities: gradual healing, automatic
 ## attacks and periodic shields. Pets are never permanently lost.
 ##
-## Overhaul (3F): spring-damper follow with a leash and a catch-up sprint (never
-## sliding under the player's feet), walk/idle/blink animation with idle
-## behaviours (sit, sniff, glance), species-specific ability VFX, a visible
-## shield bubble while shield points remain, cosmetic growth tiers from PetDB,
-## and a "dazed" downed state with orbiting stars instead of vanishing.
+## Overhaul (3F): spring-damper follow with a smooth bounded catch-up sprint
+## (never teleporting, never sliding under the player's feet), walk/idle/blink
+## animation with idle behaviours (sit, sniff, glance), species-specific ability
+## VFX, a visible shield bubble while shield points remain, cosmetic growth tiers
+## from PetDB, and a quiet "dazed" downed pose instead of vanishing.
 
 const LEASH_DISTANCE := 6.0
 const CATCHUP_DISTANCE := 2.6
 const FEET_CLEARANCE := 0.62
 const FOLLOW_STIFFNESS := 9.5
 const FOLLOW_DAMPING := 5.2
+const CATCHUP_STIFFNESS := 26.0
+const CATCHUP_DAMPING := 7.0
+const MAX_FOLLOW_SPEED := 9.0
 
 var player: Node2D
 var body_radius := 0.3
@@ -21,7 +24,6 @@ var body_radius := 0.3
 var _sprite: Sprite2D
 var _shadow: Sprite2D
 var _level_label: Label
-var _stars: Array[Sprite2D] = []
 var _shield_bubble: Sprite2D
 var _frame_timer := 0.0
 var _frame := 0
@@ -36,7 +38,6 @@ var _idle_behaviour := 0
 var _idle_behaviour_timer := 0.0
 var _sniff_offset := Vector2.ZERO
 var _pose_lock := 0.0
-var _aura_timer := 0.0
 var _last_level := 1
 
 
@@ -87,22 +88,13 @@ func _build() -> void:
 	_shield_bubble.name = "ShieldBubble"
 	_shield_bubble.texture = PixelArt.light_texture()
 	_shield_bubble.modulate = Color(0.55, 0.9, 1.0, 0.0)
-	_shield_bubble.scale = Vector2(0.045, 0.05)
+	_shield_bubble.scale = Vector2(0.017, 0.019)
 	_shield_bubble.z_as_relative = false
 	_shield_bubble.z_index = 690
 	add_child(_shield_bubble)
 
-	# Dazed stars for the downed state.
-	for i in 3:
-		var star := Sprite2D.new()
-		star.texture = PixelArt.icon("spark", 16)
-		star.scale = Vector2(0.028, 0.028)
-		star.modulate = Color("#ffe28a")
-		star.visible = false
-		star.z_as_relative = false
-		star.z_index = 720
-		add_child(star)
-		_stars.append(star)
+	# Dazed state feedback is the curled pose and gentle bob alone; no
+	# orbiting star clutter.
 
 
 func _process(delta: float) -> void:
@@ -116,8 +108,6 @@ func _process(delta: float) -> void:
 		_process_downed(delta)
 		return
 	_down_timer = 0.0
-	for star in _stars:
-		star.visible = false
 	_bob += delta
 	if _pose_lock > 0.0:
 		_pose_lock = maxf(0.0, _pose_lock - delta)
@@ -142,16 +132,19 @@ func _follow(delta: float) -> void:
 	var desired := player.global_position + Vector2(0.95 * side, 0.5) + _sniff_offset
 	var offset := desired - global_position
 	var distance := offset.length()
-	if distance > LEASH_DISTANCE:
-		global_position = desired
-		_follow_velocity = Vector2.ZERO
-		return
-	# Spring-damper: snappy on short distances, springs harder when far behind.
-	var sprint := 1.0
+	# Continuous catch-up, never a teleport: ordinary range uses the soft
+	# spring; when the pet falls behind it switches to a stiffer, heavily
+	# damped sprint with a bounded top speed so it races back smoothly
+	# instead of snapping onto the player.
+	var stiffness := FOLLOW_STIFFNESS
+	var damping := FOLLOW_DAMPING
 	if distance > CATCHUP_DISTANCE:
-		sprint = 1.65
-	var accel := offset * (FOLLOW_STIFFNESS * sprint) - _follow_velocity * FOLLOW_DAMPING
+		var blend := clampf((distance - CATCHUP_DISTANCE) / maxf(0.5, LEASH_DISTANCE - CATCHUP_DISTANCE), 0.0, 1.0)
+		stiffness = lerpf(FOLLOW_STIFFNESS, CATCHUP_STIFFNESS, blend)
+		damping = lerpf(FOLLOW_DAMPING, CATCHUP_DAMPING, blend)
+	var accel := offset * stiffness - _follow_velocity * damping
 	_follow_velocity += accel * delta
+	_follow_velocity = _follow_velocity.limit_length(MAX_FOLLOW_SPEED)
 	global_position += _follow_velocity * delta
 	# Never slide under the player's feet.
 	var to_player := global_position - player.global_position
@@ -211,8 +204,9 @@ func _apply_texture() -> void:
 
 
 func _process_downed(delta: float) -> void:
-	# Dazed instead of invisible: curled pose with orbiting stars, then a happy
-	# recovery pop when the revive timer completes.
+	# Dazed instead of invisible: curled pose with a slow breathing bob and a
+	# dimmed "..." label, then a happy recovery pop when the revive timer
+	# completes. No orbiting stars.
 	visible = true
 	_down_timer += delta
 	_bob += delta
@@ -220,18 +214,15 @@ func _process_downed(delta: float) -> void:
 		if _sprite.texture != PixelArt.pet_texture(GameState.active_pet_id(), 5):
 			_sprite.texture = PixelArt.pet_texture(GameState.active_pet_id(), 5)
 		_sprite.position.y = -0.30 + sin(_bob * 2.0) * 0.02
+		_sprite.modulate = _sprite.modulate.lerp(Color(0.72, 0.72, 0.78), clampf(delta * 2.0, 0.0, 1.0))
 	if _shadow:
 		_shadow.scale = Vector2(0.012, 0.007)
-	for i in _stars.size():
-		var star := _stars[i]
-		star.visible = GameSettings.effects_at_least("med")
-		var angle := _bob * 2.6 + TAU * float(i) / 3.0
-		star.position = Vector2(cos(angle) * 0.45, -0.42 + sin(angle) * 0.12)
-		star.rotation = angle
 	if _level_label:
 		_level_label.text = "..."
 	if _down_timer >= 5.0:
 		_down_timer = 0.0
+		if _sprite:
+			_sprite.modulate = Color.WHITE
 		GameState.revive_active_pet()
 		GameState.toast_requested.emit("%s recovers and returns to your side." % PetDB.name_of(GameState.active_pet_id()), "good")
 		_celebrate()
@@ -331,6 +322,7 @@ func _update_shield_bubble(delta: float, _level: int) -> void:
 
 func _update_growth_aura(delta: float, pet: Dictionary) -> void:
 	# Cosmetic growth tiers from PetDB (optional "tiers" key, safe defaults).
+	# The aura is a quiet tint only — no ambient spark pops around the pet.
 	var def := PetDB.get_pet(str(pet.get("id", "ember")))
 	var tiers: Dictionary = def.get("tiers", {"aura": 3, "glow": 5})
 	var level := int(pet.get("level", 1))
@@ -339,12 +331,6 @@ func _update_growth_aura(delta: float, pet: Dictionary) -> void:
 		_sprite.modulate = accent.lerp(Color.WHITE, 0.72)
 	elif _sprite:
 		_sprite.modulate = Color.WHITE
-	if level >= int(tiers.get("aura", 3)) and GameSettings.effects_at_least("med"):
-		_aura_timer -= delta
-		if _aura_timer <= 0.0:
-			_aura_timer = randf_range(0.8, 1.8)
-			var accent: Color = def.get("accent", Color("#ffd27a"))
-			Vfx.pop(global_position + Vector2(randf_range(-0.3, 0.3), -randf_range(0.4, 0.9)), "spark", accent)
 
 
 func _nearest_enemy(max_distance: float) -> Node2D:

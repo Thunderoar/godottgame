@@ -110,11 +110,13 @@ func ring(at: Vector2, radius: float, color: Color, duration: float) -> void:
 		return
 	r.visible = true
 	r.modulate = Color(color.r, color.g, color.b, 0.6)
-	r.scale = Vector2(radius * 1.4 / 64.0, radius * 1.4 / 64.0)
+	# The pool texture is the 128px radial light; dividing by its real size
+	# keeps `radius` an honest world-unit radius (128 * s / 2 = radius).
+	r.scale = Vector2(radius * 1.4 / 128.0, radius * 1.4 / 128.0)
 	r.global_position = at
 	var tween := r.create_tween().set_parallel(true)
 	_own(r, tween)
-	tween.tween_property(r, "scale", Vector2(radius * 2.6 / 64.0, radius * 2.6 / 64.0), duration)
+	tween.tween_property(r, "scale", Vector2(radius * 2.6 / 128.0, radius * 2.6 / 128.0), duration)
 	tween.tween_property(r, "modulate:a", 0.0, duration)
 	tween.chain().tween_callback(func() -> void:
 		if is_instance_valid(r):
@@ -130,13 +132,14 @@ func dust(at: Vector2, count: int, color: Color) -> void:
 			return
 		d.visible = true
 		d.modulate = color
-		var start := 0.05 + randf() * 0.03
+		# Small ground puffs (~0.7-1.3 units across) around a 1-unit character.
+		var start := 0.006 + randf() * 0.004
 		d.scale = Vector2(start, start * 0.8)
 		d.global_position = at + Vector2(randf_range(-0.22, 0.22), randf_range(-0.05, 0.12))
 		var tween := d.create_tween().set_parallel(true)
 		_own(d, tween)
 		tween.tween_property(d, "global_position", d.global_position + Vector2(randf_range(-0.35, 0.35), -randf_range(0.15, 0.45)), 0.45)
-		tween.tween_property(d, "scale", Vector2(start * 2.4, start * 1.8), 0.45)
+		tween.tween_property(d, "scale", Vector2(start * 2.2, start * 1.7), 0.45)
 		tween.tween_property(d, "modulate:a", 0.0, 0.45)
 		tween.chain().tween_callback(func() -> void:
 			if is_instance_valid(d):
@@ -204,7 +207,7 @@ func leaves(at: Vector2, count: int, color: Color) -> void:
 		if d == null:
 			return
 		d.visible = true
-		d.texture = PixelArt.icon("spark", 16)
+		d.texture = PixelArt.leaf_texture()
 		d.modulate = color
 		d.scale = Vector2(0.022, 0.022)
 		d.global_position = at + Vector2(randf_range(-0.4, 0.4), -randf_range(0.5, 1.4))

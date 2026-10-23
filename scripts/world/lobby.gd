@@ -41,6 +41,10 @@ var _ruin_positions: Array[Vector2] = []
 var _tree_serial := 0
 var _emergency_fire: Sprite2D
 var _emergency_wall_toast := 0.0
+var _shop_spots: Array[Dictionary] = []
+var _shopping_timer := 12.0
+var _turtle: BeachedTurtle
+var _besut_sign: BesutSign
 
 const RECOVERY_CENTER := Vector2(34.0, 23.7)
 const RECOVERY_RADIUS := 4.3
@@ -59,6 +63,7 @@ func _ready() -> void:
 	_build_portals()
 	_build_gathering()
 	_build_dock_and_ship()
+	_build_beach_landmarks()
 	_build_forest()
 	_build_forest_monsters()
 	_build_scatter()
@@ -299,23 +304,34 @@ func _build_water_layer() -> void:
 
 
 func _make_water_mask_texture() -> Texture2D:
-	var key := "water_mask_lobby"
+	# Half-resolution sea shape for the animated overlay. The painted ocean in
+	# _paint_coast() only exists below the coast curve and left of COAST_END_X,
+	# so the mask is filled exactly there and nowhere else — every pixel outside
+	# the real ocean stays fully transparent so animated water can never cover
+	# grass, paths or the far beach. The RED channel carries the shore distance
+	# (0 at the waterline, 1 in deep water) so the shader's shallow->deep
+	# gradient and wave bands follow the real coastline instead of the
+	# texture's global V coordinate.
+	var key := "water_mask_lobby_v2"
 	if PixelArt.CACHE.has(key):
 		return PixelArt.CACHE[key]
 	var w := 1024
 	var h := 640
+	var coast_end_px := int(25.2 * 32.0)
 	var img := PixelArt.image(w, h)
 	for x in w:
-		var shore := _coast_pixel_y(x * 2) / 2.0
+		var terrain_x := x * 2
+		if terrain_x >= coast_end_px:
+			continue
+		var shore := _coast_pixel_y(terrain_x) / 2.0
 		for y in h:
 			if float(y) < shore:
 				continue
 			var depth := clampf((float(y) - shore) / 90.0, 0.0, 1.0)
-			# Sea shape with a soft foam lip at the shoreline.
+			# Alpha = shape + opacity: faint over the painted shallow
+			# water so the baked shoreline shows through, solid offshore.
 			var a := 0.55 + depth * 0.45
-			if float(y) - shore < 3.0:
-				a = 0.75
-			img.set_pixel(x, y, Color(1, 1, 1, a))
+			img.set_pixel(x, y, Color(depth, depth, depth, a))
 	var tex := ImageTexture.create_from_image(img)
 	PixelArt.CACHE[key] = tex
 	return tex
@@ -350,17 +366,19 @@ func _build_ambient_life() -> void:
 	# Cloud shadows, pollen, butterflies, forest light shafts, the eastern
 	# danger grade and chimney smoke. Everything is a handful of sprites and
 	# one capped CPU particle emitter; low quality drops the whole layer.
+	# All scales are tuned against the 128px light texture / 12px butterfly
+	# art so each element stays proportionate to a ~1-unit character.
 	if not GameSettings.effects_at_least("med") or GameSettings.reduce_motion():
 		return
 	var holder := Node2D.new()
 	holder.name = "AmbientLife"
 	add_child(holder)
-	# Drifting cloud shadows over the meadow.
+	# Drifting cloud shadows over the meadow (~13-15 units wide).
 	for i in 3:
 		var cloud := Sprite2D.new()
 		cloud.texture = PixelArt.light_texture()
 		cloud.modulate = Color(0.16, 0.22, 0.26, 0.10)
-		cloud.scale = Vector2(0.55 + float(i) * 0.2, 0.3)
+		cloud.scale = Vector2(0.10 + float(i) * 0.02, 0.05)
 		cloud.z_as_relative = false
 		cloud.z_index = 1
 		cloud.position = Vector2(randf_range(4.0, 50.0), randf_range(8.0, 30.0))
@@ -368,14 +386,14 @@ func _build_ambient_life() -> void:
 		var drift := cloud.create_tween().set_loops()
 		drift.tween_property(cloud, "position:x", cloud.position.x + randf_range(14.0, 22.0), randf_range(30.0, 46.0)).set_trans(Tween.TRANS_SINE)
 		drift.tween_property(cloud, "position:x", cloud.position.x, randf_range(30.0, 46.0)).set_trans(Tween.TRANS_SINE)
-	# Pollen motes over the meadow.
+	# Pollen motes over the meadow: soft dots, a fraction of a unit across.
 	var pollen := CPUParticles2D.new()
 	pollen.amount = 12
 	pollen.lifetime = 5.0
 	pollen.preprocess = 2.5
-	pollen.texture = PixelArt.icon("spark", 16)
-	pollen.scale_amount_min = 0.18
-	pollen.scale_amount_max = 0.35
+	pollen.texture = PixelArt.dot_texture(8)
+	pollen.scale_amount_min = 0.024
+	pollen.scale_amount_max = 0.048
 	pollen.color = Color(1.0, 0.95, 0.75, 0.28)
 	pollen.direction = Vector2(0.4, -0.2)
 	pollen.spread = 180.0
@@ -388,25 +406,33 @@ func _build_ambient_life() -> void:
 	pollen.z_as_relative = false
 	pollen.z_index = 680
 	holder.add_child(pollen)
-	# Butterflies fluttering near the flower borders.
+	# Butterflies fluttering near the flower borders — real two-frame wing
+	# artwork, never a generic spark icon.
 	for i in 3:
+		var tint: Color = [Color("#ffd47b"), Color("#a8e8ff"), Color("#ffb0c8")][i]
+		var flutter_tex := AnimatedTexture.new()
+		flutter_tex.frames = 2
+		flutter_tex.set("frame_0/texture", PixelArt.butterfly_texture(0, tint))
+		flutter_tex.set("frame_1/texture", PixelArt.butterfly_texture(1, tint))
+		flutter_tex.set("frame_0/duration", 0.22)
+		flutter_tex.set("frame_1/duration", 0.22)
 		var butterfly := Sprite2D.new()
-		butterfly.texture = PixelArt.icon("spark", 16)
-		butterfly.scale = Vector2(0.022, 0.022)
-		butterfly.modulate = [Color("#ffd47b"), Color("#a8e8ff"), Color("#ffb0c8")][i]
+		butterfly.texture = flutter_tex
+		butterfly.scale = Vector2(0.030, 0.030)
 		butterfly.z_index = 8
+		butterfly.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		butterfly.position = Vector2(randf_range(18.0, 44.0), randf_range(16.0, 30.0))
 		holder.add_child(butterfly)
 		var flutter := butterfly.create_tween().set_loops()
 		for j in 4:
 			var to := butterfly.position + Vector2(randf_range(-2.5, 2.5), randf_range(-1.4, 1.4))
 			flutter.tween_property(butterfly, "position", to, randf_range(1.4, 2.4)).set_trans(Tween.TRANS_SINE)
-	# Light shafts through the eastern canopy.
+	# Light shafts through the eastern canopy (~3x8 units).
 	for i in 2:
 		var shaft := Sprite2D.new()
 		shaft.texture = PixelArt.light_texture()
 		shaft.modulate = Color(1.0, 0.95, 0.7, 0.09)
-		shaft.scale = Vector2(0.30, 0.85)
+		shaft.scale = Vector2(0.022, 0.062)
 		shaft.rotation = 0.5
 		shaft.z_as_relative = false
 		shaft.z_index = 2
@@ -415,24 +441,25 @@ func _build_ambient_life() -> void:
 		var breathe := shaft.create_tween().set_loops()
 		breathe.tween_property(shaft, "modulate:a", 0.13, 2.2).set_trans(Tween.TRANS_SINE)
 		breathe.tween_property(shaft, "modulate:a", 0.08, 2.2).set_trans(Tween.TRANS_SINE)
-	# Eastern danger grade: the woodland reads darker toward the horizon.
+	# Eastern danger grade: the woodland reads darker toward the horizon
+	# (~17x34 units — sized to the woodland, not the whole map).
 	var grade := Sprite2D.new()
 	grade.texture = PixelArt.light_texture()
 	grade.modulate = Color(0.08, 0.12, 0.18, 0.16)
-	grade.scale = Vector2(1.1, 1.0)
+	grade.scale = Vector2(0.135, 0.27)
 	grade.z_as_relative = false
 	grade.z_index = 2
 	grade.position = Vector2(56.5, 20.0)
 	holder.add_child(grade)
-	# Chimney smoke once the cottage has one (level 3+).
+	# Chimney smoke once the cottage has one (level 3+): small puffs.
 	if GameState.house_level() >= 3:
 		var smoke := CPUParticles2D.new()
 		smoke.amount = 8
 		smoke.lifetime = 3.2
 		smoke.preprocess = 1.5
 		smoke.texture = PixelArt.light_texture()
-		smoke.scale_amount_min = 0.10
-		smoke.scale_amount_max = 0.22
+		smoke.scale_amount_min = 0.012
+		smoke.scale_amount_max = 0.022
 		smoke.color = Color(0.75, 0.8, 0.8, 0.16)
 		smoke.direction = Vector2(0.15, -1)
 		smoke.spread = 12.0
@@ -550,7 +577,7 @@ func _on_house_upgraded(level: int) -> void:
 	var tween := create_tween()
 	tween.tween_property(house_sprite, "modulate", Color.WHITE, 0.65)
 	if level >= 4:
-		house_glow.texture_scale = 0.9
+		house_glow.texture_scale = 0.065
 		house_glow.energy = 0.38
 	var game := get_tree().get_first_node_in_group("game")
 	if game != null and game.has_method("refresh_world_ui"):
@@ -597,14 +624,22 @@ func _add_shop(kind: String, at: Vector2, npc_name: String, color: Color) -> voi
 	npc.npc_name = npc_name
 	npc.position = Vector2(0, 1.35)
 	shop.add_child(npc)
-	# A small warm lamp under each awning.
+	# A small warm lamp under each awning (~5-unit pool).
 	var lamp := PointLight2D.new()
 	lamp.texture = PixelArt.light_texture()
-	lamp.texture_scale = 0.34
+	lamp.texture_scale = 0.05
 	lamp.energy = 0.22
 	lamp.color = color.lightened(0.35)
 	lamp.position = Vector2(0, -1.3)
 	shop.add_child(lamp)
+	# Ambient shopping: two browse slots in front of the counter plus the
+	# keeper reference, so residents can visit without stacking on one spot.
+	_shop_spots.append({
+		"kind": kind,
+		"stall": shop.position,
+		"browse": [shop.position + Vector2(-0.95, 2.55), shop.position + Vector2(0.95, 2.55)],
+		"keeper": npc,
+	})
 
 
 func _build_special_npc() -> void:
@@ -878,7 +913,7 @@ func _add_tree(at: Vector2, upper_path: String, lower_path: String, scale_mul: f
 	shadow.modulate = Color(0, 0, 0, 0.33)
 	shadow.position = Vector2(0, -0.03)
 	shadow.z_index = -1
-	add_child(shadow)
+	holder.add_child(shadow)
 	var lower_sprite := Sprite2D.new()
 	lower_sprite.texture = lower
 	lower_sprite.centered = false
@@ -886,7 +921,7 @@ func _add_tree(at: Vector2, upper_path: String, lower_path: String, scale_mul: f
 	lower_sprite.scale = Vector2(PixelArt.PX, PixelArt.PX) * scale_mul
 	lower_sprite.modulate = Color(0.76, 0.9, 0.74)
 	lower_sprite.z_index = 3
-	add_child(lower_sprite)
+	holder.add_child(lower_sprite)
 	var upper_sprite := Sprite2D.new()
 	upper_sprite.texture = upper
 	upper_sprite.material = Shaders.wind_material() if GameSettings.effects_at_least("med") else null
@@ -895,7 +930,7 @@ func _add_tree(at: Vector2, upper_path: String, lower_path: String, scale_mul: f
 	upper_sprite.scale = Vector2(PixelArt.PX, PixelArt.PX) * scale_mul
 	upper_sprite.modulate = Color(0.76, 0.9, 0.74)
 	upper_sprite.z_index = 3
-	add_child(upper_sprite)
+	holder.add_child(upper_sprite)
 	holder.register_visual(lower_sprite)
 	holder.register_visual(upper_sprite)
 	var body := StaticBody2D.new()
@@ -907,7 +942,7 @@ func _add_tree(at: Vector2, upper_path: String, lower_path: String, scale_mul: f
 	shape.shape = circle
 	shape.position = Vector2(0, -0.2)
 	body.add_child(shape)
-	add_child(body)
+	holder.add_child(body)
 
 
 func _build_scatter() -> void:
@@ -1196,20 +1231,20 @@ func _add_resident_house(house_name: String, at: Vector2, level: int) -> void:
 	art.offset = Vector2(-112, -176)
 	art.scale = Vector2(PixelArt.PX, PixelArt.PX) * 0.78
 	art.z_index = 7
-	add_child(art)
+	holder.add_child(art)
 	var glow := PointLight2D.new()
 	glow.texture = PixelArt.light_texture()
-	glow.texture_scale = 0.4
+	glow.texture_scale = 0.045
 	glow.energy = 0.2
 	glow.color = Color("#ffd58c")
 	glow.position = Vector2(0, -1.2)
-	add_child(glow)
+	holder.add_child(glow)
 	var target := SettlementTarget.new()
 	target.name = "ResidentHouseTarget"
 	target.target_name = "Resident cottage"
 	target.damage_scale = 0.25
 	target.position = Vector2(0, -0.8)
-	add_child(target)
+	holder.add_child(target)
 	var body := StaticBody2D.new()
 	body.collision_layer = 1
 	var shape := CollisionShape2D.new()
@@ -1218,7 +1253,7 @@ func _add_resident_house(house_name: String, at: Vector2, level: int) -> void:
 	shape.shape = rect
 	shape.position = Vector2(0, -0.55)
 	body.add_child(shape)
-	add_child(body)
+	holder.add_child(body)
 	_house_positions.append(at)
 	_markers.append({"position": at, "color": Color("#e4c571"), "size": 3.5, "shape": "square"})
 
@@ -1235,7 +1270,7 @@ func _add_ruin_house(house_name: String, at: Vector2, state: String) -> void:
 	art.offset = Vector2(-112, -176)
 	art.scale = Vector2(PixelArt.PX, PixelArt.PX) * 0.74
 	art.z_index = 6
-	add_child(art)
+	holder.add_child(art)
 	match state:
 		"abandoned":
 			art.modulate = Color(0.58, 0.58, 0.52)
@@ -1255,7 +1290,7 @@ func _add_ruin_house(house_name: String, at: Vector2, state: String) -> void:
 				rubble.rotation = randf_range(-0.8, 0.8)
 				rubble.position = Vector2(randf_range(-2.0, 2.0), randf_range(-0.4, 0.3))
 				rubble.modulate = Color("#8a6a47")
-				add_child(rubble)
+				holder.add_child(rubble)
 			_add_smoke(holder, Vector2(0.0, -2.0))
 	var body := StaticBody2D.new()
 	body.collision_layer = 1
@@ -1265,7 +1300,7 @@ func _add_ruin_house(house_name: String, at: Vector2, state: String) -> void:
 	shape.shape = rect
 	shape.position = Vector2(0, -0.5)
 	body.add_child(shape)
-	add_child(body)
+	holder.add_child(body)
 	_ruin_positions.append(at)
 	_markers.append({"position": at, "color": Color("#8b7b62"), "size": 3.0, "shape": "square"})
 
@@ -1278,7 +1313,7 @@ func _add_smoke(holder: Node2D, at: Vector2) -> void:
 		smoke.modulate = Color(0.45, 0.43, 0.4, 0.35)
 		smoke.position = at + Vector2(float(i) * 0.25, 0)
 		smoke.z_index = 7
-		add_child(smoke)
+		holder.add_child(smoke)
 		var tween := smoke.create_tween().set_loops()
 		tween.tween_property(smoke, "position:y", smoke.position.y - 1.2, 2.4 + float(i) * 0.2)
 		tween.parallel().tween_property(smoke, "modulate:a", 0.0, 2.4)
@@ -1402,8 +1437,88 @@ func _add_resident(resident_name: String, role: String, activity: String, start:
 	for p in points:
 		typed_points.append(p)
 	resident.waypoints = typed_points
+	resident.purchase_made.connect(_on_resident_purchase)
 	add_child(resident)
 	_residents.append(resident)
+
+
+# ------------------------------------------------------------------ beach landmarks
+
+func _build_beach_landmarks() -> void:
+	# A resting sea turtle on the dry sand, placed from the real coastline so it
+	# can never sit in the ocean or under the animated water overlay.
+	var turtle_x := 20.0
+	var shore_y := float(_coast_pixel_y(int(turtle_x * 32.0))) / 32.0
+	_turtle = BeachedTurtle.new()
+	_turtle.name = "BeachedTurtle"
+	_turtle.position = Vector2(turtle_x, shore_y - 1.7)
+	add_child(_turtle)
+	# The village-entry road sign reading BESUT, beside the main beach path and
+	# clear of doors, stalls, portals and the fence gates.
+	_besut_sign = BesutSign.new()
+	_besut_sign.name = "BesutSign"
+	_besut_sign.position = Vector2(24.2, 27.2)
+	add_child(_besut_sign)
+
+
+func turtle_position() -> Vector2:
+	return _turtle.global_position if is_instance_valid(_turtle) else Vector2.ZERO
+
+
+func has_besut_sign() -> bool:
+	return is_instance_valid(_besut_sign)
+
+
+# ------------------------------------------------------------------ ambient shopping
+
+func _start_shopping_trip() -> void:
+	# Send one idle resident on one visual errand. Purely ambient: no shop
+	# panel opens, no GameState transaction runs, the player's economy is
+	# untouched. Emergencies cancel trips (see Resident._on_emergency_changed).
+	if GameState.emergency_active() or _shop_spots.is_empty():
+		return
+	var candidates: Array[Resident] = []
+	for resident in _residents:
+		if not is_instance_valid(resident) or resident.is_shopping():
+			continue
+		if bool(resident.combat_enabled):
+			continue
+		candidates.append(resident)
+	if candidates.is_empty():
+		return
+	# Prefer a stall nobody is currently visiting so the crowd spreads out.
+	var free_spots: Array[Dictionary] = []
+	for spot in _shop_spots:
+		var busy := false
+		for resident in _residents:
+			if is_instance_valid(resident) and resident.is_shopping() and resident.current_shop_kind() == str(spot.get("kind", "")):
+				busy = true
+				break
+		if not busy:
+			free_spots.append(spot)
+	var pool := free_spots if not free_spots.is_empty() else _shop_spots
+	var spot: Dictionary = pool[randi() % pool.size()]
+	var customer := candidates[randi() % candidates.size()]
+	var stall_pos: Vector2 = spot.get("stall", Vector2.ZERO)
+	var browse_spots: Array = spot.get("browse", [stall_pos + Vector2(0, 2.55)])
+	var browse: Vector2 = browse_spots[randi() % browse_spots.size()]
+	customer.begin_shopping_trip(str(spot.get("kind", "potion")), browse, stall_pos)
+
+
+func _on_resident_purchase(shop_kind: String, _customer: Resident) -> void:
+	# The keeper acknowledges the sale: a small hop plus a soft ring at the
+	# stall. Restrained on purpose — no toasts, no floating names.
+	for spot in _shop_spots:
+		if str(spot.get("kind", "")) != shop_kind:
+			continue
+		var keeper := spot.get("keeper") as ShopNPC
+		var stall_pos: Vector2 = spot.get("stall", Vector2.ZERO)
+		Vfx.ring(stall_pos + Vector2(0, -0.6), 0.8, Color("#ffe9a8"), 0.4)
+		if keeper != null and is_instance_valid(keeper) and keeper.sprite != null:
+			var bob := keeper.sprite.create_tween()
+			bob.tween_property(keeper.sprite, "position:y", keeper.sprite.position.y - 0.1, 0.12).set_trans(Tween.TRANS_SINE)
+			bob.tween_property(keeper.sprite, "position:y", keeper.sprite.position.y, 0.16).set_trans(Tween.TRANS_SINE)
+		break
 
 
 # ------------------------------------------------------------------ coast guard & rubbish
@@ -1443,6 +1558,10 @@ func _process(delta: float) -> void:
 		_emergency_wall_toast = maxf(0.0, _emergency_wall_toast - delta)
 	if GameSettings.effects_at_least("med") and not GameSettings.reduce_motion():
 		_update_ambient(delta)
+	_shopping_timer -= delta
+	if _shopping_timer <= 0.0:
+		_shopping_timer = randf_range(18.0, 34.0)
+		_start_shopping_trip()
 
 
 func _tick_recovery(delta: float) -> void:

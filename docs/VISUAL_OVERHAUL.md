@@ -21,26 +21,23 @@ Status: in progress on branch `visual-overhaul`. Engine: Godot 4.7.2 (GL Compati
 - **Icon sizes.** 16×16 (unchanged, existing callers) and a new native 32×32 set.
   Touch buttons draw the 32px icon at an integer scale; inventory/shop cards use 32.
 
-## 2. Pixel-scale decision (the §3B camera question)
+## 2. Pixel-scale decision (superseded: user-adjustable zoom)
 
-Current: `FollowCamera.zoom = 38` with `PixelArt.PX = 1/32` ⇒ 1.1875 screen px per
-art px — non-integer, so art columns render 1px/2px unevenly and shimmer while
-panning.
+The overhaul shipped a fixed integer 2:1 scale (`zoom = 64`). The repair pass
+replaced the fixed constant with a **user setting**:
 
-**Decision: integer 2:1 scale — `zoom = 64`.** One art pixel = exactly 2×2 screen
-pixels; with `snap_2d_transforms_to_pixel` the field is rock solid. Effects:
-
-- The 32×48 hero renders 64×96 — chunky and readable on a phone held at arm's length.
-- View area = 640×360 art px = 20×11.25 world units (vs 33.7×18.9 today). Mission
-  arrows and the journal already guide the player across the larger settlement.
-- Camera adds a small look-ahead in the facing direction (smoothed) and a
-  decaying shake. Camera position snaps to the art grid (multiples of 1/32) so
-  panning never produces sub-pixel wobble.
-- `GameSettings.screen_shake` is now honoured by `FollowCamera.shake()` (the setting
-  existed but nothing read it).
-
-Flagged in "Decisions needed": if the owner prefers the wider view, change
-`FollowCamera.ZOOM` from 64 back to 32 (1:1, hero 32×48) — one constant.
+- `FollowCamera.DEFAULT_ZOOM = 40` — the classic village framing (view ≈ 32×18
+  world units), chosen as the default after comparing with the pre-overhaul
+  branch; 64 proved too close for ordinary play.
+- `GameSettings.camera_zoom` (int, 70..160 % of the default, persisted in
+  `user://settings.cfg`) drives every world's camera; each `FollowCamera` eases
+  toward the target zoom so Settings changes glide.
+- The camera rounds its position to the 1/32 art grid **only** when the
+  effective zoom renders one art pixel at a whole number of screen pixels
+  (e.g. the crisp 2:1 look at 64); at fractional scales the engine's
+  `snap_2d_transforms_to_pixel` keeps rendering crisp without whole-art-pixel
+  stepping. `snap_2d_vertices_to_pixel` is OFF (double snapping caused jitter).
+- Equal x/y zoom always — no distortion. Camera zoom never resizes the HUD.
 
 ## 3. Performance budget (Android, GL Compatibility)
 
@@ -66,6 +63,12 @@ Settings panel):
 - `effects_quality` ("low" | "med" | "high", default "high") — low drops ambient
   life, wind interaction, extra lights and hit-stop; med keeps wind but drops
   ambient particles; high keeps everything.
+- `camera_zoom` (int, 70..160, default 100) — percent of `FollowCamera.DEFAULT_ZOOM`
+  (40); eased live, persisted across restarts and world switches.
+- `ui_scale` (int, 75..130, default 100) — the single GUI-scale authority. The HUD
+  scales its root from the top-left and divides its layout rect by the factor so
+  edge-anchored controls stay glued to the screen; a legacy save-file scale value
+  is migrated once.
 
 Telegraphs never rely on colour alone (shape + motion: ground decal + wind-up pose +
 flash). Touch targets stay ≥ 44px. Text contrast stays on the `GameUI` palette.
@@ -108,9 +111,9 @@ shared `HitFeedback`/`Vfx` helpers (flash, sparks, damage numbers, micro-shake).
 
 ## 7. Verification
 
-- `tools/tide_test.tscn` remains the only gate: **269 checks, PASS, exit 0** at
-  baseline (the repo moved past the "250 checks / 1 tree failure" state quoted in
-  the task brief). The bar for this branch: no new failures, no `SCRIPT ERROR` /
+- `tools/tide_test.tscn` remains the only gate: **361 checks, PASS, exit 0**
+  after the repair pass (46 dedicated visual-repair regression checks were
+  added). The bar for this branch: no new failures, no `SCRIPT ERROR` /
   `ERROR:` lines.
 - `tools/visual_review.tscn` (new, non-destructive) renders fixed scenarios
   (title, lobby, dungeon, each shop, portals, HUD at 1280×720 and 832×480) to PNGs

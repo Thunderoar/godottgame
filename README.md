@@ -69,6 +69,13 @@ four neighbouring resident cottages beyond the fence. Routines include fishing,
 gardening, carpentry, wood hauling, animal keeping, farming, trading, stable work
 and two village defenders. Four residents can join the defence.
 
+Residents also run their own errands: every so often one walks to a stall,
+browses the goods, exchanges coin for a purchase and ambles away to resume the
+route. These ambient purchases are purely visual — the player's gold, inventory
+and progression are never touched. A **BESUT** road sign marks the village
+entrance beside the main beach path, and a **resting sea turtle** dozes on the
+dry sand above the waterline (it gets up for nobody).
+
 ### Custom settlement editing
 Press **B** or the top-left **Build** button to open the settlement editor.
 A marked building area appears. Drag the house, shop groups, fence runs, garden
@@ -121,6 +128,14 @@ guard to open a persistent sea-cleaning report instead of a timed notification.
 
 ![Nia's Pet Shop](docs/screenshots/tide_pet_shop.png)
 ![Construction Shop](docs/screenshots/tide_house.png)
+
+## HUD
+
+The persistent HUD keeps the top-left identity/currency panel with XP and pet XP
+bars, Pack and Build buttons, the mission journal, the emergency indicator and
+the boss bar. Health, mana and pet health float in a compact bar above the hero
+(`PlayerVitalHud`); the old top-right VITALS panel is gone by design and is not
+recreated anywhere.
 
 ## Companions and healing
 
@@ -176,14 +191,18 @@ rules (see `docs/VISUAL_OVERHAUL.md` for the design decisions):
   dressing, flickering torches and a boss-arena emblem.
 - **A living meadow.** Grass renders in clustered MultiMesh fields that sway
   in a shared wind shader and bend away from walking characters; the sea
-  carries animated bands, foam and sparkle; cloud shadows, pollen,
-  butterflies, light shafts, chimney smoke and falling leaves keep the world
-  breathing. (The old washed-out look was every PointLight2D being ~13x
-  oversized; lights are now real local pools.)
-- **Comfort settings.** Settings gains Effects quality (low/med/high) and
-  Reduce motion. Touch buttons show keycap hints on keyboard layouts, a
-  cooldown sweep on Strike, count badges on potions and a context-sensitive
-  Use icon.
+  carries shore-parallel animated bands and a foam lip driven by a coastline
+  mask; cloud shadows, pollen motes, hand-drawn fluttering butterflies, light
+  shafts, chimney smoke and falling leaves keep the world breathing. Every
+  effect is sized against the 128px light texture, lights are real local
+  pools, and there is no random star or sparkle clutter anywhere.
+- **Comfort settings.** Settings gains Effects quality (low/med/high), Reduce
+  motion, a **Camera zoom** slider (70–160%, eased, default framing matches the
+  classic view) and an **Interface scale** slider (75–130%) that keeps
+  edge-anchored controls glued to the screen at every size. Camera zoom never
+  resizes the HUD and interface scale never zooms the world. Touch buttons show
+  keycap hints on keyboard layouts, a cooldown sweep on Strike, count badges on
+  potions and a context-sensitive Use cue.
 
 ## Project structure
 
@@ -202,7 +221,7 @@ scripts/
   world/                    lobby, dungeon, residents, rubbish, editor, defence
   ui/                       HUD, joystick, touch buttons, tutorial, modals
 tools/
-  tide_test.tscn            end-to-end acceptance test (250 checks)
+  tide_test.tscn            end-to-end acceptance test (361 checks)
   tide_capture.tscn         screenshot harness
 docs/
   ACCEPTANCE_TESTS.md
@@ -220,7 +239,8 @@ godot --headless --path . res://tools/tide_test.tscn
 godot --path . res://tools/tide_capture.tscn
 ```
 
-Latest result on the `visual-overhaul` branch: **314 checks, PASS**. The suite
+Latest result on the `visual-overhaul-merge-2` branch (after the visual repair
+pass): **361 checks, PASS**. The suite
 must always end with `PASS` and exit 0; the tally itself is data-driven and
 drifts as catalogue data changes. The suite covers title/credits, tutorial,
 three weapons, permanent daytime, no NPC labels or pop-ups, XP bars, Pet Food,

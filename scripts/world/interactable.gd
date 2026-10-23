@@ -34,7 +34,7 @@ func _process(delta: float) -> void:
 func _make_marker() -> void:
 	marker = Sprite2D.new()
 	marker.name = "InteractionMarker"
-	marker.texture = PixelArt.icon("spark", 16)
+	marker.texture = PixelArt.marker_texture()
 	marker.scale = Vector2(0.040, 0.040)
 	marker.position = Vector2(0, -1.65)
 	marker.z_as_relative = false

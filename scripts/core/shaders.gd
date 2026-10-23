@@ -144,17 +144,22 @@ uniform float band_scale = 42.0;
 uniform float speed = 0.55;
 
 void fragment() {
-	// The texture is a shape mask: sea where alpha > 0, foam lip at the shore.
-	float mask_a = texture(TEXTURE, UV).a;
+	// The mask is generated from the real coastline: alpha is the sea shape
+	// (zero outside the painted ocean) and RED is the distance from the
+	// shoreline, so every gradient and band below follows the actual coast
+	// instead of the texture's global UV.
+	vec4 sample = texture(TEXTURE, UV);
+	float mask_a = sample.a;
+	float depth = sample.r;
 	float wave = sin(UV.x * band_scale + TIME * speed) * 0.5
 		+ sin(UV.x * band_scale * 0.53 - TIME * speed * 0.8) * 0.5;
-	float band = fract(UV.y * 7.0 + wave * 0.18 + TIME * 0.06);
-	float crest = smoothstep(0.86, 1.0, band);
-	float depth = smoothstep(0.0, 1.0, UV.y);
-	vec4 col = mix(shallow, deep, depth);
-	float sparkle = step(0.985, sin(UV.x * 220.0 + TIME * 2.2) * sin(UV.y * 140.0 - TIME * 1.7));
-	vec3 rgb = mix(col.rgb, foam.rgb, crest * 0.85);
-	rgb += sparkle * 0.35 * (1.0 - depth * 0.6);
-	COLOR = vec4(rgb, mix(col.a, 1.0, crest * 0.5) * mask_a);
+	// Wave bands run parallel to the shore (depth-driven), rolling landward.
+	float band = fract(depth * 3.0 + wave * 0.14 + TIME * 0.05);
+	float crest = smoothstep(0.88, 1.0, band) * smoothstep(0.02, 0.18, depth);
+	// Foam lip hugging the waterline.
+	float lip = smoothstep(0.035, 0.0, depth);
+	vec4 col = mix(shallow, deep, smoothstep(0.12, 1.0, depth));
+	vec3 rgb = mix(col.rgb, foam.rgb, max(crest * 0.85, lip * 0.9));
+	COLOR = vec4(rgb, mix(col.a, 1.0, max(crest * 0.5, lip * 0.55)) * mask_a);
 }
 "

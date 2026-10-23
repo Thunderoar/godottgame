@@ -36,13 +36,8 @@ var _gold_label: Label
 var _diamond_label: Label
 var _identity_label: Label
 var _clock_label: Label
-var _health_bar: SegmentedBar
-var _mana_bar: SegmentedBar
 var _xp_bar: SegmentedBar
-var _pet_bar: SegmentedBar
 var _pet_xp_bar: SegmentedBar
-var _pet_name: Label
-var _pet_icon: TextureRect
 var _objectives_box: VBoxContainer
 var _emergency_panel: PanelContainer
 var _emergency_label: Label
@@ -88,7 +83,6 @@ func _ready() -> void:
 	_build_root()
 	_build_menu_button()
 	_build_currency_panel()
-	_build_vitals_panel()
 	_build_objectives()
 	_build_mission_guide()
 	_build_emergency_panel()
@@ -102,8 +96,7 @@ func _ready() -> void:
 	_build_tutorial()
 	_build_modals()
 	_build_fade()
-	_root.resized.connect(func() -> void:
-		_root.pivot_offset = _root.size * 0.5)
+	get_viewport().size_changed.connect(_on_viewport_resized)
 	GameState.data_changed.connect(refresh_all)
 	GameState.pet_changed.connect(_refresh_pet)
 	GameSettings.changed.connect(_on_setting_changed)
@@ -122,6 +115,12 @@ func _build_root() -> void:
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.theme = GameUI.theme()
 	add_child(_root)
+
+
+func _on_viewport_resized() -> void:
+	# Keep the GUI-scale layout glued to the real screen edges whenever the
+	# window or stretch viewport changes size.
+	_apply_gui_scale(get_gui_scale())
 
 
 func _build_menu_button() -> void:
@@ -172,53 +171,6 @@ func _build_currency_panel() -> void:
 	_pet_xp_bar.custom_minimum_size = Vector2(268, 22)
 	box.add_child(_pet_xp_bar)
 
-
-
-func _build_vitals_panel() -> void:
-	var panel := GameUI.panel(Color(0.035, 0.08, 0.09, 0.9), Color("#3a565a"))
-	panel.anchor_left = 1.0
-	panel.anchor_right = 1.0
-	panel.offset_left = -330
-	panel.offset_right = -22
-	panel.offset_top = 64
-	panel.offset_bottom = 218
-	_root.add_child(panel)
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 3)
-	panel.add_child(box)
-	var header := HBoxContainer.new()
-	header.add_child(GameUI.label("VITALS", 11, GameUI.MUTED))
-	var atk := GameUI.label("ATK %d  •  DEF %d" % [GameState.attack_power(), GameState.defense()], 11, GameUI.TEAL)
-	atk.name = "VitalsStats"
-	atk.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	atk.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	header.add_child(atk)
-	box.add_child(header)
-	_health_bar = SegmentedBar.new()
-	_health_bar.setup("HEALTH", GameUI.RED, 10, false)
-	box.add_child(_health_bar)
-	_mana_bar = SegmentedBar.new()
-	_mana_bar.setup("MANA", GameUI.MANA, 10, false)
-	box.add_child(_mana_bar)
-	var pet_row := HBoxContainer.new()
-	pet_row.add_theme_constant_override("separation", 8)
-	box.add_child(pet_row)
-	_pet_icon = TextureRect.new()
-	_pet_icon.custom_minimum_size = Vector2(30, 30)
-	_pet_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_pet_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_pet_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pet_row.add_child(_pet_icon)
-	var pet_info := VBoxContainer.new()
-	pet_info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pet_info.add_theme_constant_override("separation", 0)
-	pet_row.add_child(pet_info)
-	_pet_name = GameUI.label("Ember  Lv 1", 11, GameUI.MUTED)
-	pet_info.add_child(_pet_name)
-	_pet_bar = SegmentedBar.new()
-	_pet_bar.setup("PET", GameUI.GOLD, 5, true)
-	_pet_bar.custom_minimum_size = Vector2(250, 22)
-	pet_info.add_child(_pet_bar)
 
 
 func _build_objectives() -> void:
@@ -372,7 +324,7 @@ func _build_controls() -> void:
 	_interact_button = TouchActionButton.new()
 	_interact_button.action = "interact"
 	_interact_button.caption = "Use"
-	_interact_button.icon_kind = "spark"
+	_interact_button.icon_kind = "marker"
 	_interact_button.accent = Color("#61c9ba")
 	_interact_button.diameter = 82
 	_anchor_bottom_right(_interact_button, Vector2(-124, -234), Vector2(-42, -152))
@@ -469,24 +421,39 @@ func _apply_saved_settings() -> void:
 	var saved := GameState.control_layout()
 	if not saved.is_empty():
 		_apply_control_layout(saved)
-	_apply_gui_scale(GameState.gui_scale())
+	# GameSettings.ui_scale (settings.cfg) is the single authority for GUI
+	# scale — it applies on the title screen and survives delete_save(). A
+	# legacy save-file value is adopted once so nobody loses their setting.
+	if GameSettings.ui_scale() == 100 and absf(GameState.gui_scale() - 1.0) > 0.001:
+		GameSettings.set_ui_scale(int(round(GameState.gui_scale() * 100.0)))
+	_apply_gui_scale(GameSettings.ui_scale() / 100.0)
 
 
 func get_gui_scale() -> float:
 	return _root.scale.x if _root != null else 1.0
 
 
-func set_gui_scale(value: float) -> void:
+func set_gui_scale(value: float, persist := true) -> void:
 	var clamped := clampf(value, 0.75, 1.3)
 	_apply_gui_scale(clamped)
-	GameState.set_gui_scale(clamped)
+	GameSettings.set_ui_scale(int(round(clamped * 100.0)), persist)
 
 
 func _apply_gui_scale(value: float) -> void:
+	# Scale the HUD root from its top-left corner and shrink its layout rect
+	# by the same factor, so edge-anchored children (menu button, joystick,
+	# action buttons) stay glued to the real screen edges at every scale
+	# instead of drifting off-screen or floating away from the corners.
 	if _root == null:
 		return
-	_root.pivot_offset = _root.size * 0.5
-	_root.scale = Vector2(value, value)
+	var clamped := clampf(value, 0.75, 1.3)
+	var viewport_size := get_viewport().get_visible_rect().size
+	if viewport_size.length_squared() < 1.0:
+		return
+	_root.pivot_offset = Vector2.ZERO
+	_root.scale = Vector2(clamped, clamped)
+	_root.size = viewport_size / clamped
+	_root.position = Vector2.ZERO
 
 
 func get_control_layout_current() -> Dictionary:
@@ -753,7 +720,7 @@ func _update_prompt() -> void:
 				var short := prompt.split(" ")[0]
 				_interact_button.set_contextual(short.trim_suffix("."), _prompt_icon_kind(prompt))
 			else:
-				_interact_button.set_contextual("Use", "spark")
+				_interact_button.set_contextual("Use", "marker")
 
 
 func _use_quick_potion(item_id: String) -> void:
@@ -764,7 +731,7 @@ func set_world(w: Node) -> void:
 	world = w
 	_last_prompt = ""
 	if _interact_button:
-		_interact_button.set_contextual("Use", "spark")
+		_interact_button.set_contextual("Use", "marker")
 	_prompt_panel.visible = false
 	_boss_panel.visible = false
 	_sleep_panel.visible = false
@@ -781,8 +748,6 @@ func refresh_all() -> void:
 	_identity_label.text = "%s  •  Lv %d" % [str(GameState.data.character_name), int(GameState.data.level)]
 	_gold_label.text = str(GameState.gold())
 	_diamond_label.text = str(GameState.diamonds())
-	_health_bar.set_values(GameState.health(), GameState.health_max())
-	_mana_bar.set_values(GameState.mana(), GameState.mana_max())
 	_xp_bar.set_values(int(GameState.data.get("xp", 0)), int(GameState.data.get("xp_next", 60)))
 	_refresh_pet()
 	_refresh_objectives()
@@ -797,26 +762,17 @@ func refresh_all() -> void:
 	# The Strike icon follows the active hero's weapon discipline.
 	if _attack_button:
 		_attack_button.set_icon(GameState.character_weapon_style())
-	var vitals := _root.find_child("VitalsStats", true, false)
-	if vitals is Label:
-		vitals.text = "ATK %d  •  DEF %d  •  SH %d" % [GameState.attack_power(), GameState.defense(), GameState.shield()]
 
 
 func _refresh_pet() -> void:
+	# Pet identity lives above the companion itself and in the top-left pet
+	# XP bar; the removed top-right VITALS panel is not recreated anywhere.
 	var pet := GameState.get_active_pet()
+	var pet_xp := GameState.pet_xp_progress()
 	if pet.is_empty():
-		_pet_name.text = "No companion"
-		_pet_bar.set_values(0, 1)
 		_pet_xp_bar.set_caption("PET XP")
 		_pet_xp_bar.set_values(0, 1)
-		_pet_icon.texture = null
 		return
-	_pet_icon.texture = PixelArt.pet_texture(str(pet.id))
-	_pet_name.text = "%s  Lv %d  •  %s" % [PetDB.name_of(str(pet.id)), int(pet.level), "Support" if bool(pet.alive) else "RECOVERING"]
-	_pet_name.add_theme_color_override("font_color", GameUI.MUTED if bool(pet.alive) else GameUI.RED)
-	_pet_bar.set_values(int(pet.hp), int(pet.hp_max))
-	_pet_bar.fill_color = GameUI.GOLD if bool(pet.alive) else Color("#5d4a45")
-	var pet_xp := GameState.pet_xp_progress()
 	if bool(pet_xp.get("max", false)):
 		_pet_xp_bar.set_caption("PET XP MAX")
 		_pet_xp_bar.set_values(1, 1)
@@ -904,7 +860,7 @@ func _prompt_icon_kind(prompt: String) -> String:
 			return "bed"
 		"Gather":
 			return "gather"
-	return "spark"
+	return "marker"
 
 
 func _show_key_hints() -> bool:
@@ -944,6 +900,8 @@ func _apply_touch_mode() -> void:
 func _on_setting_changed(key: String) -> void:
 	if key == "touch_controls":
 		_apply_touch_mode()
+	elif key == "ui_scale":
+		_apply_gui_scale(GameSettings.ui_scale() / 100.0)
 
 
 func flash_hurt() -> void:

@@ -1,7 +1,8 @@
 class_name SettingsPanel
 extends ModalBase
-## GUI scale and touch-control customization. Values are stored in GameState
-## and applied to the live HUD immediately.
+## GUI scale, camera zoom and touch-control customization. Device prefs are
+## stored in GameSettings (settings.cfg) and applied to the live HUD / cameras
+## immediately; the file is written once on slider release, not per tick.
 
 const CONTROL_ROWS := [
 	["joystick", "Joystick"],
@@ -15,6 +16,7 @@ const CONTROL_ROWS := [
 
 var _rows: Dictionary = {}
 var _scale_label: Label
+var _zoom_label: Label
 
 
 func open_settings() -> void:
@@ -45,8 +47,34 @@ func _rebuild() -> void:
 	scale_row.add_child(_scale_label)
 	slider.value_changed.connect(func(value: float) -> void:
 		_scale_label.text = "%d%%" % int(round(value * 100.0))
-		hud.set_gui_scale(value))
+		hud.set_gui_scale(value, false))
+	# Persist once on release instead of rewriting settings.cfg every tick.
+	slider.drag_ended.connect(func(_value_changed: bool) -> void:
+		hud.set_gui_scale(slider.value, true))
 	content.add_child(scale_row)
+
+	add_section("CAMERA", GameUI.GOLD)
+	var zoom_row := HBoxContainer.new()
+	zoom_row.add_theme_constant_override("separation", 12)
+	zoom_row.add_child(GameUI.label("Camera zoom", 14, GameUI.TEXT))
+	var zoom_slider := HSlider.new()
+	zoom_slider.min_value = GameSettings.CAMERA_ZOOM_MIN
+	zoom_slider.max_value = GameSettings.CAMERA_ZOOM_MAX
+	zoom_slider.step = 5.0
+	zoom_slider.value = GameSettings.camera_zoom()
+	zoom_slider.custom_minimum_size = Vector2(360, 32)
+	zoom_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	zoom_row.add_child(zoom_slider)
+	_zoom_label = GameUI.label("%d%%" % int(zoom_slider.value), 16, GameUI.GOLD)
+	_zoom_label.custom_minimum_size = Vector2(70, 0)
+	zoom_row.add_child(_zoom_label)
+	zoom_slider.value_changed.connect(func(value: float) -> void:
+		_zoom_label.text = "%d%%" % int(round(value))
+		GameSettings.set_camera_zoom(int(round(value)), false))
+	zoom_slider.drag_ended.connect(func(_value_changed: bool) -> void:
+		GameSettings.set_camera_zoom(int(round(zoom_slider.value)), true))
+	content.add_child(zoom_row)
+	add_body_text("Camera zoom eases in smoothly and never resizes the interface; interface scale never zooms the world.", GameUI.MUTED, 13)
 
 	add_section("EFFECTS & COMFORT", GameUI.GOLD)
 	var effects_row := HBoxContainer.new()

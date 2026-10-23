@@ -11,7 +11,7 @@ Run from `GAME_COMP_RPG-Godot/`:
 # Parse/import every script and report warnings as failures.
 godot --headless --path . --editor --quit
 
-# Full acceptance suite. Expect: 314 checks, PASS.
+# Full acceptance suite. Expect: 361 checks, PASS.
 godot --headless --path . res://tools/tide_test.tscn
 
 # Visual capture harness (writes PNGs).
@@ -149,6 +149,39 @@ suite (`_test_visual_overhaul_contracts` and updated attack waits):
   and deal damage only on the active frame; wind-ups can be interrupted.
 - Quality tiers: `low` drops ambient life, wind sway and hit-stop; reduce
   motion disables shake, look-ahead and bending.
+
+## Visual repair checks (visual-overhaul-merge-2 repair pass)
+
+Covered by `_test_visual_repair_regressions`:
+
+- **Tree hierarchy:** every `ForestTree` owns its registered visuals and its
+  `Body` collider as children, and the visuals render within ~3 world units of
+  the tree's position (no lobby-origin stacking). Damage, falling, collider
+  drop and per-tree health persistence are re-asserted.
+- **Resident cottages** own their art (holder has children).
+- **Water mask:** alpha is zero beyond the painted ocean (terrain x >= 25.2
+  units); the real sea carries depth data in the RED channel that the shader
+  uses for the shallow-to-deep gradient, shore-parallel wave bands and the
+  foam lip. No sparkle term exists in `Shaders.WATER_CODE`.
+- **Star cleanup:** no orbiting stars on the downed pet; butterflies, pollen
+  and falling leaves use dedicated artwork that differs from the spark icon;
+  interaction cues are chevrons, not stars.
+- **Camera zoom:** `FollowCamera.DEFAULT_ZOOM == 40`; the setting clamps to
+  70..160% (28..64 actual zoom); GUI scale changes never zoom the world.
+- **GUI scale:** 0.75/1.30 apply and persist via `GameSettings.ui_scale`; the
+  HUD layout rect compensates (viewport/scale) so edge-anchored controls stay
+  on screen at maximum scale.
+- **Beach landmarks:** the turtle rests on dry sand above the waterline with a
+  grounded collider; the BESUT sign exists with >= 36px lettering art and
+  never blocks a shop front.
+- **Ambient shopping:** a resident completes TO_SHOP -> BROWSE -> BUY -> LEAVE
+  with a visible purchase exchange; the player's gold and inventory are
+  unchanged and no shop panel opens (economy isolation).
+- **Pet catch-up:** after being placed 8 units behind, the pet's largest
+  single-frame step stays under 0.5 units (bounded spring, no leash teleport)
+  and it rejoins the player.
+- **Player movement continuity:** input-driven movement shows no per-frame
+  step above 0.4 units (continuous, not grid-stepped).
 
 ## Regression rules for agents
 

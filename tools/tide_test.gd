@@ -37,8 +37,9 @@ func _ready() -> void:
 	_check(GameState.equipped_item("weapon") == "rusty_sword", "starter sword equipped")
 	_check(GameState.active_pet_id() == "ember", "starter pet active")
 	_check(GameState.has_living_pet(), "starter pet alive")
-	_check(hud.get("_health_bar").segments == 10, "player health uses 10 segments")
-	_check(hud.get("_pet_bar").segments == 5, "pet health uses 5 segments")
+	_check(hud.get("_health_bar") == null and hud.find_child("VitalsStats", true, false) == null, "the top-right VITALS panel is removed")
+	_check(hud.get("_xp_bar") != null and hud.get("_pet_xp_bar") != null, "XP and pet XP indicators remain in the HUD")
+	_check(game.call("player") != null and game.call("player").get_node_or_null("VitalHud") is PlayerVitalHud, "floating vitals still show health, mana and pet HP")
 	_check(hud.get("_minimap") == null, "no minimap exists")
 	_check(hud.get("_emergency_panel") != null, "emergency HUD exists")
 	_check(hud.get("_recovery_panel") != null, "recovery HUD exists")
@@ -93,6 +94,7 @@ func _ready() -> void:
 	await _test_gathering()
 	await _test_shops()
 	await _test_visual_overhaul_contracts()
+	await _test_visual_repair_regressions()
 	await _test_house_and_sleep()
 	await _test_menu_and_settings()
 	await _test_auto_heal_and_shield()
@@ -328,6 +330,184 @@ func _test_visual_overhaul_contracts() -> void:
 	await get_tree().process_frame
 
 
+func _test_visual_repair_regressions() -> void:
+	# --- Trees: per-tree hierarchy, coordinates and feedback (P0 regression).
+	var trees := get_tree().get_nodes_in_group("forest_tree")
+	var hierarchy_ok := true
+	var position_ok := true
+	var body_count := 0
+	for tree in trees:
+		var t := tree as ForestTree
+		var visuals: Array = t.get("_visuals")
+		if visuals == null or visuals.size() < 2:
+			hierarchy_ok = false
+			continue
+		for visual in visuals:
+			if not is_instance_valid(visual) or visual.get_parent() != t:
+				hierarchy_ok = false
+		if t.get_node_or_null("Body") is StaticBody2D and (t.get_node("Body") as Node2D).get_parent() == t:
+			body_count += 1
+		else:
+			hierarchy_ok = false
+		var sample: CanvasItem = visuals[0]
+		if sample.global_position.distance_to(t.global_position) > 3.0:
+			position_ok = false
+	_check(hierarchy_ok, "every forest tree owns its sprites and collider (no lobby-origin stack)")
+	_check(position_ok, "tree sprites render at the tree's world position")
+	_check(body_count >= trees.size() - 1, "tree trunks keep their collision bodies (%d/%d)" % [body_count, trees.size()])
+	if not trees.is_empty():
+		var tree := trees[0] as ForestTree
+		var hp := tree.health
+		tree.take_attack_damage(10)
+		_check(tree.health == maxi(0, hp - 10), "damage applies to the tree that was hit")
+		tree.take_attack_damage(999)
+		_check(tree.fallen, "a felled tree falls")
+		_check(tree.get_node_or_null("Body") != null and (tree.get_node("Body") as StaticBody2D).collision_layer == 0, "a felled tree drops its collision")
+		_check(GameState.forest_tree_health(tree.tree_id, 100) == 0, "felled tree health persists")
+
+	# --- Resident houses own their art (same reparenting regression).
+	var house_holders := get_tree().get_nodes_in_group("resident_house")
+	var houses_ok := not house_holders.is_empty()
+	for holder in house_holders:
+		if (holder as Node).get_child_count() < 3:
+			houses_ok = false
+	_check(houses_ok, "resident cottages render their art at their own position")
+
+	# --- Water mask matches the real ocean (P0 regression).
+	var lobby := game.world as Lobby
+	var mask_tex: Texture2D = lobby.call("_make_water_mask_texture")
+	var mask := mask_tex.get_image()
+	var beyond_alpha := 0.0
+	for x in [420, 500, 700, 1000]:
+		for y in [300, 500, 620]:
+			if x < mask.get_width() and y < mask.get_height():
+				beyond_alpha = maxf(beyond_alpha, mask.get_pixel(x, y).a)
+	_check(beyond_alpha == 0.0, "water mask is empty beyond the painted ocean")
+	var shore_inside := float(lobby._coast_pixel_y(200)) / 32.0
+	var in_sea := mask.get_pixel(100, int(shore_inside * 16.0) + 60)
+	_check(in_sea.a > 0.4 and in_sea.r > 0.2, "water mask fills the real sea with depth data")
+
+	# --- Unwanted stars and sparkles are gone.
+	_check("sparkle" not in Shaders.WATER_CODE, "the sea no longer twinkles with random sparkle stars")
+	_check(get_tree().get_first_node_in_group("pet").get("_stars") == null, "the downed pet no longer orbits stars")
+	_check(PixelArt.butterfly_texture(0, Color("#ffd47b")) != PixelArt.icon("spark", 16), "butterflies use real wing art, not spark icons")
+	_check(PixelArt.dot_texture(8) != PixelArt.icon("spark", 16), "pollen uses soft dots, not star icons")
+
+	# --- Camera zoom setting: bounds, default and world application.
+	_check(FollowCamera.DEFAULT_ZOOM == 40.0, "camera default zoom frames the village like the classic view")
+	_check(is_equal_approx(lobby.camera.zoom_from_settings(), 40.0), "camera starts at the default zoom")
+	GameSettings.set_camera_zoom(999)
+	_check(GameSettings.camera_zoom() == 160 and is_equal_approx(lobby.camera.zoom_from_settings(), 64.0), "camera zoom clamps at the close end")
+	GameSettings.set_camera_zoom(1)
+	_check(GameSettings.camera_zoom() == 70 and is_equal_approx(lobby.camera.zoom_from_settings(), 28.0), "camera zoom clamps at the wide end")
+	GameSettings.set_camera_zoom(100)
+	var zoom_before_gui := lobby.camera.zoom.x
+	hud.call("set_gui_scale", 1.25)
+	_check(is_equal_approx(lobby.camera.zoom.x, zoom_before_gui), "GUI scale does not zoom the world")
+	hud.call("set_gui_scale", 1.0)
+
+	# --- GUI scale: authority, layout rect and edge anchoring.
+	hud.call("set_gui_scale", 0.75)
+	_check(is_equal_approx(hud.get_gui_scale(), 0.75) and GameSettings.ui_scale() == 75, "minimum GUI scale applies and persists")
+	var root: Control = hud.get("_root")
+	var vp := hud.get_viewport().get_visible_rect().size
+	_check(root.size.x >= vp.x / 0.75 - 1.0 and root.size.x <= vp.x / 0.75 + 1.0, "HUD layout rect compensates for the scale")
+	hud.call("set_gui_scale", 1.30)
+	_check(is_equal_approx(hud.get_gui_scale(), 1.30) and GameSettings.ui_scale() == 130, "maximum GUI scale applies and persists")
+	var menu_button := hud.get("_menu_button") as Button
+	var menu_right := menu_button.global_position.x + menu_button.size.x * menu_button.scale.x
+	_check(menu_right <= vp.x + 2.0, "edge-anchored controls stay on screen at maximum scale")
+	hud.call("set_gui_scale", 1.0)
+	_check(GameSettings.ui_scale() == 100, "GUI scale returns to the default")
+
+	# --- Turtle on the beach.
+	_check(lobby.has_besut_sign(), "the village-entry BESUT sign exists")
+	var turtle_pos: Vector2 = lobby.turtle_position()
+	var turtle_shore := float(lobby._coast_pixel_y(int(turtle_pos.x * 32.0))) / 32.0
+	_check(turtle_pos.y < turtle_shore - 0.8 and turtle_pos.y > turtle_shore - 3.4, "the turtle rests on dry sand above the waterline")
+	var turtle := lobby.get_node_or_null("BeachedTurtle") as BeachedTurtle
+	_check(turtle != null and turtle.get_node_or_null("Body") is StaticBody2D, "the turtle is grounded with a collider")
+	var sign := lobby.get_node_or_null("BesutSign") as BesutSign
+	_check(sign != null and PixelArt.besut_sign_texture().get_width() >= 36, "the BESUT sign renders legible lettering")
+	for shop_at in [Vector2(23.8, 22.2), Vector2(21.2, 19.2), Vector2(26.8, 17.8)]:
+		_check(sign.global_position.distance_to(shop_at) > 2.0, "the sign never blocks a shop front")
+
+	# --- NPC shopping: full state walk with economy isolation.
+	var shopper: Resident = null
+	for resident in lobby.get("_residents"):
+		var r := resident as Resident
+		if not bool(r.combat_enabled) and not r.is_shopping():
+			shopper = r
+			break
+	_check(shopper != null, "an idle resident is available for a shopping errand")
+	if shopper != null:
+		var gold_before := GameState.gold()
+		var inventory_before: Dictionary = (GameState.data.get("inventory") as Dictionary).duplicate(true)
+		var purchase := {"seen": false, "kind": ""}
+		shopper.purchase_made.connect(func(kind: String, _who: Resident) -> void:
+			purchase["seen"] = true
+			purchase["kind"] = kind)
+		var stall := Vector2(23.8, 22.2)
+		var browse := stall + Vector2(0.95, 2.55)
+		shopper.global_position = browse + Vector2(3.0, 1.5)
+		_check(shopper.begin_shopping_trip("potion", browse, stall), "a shopping trip starts")
+		_check(shopper.is_shopping() and shopper.current_shop_kind() == "potion", "the shopping state machine engages")
+		var last_pos := shopper.global_position
+		var max_step := 0.0
+		for i in 24:
+			await get_tree().process_frame
+			max_step = maxf(max_step, last_pos.distance_to(shopper.global_position))
+			last_pos = shopper.global_position
+		_check(max_step < 0.25, "the shopper walks continuously toward the stall (max step %.2f)" % max_step)
+		# Let the resident reach the counter, then shortcut the browse pause.
+		var waited := 0.0
+		while shopper.is_shopping() and shopper.get("_shop_phase") == Resident.ShopPhase.TO_SHOP and waited < 12.0:
+			await get_tree().create_timer(0.2).timeout
+			waited += 0.2
+		_check(shopper.get("_shop_phase") == Resident.ShopPhase.BROWSE, "the resident arrives and starts browsing")
+		shopper.set("_shop_timer", 0.05)
+		await get_tree().create_timer(0.4).timeout
+		_check(purchase["seen"] and purchase["kind"] == "potion", "a visible purchase exchange happens at the counter")
+		shopper.set("_shop_timer", 0.05)
+		await get_tree().create_timer(0.4).timeout
+		var leave_start := shopper.global_position
+		await get_tree().create_timer(0.5).timeout
+		_check(leave_start.distance_to(shopper.global_position) > 0.15 or not shopper.is_shopping(), "the shopper leaves the counter")
+		shopper.call("_end_shopping")
+		_check(not shopper.is_shopping(), "the trip ends and the resident resumes its route")
+		_check(GameState.gold() == gold_before, "ambient shopping never touches the player's gold")
+		_check((GameState.data.get("inventory") as Dictionary).size() == inventory_before.size(), "ambient shopping never touches the player's inventory")
+		_check(not hud.shop_panel.visible, "an NPC purchase never opens the player's shop panel")
+
+	# --- Pet catch-up: bounded speed, no leash teleport.
+	var pet := get_tree().get_first_node_in_group("pet") as Pet
+	var p: Player = game.call("player")
+	if pet != null and p != null:
+		pet.global_position = p.global_position + Vector2(8.0, 0.5)
+		var last_pet := pet.global_position
+		var max_pet_step := 0.0
+		for i in 30:
+			await get_tree().process_frame
+			max_pet_step = maxf(max_pet_step, last_pet.distance_to(pet.global_position))
+			last_pet = pet.global_position
+		_check(max_pet_step < 0.5, "the pet catches up at bounded speed, never teleporting (max step %.2f)" % max_pet_step)
+		await get_tree().create_timer(2.0).timeout
+		_check(pet.global_position.distance_to(p.global_position) < 3.0, "the pet rejoins the player after falling behind")
+
+	# --- Player movement continuity.
+	if p != null:
+		var start := p.global_position
+		var last_player := p.global_position
+		var max_player_step := 0.0
+		Input.action_press("move_right")
+		for i in 20:
+			await get_tree().process_frame
+			max_player_step = maxf(max_player_step, last_player.distance_to(p.global_position))
+			last_player = p.global_position
+		Input.action_release("move_right")
+		_check(p.global_position.x > start.x + 0.2, "player still moves under input")
+		_check(max_player_step < 0.4, "player movement is continuous, not stepped (max step %.2f)" % max_player_step)
+
 func _test_house_and_sleep() -> void:
 	var builder: ShopNPC = null
 	for node in get_tree().get_nodes_in_group("interactable"):
@@ -380,7 +560,7 @@ func _test_menu_and_settings() -> void:
 	_check(hud.settings_panel.visible, "Settings can be opened from the menu system")
 	var old_scale := float(hud.get_gui_scale())
 	hud.call("set_gui_scale", 1.10)
-	_check(is_equal_approx(hud.get_gui_scale(), 1.10) and is_equal_approx(GameState.gui_scale(), 1.10), "GUI scale setting applies and persists")
+	_check(is_equal_approx(hud.get_gui_scale(), 1.10) and GameSettings.ui_scale() == 110, "GUI scale setting applies and persists via GameSettings")
 	hud.call("set_control_layout", "attack", 100.0, 500.0, 88.0)
 	var attack := hud.get("_attack_button") as TouchActionButton
 	_check(attack.position.distance_to(Vector2(100, 500)) < 0.5 and is_equal_approx(attack.diameter, 88.0), "button positions and sizes are customizable")

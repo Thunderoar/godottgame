@@ -87,6 +87,10 @@ func _ready() -> void:
 	hud.hide_modals()
 	await get_tree().process_frame
 
+	# Back to the full window for the visual repair scenes below.
+	get_window().size = Vector2(1280, 720)
+	await get_tree().create_timer(0.3).timeout
+
 	# Combat frame strip: sword wind-up / active / recovery against a dummy.
 	var strip_player: Node = game.call("player")
 	if strip_player != null and game.world is Lobby:
@@ -105,6 +109,74 @@ func _ready() -> void:
 			await get_tree().create_timer(0.07).timeout
 			await _shot("13_combat_strip_%d" % i)
 		dummy.queue_free()
+
+	# --- Visual repair review: coast + turtle, BESUT sign, forest, shopping,
+	# --- zoom levels, quality tiers and GUI scales.
+	if strip_player != null:
+		strip_player.global_position = Vector2(20.0, 32.6)
+		await get_tree().create_timer(0.6).timeout
+		await _shot("14_coast_turtle")
+
+	if strip_player != null:
+		strip_player.global_position = Vector2(24.6, 28.6)
+		await get_tree().create_timer(0.5).timeout
+		await _shot("15_besut_sign")
+
+	if strip_player != null:
+		strip_player.global_position = Vector2(52.0, 18.0)
+		await get_tree().create_timer(0.6).timeout
+		await _shot("16_forest_trees")
+
+	if game.world is Lobby:
+		var shoppers: Array = (game.world as Lobby).get("_residents")
+		for candidate in shoppers:
+			var r := candidate as Resident
+			if r == null or bool(r.combat_enabled) or r.is_shopping():
+				continue
+			r.global_position = Vector2(23.8 + 0.95, 22.2 + 2.55)
+			r.begin_shopping_trip("potion", Vector2(23.8 + 0.95, 22.2 + 2.55), Vector2(23.8, 22.2))
+			break
+		await get_tree().create_timer(0.9).timeout
+		await _shot("17_npc_shopping")
+
+	GameSettings.set_camera_zoom(70)
+	if strip_player != null:
+		strip_player.global_position = Vector2(32.0, 24.0)
+		await get_tree().create_timer(1.4).timeout
+		await _shot("18_zoom_out")
+
+	GameSettings.set_camera_zoom(160)
+	await get_tree().create_timer(1.4).timeout
+	await _shot("19_zoom_in")
+	GameSettings.set_camera_zoom(100)
+	await get_tree().create_timer(1.0).timeout
+
+	GameSettings.set_effects_quality("low")
+	GameSettings.set_reduce_motion(true)
+	game.call("_load_lobby", false)
+	await get_tree().create_timer(1.0).timeout
+	await _shot("20_quality_low")
+	GameSettings.set_effects_quality("high")
+	GameSettings.set_reduce_motion(false)
+	game.call("_load_lobby", false)
+	await get_tree().create_timer(1.0).timeout
+	await _shot("21_quality_high")
+
+	hud.call("set_gui_scale", 1.30)
+	await get_tree().create_timer(0.3).timeout
+	await _shot("22_gui_130")
+	hud.call("set_gui_scale", 0.75)
+	await get_tree().create_timer(0.3).timeout
+	await _shot("23_gui_75")
+	hud.call("set_gui_scale", 1.0)
+
+	get_window().size = Vector2(832, 480)
+	hud.call("set_gui_scale", 1.30)
+	await get_tree().create_timer(0.4).timeout
+	await _shot("24_gui_130_832x480")
+	hud.call("set_gui_scale", 1.0)
+	get_window().size = Vector2(1280, 720)
+	await get_tree().create_timer(0.3).timeout
 
 	print("visual_review: done")
 	get_tree().quit(0)

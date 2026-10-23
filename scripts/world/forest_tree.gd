@@ -70,8 +70,8 @@ func _spawn_impact_feedback() -> void:
 	shake.tween_property(self, "position:x", position.x, 0.05)
 	for i in 3:
 		var leaf := Sprite2D.new()
-		leaf.texture = PixelArt.icon("spark")
-		leaf.scale = Vector2(0.035, 0.035)
+		leaf.texture = PixelArt.leaf_texture()
+		leaf.scale = Vector2(0.030, 0.030)
 		leaf.modulate = Color("#c7e07a") if i % 2 == 0 else Color("#ffb45f")
 		leaf.z_as_relative = false
 		leaf.z_index = 720

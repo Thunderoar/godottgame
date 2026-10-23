@@ -80,6 +80,8 @@ static func draw_icon(img: Image, kind: String, size: int) -> void:
 			_check(img, s)
 		"spark":
 			_spark(img, s)
+		"marker":
+			_marker(img, s)
 		"portal":
 			_portal(img, s)
 		"pet":
@@ -599,6 +601,16 @@ static func _check(img: Image, s: float) -> void:
 	_line(img, 12 * s, 24 * s, 26 * s, 8 * s, tick, 4.0 * s)
 	_line(img, 6 * s, 17 * s, 12 * s, 24 * s, tick_light, 1.4 * s)
 	_line(img, 12 * s, 24 * s, 22 * s, 12 * s, tick_light, 1.4 * s)
+
+
+static func _marker(img: Image, s: float) -> void:
+	# Interaction chevron: a down-pointing cue that reads as "press Use here",
+	# never as a sparkle star.
+	var fill := Color("#ffd47b")
+	var edge := Color("#8a5a1f")
+	_poly(img, [Vector2(4 * s, 6 * s), Vector2(28 * s, 6 * s), Vector2(28 * s, 11 * s), Vector2(19 * s, 11 * s), Vector2(19 * s, 16 * s), Vector2(13 * s, 16 * s), Vector2(13 * s, 11 * s), Vector2(4 * s, 11 * s)], edge)
+	_poly(img, [Vector2(6 * s, 8 * s), Vector2(26 * s, 8 * s), Vector2(16 * s, 15 * s)], fill)
+	_line(img, 10 * s, 11 * s, 16 * s, 14 * s, edge, 1.4 * s)
 
 
 static func _spark(img: Image, s: float) -> void:

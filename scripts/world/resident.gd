@@ -2,6 +2,13 @@ class_name Resident
 extends Node2D
 ## Ambient settlement resident with a daily route. During an emergency the
 ## resident drops their routine and runs for shelter.
+##
+## Shopping trips are a purely ambient visual: the resident walks to a stall,
+## browses, exchanges coin for goods (VFX only) and walks away to resume the
+## route from wherever it stands — never teleporting, never touching the
+## player's gold, inventory or progression.
+
+signal purchase_made(shop_kind: String, customer: Resident)
 
 @export var resident_name := "Resident"
 @export var role := "resident"
@@ -14,6 +21,14 @@ extends Node2D
 @export var combat_range := 4.2
 @export var combat_interval := 1.15
 
+const SHOP_WALK_SCALE := 0.9
+const SHOP_ARRIVE_DIST := 0.28
+const BROWSE_TIME_MIN := 2.2
+const BROWSE_TIME_MAX := 4.2
+const LEAVE_DISTANCE := 2.6
+
+enum ShopPhase { TO_SHOP, BROWSE, BUY, LEAVE }
+
 var _sprite: Sprite2D
 var _tool: Sprite2D
 var _index := 0
@@ -22,6 +37,12 @@ var _bob := 0.0
 var _frightened := false
 var _threat_notified := false
 var _attack_timer := 0.0
+var _shopping := false
+var _shop_phase := ShopPhase.TO_SHOP
+var _shop_kind := ""
+var _shop_target := Vector2.ZERO
+var _shop_stall := Vector2.ZERO
+var _shop_timer := 0.0
 
 
 func _ready() -> void:
@@ -43,10 +64,11 @@ func _build() -> void:
 	_sprite.z_index = 7
 	add_child(_sprite)
 	_tool = Sprite2D.new()
-	_tool.texture = PixelArt.icon(_tool_icon())
+	_tool.texture = PixelArt.icon(_tool_icon()) if _tool_icon() != "" else null
 	_tool.scale = Vector2(0.028, 0.028)
 	_tool.position = Vector2(0.28, -0.62)
 	_tool.z_index = 8
+	_tool.visible = _tool_icon() != ""
 	add_child(_tool)
 
 
@@ -55,12 +77,15 @@ func _process(delta: float) -> void:
 	if _attack_timer > 0.0:
 		_attack_timer = maxf(0.0, _attack_timer - delta)
 	if GameState.emergency_active() and combat_enabled:
+		_shopping = false
 		_fight(delta)
+	elif _shopping:
+		_do_shopping(delta)
 	else:
 		_move_route(delta)
 	if _sprite:
 		_sprite.position.y = sin(_bob * 5.0) * 0.02
-	if _tool:
+	if _tool and _tool.texture != null:
 		_tool.position.y = -0.62 + sin(_bob * 4.0) * 0.02
 		_tool.visible = not _frightened
 
@@ -112,6 +137,96 @@ func _move_route(delta: float) -> void:
 			_index = (_index + 1) % maxi(1, waypoints.size())
 
 
+# ------------------------------------------------------------------ shopping
+
+func is_shopping() -> bool:
+	return _shopping
+
+
+func current_shop_kind() -> String:
+	return _shop_kind
+
+
+func begin_shopping_trip(shop_kind: String, browse_spot: Vector2, stall_position: Vector2) -> bool:
+	# Ambient-only errand: continuous walking, visual purchase, no economy calls.
+	if _shopping or _frightened or GameState.emergency_active() or not is_inside_tree():
+		return false
+	if waypoints.is_empty():
+		return false
+	_shopping = true
+	_shop_phase = ShopPhase.TO_SHOP
+	_shop_kind = shop_kind
+	_shop_target = browse_spot
+	_shop_stall = stall_position
+	_shop_timer = 0.0
+	if _tool:
+		_tool.visible = false
+	return true
+
+
+func _do_shopping(delta: float) -> void:
+	match _shop_phase:
+		ShopPhase.TO_SHOP:
+			if _walk_to(_shop_target, delta, speed * SHOP_WALK_SCALE):
+				_shop_phase = ShopPhase.BROWSE
+				_shop_timer = randf_range(BROWSE_TIME_MIN, BROWSE_TIME_MAX)
+				if _sprite:
+					_sprite.flip_h = (_shop_stall.x - global_position.x) < 0.0
+		ShopPhase.BROWSE:
+			# Examine the goods: a small lean toward the stall while deciding.
+			_shop_timer -= delta
+			if _sprite:
+				_sprite.position.x = -0.06 if _shop_stall.x < global_position.x else 0.06
+			if _shop_timer <= 0.0:
+				_shop_phase = ShopPhase.BUY
+				_shop_timer = 0.7
+				_purchase_feedback()
+		ShopPhase.BUY:
+			_shop_timer -= delta
+			if _shop_timer <= 0.0:
+				_shop_phase = ShopPhase.LEAVE
+				var away := (global_position - _shop_stall).normalized()
+				if away.length_squared() < 0.001:
+					away = Vector2(0, 1)
+				_shop_target = global_position + away * LEAVE_DISTANCE
+				if _sprite:
+					_sprite.position.x = 0.0
+		ShopPhase.LEAVE:
+			if _walk_to(_shop_target, delta, speed):
+				_end_shopping()
+
+
+func _walk_to(target: Vector2, delta: float, move_speed: float) -> bool:
+	# Continuous, delta-based walking with a deliberate stopping distance.
+	var delta_pos := target - global_position
+	var distance := delta_pos.length()
+	if distance <= SHOP_ARRIVE_DIST:
+		return true
+	var step := minf(delta * move_speed, distance)
+	global_position += delta_pos.normalized() * step
+	if _sprite:
+		_sprite.flip_h = delta_pos.x < 0.0
+	return false
+
+
+func _purchase_feedback() -> void:
+	# Coin leaves the customer, goods appear — VFX only, zero GameState calls,
+	# so the player's gold, inventory and progression are never touched.
+	var head := global_position + Vector2(0, -1.1)
+	Vfx.pop(head, "gold", Color("#ffe28a"))
+	Vfx.sparks(head + Vector2(0, -0.2), Vector2.UP, Color("#ffe7a1"), 3)
+	purchase_made.emit(_shop_kind, self)
+
+
+func _end_shopping() -> void:
+	_shopping = false
+	_shop_phase = ShopPhase.TO_SHOP
+	if _tool:
+		_tool.visible = not _frightened
+	# The route resumes from the current waypoint — the resident walks there
+	# continuously; nothing snaps back to an earlier route position.
+
+
 func _nearest_raider(max_distance: float) -> Enemy:
 	var best: Enemy = null
 	var best_distance := max_distance
@@ -132,6 +247,8 @@ func _current_waypoint() -> Variant:
 
 
 func _tool_icon() -> String:
+	# Unmapped roles carry no prop at all — a floating generic spark star is
+	# exactly the ambient clutter the star cleanup removes.
 	match role:
 		"fisher":
 			return "food"
@@ -149,13 +266,18 @@ func _tool_icon() -> String:
 			return "food"
 		"trader":
 			return "gold"
+		"stablehand":
+			return "food"
 		_:
-			return "spark"
+			return ""
 
 
 func _on_emergency_changed(active: bool, _remaining: int, _damage: int) -> void:
 	_frightened = active
 	if active:
+		# An emergency cancels any shopping errand immediately.
+		if _shopping:
+			_end_shopping()
 		Vfx.pop(global_position + Vector2(0, -1.4), "close", Color("#ff9c6b"))
 	if not active:
 		_threat_notified = false
