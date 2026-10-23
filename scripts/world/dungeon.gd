@@ -31,6 +31,8 @@ func setup(id: String) -> void:
 
 
 func _ready() -> void:
+	var guide := MissionPath.new()
+	add_child(guide)
 	add_to_group("world")
 	add_to_group("dungeon")
 	y_sort_enabled = true

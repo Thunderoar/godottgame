@@ -4,6 +4,7 @@ extends ModalBase
 ## cost and recovery change are shown before a separate Confirm action.
 
 var _band: ShopScene
+var _preview_level := 1
 
 
 func _ready() -> void:
@@ -18,6 +19,7 @@ func _ready() -> void:
 
 
 func open_house() -> void:
+	_preview_level = mini(GameState.house_level() + 1, HouseDB.max_level())
 	open_panel("Bram's Construction Shop")
 	if _band != null:
 		_band.keeper_say(ShopLinesDB.line("house", "greeting"))
@@ -28,6 +30,7 @@ func _rebuild() -> void:
 	_band = ShopScene.new()
 	_band.setup("house", "Bram")
 	content.add_child(_band)
+	add_body_text("Repairs are free: approach a damaged house or fence and press E / Use (Betulkan). It is restored immediately.", GameUI.TEAL, 15)
 	content.add_child(GameUI.spacer(2))
 	var level := GameState.house_level()
 	var current := HouseDB.get_level(level)
@@ -37,14 +40,23 @@ func _rebuild() -> void:
 	progression.add_theme_constant_override("separation", 6)
 	for step in range(1, HouseDB.max_level() + 1):
 		var color := GameUI.GOLD if step == level else (GameUI.GREEN if step < level else GameUI.BORDER_LIGHT)
-		progression.add_child(GameUI.chip("LEVEL %d" % step, color))
+		var choose := GameUI.button("LEVEL %d" % step, Vector2(108, 38))
+		choose.add_theme_color_override("font_color", color)
+		choose.toggle_mode = true
+		choose.button_pressed = step == _preview_level
+		choose.set_meta("house_preview_level", step)
+		choose.pressed.connect(_select_preview.bind(step))
+		progression.add_child(choose)
 	content.add_child(progression)
 	content.add_child(GameUI.spacer(2))
 	var previews := HBoxContainer.new()
 	previews.add_theme_constant_override("separation", 20)
 	content.add_child(previews)
 	previews.add_child(_preview_card(current, "CURRENT", level, true))
-	previews.add_child(_preview_card(next if not next.is_empty() else current, "NEXT" if not next.is_empty() else "COMPLETE", mini(level + 1, HouseDB.max_level()), false))
+	var selected := HouseDB.get_level(_preview_level)
+	previews.add_child(_preview_card(selected, "PREVIEW - LEVEL %d" % _preview_level, _preview_level, false))
+	add_body_text("%s: %s" % [selected.get("name", "Cottage"), selected.get("description", "")], GameUI.TEXT, 14)
+	add_body_text("Tap any level to see its design. Confirm Upgrade purchases only your next level.", GameUI.MUTED, 13)
 	if next.is_empty():
 		add_section("THE LANTERN HOUSE IS COMPLETE", GameUI.GOLD)
 		add_body_text("Your cottage is the finest on the coast. Full health now returns in %.0f seconds." % float(current.recovery), GameUI.TEXT, 16)
@@ -106,3 +118,8 @@ func _preview_card(data: Dictionary, tag: String, level: int, is_current: bool) 
 	rec.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(rec)
 	return card
+
+
+func _select_preview(level: int) -> void:
+	_preview_level = clampi(level, 1, HouseDB.max_level())
+	_rebuild()

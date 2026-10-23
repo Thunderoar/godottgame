@@ -47,13 +47,12 @@ and writes it; visual systems call `GameSettings.effects_at_least()` /
 - recovery state,
 - emergency state (active, remaining monsters, building damage),
 - settlement layout (saved editable-object positions),
-- persistent per-tree forest health,
+- persistent per-tree forest health and remaining sapling growth time,
 - sea-cleaning count,
 - custom touch-control layout (GUI scale delegates to GameSettings),
 - in-game play time and counters.
 
-The world is intentionally locked in **permanent daytime**; there is no phase
-clock or night transition.
+Game advances the saved `world_time` only while a world exists. GameState alternates 180-second day/night phases and emits `day_phase_changed` at boundaries; title screens do not advance it.
 
 Signals:
 
@@ -163,8 +162,7 @@ in the top-left HUD panel and use `GameState.data.xp_next` and
 - Monster mode opens `PortalPanel`; pet mode opens `PetBattlePanel`.
 - `PetBattlePanel` starts a 1v1 duel with the active pet's real level/stats.
   Both pets have `Attack` and `Defend`.
-- Each round opens a 2-second choice window. Player and enemy choices are held,
-  then `_resolve_turn()` applies both simultaneously. Defend reduces incoming
+- Each round waits indefinitely for an explicit player Attack or Defend. `choose_skill` resolves both actions together; `_resolve_turn` rejects an empty player choice. Defend reduces incoming
   damage by 65%.
 - `PetHitEffect` adds scratch/punch impacts on damage and a shield shell when a
   pet defends.
@@ -192,45 +190,64 @@ in the top-left HUD panel and use `GameState.data.xp_next` and
   chickens/goats, two horses, seven resident cottages, abandoned/damaged/destroyed
   ruin houses, the coastal guard/rubbish system, the yellow Unisza student and a
   dense forest.
-- `Resident` follows daily waypoints. Non-combat residents flee to shelter on
-  `emergency_changed(true, ...)`; combat-capable residents and defenders attack
-  nearby raiders. Residents and merchants no longer create floating name labels.
+- `Resident` follows daily waypoints. During sea-urchin danger or an emergency,
+  residents seek an intact house and become protected only after entering it.
+  Residents and merchants do not create floating personal-name labels.
 - `SettlementPlaceable` groups the house, shops, fence runs, garden beds and
   decorations. `SettlementEditor` toggles with Build/B, locks movement, draws the
   grid area and supports touch/mouse drag with grid snap and bounds clamping.
   Positions save under `settlement_layout` and survive lobby reloads.
 - `SettlementTarget` marks the cottage, shop stalls and resident cottages.
-  `ForestTree` marks the 64 protected trees in the eastern woodland. Every tree
+  `ForestTree` marks the protected trees throughout the woodland. Every tree
   has persistent HP, shakes/flashes, emits small leaf VFX and plays `tree_hit`.
-  At zero HP it falls and leaves the target group. When all trees are dead,
-  `Lobby` calls `GameState.trigger_game_over()`.
-- `Lobby` spawns eight persistent `forest_mode` monsters and three extra during
-  an emergency. Their attack cadence is 0.62s, so tree impacts stay active.
-- `Enemy.forest_mode` targets the nearest tree until `_can_see_player()` passes a
-  range + raycast line-of-sight check. On first sight it immediately sets the
-  player as target, plays `aggro`, and starts a charge before attacking.
-- `Game` triggers an emergency after 14 seconds inside a portal and applies
+  Fire attacks ignite mature trees, causing ongoing damage with visible flames.
+  At zero HP a tree falls, disappears and leaves the target group. Two blue
+  `Resident.water_power` keepers claim separate jobs, walk to fires and water
+  trees to restore 5 HP per 1.25 seconds and extinguish them at full health.
+  `VillageServicesPanel` recruits up to five keepers with saved ownership.
+  They also walk to
+  fallen trees and plant replacements after two seconds of work. Replacements
+  grow for 30 seconds of active lobby time, tracked in `forest_growth`; they
+  have no trunk collision and cannot be targeted or damaged until mature.
+  When no mature trees or planted saplings remain, `Lobby` triggers game over.
+  A four-second devastation sequence grades the terrain orange, fades in a
+  dark green sea and stranded dead fish/crabs, then shows the locked panel.
+- `Lobby` spawns 24 fire monsters, with a raid cap of 30. They only attack mature
+  trees and never target or damage players. They remain active after sunrise;
+  each night replenishes living fire monsters to 24 and sea urchins to 6. Dawn only changes lighting and never removes or disables surviving enemies.
+- Sea rubbish and emergency waves spawn `urchin` enemies. They choose trees,
+  fences, houses or exposed residents, and follow obstacle-aware village routes.
+  Their tree damage does not ignite fires. Kill rewards never duplicate catches.
+- Houses and fences register stable structure IDs in GameState. `SettlementTarget`
+  applies per-structure HP, collapse, collision release and restoration. Residents
+  walk to intact homes during danger and hide/protect themselves only after arrival.
+  Destruction exposes occupants; resident HP and deaths persist by resident name.
+- `VillageServicesPanel` hires blue water keepers. Houses have a `StructureRepairPoint` at the doorway; every fence segment has a repair point. These Interactables check player distance, then call `GameState.repair_structure` to restore HP immediately without payment. There are no repair workers or paid plans.
+- `Game` triggers an emergency after at least 14 seconds inside a portal, once it is night, and applies
   damage ticks every 5 seconds until the player returns.
 - `Lobby` spawns `settlement_mode` raiders from sea and forest approaches. Each
   raider death calls `register_emergency_kill()` and grants gold. Zero remaining
   clears the emergency and objective.
 - The player is never teleported, and the portal world/combat is untouched.
 
-## Permanent daytime and title flow
+## Day/night cycle and title flow
 
-- The environment remains in daylight at all times. No phase timer, night tint or
-  HUD countdown exists.
+- Day and night each last 180 seconds. The HUD shows the phase/countdown and Lobby blends a readable night tint over three seconds (instant with Reduce Motion). Only night can create new fire monsters or sea urchins, including emergency and rubbish paths.
+- Living home enemies are captured as primitive kind/position/HP/raid records in `home_monsters` before saves and world transitions. Lobby restores these even during daylight. Saved `home_wave` prevents duplicate night refills. New journeys reset both clock and enemies.
 - `TitleScreen` shows **SAVE THE WORLD**, the creator credit, Continue and the
   three-hero **CHOOSE YOUR ROAD** cards.
-- New games start `TutorialGuide` (eight non-blocking steps); Continue skips it.
+- New games start `TutorialGuide` with ten action-based lessons from `MissionDB`.
+  Only the current lesson's real event advances `mission_step`; Continue resumes
+  the saved lesson. `TutorialSpotlight` darkens the rest of the screen and draws an arrow around the current control, stall, or modal action. It does not intercept input. Tips can be hidden/reopened from Menu.
 
 ## Guidance, dashboard and menus
 
-- `Lobby.get_guidance_targets()` returns up to three mission targets: emergency
-  raider, Monster gate, Pet gate, Construction Shop or forest/guard fallback.
+- `Lobby.get_guidance_targets()` returns the current lesson's single destination,
+  using actual shop positions after editing. After lessons, it selects one objective.
   `Dungeon.get_guidance_targets()` returns the boss or Shore Gate.
-- `GameHUD._update_mission_guide()` refreshes three `MissionArrow` nodes every
-  0.2s with direction and distance.
+- `MissionPath` draws dashed arrows along routes around world collision. Lobby
+  shares its resident route planner; Dungeon has a separate planner. The old HUD
+  arrow strip is no longer constructed; compatibility methods remain inert.
 - `PlayerVitalHud` is a child of `Player` with `light_mask = 0`; it draws only HP
   and MP above the player's head.
 - `GameHUD.MenuButton` emits `menu_requested`. `MenuPanel` opens Settings or
@@ -347,3 +364,7 @@ Map undo integrates with EditorUndoRedoManager; pixels use bounded image snapsho
 The plugin reports unsaved work and keeps recovery drafts across disable/reload.
 It is excluded from runtime packaging. Exported resource-pack smoke testing boots
 the actual game and imported art without the editor code.
+
+HousePanel keeps a local selected preview level. Every Level button can show that design and recovery rate without changing GameState or charging diamonds; Confirm Upgrade still purchases only the next level. ShopNPC handles unhandled mouse/touch hits against the full stall footprint, guarded by current world, modal lock and editor state.
+
+PetBattleDB assigns a separate background resource path to each duel. The supplied image bytes could not be downloaded in this sandbox; those assets are pending. `tools/import_pet_backgrounds.ps1` accepts a local source folder and prepares the files, including a PNG first frame of the GIF.

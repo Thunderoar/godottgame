@@ -654,6 +654,24 @@ static func enemy_texture(kind: String, boss: bool = false, frame: int = 0) -> T
                                 px(img, 13, 21 + bob, OUTLINE)
                                 px(img, 19, 21 + bob, OUTLINE)
                                 hline(img, 13, 25 + bob, 6, OUTLINE)
+                        "urchin":
+                                ellipse(img, 16, 27, 13, 3, Color(0, 0, 0, 0.3))
+                                for i in 16:
+                                        var angle := float(i) * TAU / 16.0
+                                        var tip := Vector2(16, 17) + Vector2.from_angle(angle) * (14.0 if i % 2 == 0 else 12.0)
+                                        line(img, 16, 17, roundi(tip.x), roundi(tip.y) + bob, Color("#343052"))
+                                ellipse(img, 16, 18 + bob, 9, 8, Color("#41395e"))
+                                ellipse(img, 14, 16 + bob, 6, 5, Color("#665381"))
+                                rect(img, 11, 17 + bob, 3, 2, Color("#f4df8a"))
+                                rect(img, 19, 17 + bob, 3, 2, Color("#f4df8a"))
+                        "fire":
+                                ellipse(img, 16, 27, 12, 4, Color("#432c26"))
+                                _fill_polygon(img, [Vector2i(4, 26), Vector2i(7, 12 + bob), Vector2i(12, 17), Vector2i(16, 2 + bob), Vector2i(20, 15), Vector2i(26, 9), Vector2i(29, 26)], Color("#e95720"))
+                                ellipse(img, 16, 23 + bob, 9, 7, Color("#ffac35"))
+                                _fill_polygon(img, [Vector2i(10, 26), Vector2i(16, 11 + bob), Vector2i(23, 26)], Color("#ffe57b"))
+                                rect(img, 10, 20 + bob, 4, 3, OUTLINE)
+                                rect(img, 19, 20 + bob, 4, 3, OUTLINE)
+                                hline(img, 14, 26 + bob, 5, Color("#94351e"))
                         "raider":
                                 ellipse(img, 16, 24 + bob, 12, 7, Color("#1e1c23"))
                                 ellipse(img, 16, 21 + bob, 10, 7, Color("#342b31"))
@@ -739,6 +757,7 @@ static func npc_texture(kind: String) -> Texture2D:
                         "defender": [Color("#3b5368"), Color("#a8c8d8"), Color("#26343f")],
                         "resident": [Color("#5b5967"), Color("#c7c2d6"), Color("#34323d")],
                         "student": [Color("#b08a20"), Color("#ffe06a"), Color("#5a4312")],
+                        "water_keeper": [Color("#2078cb"), Color("#9ceaff"), Color("#153d7a")],
                 }.get(kind, [Color("#5c5c5c"), Color("#c9c9c9"), Color("#333333")])
                 var robe: Color = palette[0]
                 var accent: Color = palette[1]

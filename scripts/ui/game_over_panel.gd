@@ -25,7 +25,7 @@ func _rebuild() -> void:
 	add_body_text("THE VILLAGE HAS FALLEN", GameUI.RED, 30)
 	var text := _reason if _reason != "" else "The forest is gone. There is nothing left to defend."
 	add_body_text(text, GameUI.TEXT, 18)
-	add_body_text("Every tree in the eastern woodland has been destroyed. This run is over.", GameUI.MUTED, 14)
+	add_body_text("No mature trees or planted saplings remain. The earth has dried and the sea is poisoned.", GameUI.MUTED, 14)
 	content.add_child(GameUI.spacer(10))
 	var button := GameUI.button("Return to Title", Vector2(320, 52))
 	button.pressed.connect(func() -> void:

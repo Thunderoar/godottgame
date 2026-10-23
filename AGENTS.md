@@ -342,5 +342,6 @@ or EditorPlugin from gameplay scripts. The main workspace is **Tidesworn**.
   subdirectory. A source PNG/map is overwritten only through an explicit Save.
 
 Workflows, current evidence and limits are in `docs/CREATIVE_REVAMP_COMPLETION.md`
-and `docs/CREATIVE_REVAMP_QA.md`. The verified gameplay tally is 438 checks; the
+and `docs/CREATIVE_REVAMP_QA.md`. After the 2026-10-24 local gameplay merge,
+the verified gameplay tally is 524 checks; the
 native editor workflow has 27 checks plus a separate runtime restart verification.

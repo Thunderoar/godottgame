@@ -30,6 +30,7 @@ var menu_panel: MenuPanel
 var settings_panel: SettingsPanel
 var dialogue_panel: DialoguePanel
 var game_over_panel: GameOverPanel
+var village_services_panel: VillageServicesPanel
 
 var _gui_layout: Dictionary = {}
 var _root: Control
@@ -196,57 +197,12 @@ func _build_objectives() -> void:
 
 
 func _build_mission_guide() -> void:
-	_mission_panel = GameUI.panel(Color(0.025, 0.065, 0.075, 0.88), Color("#45666b"))
-	_mission_panel.anchor_left = 0.5
-	_mission_panel.anchor_right = 0.5
-	_mission_panel.anchor_top = 1.0
-	_mission_panel.anchor_bottom = 1.0
-	_mission_panel.offset_left = -252
-	_mission_panel.offset_right = 252
-	_mission_panel.offset_top = -136
-	_mission_panel.offset_bottom = -92
-	_mission_panel.visible = false
-	_root.add_child(_mission_panel)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 5)
-	_mission_panel.add_child(row)
-	for i in 3:
-		var arrow := MissionArrow.new()
-		arrow.custom_minimum_size = Vector2(160, 30)
-		arrow.visible = false
-		row.add_child(arrow)
-		_mission_arrows.append(arrow)
+	# Navigation is drawn on world paths; no bottom notification strip.
+	pass
 
 
 func _update_mission_guide() -> void:
-	if _mission_panel == null:
-		return
-	if world == null or not is_instance_valid(world):
-		_mission_panel.visible = false
-		return
-	var player := get_tree().get_first_node_in_group("player") as Node2D
-	if player == null:
-		_mission_panel.visible = false
-		return
-	var targets: Array = []
-	if world.has_method("get_guidance_targets"):
-		targets = world.call("get_guidance_targets") as Array
-	if targets.is_empty():
-		_mission_panel.visible = false
-		return
-	_mission_panel.visible = true
-	for i in _mission_arrows.size():
-		var arrow := _mission_arrows[i]
-		if i >= targets.size():
-			arrow.visible = false
-			continue
-		var target: Dictionary = targets[i]
-		var target_color: Color = target.get("color", GameUI.TEAL)
-		var target_position: Vector2 = target.get("position", player.global_position)
-		arrow.visible = true
-		arrow.setup(str(target.get("label", "OBJECTIVE")), target_color)
-		arrow.aim(player.global_position, target_position)
-
+	pass
 
 func _build_emergency_panel() -> void:
 	_emergency_panel = GameUI.panel(Color(0.16, 0.035, 0.045, 0.94), Color("#c44f55"))
@@ -433,7 +389,7 @@ func set_gui_scale(value: float, persist: bool = true) -> void:
 
 func _capture_gui_layout() -> void:
 	for child in _root.get_children():
-		if child is Control and not child is ModalBase and child != tutorial_guide and child != _fade and child != _vignette:
+		if child is Control and not child is ModalBase and not child is TutorialSpotlight and child != tutorial_guide and child != _fade and child != _vignette:
 			_gui_layout[child] = {"left": child.offset_left, "top": child.offset_top, "size": child.size.max(child.get_combined_minimum_size())}
 
 
@@ -653,9 +609,15 @@ func _build_tutorial() -> void:
 	tutorial_guide = TutorialGuide.new()
 	tutorial_guide.name = "TutorialGuide"
 	_root.add_child(tutorial_guide)
+	var spotlight := TutorialSpotlight.new()
+	spotlight.hud = self
+	spotlight.name = "TutorialSpotlight"
+	_root.add_child(spotlight)
 
 
 func _build_modals() -> void:
+	village_services_panel = VillageServicesPanel.new()
+	_root.add_child(village_services_panel)
 	shop_panel = ShopPanel.new()
 	_root.add_child(shop_panel)
 	inventory_panel = InventoryPanel.new()
@@ -971,6 +933,8 @@ func set_build_mode(active: bool) -> void:
 
 
 func any_modal_open() -> bool:
+	if village_services_panel != null and village_services_panel.visible:
+		return true
 	for panel in [shop_panel, inventory_panel, portal_panel, pet_battle_panel, sea_cleaning_panel, house_panel, victory_panel, defeat_panel, menu_panel, settings_panel, dialogue_panel, game_over_panel]:
 		if panel != null and panel.visible:
 			return true
@@ -978,6 +942,8 @@ func any_modal_open() -> bool:
 
 
 func hide_modals() -> void:
+	if village_services_panel != null and village_services_panel.visible:
+		village_services_panel.close_panel()
 	for panel in [shop_panel, inventory_panel, portal_panel, pet_battle_panel, sea_cleaning_panel, house_panel, victory_panel, defeat_panel, menu_panel, settings_panel, dialogue_panel, game_over_panel]:
 		if panel != null and panel.visible:
 			panel.close_panel()
