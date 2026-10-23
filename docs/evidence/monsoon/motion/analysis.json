@@ -1,0 +1,69 @@
+{
+  "samples": 1166,
+  "fixed_fps": 60,
+  "entities": {
+    "player": {
+      "max_same_stage_step": 0.4214534759520987,
+      "moving_samples": 343,
+      "fractional_art_pixel_fraction": 1.0
+    },
+    "pet": {
+      "max_same_stage_step": 0.14999941881677212,
+      "moving_samples": 1086,
+      "fractional_art_pixel_fraction": 1.0
+    },
+    "camera": {
+      "max_same_stage_step": 0.3456888141379621,
+      "moving_samples": 818,
+      "fractional_art_pixel_fraction": 1.0
+    },
+    "enemy": {
+      "max_same_stage_step": 0.108332954990447,
+      "moving_samples": 1005,
+      "fractional_art_pixel_fraction": 1.0
+    },
+    "resident": {
+      "max_same_stage_step": 0.6988829982671078,
+      "moving_samples": 359,
+      "fractional_art_pixel_fraction": 1.0
+    }
+  },
+  "baseline_comparison": {
+    "player": {
+      "baseline_max_step": 0.4214534759520987,
+      "monsoon_max_step": 0.4214534759520987,
+      "baseline_index": 0,
+      "monsoon_index": 0
+    },
+    "pet": {
+      "baseline_max_step": 0.15000019789091615,
+      "monsoon_max_step": 0.14999941881677212,
+      "baseline_index": 985,
+      "monsoon_index": 981
+    },
+    "camera": {
+      "baseline_max_step": 0.3456888141379621,
+      "monsoon_max_step": 0.3456888141379621,
+      "baseline_index": 566,
+      "monsoon_index": 566
+    },
+    "enemy": {
+      "baseline_max_step": 0.10833383784339574,
+      "monsoon_max_step": 0.108332954990447,
+      "baseline_index": 1149,
+      "monsoon_index": 744
+    },
+    "resident": {
+      "baseline_max_step": 0.6988829982671078,
+      "monsoon_max_step": 0.6988829982671078,
+      "baseline_index": 817,
+      "monsoon_index": 817
+    }
+  },
+  "notes": [
+    "Fixed-fps recording is not real-time FPS evidence.",
+    "Largest player step is initial physics overlap correction at sample 0, identical on main.",
+    "Largest resident step at sample 817 and camera catch-up at 566 are identical on main.",
+    "All moving Monsoon samples retain fractional art-pixel coordinates."
+  ]
+}

@@ -9,7 +9,7 @@ var role_entry: LineEdit
 var domain: OptionButton
 var picker: ColorPickerButton
 var comparison: Label
-var path := "res://data/palettes/coast.tres"
+var path := "res://data/palettes/monsoon_afterglow.tres"
 var dirty := false
 
 func _ready() -> void:
@@ -19,6 +19,10 @@ func _ready() -> void:
 	name_entry.text_changed.connect(func(_text: String) -> void: dirty = true)
 	W.button(top, "Load palette…", func() -> void: W.dialog(self, ["*.tres ; WorldPalette"], false, _load).popup_centered())
 	W.button(top, "Save palette…", func() -> void: W.dialog(self, ["*.tres ; WorldPalette"], true, _save).popup_centered())
+	var presets := W.row(self)
+	for preset in [["Monsoon Afterglow", "monsoon_afterglow"], ["Previous coast", "coast"], ["Original", "original"]]:
+		var destination := "res://data/palettes/%s.tres" % preset[1]
+		W.button(presets, preset[0], func() -> void: _load(destination))
 	var controls := W.row(self)
 	domain = W.option(controls, ["World", "UI"])
 	role_entry = W.entry(controls, "Role name", "grass")

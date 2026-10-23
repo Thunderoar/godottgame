@@ -24,14 +24,31 @@ static var generation := 0
 
 static func current() -> WorldPalette:
 	if active == null:
-		active = load("res://data/palettes/coast.tres") as WorldPalette
+		active = load("res://data/palettes/monsoon_afterglow.tres") as WorldPalette
 	return active
 
 static func color(role: String) -> Color:
-	return current().world.get(role, Color.MAGENTA)
+	var materials := current().world
+	if materials.has(role): return materials[role]
+	# Older palettes remain valid: new roles derive from established materials.
+	var fallback := {"leaf": "grass_shadow", "leaf_mint": "grass_light", "leaf_sun": "grass_warm", "leaf_deep": "grass_shadow", "fern": "grass", "sea_mid": "sea_shallow", "wood_shadow": "shadow", "sunlight": "gold", "cream": "sand", "lantern": "gold", "outline": "shadow"}
+	return materials.get(fallback.get(role, role), Color.MAGENTA)
+
+static func select_for_map(palette: WorldPalette) -> void:
+	# Developer A/B preview only; no player preference or shared-resource mutation.
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--palette="):
+			var path := argument.trim_prefix("--palette=")
+			var preview := load(path) as WorldPalette if ResourceLoader.exists(path) else null
+			if preview != null:
+				use_palette(preview)
+				return
+	use_palette(palette if palette != null else current())
+
 
 static func use_palette(palette: WorldPalette, force := false) -> void:
 	if active == palette and not force: return
 	active = palette
 	generation += 1
 	PixelArt.CACHE.clear()
+	GameUI.invalidate()

@@ -43,3 +43,9 @@ art into their resource pack.
 Evidence: `evidence/creative/studio/pixel-editor.png`. Reproduce the automated
 workflow with `./tools/test_creative_editor.sh`; it uses both a disposable source
 copy and isolated userdata because this workflow intentionally writes assets.
+
+Monsoon source PNGs are available under `assets/authored/monsoon/`. Open an
+individual tree, undergrowth, cottage, stall or prop to edit its exact pixels.
+The adjacent manifest records dimensions and attachment pivots. Register the
+result under an explicit procedural key to use it as a runtime override;
+generators remain the master for palette-aware fallback art.

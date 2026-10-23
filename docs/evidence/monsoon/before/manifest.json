@@ -1,0 +1,392 @@
+[
+	{
+		"name": "new-journey",
+		"player": [
+			34.0,
+			24.2999992370605
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 0.0,
+		"zoom": 38.0
+	},
+	{
+		"name": "village",
+		"player": [
+			34.0,
+			24.2999992370605
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"name": "market",
+		"player": [
+			24.0,
+			22.5492248535156
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"name": "forest",
+		"player": [
+			53.0,
+			19.0
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"name": "beach",
+		"player": [
+			9.0,
+			25.0
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"name": "turtle",
+		"player": [
+			14.0,
+			28.0
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"name": "east-coast",
+		"player": [
+			24.0,
+			35.0
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"name": "besut",
+		"player": [
+			30.3999996185303,
+			26.7999992370605
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"name": "portals",
+		"player": [
+			34.0,
+			13.0
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"name": "inventory",
+		"player": [
+			34.0,
+			24.2999992370605
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"name": "shop",
+		"player": [
+			34.0,
+			24.2999992370605
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"name": "water-low",
+		"player": [
+			14.0,
+			28.0
+		],
+		"quality": "low",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"name": "water-med",
+		"player": [
+			14.0,
+			28.0
+		],
+		"quality": "med",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"name": "water-high",
+		"player": [
+			14.0,
+			28.0
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"name": "reduce-motion",
+		"player": [
+			14.0,
+			28.0
+		],
+		"quality": "high",
+		"reduce_motion": true,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"name": "zoom-28",
+		"player": [
+			34.0,
+			24.2999992370605
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 28.0
+	},
+	{
+		"name": "zoom-64",
+		"player": [
+			34.0,
+			24.2999992370605
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 64.0
+	},
+	{
+		"name": "small-screen",
+		"player": [
+			34.0,
+			24.2999992370605
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			832,
+			480
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"name": "small-shop",
+		"player": [
+			34.0,
+			24.2999992370605
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			832,
+			480
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"name": "golden-hour",
+		"player": [
+			34.0,
+			24.2999992370605
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 155.0,
+		"zoom": 38.0
+	},
+	{
+		"name": "night-village",
+		"player": [
+			34.0,
+			24.2999992370605
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 205.0,
+		"zoom": 38.0
+	},
+	{
+		"name": "night-forest",
+		"player": [
+			53.0,
+			19.0
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 205.0,
+		"zoom": 38.0
+	},
+	{
+		"name": "water-keeper",
+		"player": [
+			59.524772644043,
+			11.1999998092651
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 205.0,
+		"zoom": 38.0
+	},
+	{
+		"name": "coastal-combat",
+		"player": [
+			59.5310249328613,
+			11.1999998092651
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 205.0,
+		"zoom": 38.0
+	},
+	{
+		"name": "dungeon",
+		"player": [
+			24.0,
+			24.0
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 360.0,
+		"zoom": 38.0
+	},
+	{
+		"name": "dungeon-combat",
+		"player": [
+			24.0062465667725,
+			24.0
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 360.0,
+		"zoom": 38.0
+	}
+]

@@ -1,0 +1,475 @@
+{
+	"entries": {
+		"baskets": {
+			"file": "baskets.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				32,
+				64
+			],
+			"size": [
+				64,
+				64
+			]
+		},
+		"bucket": {
+			"file": "bucket.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				32,
+				64
+			],
+			"size": [
+				64,
+				64
+			]
+		},
+		"fishing_net": {
+			"file": "fishing_net.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				32,
+				64
+			],
+			"size": [
+				64,
+				64
+			]
+		},
+		"house_1": {
+			"file": "house_1.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				112,
+				176
+			],
+			"size": [
+				224,
+				176
+			]
+		},
+		"house_2": {
+			"file": "house_2.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				112,
+				176
+			],
+			"size": [
+				224,
+				176
+			]
+		},
+		"house_3": {
+			"file": "house_3.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				112,
+				176
+			],
+			"size": [
+				224,
+				176
+			]
+		},
+		"house_4": {
+			"file": "house_4.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				112,
+				176
+			],
+			"size": [
+				224,
+				176
+			]
+		},
+		"house_5": {
+			"file": "house_5.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				112,
+				176
+			],
+			"size": [
+				224,
+				176
+			]
+		},
+		"lantern": {
+			"file": "lantern.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				32,
+				64
+			],
+			"size": [
+				64,
+				64
+			]
+		},
+		"planter": {
+			"file": "planter.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				32,
+				64
+			],
+			"size": [
+				64,
+				64
+			]
+		},
+		"stall_equipment": {
+			"file": "stall_equipment.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				56,
+				96
+			],
+			"size": [
+				112,
+				96
+			]
+		},
+		"stall_house": {
+			"file": "stall_house.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				56,
+				96
+			],
+			"size": [
+				112,
+				96
+			]
+		},
+		"stall_pet": {
+			"file": "stall_pet.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				56,
+				96
+			],
+			"size": [
+				112,
+				96
+			]
+		},
+		"stall_potion": {
+			"file": "stall_potion.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				56,
+				96
+			],
+			"size": [
+				112,
+				96
+			]
+		},
+		"timber": {
+			"file": "timber.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				32,
+				64
+			],
+			"size": [
+				64,
+				64
+			]
+		},
+		"tree_0_lower": {
+			"file": "tree_0_lower.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				52,
+				46
+			],
+			"size": [
+				104,
+				46
+			]
+		},
+		"tree_0_upper": {
+			"file": "tree_0_upper.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				52,
+				128
+			],
+			"size": [
+				104,
+				82
+			]
+		},
+		"tree_0_whole": {
+			"file": "tree_0_whole.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				52,
+				128
+			],
+			"size": [
+				104,
+				128
+			]
+		},
+		"tree_1_lower": {
+			"file": "tree_1_lower.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				58,
+				46
+			],
+			"size": [
+				116,
+				46
+			]
+		},
+		"tree_1_upper": {
+			"file": "tree_1_upper.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				58,
+				120
+			],
+			"size": [
+				116,
+				74
+			]
+		},
+		"tree_1_whole": {
+			"file": "tree_1_whole.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				58,
+				120
+			],
+			"size": [
+				116,
+				120
+			]
+		},
+		"tree_2_lower": {
+			"file": "tree_2_lower.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				42,
+				46
+			],
+			"size": [
+				84,
+				46
+			]
+		},
+		"tree_2_upper": {
+			"file": "tree_2_upper.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				42,
+				144
+			],
+			"size": [
+				84,
+				98
+			]
+		},
+		"tree_2_whole": {
+			"file": "tree_2_whole.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				42,
+				144
+			],
+			"size": [
+				84,
+				144
+			]
+		},
+		"tree_3_lower": {
+			"file": "tree_3_lower.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				48,
+				46
+			],
+			"size": [
+				96,
+				46
+			]
+		},
+		"tree_3_upper": {
+			"file": "tree_3_upper.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				48,
+				116
+			],
+			"size": [
+				96,
+				70
+			]
+		},
+		"tree_3_whole": {
+			"file": "tree_3_whole.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				48,
+				116
+			],
+			"size": [
+				96,
+				116
+			]
+		},
+		"tree_4_lower": {
+			"file": "tree_4_lower.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				56,
+				46
+			],
+			"size": [
+				112,
+				46
+			]
+		},
+		"tree_4_upper": {
+			"file": "tree_4_upper.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				56,
+				144
+			],
+			"size": [
+				112,
+				98
+			]
+		},
+		"tree_4_whole": {
+			"file": "tree_4_whole.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				56,
+				144
+			],
+			"size": [
+				112,
+				144
+			]
+		},
+		"undergrowth_0": {
+			"file": "undergrowth_0.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				20,
+				32
+			],
+			"size": [
+				40,
+				32
+			]
+		},
+		"undergrowth_1": {
+			"file": "undergrowth_1.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				20,
+				32
+			],
+			"size": [
+				40,
+				32
+			]
+		},
+		"undergrowth_2": {
+			"file": "undergrowth_2.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				20,
+				32
+			],
+			"size": [
+				40,
+				32
+			]
+		},
+		"undergrowth_3": {
+			"file": "undergrowth_3.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				20,
+				32
+			],
+			"size": [
+				40,
+				32
+			]
+		},
+		"undergrowth_4": {
+			"file": "undergrowth_4.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				20,
+				32
+			],
+			"size": [
+				40,
+				32
+			]
+		},
+		"undergrowth_5": {
+			"file": "undergrowth_5.png",
+			"filter": "nearest",
+			"frames": 1,
+			"pivot": [
+				20,
+				32
+			],
+			"size": [
+				40,
+				32
+			]
+		}
+	},
+	"palette": "Monsoon Afterglow",
+	"scale": 0.03125,
+	"source": "Original artwork generated by scripts/creative/monsoon_art.gd and scripts/core/pixel_art.gd"
+}

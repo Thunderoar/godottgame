@@ -1,0 +1,82 @@
+{
+  "source_commit": "a858b4c55c7f702def02035cc89aca88d37f1cf8",
+  "renderer": "llvmpipe (LLVM 23.1.1, 256 bits)",
+  "before": {
+    "cold_build_ms": 977.617,
+    "quality": {
+      "high": {
+        "cache_entries": 128,
+        "draw_calls": 323.788888888889,
+        "max_ms": 90.692,
+        "mean_ms": 34.9094388888889,
+        "median_ms": 32.454,
+        "p95_ms": 56.876,
+        "texture_bytes": 55387795.0
+      },
+      "low": {
+        "cache_entries": 128,
+        "draw_calls": 321.0,
+        "max_ms": 33.255,
+        "mean_ms": 20.4358,
+        "median_ms": 19.915,
+        "p95_ms": 24.182,
+        "texture_bytes": 55387795.0
+      },
+      "med": {
+        "cache_entries": 128,
+        "draw_calls": 322.294444444444,
+        "max_ms": 122.833,
+        "mean_ms": 37.9322444444444,
+        "median_ms": 32.523,
+        "p95_ms": 64.788,
+        "texture_bytes": 55387795.0
+      }
+    },
+    "renderer": "llvmpipe (LLVM 23.1.1, 256 bits)",
+    "resolution": [
+      1280,
+      720
+    ],
+    "warm_build_ms": 19.643,
+    "world_time": 360.0
+  },
+  "after": {
+    "cold_build_ms": 476.639,
+    "quality": {
+      "high": {
+        "cache_entries": 150,
+        "draw_calls": 336.7,
+        "max_ms": 72.101,
+        "mean_ms": 30.1568,
+        "median_ms": 29.077,
+        "p95_ms": 36.271,
+        "texture_bytes": 55113375.0
+      },
+      "low": {
+        "cache_entries": 150,
+        "draw_calls": 334.0,
+        "max_ms": 28.979,
+        "mean_ms": 22.4079111111111,
+        "median_ms": 21.931,
+        "p95_ms": 27.712,
+        "texture_bytes": 55113375.0
+      },
+      "med": {
+        "cache_entries": 150,
+        "draw_calls": 335.0,
+        "max_ms": 37.423,
+        "mean_ms": 28.5895777777778,
+        "median_ms": 28.184,
+        "p95_ms": 32.322,
+        "texture_bytes": 55113375.0
+      }
+    },
+    "renderer": "llvmpipe (LLVM 23.1.1, 256 bits)",
+    "resolution": [
+      1280,
+      720
+    ],
+    "warm_build_ms": 20.494,
+    "world_time": 360.0
+  }
+}

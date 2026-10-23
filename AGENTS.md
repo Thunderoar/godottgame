@@ -326,7 +326,7 @@ asset catalog, authored map/runtime rendering and micro-action resources.
 `addons/tidesworn_creative_tools/` is editor-only; never reference EditorInterface
 or EditorPlugin from gameplay scripts. The main workspace is **Tidesworn**.
 
-- Default authoring data: `data/maps/village.tres`, `data/palettes/coast.tres`,
+- Default authoring data: `data/maps/village.tres`, `data/palettes/monsoon_afterglow.tres`,
   `data/asset_registry/library.tres`. Independent PNGs stay under assets/authored.
 - Existing procedural forest IDs and creation order remain authoritative. Map
   base overrides move existing nodes; new authored trees use their authored ID.
@@ -345,3 +345,24 @@ Workflows, current evidence and limits are in `docs/CREATIVE_REVAMP_COMPLETION.m
 and `docs/CREATIVE_REVAMP_QA.md`. After the 2026-10-24 local gameplay merge,
 the verified gameplay tally is 524 checks; the
 native editor workflow has 27 checks plus a separate runtime restart verification.
+
+
+## 12. Monsoon Afterglow presentation
+
+The shipped village selects `data/palettes/monsoon_afterglow.tres`. Previous
+palettes remain compatible through semantic fallback. `MonsoonArt` owns original
+reproducible tree/plant/cottage/prop pixels; `assets/authored/monsoon/` contains
+editable exports and pivots. Explicit AssetRegistry overrides remain authoritative,
+including `authored_tree` and legacy `foliage/<path>` keys. Imported house art owns
+its windows; do not draw the procedural window mask over it.
+
+`MonsoonLighting` maps the existing GameState clock to presentation only. Do not
+add another clock or change phase spawning. Low/Reduce Motion keep the complete
+static terrain/water and warm windows. Optional boat motion has one owned tween
+that responds to live settings. Forest families consume no placement RNG.
+
+`MonsoonChecks` is part of the isolated gameplay gate and compares every original
+forest association against `tools/fixtures/monsoon_forest.json`. Run
+`./tools/review_monsoon.sh /absolute/output` for actual-renderer fixtures and
+measured software-renderer performance. Full evidence, caveats and authoring
+instructions: `docs/MONSOON_AFTERGLOW_REPORT.md` and `docs/ART_DIRECTION.md`.

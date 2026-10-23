@@ -160,14 +160,15 @@ func _make_dungeon_texture() -> Texture2D:
 	for i in 10:
 		var pt := Vector2(rng.randi_range(90, w - 90), rng.randi_range(100, h - 100))
 		_blend_ellipse(img, int(pt.x), int(pt.y), rng.randi_range(14, 40), rng.randi_range(5, 12), puddle, 0.35)
-	# Glowing spores in the theme mote colour.
-	var mote: Color = palette["mote"]
-	for i in 70:
+	# Small jade minerals nest in damp floor seams. Grouped clusters replace
+	# isolated bright dots, leaving the central fighting surface quiet.
+	var mineral := WorldPalette.color("leaf").lerp(glow, 0.15)
+	for i in 32:
 		var x := rng.randi_range(60, w - 60)
 		var y := rng.randi_range(60, h - 60)
-		img.set_pixel(x, y, mote)
-		if i % 9 == 0:
-			img.set_pixel(x + 1, y + 1, mote.darkened(0.25))
+		PixelArt.rect(img, x, y, 4, 2, mineral.darkened(0.18))
+		PixelArt.rect(img, x + 2, y - 2, 3, 2, mineral)
+		if i % 4 == 0: PixelArt.hline(img, x + 2, y - 2, 2, mineral.lightened(0.2))
 	var tex := ImageTexture.create_from_image(img)
 	PixelArt.CACHE[key] = tex
 	return tex

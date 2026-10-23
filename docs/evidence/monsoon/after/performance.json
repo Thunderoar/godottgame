@@ -1,0 +1,39 @@
+{
+	"cold_build_ms": 476.639,
+	"quality": {
+		"high": {
+			"cache_entries": 150,
+			"draw_calls": 336.7,
+			"max_ms": 72.101,
+			"mean_ms": 30.1568,
+			"median_ms": 29.077,
+			"p95_ms": 36.271,
+			"texture_bytes": 55113375.0
+		},
+		"low": {
+			"cache_entries": 150,
+			"draw_calls": 334.0,
+			"max_ms": 28.979,
+			"mean_ms": 22.4079111111111,
+			"median_ms": 21.931,
+			"p95_ms": 27.712,
+			"texture_bytes": 55113375.0
+		},
+		"med": {
+			"cache_entries": 150,
+			"draw_calls": 335.0,
+			"max_ms": 37.423,
+			"mean_ms": 28.5895777777778,
+			"median_ms": 28.184,
+			"p95_ms": 32.322,
+			"texture_bytes": 55113375.0
+		}
+	},
+	"renderer": "llvmpipe (LLVM 23.1.1, 256 bits)",
+	"resolution": [
+		1280,
+		720
+	],
+	"warm_build_ms": 20.494,
+	"world_time": 360.0
+}

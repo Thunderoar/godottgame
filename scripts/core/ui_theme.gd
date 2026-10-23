@@ -20,6 +20,10 @@ const GREEN := Color("#8ac36b")
 static var _theme: Theme
 
 
+static func invalidate() -> void:
+        _theme = null
+
+
 static func theme() -> Theme:
         if _theme != null:
                 return _theme
@@ -147,15 +151,15 @@ static func frame_style(variant: String = "wood", radius: int = 8) -> StyleBoxFl
         var width := 2
         match variant:
                 "wood":
-                        fill = Color("#2b2118")
-                        border = Color("#8a6138")
+                        fill = WorldPalette.current().ui.get("panel", PANEL)
+                        border = WorldPalette.current().ui.get("border", BORDER)
                         width = 3
                 "iron":
                         fill = Color("#1a2226")
                         border = Color("#6f8388")
                         width = 3
                 "parchment":
-                        fill = Color("#241f16")
+                        fill = Color("#293e45")
                         border = Color("#a89064")
                         width = 2
                 "stone":

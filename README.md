@@ -12,6 +12,15 @@ diamonds and boss trophies.
 ![Title screen](docs/screenshots/tide_title.png)
 ![Seaside settlement](docs/screenshots/tide_lobby.png)
 
+## Monsoon Afterglow
+
+The shipped village now has an original jade-and-mint tropical forest, seaglass
+water, timber kampung-inspired homes, woven market stalls and clock-driven
+golden-hour/lantern lighting. Low effects and Reduce Motion retain the complete
+static artwork. [Art direction](docs/ART_DIRECTION.md),
+[before/after evidence and verification](docs/MONSOON_AFTERGLOW_REPORT.md), and
+[editable source artwork](assets/authored/monsoon/) document the overhaul.
+
 ## Run
 
 1. Open `project.godot` in **Godot 4.7.2**.
@@ -250,8 +259,9 @@ XDG_DATA_HOME="$review_dir/userdata" TIDESWORN_TEST_ROOT="$review_dir" godot --p
 
 The raw acceptance scene deletes its save. Never run it against real user data.
 The suite must report PASS, exit 0 and have no SCRIPT ERROR / ERROR output; the
-count is data-driven. The combined Creative Studio and gameplay merge passes
-524 acceptance checks, plus 27 editor checks and a separate runtime restart.
+count is data-driven. The Monsoon Afterglow delivery passes 562 acceptance
+checks, 63 native graphical checks, plus 27 editor checks and a separate runtime
+restart. The protected incoming main baseline passed 524 acceptance checks.
 The earlier deep audit passed 408 acceptance checks and 63 native graphical
 checks. See [the audit report](docs/DEEP_AUDIT_REPORT.md) for
 actual results, root causes, files and visual evidence, and

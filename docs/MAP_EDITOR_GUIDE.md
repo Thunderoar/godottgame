@@ -83,3 +83,11 @@ Evidence: `evidence/creative/studio/map-editor.png` and `authored-runtime.png`.
 The editor test paints grass, a curved path and water, places a tree and imported
 prop, uses native undo/redo, saves/reloads and starts a second process to verify
 imported graphics and actual water collision.
+
+Monsoon Afterglow is now the default village palette and shares the runtime's
+clustered meadow and material stamps. New tree proxies use the original
+Monsoon broadleaf asset; fixed procedural-tree proxies remain representative,
+while Play shows each stable ID's actual family. The World Palette quick buttons
+compare Monsoon, Previous coast and Original. Select a palette for a map and
+explicitly Save to persist it. Painted tiles retain the existing layer and
+collision contracts.

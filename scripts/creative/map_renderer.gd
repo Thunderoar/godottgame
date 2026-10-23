@@ -25,9 +25,9 @@ static func tile_image(material: String, at: Vector2i, map: AuthoredMap, layer: 
 	# Deterministic material grain, then feathered edges toward existing neighbours.
 	var rng := RandomNumberGenerator.new()
 	rng.seed = map.seed_value + at.x * 7919 + at.y * 104729
-	for i in 20:
+	for i in 5:
 		var p := Vector2i(rng.randi_range(2, 29), rng.randi_range(2, 29))
-		img.set_pixelv(p, color.lightened(0.07) if i % 2 else color.darkened(0.035))
+		img.fill_rect(Rect2i(p, Vector2i(3, 2)), color.lightened(0.055) if i % 2 else color.darkened(0.035))
 	for direction in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
 		var other := map.cell(layer, at + direction)
 		if other == material:
@@ -142,6 +142,7 @@ static func object_texture(id: String) -> Texture2D:
 		return imported
 	match id:
 		"tree": return PixelArt.authored_tree_texture()
+		"monsoon/planter": return MonsoonArt.prop("planter")
 		"house": return PixelArt.house_texture(1)
 		"shop": return PixelArt.stall_texture("potion")
 		"flowers", "bush", "bench", "rock": return PixelArt.coastal_prop(id)

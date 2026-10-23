@@ -1,0 +1,38 @@
+Godot Engine v4.7.2.stable.arch_linux.ed1daf0bf (2026-08-17 01:18:38 UTC) - https://godotengine.org
+WARNING: Failed to create wd.xic as the input method or its xim server may not have started yet.
+     at: _create_xic (platform/linuxbsd/x11/display_server_x11.cpp:6347)
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 4.6 (Core Profile) Mesa 26.2.4-arch3.1 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 23.1.1, 256 bits)
+
+Verified isolated user data: /tmp/tidesworn-monsoon-4AdX7p3I/userdata/godot/app_userdata/Save The World
+CAPTURE new-journey
+CAPTURE village
+CAPTURE market
+CAPTURE forest
+CAPTURE beach
+CAPTURE turtle
+CAPTURE east-coast
+CAPTURE besut
+CAPTURE portals
+CAPTURE inventory
+CAPTURE shop
+CAPTURE water-low
+CAPTURE water-med
+CAPTURE water-high
+CAPTURE reduce-motion
+CAPTURE zoom-28
+CAPTURE zoom-64
+CAPTURE small-screen
+CAPTURE small-shop
+CAPTURE golden-hour
+CAPTURE night-village
+CAPTURE night-forest
+CAPTURE water-keeper
+CARETAKER watering=true
+CAPTURE coastal-combat
+COMBAT coastal: damage verified
+CAPTURE dungeon
+CAPTURE dungeon-combat
+COMBAT dungeon: damage verified
+MONSOON_REVIEW PASS {"cold_build_ms":476.639,"quality":{"high":{"cache_entries":150,"draw_calls":336.7,"max_ms":72.101,"mean_ms":30.1568,"median_ms":29.077,"p95_ms":36.271,"texture_bytes":55113375.0},"low":{"cache_entries":150,"draw_calls":334.0,"max_ms":28.979,"mean_ms":22.4079111111111,"median_ms":21.931,"p95_ms":27.712,"texture_bytes":55113375.0},"med":{"cache_entries":150,"draw_calls":335.0,"max_ms":37.423,"mean_ms":28.5895777777778,"median_ms":28.184,"p95_ms":32.322,"texture_bytes":55113375.0}},"renderer":"llvmpipe (LLVM 23.1.1, 256 bits)","resolution":[1280,720],"warm_build_ms":20.494,"world_time":360.0}

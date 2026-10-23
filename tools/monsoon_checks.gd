@@ -1,0 +1,84 @@
+class_name MonsoonChecks
+extends RefCounted
+## Protect visual ownership, original forest associations, palettes and clock edges.
+static func run(game: Game, check: Callable) -> void:
+	var lobby := game.world as Lobby
+	var expected: Array = JSON.parse_string(FileAccess.get_file_as_string("res://tools/fixtures/monsoon_forest.json"))
+	var unchanged := lobby._forest_trees.size() == expected.size()
+	for i in mini(expected.size(), lobby._forest_trees.size()):
+		var tree := lobby._forest_trees[i]
+		var record: Dictionary = expected[i]
+		unchanged = unchanged and tree.tree_id == str(record.id) and tree.max_health == int(record.hp) and tree.position.distance_to(Vector2(float(record.position[0]), float(record.position[1]))) < 0.0001
+	check.call(unchanged, "Monsoon preserves every original forest ID, creation order, position and maximum HP")
+	var palette := WorldPalette.current()
+	check.call(palette.title == "Monsoon Afterglow", "shipped village selects Monsoon Afterglow in runtime and authored map")
+	check.call(WorldPalette.color("leaf_mint").get_luminance() > WorldPalette.color("leaf").get_luminance() and WorldPalette.color("leaf").get_luminance() > WorldPalette.color("leaf_deep").get_luminance(), "foliage ramp separates upper leaves, leaf body and deep interior")
+	var silhouettes := {}
+	for species in MonsoonArt.TREE_SIZES.size():
+		var full := MonsoonArt.tree_texture(species).get_image()
+		var upper := MonsoonArt.tree_texture(species, "upper").get_image()
+		var lower := MonsoonArt.tree_texture(species, "lower").get_image()
+		var assembled := PixelArt.image(full.get_width(), full.get_height())
+		assembled.blit_rect(upper, Rect2i(Vector2i.ZERO, upper.get_size()), Vector2i.ZERO)
+		assembled.blit_rect(lower, Rect2i(Vector2i.ZERO, lower.get_size()), Vector2i(0, upper.get_height()))
+		check.call(assembled.get_data() == full.get_data(), "tree family %d split preserves pixels and trunk/crown pivot" % species)
+		var bounds := full.get_used_rect()
+		check.call(bounds.position.x > 0 and bounds.position.y > 0 and bounds.end.x < full.get_width() and bounds.end.y < full.get_height(), "tree family %d has transparent clearance without clipped silhouettes" % species)
+		silhouettes[str(bounds) + str(full.get_size())] = true
+	check.call(silhouettes.size() == MonsoonArt.TREE_SIZES.size(), "all five tree families have distinct silhouette bounds and proportions")
+	for level in range(1, 6):
+		check.call(PixelArt.house_texture(level).get_size() == Vector2(224, 176) and MonsoonArt.house(level, true).get_used_rect().has_area(), "cottage tier %d retains frame footprint and dedicated night windows" % level)
+	var time_before := float(GameState.data.get("world_time", 0.0))
+	for boundary in [0.0, 133.0, 180.0, 193.0, 340.0, 360.0]:
+		var before := MonsoonLighting.grade(boundary - 0.001)
+		var after := MonsoonLighting.grade(boundary + 0.001)
+		check.call(Vector3(before.r, before.g, before.b).distance_to(Vector3(after.r, after.g, after.b)) < 0.001, "lighting remains continuous at world-clock boundary %d" % boundary)
+	check.call(is_zero_approx(MonsoonLighting.lantern_strength(50.0)) and MonsoonLighting.lantern_strength(210.0) > 0.99 and time_before == float(GameState.data.get("world_time", 0.0)), "lanterns follow the existing clock without advancing or mutating gameplay time")
+	var imported := AssetRegistry.get_texture("coastal/planter")
+	var imported_pixels := imported.get_image().get_data()
+	var original := load("res://data/palettes/coast.tres") as WorldPalette
+	var tree_before := MonsoonArt.tree_texture(0)
+	WorldPalette.use_palette(original)
+	var tree_after := MonsoonArt.tree_texture(0)
+	check.call(tree_before != tree_after and WorldPalette.color("leaf_mint") != Color.MAGENTA, "previous palettes derive new semantic roles and invalidate generated artwork")
+	check.call(imported_pixels == AssetRegistry.get_texture("coastal/planter").get_image().get_data(), "palette preview leaves imported source artwork untouched")
+	WorldPalette.use_palette(palette)
+	var catalog := AssetRegistry.library()
+	var replacement := catalog.duplicate(true) as AssetCatalog
+	replacement.entries["house_1"] = catalog.entries["coastal/planter"].duplicate(true)
+	replacement.entries["authored_tree"] = catalog.entries["coastal/planter"].duplicate(true)
+	var legacy_upper := "res://assets/sprites/TX Plant__TX Tree T1 Upper.tres"
+	replacement.entries["foliage/" + legacy_upper] = catalog.entries["coastal/planter"].duplicate(true)
+	AssetRegistry.catalog = replacement
+	AssetRegistry.invalidate()
+	lobby._add_window_lights(lobby.house_sprite, 1)
+	check.call(PixelArt.authored_tree_texture() == AssetRegistry.get_texture("authored_tree"), "existing authored_tree semantic overrides retain priority")
+	# Unparented construction checks a legacy override without running a world or
+	# assigning any additional persistent tree state in the active game.
+	var fixture := Lobby.new()
+	fixture._add_tree(Vector2(54, 8), legacy_upper, "unused_lower", 1.0)
+	var canopy := fixture._forest_trees[0]._visuals[1] as Sprite2D
+	check.call(canopy.texture == AssetRegistry.get_texture("foliage/" + legacy_upper), "legacy foliage overrides remain authoritative on existing forest trees")
+	fixture.free()
+	check.call(not lobby.house_sprite.get_node("WarmWindows").visible, "imported house overrides never receive a procedural window mask")
+	AssetRegistry.catalog = catalog
+	AssetRegistry.invalidate()
+	lobby._add_window_lights(lobby.house_sprite, GameState.house_level())
+	var cached := WorldTerrain._make_terrain_texture()
+	check.call(cached == WorldTerrain._make_terrain_texture(), "unchanged palettes reuse the whole terrain texture")
+	var quality := GameSettings.effects_quality()
+	var motion := GameSettings.reduce_motion()
+	for tier in ["low", "med", "high"]:
+		GameSettings.set_effects_quality(tier, false)
+		GameSettings.set_reduce_motion(true, false)
+		check.call(cached == WorldTerrain._make_terrain_texture() and not lobby.get_node("WaterLayer").visible, "%s reduced motion retains the same complete static terrain and water" % tier)
+	var ship := lobby.get_node("MooredShip") as Sprite2D
+	var boat_motion: Tween = ship.get_meta("ambient_tween")
+	check.call(not boat_motion.is_running(), "Reduce Motion pauses the existing boat tween immediately")
+	GameSettings.set_reduce_motion(false, false)
+	GameSettings.set_effects_quality("low", false)
+	check.call(not boat_motion.is_running(), "Low quality pauses optional boat motion after a live settings change")
+	GameSettings.set_effects_quality("high", false)
+	check.call(boat_motion.is_running(), "High quality restores the same owned boat tween")
+	GameSettings.set_effects_quality(quality, false)
+	GameSettings.set_reduce_motion(motion, false)
