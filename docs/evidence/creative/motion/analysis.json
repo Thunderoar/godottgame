@@ -1,0 +1,38 @@
+{
+  "player": {
+    "max_step": 0.07333416770984347,
+    "fractional_samples": 805
+  },
+  "pet": {
+    "max_step": 0.15000059497528018,
+    "fractional_samples": 1165
+  },
+  "camera": {
+    "max_step": 0.17267722285265663,
+    "fractional_samples": 1165
+  },
+  "enemy": {
+    "max_step": 0.10857221898145389,
+    "fractional_samples": 1123
+  },
+  "resident": {
+    "max_step": 0.08537012946622291,
+    "fractional_samples": 600
+  },
+  "samples": 1166,
+  "stages": {
+    "move_right": 32,
+    "move_down": 32,
+    "move_left": 32,
+    "move_up": 32,
+    "move_right+move_down": 32,
+    "move_left+move_down": 32,
+    "move_left+move_up": 32,
+    "move_right+move_up": 207,
+    "moving_zoom_28": 45,
+    "moving_zoom_64": 45,
+    "moving_zoom_38": 45,
+    "obstacle_corner": 360,
+    "shop_approach": 240
+  }
+}

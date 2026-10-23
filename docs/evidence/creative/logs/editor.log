@@ -1,0 +1,42 @@
+Godot Engine v4.7.2.stable.arch_linux.ed1daf0bf (2026-08-17 01:18:38 UTC) - https://godotengine.org
+WARNING: Failed to create wd.xic as the input method or its xim server may not have started yet.
+     at: _create_xic (platform/linuxbsd/x11/display_server_x11.cpp:6347)
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 4.6 (Core Profile) Mesa 26.2.4-arch3.1 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 23.1.1, 256 bits)
+
+Tidesworn Studio: Editor-time authoring • source maps stay separate from player settlement saves. Wheel zoom / middle mouse pan in canvases.
+[TOOL OK] all four native editor workspaces loaded
+[TOOL OK] rectangle and bucket work through the editor controls
+[TOOL OK] pencil draws continuous stroke through canvas handlers
+[TOOL OK] eraser preserves PNG transparency
+[TOOL OK] pixel undo restores erased pixel
+[TOOL OK] pixel redo reapplies eraser
+[TOOL OK] palette substitution has non-destructive preview
+[TOOL OK] frame add/duplicate/reorder/remove produce valid timeline
+Tidesworn Studio: PNG + frame durations saved: res://assets/authored/props/editor_workflow.png
+[TOOL OK] PNG Save As clears dirty state only after successful save
+Tidesworn Studio: Registered authored/editor_workflow. Use this asset ID when placing a map object.
+[TOOL OK] saved artwork registers in persistent asset catalog
+[TOOL OK] newly imported PNG is available as runtime texture
+Tidesworn Studio: Imported characters/new_character_sheet. Set provenance and a semantic override, or place it in a map.
+Tidesworn Studio: Saved runtime override: demo/character
+[TOOL OK] image import, frame configuration and semantic override persist
+[TOOL OK] asset opens as editable animation frames
+Tidesworn Studio: PNG + frame durations saved: res://assets/authored/characters/new_character_sheet.png
+[TOOL OK] PNG edits update imported texture after editor reimport
+[TOOL OK] map pencil interpolates cell strokes
+[TOOL OK] rectangle paints authored water
+[TOOL OK] native EditorUndoRedoManager undoes map stroke
+[TOOL OK] native EditorUndoRedoManager redoes map stroke
+[TOOL OK] object placement preserves stable identity and collision properties
+Tidesworn Studio: Saved map: res://data/maps/editor_workflow.tres
+[TOOL OK] map save/reload preserves object IDs and dirty state
+[TOOL OK] unsaved documents require an explicit discard choice
+Tidesworn Studio: Unsaved studio edits retained as recovery drafts for the next editor session.
+[TOOL OK] plugin disables and removes its workspace
+Tidesworn Studio: Editor-time authoring • source maps stay separate from player settlement saves. Wheel zoom / middle mouse pan in canvases.
+Tidesworn Studio: Recovered unsaved studio drafts. Review them and Save or explicitly discard changes.
+[TOOL OK] plugin enables again in the same editor session
+[TOOL OK] plugin reload recovers unsaved pixel work without overwriting source art
+--- creative tools: 24 checks, 0 failures ---

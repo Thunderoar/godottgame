@@ -317,3 +317,33 @@ settlement layout, pet-duel clears, sea-cleaning count, per-tree forest health a
 GUI/control settings, removes retired items, restores pets and validates the
 hero's equipped weapon.
 Autosave runs on important transactions and app pause/focus loss.
+
+## Creative revamp resource and editor layer
+
+The active game construction flow and three autoloads are unchanged. See
+`docs/CREATIVE_REVAMP_COMPLETION.md` for the exact source inventory.
+
+`WorldPalette` is a resource with separate semantic world/UI dictionaries.
+`WorldTerrain` shares procedural village generation with the editor preview.
+`AssetCatalog` stores stable IDs, imported texture paths and frame metadata;
+`AssetRegistry` resolves overrides ahead of PixelArt's bounded fallback cache.
+`AuthoredSprite` preloads animation clips without per-frame file reads.
+
+`AuthoredMap` version 1 stores sparse terrain layers, object definitions and
+editor visibility/locking state. `AuthoredMapRenderer` creates native TileMapLayer
+batches, merged collision runs, interactive props, merchants, route/spawn markers
+and stable tree objects. Base references move existing nodes instead of duplicating
+them; player settlement layout retains precedence. The original tree generation
+order and player save format remain unchanged. Original cottage/shop service
+movement continues through SettlementEditor.
+
+`MicroAction` supplies bounded, priority-based presentation states; editable
+PersonalityProfile data describes heroes and occupations. It does not own combat
+timers, transactions or persistence. Motion drives walking cadence; logical actor
+positions and camera interpolation remain continuous.
+
+The native Tidesworn workspace is entirely under `addons/tidesworn_creative_tools`.
+Map undo integrates with EditorUndoRedoManager; pixels use bounded image snapshots.
+The plugin reports unsaved work and keeps recovery drafts across disable/reload.
+It is excluded from runtime packaging. Exported resource-pack smoke testing boots
+the actual game and imported art without the editor code.

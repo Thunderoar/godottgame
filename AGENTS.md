@@ -103,7 +103,7 @@ Rules of the runtime that shape every change:
 | `scripts/world/*.gd` (18 files) | — | Residents, forest trees, rubbish/sea, settlement editor, portals, loot, shops |
 | `scripts/ui/*.gd` (16 files) | — | HUD, 8 modal panels, joystick, touch buttons, tutorial |
 | `scripts/data/*.db.gd` (6 files) | — | Content tables: items, characters, portals, pets, houses, pet duels |
-| `scripts/core/pixel_art.gd` | 1106 | **All art is procedural** — every texture comes from here, cached forever |
+| `scripts/core/pixel_art.gd` | 1106 | Procedural fallback art plus AssetRegistry overrides; bounded generation cache |
 | `scripts/core/ui_theme.gd` | 130 | Palette + `GameUI` widget helpers |
 | `scripts/player/`, `pets/`, `combat/` | — | Player controller, arrows, companion, monsters/bosses/projectiles |
 | `scripts/*.gd` (9 loose files) | — | **Unity-port demo only** — loaded by `scenes/main.tscn`, not by the game |
@@ -224,7 +224,7 @@ adding an earlier `_rng` call rebinds every saved tree's health. Do not repeat t
 
 **Art**
 21. Generate textures via `PixelArt.cached_texture` with a stable unique key — the cache is
-    process-global and never evicted (`pixel_art.gd:12-33`).
+    process-global and bounded; explicit AssetRegistry overrides take priority (`pixel_art.gd:12-33`).
 22. Use `PixelArt.PX` for world scale (1/32); never a literal `0.03125`.
 
 **Tests & tooling**
@@ -317,3 +317,30 @@ Read in this order; older docs lie in a consistent direction ("250 checks, PASS"
 5. Working tree has no stray output (`res://shots`, rebuilt `build/`) unless intended.
 6. Tests used verified isolated data. Back up the real save first; never overwrite
    ongoing user progress by restoring an older backup after a concurrent live session.
+
+
+## 11. Creative Studio contracts
+
+The creative revamp adds no autoloads. `scripts/creative/` owns semantic palette,
+asset catalog, authored map/runtime rendering and micro-action resources.
+`addons/tidesworn_creative_tools/` is editor-only; never reference EditorInterface
+or EditorPlugin from gameplay scripts. The main workspace is **Tidesworn**.
+
+- Default authoring data: `data/maps/village.tres`, `data/palettes/coast.tres`,
+  `data/asset_registry/library.tres`. Independent PNGs stay under assets/authored.
+- Existing procedural forest IDs and creation order remain authoritative. Map
+  base overrides move existing nodes; new authored trees use their authored ID.
+- Developer maps and imported art are source resources. Player settlement layout
+  remains GameState data and takes precedence over developer base placement.
+- Optional art falls back; required missing art logs an error and displays a
+  diagnostic checker. Runtime loads imported textures, never source PNG images.
+- Palette switches clear generated caches; unchanged palettes reuse terrain.
+- Use `./tools/test_creative_editor.sh` for authoring tests: it copies the source
+  into a temporary directory as well as isolating user data. Import/save tests
+  must never mutate the developer's normal source checkout or player save.
+- Plugin reload retains unsaved recovery drafts only in its dedicated user-data
+  subdirectory. A source PNG/map is overwritten only through an explicit Save.
+
+Workflows, current evidence and limits are in `docs/CREATIVE_REVAMP_COMPLETION.md`
+and `docs/CREATIVE_REVAMP_QA.md`. The verified gameplay tally is 438 checks; the
+native editor workflow has 24 checks plus a separate runtime restart verification.

@@ -1,0 +1,24 @@
+{
+  "baseline": {
+    "build_ms": 350.892,
+    "draw_calls_mean": 283.244444444444,
+    "frame_ms_mean": 25.7914611111111,
+    "frame_ms_p95": 29.638,
+    "nodes": 1307.0,
+    "physics_ms_mean": 1.72907777777778,
+    "procedural_cache_entries": 86,
+    "renderer": false,
+    "texture_bytes": 45514771.0
+  },
+  "final": {
+    "build_ms": 1133.414,
+    "draw_calls_mean": 285.622222222222,
+    "frame_ms_mean": 26.5448222222222,
+    "frame_ms_p95": 30.495,
+    "nodes": 1331.0,
+    "physics_ms_mean": 2.17737777777778,
+    "procedural_cache_entries": 105,
+    "renderer": false,
+    "texture_bytes": 45757143.0
+  }
+}
