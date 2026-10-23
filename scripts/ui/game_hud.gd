@@ -73,6 +73,8 @@ var _hp_count: Label
 var _mp_count: Label
 var _build_mode_panel: PanelContainer
 var _menu_button: Button
+var _zoom_out_button: Button
+var _zoom_in_button: Button
 var _control_nodes: Dictionary = {}
 var _default_transforms: Dictionary = {}
 var _fade: ColorRect
@@ -87,6 +89,7 @@ func _ready() -> void:
 	add_to_group("hud")
 	_build_root()
 	_build_menu_button()
+	_build_zoom_controls()
 	_build_currency_panel()
 	_build_vitals_panel()
 	_build_objectives()
@@ -138,6 +141,40 @@ func _build_menu_button() -> void:
 	_root.add_child(_menu_button)
 
 
+func _build_zoom_controls() -> void:
+	_zoom_out_button = GameUI.button("−", Vector2(42, 38))
+	_zoom_out_button.name = "ZoomOutButton"
+	_zoom_out_button.tooltip_text = "Zoom out (− / mouse wheel down)"
+	_zoom_out_button.anchor_left = 1.0
+	_zoom_out_button.anchor_right = 1.0
+	_zoom_out_button.offset_left = -104
+	_zoom_out_button.offset_right = -62
+	_zoom_out_button.offset_top = 66
+	_zoom_out_button.offset_bottom = 104
+	_zoom_out_button.add_theme_font_size_override("font_size", 20)
+	_zoom_out_button.pressed.connect(func() -> void: _step_camera_zoom(-1.0))
+	_root.add_child(_zoom_out_button)
+
+	_zoom_in_button = GameUI.button("+", Vector2(42, 38))
+	_zoom_in_button.name = "ZoomInButton"
+	_zoom_in_button.tooltip_text = "Zoom in (+ / mouse wheel up)"
+	_zoom_in_button.anchor_left = 1.0
+	_zoom_in_button.anchor_right = 1.0
+	_zoom_in_button.offset_left = -58
+	_zoom_in_button.offset_right = -16
+	_zoom_in_button.offset_top = 66
+	_zoom_in_button.offset_bottom = 104
+	_zoom_in_button.add_theme_font_size_override("font_size", 20)
+	_zoom_in_button.pressed.connect(func() -> void: _step_camera_zoom(1.0))
+	_root.add_child(_zoom_in_button)
+
+
+func _step_camera_zoom(direction: float) -> void:
+	var active_camera := get_viewport().get_camera_2d()
+	if active_camera != null and active_camera.has_method("step_zoom"):
+		active_camera.call("step_zoom", direction)
+
+
 func _build_currency_panel() -> void:
 	var panel := GameUI.panel(Color(0.035, 0.08, 0.09, 0.88), Color("#3a565a"))
 	panel.position = Vector2(22, 18)
@@ -175,7 +212,12 @@ func _build_currency_panel() -> void:
 
 
 func _build_vitals_panel() -> void:
+	# Keep bar objects alive for shared HUD state, but hide the crowded dashboard.
+	# The compact PlayerVitalHud above the character remains available.
 	var panel := GameUI.panel(Color(0.035, 0.08, 0.09, 0.9), Color("#3a565a"))
+	panel.name = "VitalsPanel"
+	panel.visible = false
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.anchor_left = 1.0
 	panel.anchor_right = 1.0
 	panel.offset_left = -330

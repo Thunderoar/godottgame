@@ -66,7 +66,7 @@ func _rebuild() -> void:
 	motion.toggled.connect(func(on: bool) -> void: GameSettings.set_reduce_motion(on))
 	effects_row.add_child(motion)
 	content.add_child(effects_row)
-	add_body_text("Low drops ambient life, wind bending and hit-stop; Reduce motion disables shake and camera look-ahead.", GameUI.MUTED, 13)
+	add_body_text("Low drops ambient life, wind bending and hit-stop; Reduce motion disables shake and camera look-ahead. Use the top-right + / − buttons, mouse wheel or keyboard + / − to adjust camera zoom.", GameUI.MUTED, 13)
 
 	add_section("TOUCH CONTROLS", GameUI.GOLD)
 	add_body_text("Adjust X, Y and size. Changes apply immediately and are saved.", GameUI.MUTED, 13)

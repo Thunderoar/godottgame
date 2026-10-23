@@ -21,7 +21,6 @@ var body_radius := 0.3
 var _sprite: Sprite2D
 var _shadow: Sprite2D
 var _level_label: Label
-var _stars: Array[Sprite2D] = []
 var _shield_bubble: Sprite2D
 var _frame_timer := 0.0
 var _frame := 0
@@ -92,17 +91,7 @@ func _build() -> void:
 	_shield_bubble.z_index = 690
 	add_child(_shield_bubble)
 
-	# Dazed stars for the downed state.
-	for i in 3:
-		var star := Sprite2D.new()
-		star.texture = PixelArt.icon("spark", 16)
-		star.scale = Vector2(0.028, 0.028)
-		star.modulate = Color("#ffe28a")
-		star.visible = false
-		star.z_as_relative = false
-		star.z_index = 720
-		add_child(star)
-		_stars.append(star)
+	# Downed state uses the curled pose rather than orbiting star effects.
 
 
 func _process(delta: float) -> void:
@@ -116,8 +105,6 @@ func _process(delta: float) -> void:
 		_process_downed(delta)
 		return
 	_down_timer = 0.0
-	for star in _stars:
-		star.visible = false
 	_bob += delta
 	if _pose_lock > 0.0:
 		_pose_lock = maxf(0.0, _pose_lock - delta)
@@ -142,21 +129,22 @@ func _follow(delta: float) -> void:
 	var desired := player.global_position + Vector2(0.95 * side, 0.5) + _sniff_offset
 	var offset := desired - global_position
 	var distance := offset.length()
-	if distance > LEASH_DISTANCE:
-		global_position = desired
-		_follow_velocity = Vector2.ZERO
-		return
-	# Spring-damper: snappy on short distances, springs harder when far behind.
+	# Stretching the leash increases spring response; it never teleports the pet.
 	var sprint := 1.0
 	if distance > CATCHUP_DISTANCE:
 		sprint = 1.65
+	if distance > LEASH_DISTANCE:
+		sprint = 3.0
 	var accel := offset * (FOLLOW_STIFFNESS * sprint) - _follow_velocity * FOLLOW_DAMPING
 	_follow_velocity += accel * delta
+	_follow_velocity = _follow_velocity.limit_length(8.5)
 	global_position += _follow_velocity * delta
-	# Never slide under the player's feet.
+	# Steer away gently rather than correcting overlapping feet in one frame.
 	var to_player := global_position - player.global_position
-	if to_player.length() < FEET_CLEARANCE and to_player.length() > 0.001:
-		global_position = player.global_position + to_player.normalized() * FEET_CLEARANCE
+	var separation := to_player.length()
+	if separation < FEET_CLEARANCE:
+		var away := to_player.normalized() if separation > 0.001 else (Vector2.LEFT if player.facing.x >= 0.0 else Vector2.RIGHT)
+		_follow_velocity += away * (FEET_CLEARANCE - separation) * 4.0 * delta
 
 
 func _animate(delta: float, owner_player: Node2D) -> void:
@@ -211,8 +199,8 @@ func _apply_texture() -> void:
 
 
 func _process_downed(delta: float) -> void:
-	# Dazed instead of invisible: curled pose with orbiting stars, then a happy
-	# recovery pop when the revive timer completes.
+	# Dazed instead of invisible: curled pose, then a happy recovery pop when
+	# the revive timer completes.
 	visible = true
 	_down_timer += delta
 	_bob += delta
@@ -222,12 +210,6 @@ func _process_downed(delta: float) -> void:
 		_sprite.position.y = -0.30 + sin(_bob * 2.0) * 0.02
 	if _shadow:
 		_shadow.scale = Vector2(0.012, 0.007)
-	for i in _stars.size():
-		var star := _stars[i]
-		star.visible = GameSettings.effects_at_least("med")
-		var angle := _bob * 2.6 + TAU * float(i) / 3.0
-		star.position = Vector2(cos(angle) * 0.45, -0.42 + sin(angle) * 0.12)
-		star.rotation = angle
 	if _level_label:
 		_level_label.text = "..."
 	if _down_timer >= 5.0:
