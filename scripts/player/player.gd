@@ -20,6 +20,9 @@ const ACCEL := 26.0
 const FRICTION := 30.0
 const TURN_BOOST := 1.7
 const FOOTSTEP_INTERVAL := 0.3
+@export var acceleration := ACCEL
+@export var braking := FRICTION
+@export var turn_assistance := TURN_BOOST
 
 enum AttackPhase { NONE, ANTICIPATION, ACTIVE, RECOVERY }
 
@@ -126,10 +129,10 @@ func _physics_process(delta: float) -> void:
 		return
 
 	if controls_locked:
-		velocity = velocity.move_toward(Vector2.ZERO, FRICTION * delta)
+		velocity = velocity.move_toward(Vector2.ZERO, braking * delta)
 		move_and_slide()
 		if _visual:
-			_visual.set_facing(-1, velocity.length_squared() > 0.04)
+			_visual.set_motion(get_real_velocity(), GameState.move_speed())
 		_update_nearby()
 		return
 
@@ -140,13 +143,13 @@ func _physics_process(delta: float) -> void:
 		facing = input.normalized()
 		var target := input.limit_length(1.0) * GameState.move_speed()
 		# Turning against the current slide direction grips harder.
-		var turn := TURN_BOOST if velocity.dot(input) < -0.5 else 1.0
-		velocity = velocity.move_toward(target, ACCEL * turn * delta)
+		var turn := turn_assistance if velocity.dot(input) < -0.5 else 1.0
+		velocity = velocity.move_toward(target, acceleration * turn * delta)
 		if _visual and _visual.has_method("set_facing"):
 			_visual.call("set_facing", _facing_index(facing), true)
 		_update_footsteps(delta)
 	else:
-		velocity = velocity.move_toward(Vector2.ZERO, FRICTION * delta)
+		velocity = velocity.move_toward(Vector2.ZERO, braking * delta)
 		if _visual and _visual.has_method("set_facing"):
 			_visual.call("set_facing", -1, false)
 	if _lunge_impulse != Vector2.ZERO:
@@ -154,7 +157,7 @@ func _physics_process(delta: float) -> void:
 		_lunge_impulse = Vector2.ZERO
 	move_and_slide()
 	if _visual:
-		_visual.set_facing(-1, velocity.length_squared() > 0.04)
+		_visual.set_motion(get_real_velocity(), GameState.move_speed())
 
 	if Input.is_action_just_pressed("attack"):
 		try_attack()

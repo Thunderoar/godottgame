@@ -24,6 +24,11 @@ static func texture(img: Image) -> ImageTexture:
 
 
 static func cached_texture(key: String, builder: Callable) -> Texture2D:
+        var override := AssetRegistry.get_texture(key)
+        if override != null:
+                return override
+        if CACHE.size() > 1024:
+                CACHE.clear()
         if CACHE.has(key):
                 return CACHE[key]
         var img: Image = builder.call()
@@ -725,7 +730,7 @@ static func npc_texture(kind: String) -> Texture2D:
                         "builder": [Color("#46627a"), Color("#a8c4d6"), Color("#2e4152")],
                         "guard": [Color("#2e4c63"), Color("#8fb7c8"), Color("#1e2e3a")],
                         "fisher": [Color("#3d6d6a"), Color("#a8d5c7"), Color("#27443f")],
-                        "gardener": [Color("#5f743d"), Color("#d7c46e"), Color("#3b4a28")],
+                        "gardener": [WorldPalette.color("sea_deep"), WorldPalette.color("gold"), Color("#3b4a28")],
                         "carpenter": [Color("#755132"), Color("#cfaf7a"), Color("#40301f")],
                         "woodcutter": [Color("#5b4a35"), Color("#b9915b"), Color("#33291d")],
                         "keeper": [Color("#6e5b3d"), Color("#d9c89e"), Color("#403322")],
@@ -768,8 +773,8 @@ static func npc_texture(kind: String) -> Texture2D:
 static func stall_texture(kind: String) -> Texture2D:
         return cached_texture("stall_%s" % kind, func() -> Image:
                 var palette: Array = {
-                        "potion": [Color("#4a7a57"), Color("#9fd08c"), Color("#d8c05d")],
-                        "equipment": [Color("#7b4633"), Color("#d59a64"), Color("#b5b9b5")],
+                        "potion": [WorldPalette.color("sea_deep"), WorldPalette.color("sea_shallow"), WorldPalette.color("sand")],
+                        "equipment": [WorldPalette.color("roof"), WorldPalette.color("coral"), WorldPalette.color("sand")],
                         "pet": [Color("#594078"), Color("#b992d3"), Color("#d9b76a")],
                         "house": [Color("#555d63"), Color("#c9b98d"), Color("#91b6c4")],
                 }.get(kind, [Color("#4f5e5e"), Color("#a5b9b5"), Color("#d2b276")])
@@ -1124,12 +1129,12 @@ static func house_texture(level: int) -> Texture2D:
                 var right := left + width
                 var shadow_alpha := 0.26
                 ellipse(img, 112, base_y + 4, width / 2 + 12, 10, Color(0, 0, 0, shadow_alpha))
-                var wall := Color("#6d4a30") if lvl > 1 else Color("#4e392a")
-                var wall_dark := Color("#38271d")
-                var wall_light := Color("#8c613b")
-                var roof := Color("#47413b") if lvl <= 2 else Color("#5b4639")
-                var roof_dark := Color("#282725")
-                var roof_light := Color("#8d6a4e")
+                var wall := WorldPalette.color("wood") if lvl > 1 else WorldPalette.color("wood").darkened(0.18)
+                var wall_dark := WorldPalette.color("wood").darkened(0.48)
+                var wall_light := WorldPalette.color("sand").darkened(0.12)
+                var roof := WorldPalette.color("roof") if lvl % 2 == 1 else WorldPalette.color("sea_deep").lightened(0.12)
+                var roof_dark := WorldPalette.color("shadow")
+                var roof_light := WorldPalette.color("sand")
                 # Foundation / porch.
                 rect(img, left - 4, base_y - 7, width + 8, 8, wall_dark)
                 rect(img, left, base_y - 10, width, 4, wall_light.darkened(0.3))
@@ -1174,9 +1179,18 @@ static func house_texture(level: int) -> Texture2D:
                         hline(img, wx + 6, window_y + 2, 2, Color("#3a2b22"))
                         vline(img, wx + 2, window_y + 6, 2, Color("#3a2b22"))
                         rect(img, wx - 2, window_y + 13, 17, 3, wall_light)
+                # Painted shutters, carved eaves and flowering sill boxes.
+                for wx in [left + 16, right - 28]:
+                        rect(img, wx - 4, window_y + 1, 3, 11, WorldPalette.color("sea_shallow"))
+                        rect(img, wx + 14, window_y + 1, 3, 11, WorldPalette.color("sea_shallow"))
+                        rect(img, wx - 2, window_y + 15, 17, 4, wall_dark)
+                        for fx in [wx + 1, wx + 6, wx + 11]:
+                                vline(img, fx, window_y + 12, 4, WorldPalette.color("grass_shadow"))
+                                rect(img, fx - 1, window_y + 11, 3, 2, WorldPalette.color("flower"))
+                hline(img, left - 8, wall_top + 1, width + 16, WorldPalette.color("gold"))
                 # Porch deck and posts.
                 if lvl >= 2:
-                        rect(img, 112 - 31, base_y - 9, 62, 6, Color("#a17446"))
+                        rect(img, 112 - 31, base_y - 9, 62, 6, WorldPalette.color("wood"))
                         for x in range(112 - 30, 112 + 31, 7):
                                 vline(img, x, base_y - 8, 5, Color("#6f4c2d"))
                         rect(img, 112 - 34, base_y - 12, 6, 12, wall_dark)
@@ -1318,8 +1332,8 @@ static func grass_tuft_texture() -> Texture2D:
         return cached_texture("grass_tuft", func() -> Image:
                 var img := image(16, 12)
                 for p in [Vector2i(3, 10), Vector2i(6, 9), Vector2i(9, 10), Vector2i(12, 8), Vector2i(4, 6), Vector2i(10, 5)]:
-                        line(img, p.x, p.y, p.x - 1, p.y - 5, Color("#5f793c"))
-                        line(img, p.x, p.y, p.x + 1, p.y - 6, Color("#728c47"))
+                        line(img, p.x, p.y, p.x - 1, p.y - 5, WorldPalette.color("grass_shadow"))
+                        line(img, p.x, p.y, p.x + 1, p.y - 6, WorldPalette.color("grass"))
                 return img)
 
 
@@ -1449,9 +1463,9 @@ static func garden_texture() -> Texture2D:
                 for row in 3:
                         hline(img, 6, 11 + row * 6, 52, Color("#4d3524"))
                         for x in range(9, 56, 11):
-                                px(img, x, 10 + row * 6, Color("#76a34e"))
-                                px(img, x + 1, 9 + row * 6, Color("#8fbf5d"))
-                                px(img, x - 1, 9 + row * 6, Color("#668d43"))
+                                px(img, x, 10 + row * 6, WorldPalette.color("grass"))
+                                px(img, x + 1, 9 + row * 6, WorldPalette.color("grass_light"))
+                                px(img, x - 1, 9 + row * 6, WorldPalette.color("grass_shadow"))
                 hline(img, 2, 5, 60, Color("#b69a65"))
                 return img)
 
@@ -1496,9 +1510,9 @@ static func animal_texture(kind: String, frame: int = 0) -> Texture2D:
 static func leaf_texture() -> Texture2D:
         return cached_texture("leaf_small", func() -> Image:
                 var img := image(5, 3)
-                line(img, 0, 2, 4, 0, Color("#688b43"))
-                rect(img, 1, 0, 3, 2, Color("#a1bb60"))
-                px(img, 2, 1, Color("#537541"))
+                line(img, 0, 2, 4, 0, WorldPalette.color("grass_shadow"))
+                rect(img, 1, 0, 3, 2, WorldPalette.color("grass_light"))
+                px(img, 2, 1, WorldPalette.color("grass_shadow"))
                 return img)
 
 
@@ -1578,4 +1592,58 @@ static func net_texture() -> Texture2D:
                 for y in [4, 7]:
                         line(img, 4, y, 12, y, Color("#62868d"))
                 line(img, 8, 10, 8, 15, Color("#80603e"))
+                return img)
+
+
+static func occupation_tool(kind: String) -> Texture2D:
+        return cached_texture("occupation/" + kind, func() -> Image:
+                if kind not in ["fishing_rod", "watering_can"]:
+                        return icon(kind).get_image()
+                var img := image(24, 32)
+                if kind == "fishing_rod":
+                        line(img, 5, 30, 15, 3, WorldPalette.color("wood"))
+                        line(img, 6, 30, 16, 3, WorldPalette.color("gold"))
+                        line(img, 16, 3, 22, 23, Color("e8ead8"))
+                        line(img, 22, 23, 20, 26, Color("a6d9db"))
+                else:
+                        rect(img, 3, 16, 13, 10, WorldPalette.color("sea_deep"))
+                        rect(img, 4, 17, 11, 7, WorldPalette.color("sea_shallow"))
+                        ellipse_outline(img, 6, 13, 4, 6, WorldPalette.color("sea_deep"))
+                        line(img, 15, 20, 21, 15, WorldPalette.color("sea_shallow"))
+                        line(img, 18, 13, 23, 17, WorldPalette.color("gold"))
+                        px(img, 22, 22, Color("c6e6dd"))
+                        px(img, 20, 25, Color("c6e6dd"))
+                return img)
+
+
+static func coastal_prop(kind: String) -> Texture2D:
+        return cached_texture("coastal/" + kind, func() -> Image:
+                var img := image(48, 48)
+                var wood := WorldPalette.color("wood")
+                var dark := WorldPalette.color("shadow")
+                match kind:
+                        "flowers", "bush":
+                                ellipse(img, 24, 41, 18, 4, Color(0.1, 0.2, 0.2, 0.15))
+                                for at in [Vector2i(12, 32), Vector2i(23, 27), Vector2i(34, 33)]:
+                                        line(img, at.x, 41, at.x, at.y, WorldPalette.color("grass_shadow"))
+                                        ellipse(img, at.x - 3, at.y + 4, 4, 2, WorldPalette.color("grass"))
+                                        ellipse(img, at.x, at.y, 4, 3, WorldPalette.color("flower"))
+                                        px(img, at.x, at.y, WorldPalette.color("gold"))
+                        "bench":
+                                rect(img, 4, 23, 40, 4, dark)
+                                rect(img, 6, 20, 36, 3, wood.lightened(0.2))
+                                rect(img, 7, 10, 3, 25, dark)
+                                rect(img, 38, 10, 3, 25, dark)
+                                rect(img, 6, 11, 36, 6, wood)
+                                hline(img, 7, 11, 34, WorldPalette.color("sand"))
+                        "rock":
+                                ellipse(img, 24, 36, 18, 8, dark)
+                                ellipse(img, 23, 32, 16, 10, WorldPalette.color("stone"))
+                                ellipse(img, 19, 27, 10, 4, WorldPalette.color("sand"))
+                        _:
+                                rect(img, 9, 19, 30, 23, wood.darkened(0.3))
+                                rect(img, 11, 21, 26, 18, wood)
+                                for x in range(13, 37, 5): vline(img, x, 21, 18, wood.lightened(0.2))
+                                ellipse(img, 24, 19, 15, 5, WorldPalette.color("sea_deep"))
+                                ellipse(img, 24, 17, 12, 4, WorldPalette.color("sea_shallow"))
                 return img)
