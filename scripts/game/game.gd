@@ -233,7 +233,7 @@ func _portal_entry_transition(portal_id: String) -> void:
 func _nearest_gate_center(from: Vector2) -> Vector2:
 	# Drift slightly toward the paired gates so the pull reads as "into them".
 	if world is Lobby:
-		return (Lobby.MONSTER_GATE + Lobby.PET_GATE) * 0.5
+		return ((world as Lobby)._layout.position_of("monster_portal") + (world as Lobby)._layout.position_of("pet_portal")) * 0.5
 	return from
 
 

@@ -376,3 +376,43 @@ exit 0, with no failure/script/error markers. Native deep audit: **63 checks,
 restart PASS. The real-renderer tour captures 26 paired scenarios, with verified
 coastal/dungeon damage and actual watering. Full measurements and limits are in
 `MONSOON_AFTERGLOW_REPORT.md`.
+
+### Coordinated village layout (2026-10-24)
+
+`WorldChecks.run` is part of the isolated gameplay gate. The incoming main
+snapshot has 562 checks; the spatial overhaul currently passes 720 checks.
+The spatial checks use real World2D shape overlap/cast queries, exact-goal
+ResidentRoutes planning, and source resources. They cover:
+
+- Required canonical landmarks, unique IDs within each namespace, map bounds,
+  connected route graph, and minimum road widths.
+- Every important destination's player-sized approach and exact reachability;
+  every painted route's continuous centreline clearance (including jetty planks).
+- Shore/sea collision agreement, grounded turtle, sea immediately beyond the
+  deck, and safe emergency/coastal/forest spawn resolution.
+- Authored Water and water material collision, land-paint clipping against
+  existing sea, and footprint conflicts across routes away from endpoints.
+- Player layout above developer overrides above defaults; actual merchant,
+  collider, workspace and recovery ownership after a source-map/save reload.
+- Every original tree ID/position across customized buildings and decoration
+  seed changes, plus MonsoonChecks' unchanged maximum-HP and order fixture.
+- Deterministic customized re-entry, unchanged-layout terrain reuse, independent
+  source copies, and schema-default loading of old maps.
+
+Flower coverage is now a selective border-presence rule, with an additional
+reservation-clearance assertion. A large minimum flower count was inappropriate
+for keeping roads and entrances quiet; decoration quantity is not the design goal.
+
+`./tools/test_creative_editor.sh` exercises 34 editor checks in a disposable
+source copy, including spatial anchor dragging, native undo/redo, route width,
+zone vertex edits, overlays, saving and a separate runtime restart. The restart
+checks that edited service coordinates and route width actually load in gameplay.
+
+`./tools/review_world.sh /absolute/output` captures the paired real-renderer tour
+and measures cold/cached builds, frame intervals, node/draw/texture counters,
+physics monitors, eight real path queries and an active-resident workload.
+Run this harness unchanged against each ref, sequentially without concurrent
+imports/tests. Require `WORLD_REVIEW PASS`, exit 0 and no `[FAIL]`, `SCRIPT ERROR`
+or `ERROR:` markers. Day/night, effects tiers, Reduce Motion, zoom, small screens,
+real movement frames and a damage-asserted combat encounter are included.
+See WORLD_OVERHAUL_REPORT.md for measured evidence and limits.

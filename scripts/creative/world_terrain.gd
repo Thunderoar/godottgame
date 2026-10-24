@@ -4,10 +4,22 @@ extends RefCounted
 const MAP_RECT := Rect2(0, 0, 64, 40)
 const OCEAN_WIDTH_PIXELS := 806
 
-static func _make_terrain_texture() -> Texture2D:
-	var key := "terrain_lobby_revamp_%d" % WorldPalette.generation
-	if PixelArt.CACHE.has(key):
-		return PixelArt.CACHE[key]
+static func _make_terrain_texture(layout: WorldLayout = null) -> Texture2D:
+	if layout == null: layout = WorldLayout.village()
+	var key := "terrain_village_layout_%d_%d" % [WorldPalette.generation, layout.signature()]
+	# Imported source bake avoids regenerating the curated default on every launch.
+	# Geometry/palette edits invalidate it; custom maps still render from data.
+	if layout.terrain_bake_hash == layout.signature() and layout.terrain_palette_hash == palette_signature() and layout.baked_texture() != null:
+		var override := AssetRegistry.get_texture(key)
+		return override if override else layout.terrain_bake
+	if not _terrain_keys.has(key):
+		_terrain_keys.append(key)
+		while _terrain_keys.size() > 4: PixelArt.CACHE.erase(_terrain_keys.pop_front())
+	return PixelArt.cached_texture(key, func() -> Image: return _make_terrain_image(layout))
+
+static var _terrain_keys: Array[String] = []
+
+static func _make_terrain_image(layout: WorldLayout) -> Image:
 	var w := int(MAP_RECT.size.x * 32.0)
 	var h := int(MAP_RECT.size.y * 32.0)
 	var img := PixelArt.image(w, h)
@@ -23,7 +35,7 @@ static func _make_terrain_texture() -> Texture2D:
 			var field := sin(x * 0.009 + sin(y * 0.013)) * 0.5 + sin(y * 0.017 + x * 0.004) * 0.3
 			var level := floorf(field * 3.0) / 3.0
 			var col := grass.lerp(sun, maxf(0.0, level) * 0.24)
-			if x > 45 * 32:
+			if x > (45.0 + sin(y * 0.005) * 1.4) * 32:
 				col = col.lerp(shade, 0.12 + maxf(0.0, -level) * 0.3)
 			img.fill_rect(Rect2i(x, y, 4, 4), col)
 	# Low foliage grouped along coherent meadow regions; not confetti.
@@ -37,23 +49,24 @@ static func _make_terrain_texture() -> Texture2D:
 		PixelArt.rect(img, x, y - 2, 3, 2, ink)
 		if forest and i % 3 == 0:
 			PixelArt.line(img, x, y, x + 5, y - 3, WorldPalette.color("wood").lerp(grass, 0.55))
-	# Path network.
-	_paint_path(img, [Vector2(34, 24), Vector2(30, 23.2), Vector2(27, 22.6), Vector2(23.8, 22.2)], 0.72)
-	_paint_path(img, [Vector2(33.2, 23.5), Vector2(31.5, 20.5), Vector2(29.5, 16.5), Vector2(27, 12.2), Vector2(24, 10.2)], 0.62)
-	_paint_path(img, [Vector2(34, 24), Vector2(29, 25.8), Vector2(23, 28), Vector2(17, 30.2), Vector2(11, 31.8)], 0.62)
-	_paint_path(img, [Vector2(23.8, 22.2), Vector2(21.5, 20.8), Vector2(21.3, 20.5)], 0.52)
-	_paint_path(img, [Vector2(23.8, 22.2), Vector2(25.5, 19.7), Vector2(26.8, 18.8)], 0.52)
-	# House clearing.
-	_blend_ellipse(img, 34 * 32, 23 * 32, 150, 105, WorldPalette.color("sand"), 0.11)
-	_paint_path(img, [Vector2(39.4, 22.0), Vector2(42.8, 15.8), Vector2(43.4, 10.7)], 0.4)
-	# Coast and sea.
+	# Broad polygonal soil/grass masses with feathered boundaries.
+	_paint_zones(img, layout)
 	_paint_coast(img, rng)
-	# A few stone patches around the house.
-	for p in [Vector2(31.5, 22.5), Vector2(37, 23.4), Vector2(33.2, 25.4)]:
-		_blend_ellipse(img, int(p.x * 32), int(p.y * 32), 26, 15, WorldPalette.color("stone"), 0.25)
-	var tex := ImageTexture.create_from_image(img)
-	PixelArt.CACHE[key] = tex
-	return tex
+	# Union each route material before compositing: junctions have no dark seams.
+	var materials := {}
+	for route in layout.routes:
+		var material := str(route.get("material", "path"))
+		if material == "deck": continue
+		if not materials.has(material): materials[material] = PixelArt.image(w, h)
+		_paint_path(materials[material], Array(layout.route_points(route)), float(route.get("width", 1.6)), material)
+	for surface in materials.values(): img.blend_rect(surface, Rect2i(0, 0, w, h), Vector2i.ZERO)
+	for entry in layout.anchors:
+		var kind := str(entry.get("kind", ""))
+		var id := str(entry.get("id", ""))
+		if kind in ["house", "shop", "residence"] or id in ["market", "north_gate"]:
+			var at := layout.approach(id) / PixelArt.PX
+			_blend_ellipse(img, int(at.x), int(at.y), 57 if kind != "house" else 95, 27 if kind != "house" else 50, WorldPalette.color("sand"), 0.14)
+	return img
 
 
 static func _coast_pixel_y(x: int) -> int:
@@ -138,35 +151,34 @@ static func _paint_coast(img: Image, rng: RandomNumberGenerator) -> void:
 		img.set_pixel(x - 1, shore - 10, col.darkened(0.15))
 
 
-static func _paint_path(img: Image, points: Array, width_units: float) -> void:
+static func _paint_path(img: Image, points: Array, width_units: float, material: String = "path") -> void:
 	var px_points: Array[Vector2] = []
 	for p in points:
 		px_points.append(Vector2(p.x * 32.0, p.y * 32.0))
 	var width_px := width_units * 32.0
-	var base := WorldPalette.color("path")
-	var edge := WorldPalette.color("path_edge")
+	var base := WorldPalette.color(material).lerp(WorldPalette.color("grass"), 0.23)
+	if material == "stone": base = WorldPalette.color("stone").lerp(WorldPalette.color("grass_shadow"), 0.18)
 	var light := WorldPalette.color("sand")
 	for i in px_points.size() - 1:
 		var a := px_points[i]
 		var b := px_points[i + 1]
-		var bounds := Rect2(a, Vector2.ZERO).expand(b).grow(int(width_px) + 4)
-		for y in range(int(bounds.position.y), int(bounds.position.y + bounds.size.y)):
+		var bounds := Rect2(a, Vector2.ZERO).expand(b).grow(int(width_px * 0.5) + 3)
+		for y in range(int(bounds.position.y), int(bounds.position.y + bounds.size.y), 2):
 			if y < 0 or y >= img.get_height():
 				continue
-			for x in range(int(bounds.position.x), int(bounds.position.x + bounds.size.x)):
+			for x in range(int(bounds.position.x), int(bounds.position.x + bounds.size.x), 2):
 				if x < 0 or x >= img.get_width():
 					continue
 				var p := Vector2(x, y)
-				var d := _distance_to_segment(p, a, b)
-				var edge_noise := sin(float(x) * 0.31 + float(y) * 0.12) * 2.5
-				if d <= width_px * 0.5 + edge_noise:
-					img.set_pixel(x, y, base)
-					if d > width_px * 0.5 - 4:
-						img.set_pixel(x, y, edge)
-					elif (int(x / 6) * 7 + int(y / 3) * 13) % 43 == 0:
-						img.set_pixel(x, y, base.lerp(light, 0.32))
-					elif d < 3.0 and int(y / 8) % 5 == 0:
-						img.set_pixel(x, y, base.lerp(edge, 0.16))
+				var d := p.distance_to(Geometry2D.get_closest_point_to_segment(p, a, b))
+				var edge_noise := sin(float(x) * 0.07 + float(y) * 0.045) * 1.1
+				var coverage := clampf((width_px * 0.5 + edge_noise - d) / 4.5, 0.0, 1.0)
+				if coverage <= 0.0: continue
+				if coverage <= img.get_pixel(x, y).a or is_sea(Vector2(x, y) * PixelArt.PX): continue
+				var ink := base
+				if (int(x / 6) * 7 + int(y / 3) * 13) % 43 == 0: ink = base.lerp(light, 0.12)
+				ink.a = coverage
+				img.fill_rect(Rect2i(x, y, mini(2, img.get_width() - x), mini(2, img.get_height() - y)), ink)
 
 
 static func _distance_to_segment(p: Vector2, a: Vector2, b: Vector2) -> float:
@@ -187,3 +199,47 @@ static func _blend_ellipse(img: Image, cx: int, cy: int, rx: int, ry: int, color
 			img.set_pixel(px, py, existing.lerp(color, alpha))
 
 
+static func _paint_zones(img: Image, layout: WorldLayout) -> void:
+	for zone in layout.zones:
+		var id := str(zone.get("id", ""))
+		if id in ["beach", "waterfront", "reserved_gameplay"]: continue
+		var polygon: PackedVector2Array = zone.get("polygon", PackedVector2Array())
+		if polygon.size() < 3: continue
+		var bounds := Rect2(polygon[0], Vector2.ZERO)
+		for point in polygon: bounds = bounds.expand(point)
+		var inner := Geometry2D.offset_polygon(polygon, -1.0)
+		var color := WorldPalette.color(str(zone.get("material", "grass")))
+		var strength := 0.22 if id not in ["forest_interior", "market", "portal_grounds"] else 0.38
+		for y in range(maxi(0, int(bounds.position.y / PixelArt.PX)), mini(img.get_height(), int(bounds.end.y / PixelArt.PX)), 8):
+			for x in range(maxi(0, int(bounds.position.x / PixelArt.PX)), mini(img.get_width(), int(bounds.end.x / PixelArt.PX)), 8):
+				var at := Vector2(x, y) * PixelArt.PX
+				if not Geometry2D.is_point_in_polygon(at, polygon): continue
+				var interior := false
+				for inset in inner:
+					if Geometry2D.is_point_in_polygon(at, inset): interior = true; break
+				var alpha := strength
+				if not interior:
+					var boundary := INF
+					for i in polygon.size():
+						boundary = minf(boundary, at.distance_to(Geometry2D.get_closest_point_to_segment(at, polygon[i], polygon[(i + 1) % polygon.size()])))
+					alpha *= smoothstep(0.0, 1.0, boundary)
+				var ink := img.get_pixel(x, y).lerp(color, alpha)
+				img.fill_rect(Rect2i(x, y, mini(8, img.get_width() - x), mini(8, img.get_height() - y)), ink)
+
+
+static func shore_y(world_x: float) -> float:
+	var x := int(world_x / PixelArt.PX)
+	return float(_coast_pixel_y(x - posmod(x, 2))) * PixelArt.PX
+
+
+static func is_sea(at: Vector2) -> bool:
+	return at.x >= 0.0 and at.x < OCEAN_WIDTH_PIXELS * PixelArt.PX and at.y >= shore_y(at.x)
+
+
+static func palette_signature() -> int:
+	var palette := WorldPalette.current().world
+	var keys := palette.keys()
+	keys.sort()
+	var swatches: Array = []
+	for key in keys: swatches.append([key, (palette[key] as Color).to_rgba32()])
+	return hash(swatches)

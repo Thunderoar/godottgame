@@ -3,8 +3,12 @@
 [ext_resource type="Script" path="res://scripts/creative/authored_map.gd" id="1"]
 [ext_resource type="Resource" path="res://data/palettes/monsoon_afterglow.tres" id="2"]
 
+[ext_resource type="Resource" path="res://data/maps/village_layout.tres" id="3"]
+
 [resource]
 script = ExtResource("1")
+version = 2
+layout = ExtResource("3")
 objects = Array[Dictionary]([{
 "asset": "monsoon/planter",
 "blocking": false,

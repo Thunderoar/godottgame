@@ -40,6 +40,13 @@ static func tile_image(material: String, at: Vector2i, map: AuthoredMap, layer: 
 			for depth in band:
 				var p := Vector2i(depth if direction.x < 0 else 31 - depth, length) if direction.x != 0 else Vector2i(length, depth if direction.y < 0 else 31 - depth)
 				img.set_pixelv(p, neighbour.lerp(color, float(depth + 1) / float(band + 1)))
+	if layer in ["Terrain", "Paths", "Shore"] and not material.begins_with("sea"):
+		for x in 32:
+			var world_x := float(at.x) + float(x) * PixelArt.PX
+			var shore := WorldTerrain.shore_y(world_x)
+			for y in 32:
+				if (world_x < WorldTerrain.OCEAN_WIDTH_PIXELS * PixelArt.PX and float(at.y) + float(y) * PixelArt.PX >= shore) or map.water_cell(at):
+					img.set_pixel(x, y, Color.TRANSPARENT)
 	return img
 
 func _ready() -> void:
@@ -66,7 +73,7 @@ func _ready() -> void:
 		var images: Array[Image] = []
 		for at in cells:
 			var material := definition.cell(layer, at)
-			var key := material
+			var key := material + (str(at) if layer in ["Terrain", "Paths", "Shore"] and (at.x < 26 or definition.water_cell(at)) else "")
 			for direction in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
 				key += ":" + definition.cell(layer, at + direction)
 			if not variants.has(key):
@@ -86,6 +93,11 @@ func _ready() -> void:
 			tile_layer.set_cell(at, 0, Vector2i(i % 16, int(i / 16)))
 		add_child(tile_layer)
 		if layer == "Water": _add_cell_collisions(cells)
+		elif layer in ["Terrain", "Paths", "Shore"]:
+			var water_cells := {}
+			for at in cells:
+				if str(cells[at]).begins_with("sea"): water_cells[at] = true
+			if not water_cells.is_empty(): _add_cell_collisions(water_cells)
 	for data in definition.objects:
 		if data.has("base_id"):
 			_apply_base_override(data)
@@ -184,6 +196,7 @@ func _apply_base_override(data: Dictionary) -> void:
 	if id == "house" or id.begins_with("shop_"): return
 	for group in ["placeable", "forest_tree"]:
 		for node in get_tree().get_nodes_in_group(group):
+			if not is_instance_valid(node) or not get_parent().is_ancestor_of(node): continue
 			var source_id := str(node.placeable_id) if node is SettlementPlaceable else str(node.tree_id)
 			if source_id != id: continue
 			node.position = data.get("position", node.position)

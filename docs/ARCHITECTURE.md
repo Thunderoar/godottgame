@@ -368,3 +368,23 @@ the actual game and imported art without the editor code.
 HousePanel keeps a local selected preview level. Every Level button can show that design and recovery rate without changing GameState or charging diamonds; Confirm Upgrade still purchases only the next level. ShopNPC handles unhandled mouse/touch hits against the full stall footprint, guarded by current world, modal lock and editor state.
 
 PetBattleDB assigns a separate background resource path to each duel. The supplied image bytes could not be downloaded in this sandbox; those assets are pending. `tools/import_pet_backgrounds.ps1` accepts a local source folder and prepares the files, including a PNG first frame of the GIF.
+
+## Coordinated village geography
+
+AuthoredMap version 2 references an optional WorldLayout. The shipped source is
+`data/maps/village_layout.tres`. It owns anchors, footprints/approaches, route
+edges, polygonal districts and contextual scenery; Lobby builds the existing
+functional owner nodes at those resolved positions. Player settlement positions
+win over developer overrides, which win over canonical defaults. Runtime copies
+never write developer resources. Historical forest exclusions/RNG prefix remain
+frozen independently, preserving every ID/position/HP association.
+
+WorldTerrain and Map Studio render the same route graph and polygonal geography.
+The imported default terrain bake is used only for matching geometry/palette
+hashes; live edits fall back to data-driven generation with a four-version cache.
+WorldComposition supplies independent seeded, reservation-aware foliage and
+building-local workspaces. ResidentRoutes still plans against actual physics;
+customized layouts can repair road centreline routing once after synchronization.
+Sea collision follows the shared shore sampler, with an explicit exception only
+for the visible timber deck. Authored water always blocks, and land paint cannot
+hide water collision. Details and workflow: [WORLD_LAYOUT.md](WORLD_LAYOUT.md).

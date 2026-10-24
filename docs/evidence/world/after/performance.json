@@ -1,0 +1,49 @@
+{
+	"cold_build_ms": 214.71,
+	"live_residents": {
+		"median_ms": 27.322,
+		"p95_ms": 31.468,
+		"physics_ms": 1.7001375,
+		"resident_count": 14
+	},
+	"planning_eight_destinations_ms": 14.659,
+	"quality": {
+		"high": {
+			"draw_calls": 291.561111111111,
+			"mean_ms": 26.7285944444444,
+			"median_ms": 26.596,
+			"nodes": 1524.0,
+			"p95_ms": 30.961,
+			"physics_ms": 1.21956111111112,
+			"process_ms": 36.0208888888889,
+			"texture_bytes": 46000613.0
+		},
+		"low": {
+			"draw_calls": 289.0,
+			"mean_ms": 19.5331388888889,
+			"median_ms": 19.186,
+			"nodes": 1524.0,
+			"p95_ms": 22.591,
+			"physics_ms": 0.649766666666668,
+			"process_ms": 27.4659166666666,
+			"texture_bytes": 46000613.0
+		},
+		"med": {
+			"draw_calls": 290.0,
+			"mean_ms": 27.9087611111111,
+			"median_ms": 26.982,
+			"nodes": 1524.0,
+			"p95_ms": 34.929,
+			"physics_ms": 1.27248888888889,
+			"process_ms": 34.0300388888889,
+			"texture_bytes": 46000613.0
+		}
+	},
+	"renderer": "llvmpipe (LLVM 23.1.1, 256 bits)",
+	"resolution": [
+		1280,
+		720
+	],
+	"warm_build_ms": 26.26,
+	"world_time": 45.0
+}

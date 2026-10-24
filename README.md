@@ -299,3 +299,14 @@ Run `./tools/test_isolated.sh` for gameplay and `./tools/test_creative_editor.sh
 for the isolated editor/import/save/restart workflow.
 
 House upgrade levels are clickable previews: inspect any Level 1-5 design before deciding to buy the next upgrade. Pet duels wait for an explicit Attack or Defend each round. Five supplied battle backgrounds have per-duel paths configured, but the attachment downloads were blocked here; importing those local images remains pending.
+
+### Coordinated village world
+
+The village now uses a shared authored layout for its districts, functional
+anchors, connected roads, building approaches and contextual workspaces. Map
+Studio supports spatial overlays and undoable layout edits; player settlement
+positions and all original forest associations retain precedence/identity.
+See [world design and measured evidence](docs/WORLD_OVERHAUL_REPORT.md) and the
+[layout/authoring guide](docs/WORLD_LAYOUT.md). Reproduce the actual-renderer tour
+with `./tools/review_world.sh /absolute/output`; gameplay and authoring checks
+remain `./tools/test_isolated.sh` and `./tools/test_creative_editor.sh`.

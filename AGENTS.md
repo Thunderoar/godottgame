@@ -366,3 +366,26 @@ forest association against `tools/fixtures/monsoon_forest.json`. Run
 `./tools/review_monsoon.sh /absolute/output` for actual-renderer fixtures and
 measured software-renderer performance. Full evidence, caveats and authoring
 instructions: `docs/MONSOON_AFTERGLOW_REPORT.md` and `docs/ART_DIRECTION.md`.
+
+## 13. Coordinated village layout
+
+`data/maps/village.tres` selects `village_layout.tres` (WorldLayout). Anchors,
+route edges, district polygons, footprints/approaches and contextual workspaces
+are developer source data. AuthoredMap v1 maps inherit defaults; v2 may embed or
+reference a layout. Resolve player settlement positions above developer base
+objects above canonical anchors, without mutating source resources.
+
+The existing 64-tree fixture remains authoritative. Legacy exclusion coordinates
+and the 160-draw pre-forest RNG prefix are compatibility-only; optional decoration
+uses independent streams. Do not make new scenery consume forest/gameplay RNG.
+WorldTerrain uses a hash-verified imported terrain bake for the unchanged village;
+geometry/palette edits invalidate it. `tools/bake_village.tscn` requires explicit
+`--write-village-bake` to write source pixels/metadata; reimport afterward.
+`tools/test_creative_editor.sh` tests source baking only in a disposable copy.
+
+`WorldChecks` is integrated into the isolated gameplay gate. Run
+`./tools/review_world.sh /absolute/output` for actual-renderer district/day/night,
+movement/combat/configuration fixtures and comparable performance metrics. See
+`docs/WORLD_LAYOUT.md` and `docs/WORLD_OVERHAUL_REPORT.md` for ownership, editing,
+measured evidence and limits. Never reclaim sea through land paint; only the
+visible jetty deck footprint is cut out of the shared sea collision.

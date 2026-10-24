@@ -13,6 +13,9 @@ func _ready() -> void:
 	var passed := AssetRegistry.library().entries.has("demo/character")
 	var authored := game.world.get_node_or_null("AuthoredMap") as AuthoredMapRenderer
 	passed = passed and authored != null and authored.definition.objects.size() == 2
+	var saved_layout := authored.definition.layout if authored else null
+	passed = passed and saved_layout != null and saved_layout.position_of("shop_services") == Vector2(32.75, 28.25) and is_equal_approx(float(saved_layout.routes[0].width), 2.15)
+	passed = passed and (game.world as Lobby)._layout.position_of("shop_services") == Vector2(32.75, 28.25)
 	var imported := false
 	if authored:
 		for child in authored.get_children():

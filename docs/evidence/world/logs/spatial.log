@@ -1,0 +1,162 @@
+Godot Engine v4.7.2.stable.arch_linux.ed1daf0bf (2026-08-17 01:18:38 UTC) - https://godotengine.org
+
+Verified isolated user data: /tmp/tidesworn-world-check/userdata/godot/app_userdata/Save The World
+[OK] canonical village IDs, bounds, route widths and graph connectivity validate: []
+[OK] required spatial landmark exists: arrival
+[OK] required spatial landmark exists: house
+[OK] required spatial landmark exists: recovery
+[OK] required spatial landmark exists: market
+[OK] required spatial landmark exists: shop_potion
+[OK] required spatial landmark exists: shop_equipment
+[OK] required spatial landmark exists: shop_pet
+[OK] required spatial landmark exists: shop_house
+[OK] required spatial landmark exists: shop_services
+[OK] required spatial landmark exists: monster_portal
+[OK] required spatial landmark exists: pet_portal
+[OK] required spatial landmark exists: waterfront
+[OK] required spatial landmark exists: jetty_landing
+[OK] required spatial landmark exists: beach_turtle
+[OK] required spatial landmark exists: cleaning
+[OK] required spatial landmark exists: besut
+[OK] required spatial landmark exists: garden_walk
+[OK] required spatial landmark exists: forest_defence
+[OK] required spatial landmark exists: forest_clearing
+[OK] required spatial landmark exists: stable
+[OK] semantic zones admit fishing tools at the waterfront and reject them in woodland
+[OK] player-sized destination approach is clear: house
+[OK] actual physics route reaches exact destination: house
+[OK] player-sized destination approach is clear: arrival
+[OK] actual physics route reaches exact destination: arrival
+[OK] player-sized destination approach is clear: recovery
+[OK] actual physics route reaches exact destination: recovery
+[OK] player-sized destination approach is clear: market
+[OK] actual physics route reaches exact destination: market
+[OK] player-sized destination approach is clear: shop_potion
+[OK] actual physics route reaches exact destination: shop_potion
+[OK] player-sized destination approach is clear: shop_equipment
+[OK] actual physics route reaches exact destination: shop_equipment
+[OK] player-sized destination approach is clear: shop_pet
+[OK] actual physics route reaches exact destination: shop_pet
+[OK] player-sized destination approach is clear: shop_house
+[OK] actual physics route reaches exact destination: shop_house
+[OK] player-sized destination approach is clear: shop_services
+[OK] actual physics route reaches exact destination: shop_services
+[OK] player-sized destination approach is clear: monster_portal
+[OK] actual physics route reaches exact destination: monster_portal
+[OK] player-sized destination approach is clear: pet_portal
+[OK] actual physics route reaches exact destination: pet_portal
+[OK] player-sized destination approach is clear: north_gate
+[OK] actual physics route reaches exact destination: north_gate
+[OK] player-sized destination approach is clear: west_gate
+[OK] actual physics route reaches exact destination: west_gate
+[OK] player-sized destination approach is clear: south_gate
+[OK] actual physics route reaches exact destination: south_gate
+[OK] player-sized destination approach is clear: east_gate
+[OK] actual physics route reaches exact destination: east_gate
+[OK] player-sized destination approach is clear: garden_walk
+[OK] actual physics route reaches exact destination: garden_walk
+[OK] player-sized destination approach is clear: forest_defence
+[OK] actual physics route reaches exact destination: forest_defence
+[OK] player-sized destination approach is clear: forest_clearing
+[OK] actual physics route reaches exact destination: forest_clearing
+[OK] player-sized destination approach is clear: forest_south
+[OK] actual physics route reaches exact destination: forest_south
+[OK] player-sized destination approach is clear: waterfront
+[OK] actual physics route reaches exact destination: waterfront
+[OK] player-sized destination approach is clear: jetty_landing
+[OK] actual physics route reaches exact destination: jetty_landing
+[OK] player-sized destination approach is clear: beach_turtle
+[OK] actual physics route reaches exact destination: beach_turtle
+[OK] player-sized destination approach is clear: cleaning
+[OK] actual physics route reaches exact destination: cleaning
+[OK] player-sized destination approach is clear: besut
+[OK] actual physics route reaches exact destination: besut
+[OK] player-sized destination approach is clear: stable
+[OK] actual physics route reaches exact destination: stable
+[OK] player-sized destination approach is clear: ResidentHouseEast
+[OK] actual physics route reaches exact destination: ResidentHouseEast
+[OK] player-sized destination approach is clear: ResidentHouseWest
+[OK] actual physics route reaches exact destination: ResidentHouseWest
+[OK] player-sized destination approach is clear: ResidentHouseSouth
+[OK] actual physics route reaches exact destination: ResidentHouseSouth
+[OK] player-sized destination approach is clear: ResidentHouseNorth
+[OK] actual physics route reaches exact destination: ResidentHouseNorth
+[OK] player-sized destination approach is clear: ResidentHouseWestNorth
+[OK] actual physics route reaches exact destination: ResidentHouseWestNorth
+[OK] player-sized destination approach is clear: ResidentHouseEastSouth
+[OK] actual physics route reaches exact destination: ResidentHouseEastSouth
+[OK] player-sized destination approach is clear: ResidentHouseSouthWest
+[OK] actual physics route reaches exact destination: ResidentHouseSouthWest
+[OK] player-sized destination approach is clear: jetty_deck
+[OK] actual physics route reaches exact destination: jetty_deck
+[OK] full declared entrance rectangles remain free of physical obstacles
+[OK] painted route has continuous actor clearance: market_lane []
+[OK] painted route has continuous actor clearance: herbal_lane []
+[OK] painted route has continuous actor clearance: smith_lane []
+[OK] painted route has continuous actor clearance: market_crescent []
+[OK] painted route has continuous actor clearance: north_lane []
+[OK] painted route has continuous actor clearance: pet_shop_link []
+[OK] painted route has continuous actor clearance: grotto_approach []
+[OK] painted route has continuous actor clearance: duel_approach []
+[OK] painted route has continuous actor clearance: workshop_lane []
+[OK] painted route has continuous actor clearance: east_lane []
+[OK] painted route has continuous actor clearance: garden_lane []
+[OK] painted route has continuous actor clearance: garden_workshop []
+[OK] painted route has continuous actor clearance: village_promenade []
+[OK] painted route has continuous actor clearance: home_water_link []
+[OK] painted route has continuous actor clearance: besut_court []
+[OK] painted route has continuous actor clearance: south_gate_lane []
+[OK] painted route has continuous actor clearance: market_west_gate []
+[OK] painted route has continuous actor clearance: harbour_lane []
+[OK] painted route has continuous actor clearance: jetty_approach []
+[OK] painted route has continuous actor clearance: turtle_walk []
+[OK] painted route has continuous actor clearance: shore_walk []
+[OK] painted route has continuous actor clearance: coastal_loop []
+[OK] painted route has continuous actor clearance: west_cottage_lane []
+[OK] painted route has continuous actor clearance: west_residence_lane []
+[OK] painted route has continuous actor clearance: north_residence_lane []
+[OK] painted route has continuous actor clearance: stable_lane []
+[OK] painted route has continuous actor clearance: south_cottage_lane []
+[OK] painted route has continuous actor clearance: southwest_cottage_lane []
+[OK] painted route has continuous actor clearance: forest_gate_lane []
+[OK] painted route has continuous actor clearance: forest_home_lane []
+[OK] painted route has continuous actor clearance: woodland_track []
+[OK] painted route has continuous actor clearance: forest_edge_track []
+[OK] painted route has continuous actor clearance: outskirt_lane []
+[OK] painted route has continuous actor clearance: ward_step []
+[OK] painted route has continuous actor clearance: home_step []
+[OK] painted route has continuous actor clearance: jetty_boardwalk []
+[OK] sea collision agrees with painted shoreline at x=2.0
+[OK] sea collision agrees with painted shoreline at x=5.0
+[OK] sea collision agrees with painted shoreline at x=9.0
+[OK] sea collision agrees with painted shoreline at x=14.0
+[OK] sea collision agrees with painted shoreline at x=18.0
+[OK] sea collision agrees with painted shoreline at x=22.0
+[OK] visible jetty planks are walkable from the landing
+[OK] sea remains solid immediately beyond the visible jetty
+[OK] turtle remains grounded on shared beach shelf
+[OK] saved player service position wins over developer override and anchor
+[OK] developer base override wins over canonical default
+[OK] resolving and editing a copy never mutates source layout
+[OK] home arrival, ward and route endpoints follow relocated cottage
+[OK] layout anchors, routes and zones participate in snapshot undo/redo
+[OK] old authored maps inherit versioned village layout without save migration
+[OK] unchanged shipped geometry selects its imported terrain bake
+[OK] imported default terrain and live Map Studio generator have exact pixel parity
+[OK] geometry edits reject a stale bake and render directly from authored data
+[OK] unchanged resolved layout reuses terrain cache
+[OK] validator rejects duplicate canonical IDs
+[OK] flowers frame districts without occupying approaches or lanes
+[OK] land paint cannot hide permanent sea collision
+[OK] shore paint cannot disguise authored water as walkable land
+[OK] footprint validation catches a wall across a road away from destinations
+[OK] emergency, coastal and forest spawns resolve onto clear land
+[OK] developer spatial data saves outside source checkout
+[OK] existing-format settlement save reloads
+[OK] actual runtime player placements override developer source positions
+[OK] merchant, stall collider and local workspace travel with service owner
+[OK] actual recovery ward follows saved house position
+[OK] developer layout, saved buildings and decorative seed changes preserve original forest associations
+[OK] relocated shop remains reachable in actual physics
+[OK] re-entering a customized village produces deterministic resolved routes
+WORLD_CHECKS: 158 checks, 0 failures

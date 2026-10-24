@@ -1,0 +1,39 @@
+Godot Engine v4.7.2.stable.arch_linux.ed1daf0bf (2026-08-17 01:18:38 UTC) - https://godotengine.org
+WARNING: Failed to create wd.xic as the input method or its xim server may not have started yet.
+     at: _create_xic (platform/linuxbsd/x11/display_server_x11.cpp:6347)
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 4.6 (Core Profile) Mesa 26.2.4-arch3.1 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 23.1.1, 256 bits)
+
+Verified isolated user data: /tmp/tidesworn-world-review-O04gUU0o/userdata/godot/app_userdata/Save The World
+[OK] capture spawn
+[OK] capture market
+[OK] capture market-home
+[OK] capture portals
+[OK] capture forest-edge
+[OK] capture forest-interior
+[OK] capture beach-turtle
+[OK] capture jetty-ship
+[OK] capture farms-residential
+[OK] capture besut
+[OK] capture west-cottages
+[OK] capture overview
+[OK] capture effects-low
+[OK] capture effects-med
+[OK] capture effects-high
+[OK] capture reduce-motion
+[OK] capture zoom-28
+[OK] capture zoom-64
+[OK] capture small-screen
+[OK] capture traversal-00
+[OK] capture traversal-14
+[OK] capture traversal-29
+[OK] player traverses the central lane under actual movement input
+[OK] representative combat attack starts
+[OK] capture combat
+[OK] representative combat delivers actual damage
+[OK] capture night-village
+[OK] capture night-forest
+[OK] capture night-coast
+[OK] capture night-low-reduce-motion
+WORLD_REVIEW PASS {"cold_build_ms":707.532,"live_residents":{"median_ms":30.491,"p95_ms":39.271,"physics_ms":1.6293875,"resident_count":14},"planning_eight_destinations_ms":16.189,"quality":{"high":{"draw_calls":298.655555555556,"mean_ms":29.78305,"median_ms":28.106,"nodes":1529.0,"p95_ms":41.674,"physics_ms":1.12222222222223,"process_ms":45.1438666666667,"texture_bytes":45929645.0},"low":{"draw_calls":296.0,"mean_ms":22.2593666666667,"median_ms":21.803,"nodes":1529.0,"p95_ms":26.377,"physics_ms":0.807177777777776,"process_ms":28.5554666666667,"texture_bytes":45929645.0},"med":{"draw_calls":297.0,"mean_ms":30.9011333333333,"median_ms":30.537,"nodes":1529.0,"p95_ms":36.594,"physics_ms":0.631538888888889,"process_ms":37.5264333333333,"texture_bytes":45929645.0}},"renderer":"llvmpipe (LLVM 23.1.1, 256 bits)","resolution":[1280,720],"warm_build_ms":17.524,"world_time":45.0}

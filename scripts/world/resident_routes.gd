@@ -10,6 +10,7 @@ var _world: Node2D
 var _bounds: Rect2
 var _built := false
 var revision := 0
+var clearance := CLEARANCE
 
 
 func _init(world: Node2D, bounds: Rect2 = Rect2(0, 0, 64, 40)) -> void:
@@ -25,7 +26,7 @@ func invalidate() -> void:
 func _query(at: Vector2) -> PhysicsShapeQueryParameters2D:
 	var query := PhysicsShapeQueryParameters2D.new()
 	var shape := CircleShape2D.new()
-	shape.radius = CLEARANCE
+	shape.radius = clearance
 	query.shape = shape
 	query.transform = Transform2D(0.0, at)
 	query.collision_mask = 1
@@ -54,7 +55,7 @@ func _build() -> void:
 	_grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
 	_grid.update()
 	var query := _query(Vector2.ZERO)
-	(query.shape as CircleShape2D).radius = 0.35
+	(query.shape as CircleShape2D).radius = maxf(0.35, clearance)
 	for y in _grid.region.size.y:
 		for x in _grid.region.size.x:
 			var cell := Vector2i(x, y)
