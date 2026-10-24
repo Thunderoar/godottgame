@@ -66,6 +66,7 @@ func _ready() -> void:
 	var pet_xp_bar := hud.get("_pet_xp_bar") as SegmentedBar
 	_check(xp_bar != null and xp_bar.maximum == int(GameState.data.xp_next), "player XP bar shows the next-level requirement")
 	_check(pet_xp_bar != null and pet_xp_bar.maximum == PetDB.xp_for_level(2), "pet XP bar shows the next-level requirement")
+	await WorldChecks.run(game, _check)
 	await MonsoonChecks.run(game, _check)
 	await _test_day_night()
 	await _test_settlement_expansion()
@@ -242,7 +243,7 @@ func _test_settlement_expansion() -> void:
 	_check(get_tree().get_nodes_in_group("ruin_house").size() >= 3, "abandoned, damaged and destroyed houses decorate the outskirts")
 	_check(get_tree().get_nodes_in_group("horses").size() >= 2, "horses live in the village")
 	_check(PixelArt.animal_texture("horse") != null, "horse art generates")
-	_check(get_tree().get_nodes_in_group("flowers").size() >= 50, "flower borders fill the village")
+	_check(get_tree().get_nodes_in_group("flowers").size() >= 12, "selective flower borders remain around village plots")
 	_check(get_tree().get_nodes_in_group("garden").size() >= 6, "more gardens fill the village")
 	var decoration_count := 0
 	for node in get_tree().get_nodes_in_group("placeable"):

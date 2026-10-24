@@ -21,6 +21,8 @@ static func run(studio: Control) -> void:
 	studio.show()
 	await tree.process_frame
 	check(studio.tabs.get_tab_count() == 4, "all four native editor workspaces loaded")
+	var shipped := WorldLayout.village()
+	check(WorldTerrain._make_terrain_texture(shipped) == shipped.baked_texture(), "explicit terrain bake survives source save, reimport and a fresh editor process")
 	DirAccess.make_dir_recursive_absolute("res://data/maps")
 	var output := root.path_join("evidence")
 	DirAccess.make_dir_recursive_absolute(output)
@@ -137,6 +139,39 @@ static func run(studio: Control) -> void:
 	map_panel._release(Vector2i(34, 30) * 8)
 	check(map_panel.map.objects.size() == 2 and map_panel.map.objects[0].blocking, "object placement preserves stable identity and collision properties")
 	var identity: String = map_panel.map.objects[0].id
+	# Exercise the new controls through the same native undo history.
+	map_panel.spatial_kind.select(0)
+	map_panel._spatial_entries()
+	var spatial: WorldLayout = map_panel.map.resolved_layout()
+	var service_index := 0
+	for i in spatial.anchors.size():
+		if spatial.anchors[i].id == "shop_services": service_index = i
+	map_panel.spatial_entry.select(service_index)
+	map_panel.tool.select(10)
+	map_panel._press(Vector2i(32, 28) * 8)
+	map_panel._release(Vector2i(262, 226))
+	check(map_panel.map.layout.position_of("shop_services") == Vector2(32.75, 28.25), "Map Studio moves canonical service anchor through canvas handler")
+	map_panel._history_step(false)
+	check(map_panel.map.layout == null, "native undo restores an old map without explicit layout")
+	map_panel._history_step(true)
+	check(map_panel.map.layout.position_of("shop_services") == Vector2(32.75, 28.25), "native redo restores canonical layout edit")
+	map_panel.spatial_kind.select(1)
+	map_panel._spatial_entries()
+	map_panel.spatial_entry.select(0)
+	map_panel.route_width.value = 2.15
+	map_panel._apply_route_width()
+	check(is_equal_approx(map_panel.map.layout.routes[0].width, 2.15), "road width control updates shared route data")
+	map_panel.spatial_kind.select(2)
+	map_panel._spatial_entries()
+	map_panel.spatial_entry.select(0)
+	map_panel.spatial_vertex.value = 0
+	var before_zone: Vector2 = map_panel.map.layout.zones[0].polygon[0]
+	map_panel._press(Vector2i(8, 9) * 8)
+	map_panel._release(Vector2i(9, 9) * 8)
+	check(map_panel.map.layout.zones[0].polygon[0] != before_zone, "zone polygon vertex editing changes the authored boundary")
+	map_panel.spatial_shown.button_pressed = true
+	map_panel.refresh()
+	check(not map_panel.canvas.spatial_overlay.is_empty(), "shared routes, zones, plots and approach reservations render as overlays")
 	map_panel._save(map_panel.path)
 	var loaded := ResourceLoader.load(map_panel.path, "", ResourceLoader.CACHE_MODE_IGNORE) as AuthoredMap
 	check(loaded.objects[0].id == identity and not map_panel.dirty, "map save/reload preserves object IDs and dirty state")

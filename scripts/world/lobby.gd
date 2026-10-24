@@ -4,6 +4,10 @@ extends Node2D
 ## atlas, while the cottage, stalls and portal frames come from PixelArt.
 
 const MAP_RECT := Rect2(0, 0, 64, 40)
+# Historical exclusions are frozen ONLY to preserve the seeded forest identities.
+# Runtime building placement is owned by village_layout.tres.
+const FOREST_HOUSE_EXCLUSIONS := [Vector2(48.1, 18.4), Vector2(14, 18.1), Vector2(39.4, 31.4), Vector2(25, 8), Vector2(11, 12), Vector2(54.5, 33), Vector2(29, 33)]
+const FOREST_RUIN_EXCLUSIONS := [Vector2(17.8, 13.6), Vector2(52, 33.2), Vector2(22.5, 32.4), Vector2(55.5, 7.8)]
 const SPAWN := Vector2(34.0, 24.3)
 const HOUSE_BASE := Vector2(34.0, 21.4)
 const MONSTER_GATE := Vector2(30.8, 11.3)
@@ -39,6 +43,11 @@ var _recovery_center := RECOVERY_CENTER
 var _markers: Array[Dictionary] = []
 var _decor_root: Node2D
 var _rng := RandomNumberGenerator.new()
+var _decor_rng := RandomNumberGenerator.new()
+const LEGACY_FOREST_PREFIX_DRAWS := 160
+const SPAWN_SEARCH_RINGS := 9
+const SPAWN_SEARCH_DIRECTIONS := 16
+const SPAWN_SEARCH_STEP := 0.55
 var _recovery_ward: RecoveryWard
 var _settlement_editor: SettlementEditor
 var _placeables: Array[SettlementPlaceable] = []
@@ -54,6 +63,7 @@ var _local_lights: Array[PointLight2D] = []
 var _tree_positions: Array[Vector2] = []
 var _forest_trees: Array[ForestTree] = []
 var _authored_map: AuthoredMap
+var _layout: WorldLayout
 var _house_positions: Array[Vector2] = []
 var _ruin_positions: Array[Vector2] = []
 var _tree_serial := 0
@@ -69,8 +79,12 @@ func _ready() -> void:
 	add_to_group("world")
 	y_sort_enabled = true
 	_rng.seed = 7319
+	_decor_rng.seed = 88103
+	_house_positions.assign(FOREST_HOUSE_EXCLUSIONS)
+	_ruin_positions.assign(FOREST_RUIN_EXCLUSIONS)
 	var authored := AuthoredMapRenderer.selected_map()
 	_authored_map = authored
+	_layout = authored.resolved_layout(GameState.data.get("settlement_layout", {})) if authored else WorldLayout.village().resolved([], GameState.data.get("settlement_layout", {}))
 	WorldPalette.select_for_map(authored.palette if authored else null)
 	_build_background()
 	_build_bounds()
@@ -81,6 +95,8 @@ func _ready() -> void:
 	_build_portals()
 	_build_gathering()
 	_build_dock_and_ship()
+	# Preserve the historical RNG state without letting flowers own tree IDs.
+	for i in LEGACY_FOREST_PREFIX_DRAWS: _rng.randf()
 	_build_forest()
 	_build_water_keepers()
 	_build_beach_landmarks()
@@ -100,6 +116,7 @@ func _ready() -> void:
 	authored_layer.definition = authored
 	add_child(authored_layer)
 	_build_camera()
+	if not GameState.data.get("settlement_layout", {}).is_empty(): call_deferred("_resolve_custom_routes")
 	var guide := MissionPath.new()
 	add_child(guide)
 	call_deferred("_on_data_changed")
@@ -148,7 +165,7 @@ func _build_background() -> void:
 
 
 func _make_terrain_texture() -> Texture2D:
-	return WorldTerrain._make_terrain_texture()
+	return WorldTerrain._make_terrain_texture(_layout)
 
 
 func _coast_pixel_y(x: int) -> int:
@@ -226,7 +243,7 @@ func _update_ambient(delta: float) -> void:
 	_ward_mote_timer -= delta
 	if _ward_mote_timer <= 0.0 and GameState.recovery_active():
 		_ward_mote_timer = 0.7
-		Vfx.pop(RECOVERY_CENTER + Vector2(randf_range(-1.6, 1.6), -randf_range(0.4, 2.2)), "heart", Color(0.7, 1.0, 0.85, 0.8))
+		Vfx.pop(_recovery_center + Vector2(randf_range(-1.6, 1.6), -randf_range(0.4, 2.2)), "heart", Color(0.7, 1.0, 0.85, 0.8))
 
 
 func _build_ambient_life() -> void:
@@ -274,7 +291,6 @@ func _build_bounds() -> void:
 	sea.name = "SeaCollision"
 	sea.collision_layer = 1
 	add_child(sea)
-	var poly := CollisionPolygon2D.new()
 	var points := PackedVector2Array()
 	for x in range(0, OCEAN_WIDTH_PIXELS, 16):
 		var shore := float(_coast_pixel_y(x)) * PixelArt.PX + 0.18
@@ -282,8 +298,12 @@ func _build_bounds() -> void:
 		if shore >= 40.0:
 			break
 	points.append(Vector2(0, 40))
-	poly.polygon = points
-	sea.add_child(poly)
+	var deck := _layout.world_footprint("jetty_deck")
+	var cut := PackedVector2Array([deck.position, Vector2(deck.end.x, deck.position.y), deck.end, Vector2(deck.position.x, deck.end.y)])
+	for contour in Geometry2D.clip_polygons(points, cut):
+		var poly := CollisionPolygon2D.new()
+		poly.polygon = contour
+		sea.add_child(poly)
 
 
 func _add_box(body: StaticBody2D, at: Vector2, size: Vector2) -> void:
@@ -304,7 +324,7 @@ func _build_house() -> void:
 	house.category = "house"
 	house.z_index = 6
 	house.selection_size = Vector2(10.2, 7.2)
-	house.position = GameState.placeable_position("house", HOUSE_BASE)
+	house.position = _layout.position_of("house", HOUSE_BASE)
 	add_child(house)
 	_placeables.append(house)
 	_house_origin = house.position
@@ -358,7 +378,7 @@ func _build_house() -> void:
 	bed.name = "Bed"
 	bed.position = Vector2(-5.0, 0.55)
 	house.add_child(bed)
-	_markers.append({"position": HOUSE_BASE, "color": Color("#e4c571"), "size": 6.0, "shape": "square"})
+	_markers.append({"position": _house_position, "color": Color("#e4c571"), "size": 6.0, "shape": "square"})
 	_markers.append({"position": Vector2(38, 15), "color": Color("#8ac36b"), "size": 3.0, "shape": "disc"})
 
 
@@ -402,12 +422,9 @@ func _on_house_upgraded(level: int) -> void:
 # ------------------------------------------------------------------ shops
 
 func _build_shops() -> void:
-	_add_shop("potion", Vector2(23.8, 22.2), "Mara", Color("#5c8767"))
-	_add_shop("equipment", Vector2(21.2, 19.2), "Garrick", Color("#8a5a42"))
-	_add_shop("pet", Vector2(26.8, 17.8), "Nia", Color("#735b92"))
-	# Dedicated construction shop for the five-level cottage progression.
-	_add_shop("house", CONSTRUCTION_SHOP, "Bram", Color("#8f8060"))
-	_add_shop("services", WATER_SHOP, "Amina", Color("#467fc1"))
+	for entry in _layout.anchors:
+		if entry.get("kind", "") == "shop":
+			_add_shop(str(entry.id).trim_prefix("shop_"), entry.position, str(entry.get("merchant", "Neighbour")), entry.get("lamp_color", Color.WHITE))
 
 
 func _add_shop(kind: String, at: Vector2, npc_name: String, color: Color) -> void:
@@ -418,7 +435,7 @@ func _add_shop(kind: String, at: Vector2, npc_name: String, color: Color) -> voi
 	shop.z_index = 6
 	shop.y_sort_enabled = false
 	shop.selection_size = Vector2(4.3, 4.7)
-	shop.position = GameState.placeable_position(shop.placeable_id, at)
+	shop.position = _layout.position_of(shop.placeable_id, at)
 	add_child(shop)
 	_placeables.append(shop)
 	var stall := Sprite2D.new()
@@ -496,7 +513,7 @@ func _build_portals() -> void:
 	first.portal_id = "tidebound_grotto"
 	first.gate_kind = "monster"
 	first.gate_title = "Monster Battle Portal"
-	first.position = MONSTER_GATE
+	first.position = _layout.position_of("monster_portal", MONSTER_GATE)
 	add_child(first)
 	_markers.append({"position": first.position, "color": Color("#a47be0"), "size": 4.0, "shape": "arch"})
 	var second := PortalEntrance.new()
@@ -504,7 +521,7 @@ func _build_portals() -> void:
 	second.portal_id = "pet_duel_1"
 	second.gate_kind = "pet"
 	second.gate_title = "Pet Battle Portal"
-	second.position = PET_GATE
+	second.position = _layout.position_of("pet_portal", PET_GATE)
 	add_child(second)
 	_markers.append({"position": second.position, "color": Color("#58d6cf"), "size": 4.0, "shape": "arch"})
 	# Warning stones tie the paired gates together.
@@ -584,7 +601,7 @@ func _spawn_forest_monsters(count: int, restoring: bool = false) -> void:
 		monster.gold_reward = 6
 		monster.diamond_chance = 0.0
 		monster.body_radius = 0.4
-		monster.position = p + Vector2(_rng.randf_range(-0.6, 0.6), _rng.randf_range(-0.5, 0.5))
+		monster.position = safe_spawn(p + Vector2(_rng.randf_range(-0.6, 0.6), _rng.randf_range(-0.5, 0.5)), monster.body_radius)
 		add_child(monster)
 		_forest_monsters.append(monster)
 
@@ -659,7 +676,7 @@ func spawn_sea_urchin(at: Vector2, raid: bool = false, restoring: bool = false) 
 	monster.gold_reward = 12 if raid else 7
 	monster.diamond_chance = 0.0
 	monster.body_radius = 0.42
-	monster.position = at
+	monster.position = at if restoring else safe_spawn(at, monster.body_radius)
 	add_child(monster)
 	if raid:
 		_emergency_monsters.append(monster)
@@ -686,6 +703,12 @@ func _build_dock_and_ship() -> void:
 	dock.position = Vector2(9.0, 28.5)
 	dock.z_index = 2
 	add_child(dock)
+	var rope := Line2D.new()
+	rope.points = PackedVector2Array([Vector2(7.8, 27.7), Vector2(8.2, 28.3), Vector2(8, 29.2)])
+	rope.width = PixelArt.PX * 2
+	rope.default_color = WorldPalette.color("wood_shadow")
+	rope.z_index = 3
+	add_child(rope)
 	var ship := Sprite2D.new()
 	ship.name = "MooredShip"
 	ship.texture = PixelArt.ship_texture()
@@ -901,15 +924,15 @@ func _build_scatter() -> void:
 		Vector2(22.3, 13.2), Vector2(47.0, 18.0), Vector2(49.5, 24.5),
 		Vector2(26.0, 26.9), Vector2(20.0, 26.0), Vector2(11.0, 19.8),
 	]:
-		_add_wind_decor(bush_paths[_rng.randi_range(0, bush_paths.size() - 1)], p, 1.0 + _rng.randf_range(-0.12, 0.18), 4)
+		_add_wind_decor(bush_paths[_decor_rng.randi_range(0, bush_paths.size() - 1)], p, 1.0 + _decor_rng.randf_range(-0.12, 0.18), 4)
 	# Grass "rumput2": clustered MultiMesh fields (a handful of draw calls for
 	# hundreds of tufts) instead of one sprite per tuft. A dedicated seeded RNG
 	# keeps this fully deterministic and never touches the tree-id sequence.
 	_build_grass_fields(grass_paths)
 	# Flower clumps.
 	for i in 34:
-		var p := Vector2(_rng.randf_range(2, 60), _rng.randf_range(4, 35))
-		if _too_close_to_landmarks(p) and _rng.randf() > 0.2:
+		var p := Vector2(_decor_rng.randf_range(2, 60), _decor_rng.randf_range(4, 35))
+		if _too_close_to_landmarks(p) and _decor_rng.randf() > 0.2:
 			continue
 		if _authored_map:
 			var edited := false
@@ -919,8 +942,8 @@ func _build_scatter() -> void:
 		var shore := float(_coast_pixel_y(int(p.x * 32))) / 32.0
 		if p.y > shore - 0.5:
 			continue
-		for j in _rng.randi_range(2, 5):
-			_add_wind_decor(flower_paths[0], p + Vector2(_rng.randf_range(-0.5, 0.5), _rng.randf_range(-0.35, 0.35)), 0.9, 3)
+		for j in _decor_rng.randi_range(2, 5):
+			_add_wind_decor(flower_paths[0], p + Vector2(_decor_rng.randf_range(-0.5, 0.5), _decor_rng.randf_range(-0.35, 0.35)), 0.9, 3)
 	# Moveable decorations near the cottage.
 	_add_decor_placeable("barrel_1", "res://assets/sprites/TX Props__TX Props Barrel.tres", Vector2(28.8, 23.8), 1.0, 5, Vector2(1.2, 1.4))
 	_add_decor_placeable("barrel_2", "res://assets/sprites/TX Props__TX Props Barrel.tres", Vector2(40.2, 22.8), 1.0, 5, Vector2(1.2, 1.4))
@@ -928,29 +951,11 @@ func _build_scatter() -> void:
 
 
 func _build_monsoon_scenery() -> void:
-	# Curated resident workspaces. Independent of _rng and all tree identities.
-	for entry in [["fishing_net", Vector2(11.3, 25.5)], ["baskets", Vector2(13.5, 26.5)], ["timber", Vector2(43.0, 17.5)], ["bucket", Vector2(46.2, 18.6)], ["lantern", Vector2(28.3, 12.0)], ["lantern", Vector2(39.6, 12.0)]]:
-		var sprite := Sprite2D.new()
-		sprite.name = "Monsoon_" + str(entry[0])
-		sprite.texture = MonsoonArt.prop(entry[0])
-		sprite.centered = false
-		sprite.offset = Vector2(-32, -64)
-		sprite.scale = Vector2.ONE * PixelArt.PX
-		sprite.position = entry[1]
-		sprite.z_index = 5
-		add_child(sprite)
-	for placeable in _placeables:
-		if not placeable.placeable_id.begins_with("shop_"): continue
-		var basket := Sprite2D.new()
-		basket.texture = MonsoonArt.prop("planter" if placeable.placeable_id == "shop_potion" else "baskets")
-		basket.scale = Vector2.ONE * PixelArt.PX * 0.65
-		basket.position = Vector2(-1.25, -0.05)
-		basket.offset = Vector2(0, -32)
-		basket.z_index = 0
-		placeable.add_child(basket)
+	WorldComposition.build(self, _layout)
 
 
 func _add_decor_sprite(path: String, at: Vector2, scale_mul: float, z: int) -> Sprite2D:
+	if _layout and ("TX Bush" in path or "Flower" in path) and not WorldComposition.allowed(self, _layout, at, 0.5): return null
 	var tex: Texture2D
 	if "TX Bush" in path or "Flower" in path:
 		var variant := 3 if "Flower" in path else posmod(absi(path.hash()), 3)
@@ -982,7 +987,7 @@ func _add_decor_placeable(id: String, path: String, at: Vector2, scale_mul: floa
 	group.placeable_id = id
 	group.category = "decoration"
 	group.selection_size = selection
-	group.position = GameState.placeable_position(id, at)
+	group.position = GameState.placeable_position(id, _layout.position_of(id, at))
 	add_child(group)
 	_placeables.append(group)
 	var sprite := Sprite2D.new()
@@ -1032,9 +1037,12 @@ func _build_grass_fields(grass_paths: Array) -> void:
 			continue
 		if _too_close_to_landmarks(p) and _grass_rng.randf() > 0.3:
 			continue
+		if _layout and not WorldComposition.allowed(self, _layout, p, 0.3): continue
+		var zone := _layout.zone_record(p)
+		if _grass_rng.randf() > float(zone.get("density", 0.35)): continue
 		var variant := _grass_rng.randi_range(0, grass_paths.size() - 1)
 		# Forest pinnae, garden hibiscus, coastal blades; quiet maintained centre.
-		if p.x > 45.0: variant = 0 if i % 3 else 2
+		if _layout.zone_at(p) in ["forest_edge", "forest_interior"]: variant = 0 if i % 3 else 2
 		elif p.y > shore - 3.7: variant = 5
 		elif p.distance_to(SPAWN) < 7.0: variant = 4
 		elif i % 5 == 0: variant = 3
@@ -1135,26 +1143,11 @@ func _on_pet_changed() -> void:
 
 func _build_residential_life() -> void:
 	_build_fences()
-	# Neighbour cottages beyond the fence line make the settlement feel lived in.
-	_add_resident_house("ResidentHouseEast", Vector2(48.1, 18.4), 2)
-	_add_resident_house("ResidentHouseWest", Vector2(14.0, 18.1), 1)
-	_add_resident_house("ResidentHouseSouth", Vector2(39.4, 31.4), 3)
-	_add_resident_house("ResidentHouseNorth", Vector2(25.0, 8.0), 2)
-	_add_resident_house("ResidentHouseWestNorth", Vector2(11.0, 12.0), 1)
-	_add_resident_house("ResidentHouseEastSouth", Vector2(54.5, 33.0), 2)
-	_add_resident_house("ResidentHouseSouthWest", Vector2(29.0, 33.0), 1)
-	# Abandoned and battle-damaged homes make the village feel lived-in and at risk.
-	_add_ruin_house("AbandonedHouse", Vector2(17.8, 13.6), "abandoned")
-	_add_ruin_house("DamagedHouse", Vector2(52.0, 33.2), "damaged")
-	_add_ruin_house("DestroyedHouse", Vector2(22.5, 32.4), "destroyed")
-	_add_ruin_house("RuinedHouse", Vector2(55.5, 7.8), "destroyed")
-	# Garden beds.
-	_add_garden("garden_1", Vector2(39.4, 24.7))
-	_add_garden("garden_2", Vector2(41.8, 24.7))
-	_add_garden("garden_3", Vector2(44.2, 24.7))
-	_add_garden("garden_4", Vector2(36.4, 27.8))
-	_add_garden("garden_5", Vector2(19.2, 27.0))
-	_add_garden("garden_6", Vector2(44.3, 20.0))
+	for entry in _layout.anchors:
+		match str(entry.get("kind", "")):
+			"residence": _add_resident_house(str(entry.id), entry.position, int(entry.get("level", 1)))
+			"ruin": _add_ruin_house(str(entry.id), entry.position, str(entry.get("state", "destroyed")))
+			"garden": _add_garden(str(entry.id), entry.position)
 	# A small animal corner plus the village horses.
 	_add_animal("chicken", Vector2(41.6, 28.0))
 	_add_animal("chicken", Vector2(42.7, 28.3))
@@ -1178,7 +1171,7 @@ func _build_residential_life() -> void:
 		Vector2(18.3, 26.1), Vector2(45.2, 20.9),
 	]:
 		for i in 4:
-			_add_decor_sprite("res://assets/sprites/TX Plant__TX Plant - Flower 01.tres", p + Vector2(_rng.randf_range(-0.55, 0.55), _rng.randf_range(-0.35, 0.35)), 0.9, 3)
+			_add_decor_sprite("res://assets/sprites/TX Plant__TX Plant - Flower 01.tres", p + Vector2(_decor_rng.randf_range(-0.55, 0.55), _decor_rng.randf_range(-0.35, 0.35)), 0.9, 3)
 	# Daily-activity residents.
 	_add_resident("Sami", "fisher", "Fishing the shallows", Vector2(12.6, 26.0), [Vector2(12.6, 26.0), Vector2(14.0, 25.5), Vector2(11.3, 26.7)], Vector2(33.8, 23.4))
 	_add_resident("Hana", "gardener", "Tending the garden", Vector2(40.3, 25.8), [Vector2(40.3, 25.8), Vector2(42.0, 25.8), Vector2(39.1, 25.1)], Vector2(33.6, 23.2))
@@ -1198,7 +1191,8 @@ func _add_resident_house(house_name: String, at: Vector2, level: int) -> void:
 	var holder := Node2D.new()
 	holder.name = house_name
 	holder.z_index = 6
-	holder.position = at
+	holder.position = _layout.position_of(house_name, at)
+	holder.set_meta("layout_anchor", house_name)
 	holder.add_to_group("resident_house")
 	add_child(holder)
 	var art := Sprite2D.new()
@@ -1233,7 +1227,6 @@ func _add_resident_house(house_name: String, at: Vector2, level: int) -> void:
 	shape.position = Vector2(0, -0.55)
 	body.add_child(shape)
 	holder.add_child(body)
-	_house_positions.append(at)
 	_markers.append({"position": at, "color": Color("#e4c571"), "size": 3.5, "shape": "square"})
 
 
@@ -1241,7 +1234,8 @@ func _add_ruin_house(house_name: String, at: Vector2, state: String) -> void:
 	var holder := Node2D.new()
 	holder.name = house_name
 	holder.z_index = 6
-	holder.position = at
+	holder.position = _layout.position_of(house_name, at)
+	holder.set_meta("layout_anchor", house_name)
 	holder.add_to_group("ruin_house")
 	add_child(holder)
 	var art := Sprite2D.new()
@@ -1281,7 +1275,6 @@ func _add_ruin_house(house_name: String, at: Vector2, state: String) -> void:
 	shape.position = Vector2(0, -0.5)
 	body.add_child(shape)
 	holder.add_child(body)
-	_ruin_positions.append(at)
 	_markers.append({"position": at, "color": Color("#8b7b62"), "size": 3.0, "shape": "square"})
 
 
@@ -1310,7 +1303,7 @@ func _add_garden(id: String, at: Vector2) -> void:
 	group.placeable_id = id
 	group.category = "decoration"
 	group.selection_size = Vector2(2.4, 1.4)
-	group.position = GameState.placeable_position(id, at)
+	group.position = GameState.placeable_position(id, _layout.position_of(id, at))
 	add_child(group)
 	group.add_to_group("garden")
 	_placeables.append(group)
@@ -1324,13 +1317,17 @@ func _add_garden(id: String, at: Vector2) -> void:
 
 
 func _build_fences() -> void:
-	# Decorative boundary with gates aligned to the paths. Each run is one
-	# editable group so players can reposition the fence without moving it
-	# segment-by-segment.
-	_add_fence_horizontal("fence_south", 18.5, 45.2, 29.8, [Vector2(22.5, 30.5)])
-	_add_fence_horizontal("fence_north", 18.5, 45.2, 13.8, [Vector2(22.0, 26.0), Vector2(40.5, 45.3)])
-	_add_fence_vertical("fence_west", 18.5, 14.5, 29.0, [Vector2(21.0, 24.0)])
-	_add_fence_vertical("fence_east", 45.4, 14.5, 29.0, [Vector2(19.0, 22.5)])
+	for entry in _layout.anchors:
+		if entry.get("kind", "") != "fence": continue
+		var at: Vector2 = entry.position
+		var span: Vector2 = entry.get("span", Vector2.ZERO)
+		var packed: PackedVector2Array = entry.get("gaps", PackedVector2Array())
+		var gaps: Array[Vector2] = []
+		for gap in packed: gaps.append(gap + Vector2.ONE * (at.x if entry.get("axis", "horizontal") == "horizontal" else at.y))
+		if entry.get("axis", "horizontal") == "horizontal":
+			_add_fence_horizontal(str(entry.id), at.x + span.x, at.x + span.y, at.y, gaps)
+		else:
+			_add_fence_vertical(str(entry.id), at.x, at.y + span.x, at.y + span.y, gaps)
 
 
 func _add_fence_horizontal(id: String, x0: float, x1: float, y: float, gaps: Array[Vector2]) -> void:
@@ -1436,14 +1433,15 @@ func _add_resident(resident_name: String, role: String, activity: String, start:
 	resident.resident_name = resident_name
 	resident.role = role
 	resident.activity = activity
-	resident.position = start
-	resident.shelter = shelter
+	resident.position = start + (_house_position - HOUSE_BASE if role == "carpenter" else Vector2.ZERO)
+	resident.shelter = shelter + _house_position - HOUSE_BASE
+	resident.set_meta("home_shelter_offset", shelter - HOUSE_BASE)
 	resident.combat_enabled = combat
 	resident.combat_damage = damage
 	resident.combat_range = distance
 	var typed_points: Array[Vector2] = []
 	for p in points:
-		typed_points.append(p)
+		typed_points.append(p + (_house_position - HOUSE_BASE if role == "carpenter" else Vector2.ZERO))
 	resident.waypoints = typed_points
 	add_child(resident)
 	_residents.append(resident)
@@ -1717,7 +1715,7 @@ func get_guidance_targets() -> Array:
 						best = distance
 						destination = enemy.global_position
 			"portal", "boss":
-				destination = MONSTER_GATE + Vector2(0, 1)
+				destination = _layout.approach("monster_portal")
 			_:
 				return []
 		return [{"position": destination, "label": lesson.get("title", "Mission")}]
@@ -1732,11 +1730,11 @@ func get_guidance_targets() -> Array:
 			monster_pending = true
 			break
 	if monster_pending:
-		targets.append({"label": "MONSTER", "position": MONSTER_GATE, "color": Color("#b08cff")})
+		targets.append({"label": "MONSTER", "position": _layout.approach("monster_portal"), "color": Color("#b08cff")})
 	if not bool(GameState.pet_battle_state("pet_duel_1").get("cleared", false)):
-		targets.append({"label": "PET DUEL", "position": PET_GATE, "color": Color("#5bd6cf")})
+		targets.append({"label": "PET DUEL", "position": _layout.approach("pet_portal"), "color": Color("#5bd6cf")})
 	if GameState.house_level() < HouseDB.max_level():
-		targets.append({"label": "BUILD", "position": CONSTRUCTION_SHOP, "color": Color("#f2c45a")})
+		targets.append({"label": "BUILD", "position": _shop_customer_position("house", CONSTRUCTION_SHOP), "color": Color("#f2c45a")})
 	if targets.is_empty():
 		targets.append({"label": "FOREST", "position": Vector2(51.0, 21.0), "color": Color("#8ac36b")})
 		targets.append({"label": "GUARD", "position": Vector2(11.2, 27.0), "color": Color("#8fe8f7")})
@@ -1787,11 +1785,11 @@ func _build_beach_landmarks() -> void:
 	turtle.name = "BeachTurtle"
 	# Use the same two-art-pixel coastline columns as terrain and mask.
 	var coast_x := 14 * 32
-	turtle.position = Vector2(float(coast_x) * PixelArt.PX, float(_coast_pixel_y(coast_x)) * PixelArt.PX - 1.3)
+	turtle.position = _layout.position_of("beach_turtle", Vector2(float(coast_x) * PixelArt.PX, float(_coast_pixel_y(coast_x)) * PixelArt.PX - 1.3))
 	add_child(turtle)
 	var sign := Node2D.new()
 	sign.name = "BesutSign"
-	sign.position = Vector2(29.5, 28.3)
+	sign.position = _layout.position_of("besut", Vector2(29.5, 28.3))
 	sign.z_index = 6
 	sign.add_to_group("besut_sign")
 	add_child(sign)
@@ -1824,3 +1822,75 @@ func _fresh_foliage(path: String) -> Texture2D:
 					fresh.a = col.a
 					img.set_pixel(x, y, fresh)
 		return img)
+
+
+func refresh_spatial_layout() -> void:
+	# Called on drag completion, never per frame. Source map stays immutable.
+	var saved: Dictionary = GameState.data.get("settlement_layout", {})
+	_layout = _authored_map.resolved_layout(saved) if _authored_map else WorldLayout.village().resolved([], saved)
+	for placeable in _placeables:
+		if placeable.placeable_id == "house":
+			_house_position = placeable.position
+			_recovery_center = _house_position + Vector2(0, 2.3)
+			_player_spawn = _house_position + Vector2(0, 2.9)
+			if is_instance_valid(_recovery_ward): _recovery_ward.position = _recovery_center
+	for resident in _residents:
+		if is_instance_valid(resident) and resident.has_meta("home_shelter_offset"):
+			resident.shelter = _house_position + resident.get_meta("home_shelter_offset")
+	background.texture = WorldTerrain._make_terrain_texture(_layout)
+	invalidate_resident_routes()
+	call_deferred("_resolve_custom_routes")
+
+
+var _resolving_routes := false
+func _resolve_custom_routes() -> void:
+	if _resolving_routes: return
+	_resolving_routes = true
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	if is_queued_for_deletion(): return
+	var planner := ResidentRoutes.new(self, MAP_RECT)
+	planner.clearance = WorldLayout.ACTOR_CLEARANCE
+	var changed := false
+	for route in _layout.routes:
+		var points := _layout.route_points(route)
+		var clear := true
+		for i in points.size() - 1:
+			if not planner.segment_clear(points[i], points[i + 1]): clear = false; break
+		if clear: continue
+		var path := planner.path(points[0], points[-1], false)
+		if path.is_empty(): continue # Preserve user placements; editor validation reports obstructions.
+		path.resize(maxi(0, path.size() - 1))
+		route.via = path
+		changed = true
+	if changed:
+		_layout._prepared = false
+		background.texture = WorldTerrain._make_terrain_texture(_layout)
+	for node in get_tree().get_nodes_in_group("flowers"):
+		if is_ancestor_of(node): node.visible = WorldComposition.allowed(self, _layout, node.global_position, 0.5)
+	_resolving_routes = false
+
+
+func safe_spawn(at: Vector2, radius: float = 0.45) -> Vector2:
+	var query := PhysicsShapeQueryParameters2D.new()
+	var circle := CircleShape2D.new()
+	circle.radius = radius + 0.08
+	query.shape = circle
+	query.collision_mask = 1
+	for ring in SPAWN_SEARCH_RINGS:
+		for step in (1 if ring == 0 else SPAWN_SEARCH_DIRECTIONS):
+			var candidate := at + Vector2.from_angle(float(step) * TAU / float(SPAWN_SEARCH_DIRECTIONS)) * float(ring) * SPAWN_SEARCH_STEP
+			if not MAP_RECT.grow(-radius).has_point(candidate) or WorldTerrain.is_sea(candidate): continue
+			if _authored_map and (_authored_map.water_cell(Vector2i(candidate.floor())) or not _authored_map.cell("Collision", Vector2i(candidate.floor())).is_empty()): continue
+			var blocked := false
+			for tree in _forest_trees:
+				if is_instance_valid(tree) and tree.is_alive() and candidate.distance_to(tree.position + Vector2(0, -0.2)) < radius + 0.6:
+					blocked = true; break
+			if blocked: continue
+			for entry in _layout.anchors:
+				if entry.get("kind", "") not in ["house", "shop", "residence", "ruin"]: continue
+				if _layout.world_footprint(str(entry.id)).grow(radius).has_point(candidate): blocked = true; break
+			if blocked: continue
+			query.transform = Transform2D(0.0, candidate)
+			if get_world_2d().direct_space_state.intersect_shape(query, 1).is_empty(): return candidate
+	return at

@@ -137,7 +137,7 @@ func _finish_drag() -> void:
 		_selected = null
 		var lobby := get_parent() as Lobby
 		if lobby:
-			lobby.invalidate_resident_routes()
+			lobby.refresh_spatial_layout()
 	_dragging = false
 
 

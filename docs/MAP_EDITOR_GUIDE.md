@@ -91,3 +91,16 @@ while Play shows each stable ID's actual family. The World Palette quick buttons
 compare Monsoon, Previous coast and Original. Select a palette for a map and
 explicitly Save to persist it. Painted tiles retain the existing layer and
 collision contracts.
+
+## Coordinated village layout
+
+The shipped map now carries a canonical WorldLayout with district polygons,
+landmark/service anchors, connected roads, plots and approach reservations.
+Enable **Spatial overlays**, choose anchors/routes/zones and an ID, then use
+**Move layout point**. The bend/vertex selector addresses a zero-based `via`
+point or polygon vertex; moving anchors also moves their road endpoints.
+**Apply road width** changes the selected road's full ribbon width. All these
+operations use the same native undo/redo and Save workflow as paint/objects.
+See [WORLD_LAYOUT.md](WORLD_LAYOUT.md) for the schema, precedence, source bake,
+full instructions and preview limits. Base props remain representative where
+noted there; Play remains the exact runtime/physics preview.

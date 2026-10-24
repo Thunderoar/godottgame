@@ -10,6 +10,12 @@ export TIDESWORN_TEST_ROOT="$run_dir"
 printf 'Isolated creative editor artifacts: %s\n' "$run_dir"
 timeout 120 godot --headless --path "$run_dir/project" --import > "$run_dir/import.log" 2>&1
 if rg -q 'SCRIPT ERROR|ERROR:' "$run_dir/import.log"; then cat "$run_dir/import.log"; exit 1; fi
+# Exercise explicit source baking only inside this disposable checkout.
+timeout 60 godot --headless --path "$run_dir/project" res://tools/bake_village.tscn -- --write-village-bake > "$run_dir/bake.log" 2>&1
+if rg -q 'SCRIPT ERROR|ERROR:|VILLAGE_BAKE FAIL' "$run_dir/bake.log"; then cat "$run_dir/bake.log"; exit 1; fi
+rg -q '^VILLAGE_BAKE PASS ' "$run_dir/bake.log"
+timeout 120 godot --headless --path "$run_dir/project" --import > "$run_dir/bake-import.log" 2>&1
+if rg -q 'SCRIPT ERROR|ERROR:' "$run_dir/bake-import.log"; then cat "$run_dir/bake-import.log"; exit 1; fi
 set +e
 timeout 180 xvfb-run -a -s '-screen 0 1600x1000x24' godot --path "$run_dir/project" --editor -- --creative-tool-tests > "$run_dir/editor.log" 2>&1
 result=$?

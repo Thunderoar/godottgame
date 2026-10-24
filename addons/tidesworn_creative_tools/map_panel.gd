@@ -30,16 +30,23 @@ var selected_object := -1
 var _hidden: Dictionary = {}
 var _locked: Dictionary = {}
 var _before: Dictionary = {}
+var _preview_spatial: WorldLayout
 var _start := Vector2i.ZERO
 var _last := Vector2i.ZERO
 var _selection := Rect2i()
 var _base: Image
 var _base_generation := -1
 var _local_history := UndoRedo.new()
+var spatial_kind: OptionButton
+var spatial_entry: OptionButton
+var spatial_vertex: SpinBox
+var route_width: SpinBox
+var spatial_shown: CheckBox
+var _base_signature := 0
 
 func _ready() -> void:
 	base = load("res://data/maps/village_objects.tres") as AuthoredMap
-	map = (load(path) as AuthoredMap).duplicate(true)
+	map = (load(path) as AuthoredMap).copy_map()
 	_hidden = map.editor_hidden
 	_locked = map.editor_locked
 	var bar := W.row(self)
@@ -54,7 +61,7 @@ func _ready() -> void:
 	bar = W.row(self)
 	layer = W.option(bar, AuthoredMap.LAYERS)
 	terrain_choice = W.option(bar, AuthoredMap.MATERIALS)
-	tool = W.option(bar, ["Pencil", "Eraser", "Rectangle", "Fill", "Eyedropper", "Select", "Move", "Place object", "Select object", "Move object"])
+	tool = W.option(bar, ["Pencil", "Eraser", "Rectangle", "Fill", "Eyedropper", "Select", "Move", "Place object", "Select object", "Move object", "Move layout point"])
 	brush = W.number(bar, "Brush", 1, 1, 8)
 	tool.item_selected.connect(func(index: int) -> void:
 		if index == 7: _lock_base_properties(false))
@@ -121,6 +128,18 @@ tree, house, garden, flowers, fence, sign.")
 		if child is Label and child.text.length() > 60:
 			child.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			child.custom_minimum_size.x = 230
+	bar = W.row(self)
+	spatial_shown = W.check(bar, "Spatial overlays", false)
+	spatial_kind = W.option(bar, ["anchors", "routes", "zones"])
+	spatial_entry = W.option(bar, [])
+	spatial_vertex = W.number(bar, "Bend / vertex", 0, 0, 32)
+	route_width = W.number(bar, "Road width", 1.8, 0.8, 3.5)
+	route_width.step = 0.05
+	W.button(bar, "Apply road width", _apply_route_width)
+	spatial_kind.item_selected.connect(func(_i: int) -> void: _spatial_entries(); refresh())
+	spatial_entry.item_selected.connect(func(_i: int) -> void: refresh())
+	spatial_shown.toggled.connect(func(_on: bool) -> void: refresh())
+	_spatial_entries()
 	status = W.label(self, "")
 	refresh()
 
@@ -129,10 +148,13 @@ func _layer() -> String:
 
 func refresh() -> void:
 	if canvas == null or map == null: return
-	if _base == null or _base_generation != WorldPalette.generation:
-		_base = WorldTerrain._make_terrain_texture().get_image().duplicate() as Image
+	var spatial := map.resolved_layout()
+	_preview_spatial = spatial
+	if _base == null or _base_generation != WorldPalette.generation or _base_signature != spatial.signature():
+		_base = WorldTerrain._make_terrain_texture(spatial).get_image().duplicate() as Image
 		_base.resize(map.size.x * CELL, map.size.y * CELL, Image.INTERPOLATE_NEAREST)
 		_base_generation = WorldPalette.generation
+		_base_signature = spatial.signature()
 	var image := _base.duplicate() as Image
 	for name in AuthoredMap.LAYERS:
 		if _hidden.get(name, false): continue
@@ -141,13 +163,14 @@ func refresh() -> void:
 			tile.resize(CELL, CELL, Image.INTERPOLATE_NEAREST)
 			image.blend_rect(tile, Rect2i(Vector2i.ZERO, Vector2i(CELL, CELL)), at * CELL)
 	for data in _preview_objects():
-		var texture := AuthoredMapRenderer.object_texture(str(data.get("asset", "")))
+		var texture := _preview_texture(data)
 		if texture == null: continue
 		var img := texture.get_image().duplicate() as Image
 		var target_size := Vector2i(Vector2(img.get_size()) * (float(CELL) / 32.0) * float(data.get("scale", 1.0))).max(Vector2i.ONE)
 		img.resize(target_size.x, target_size.y, Image.INTERPOLATE_NEAREST)
 		var p: Vector2 = data.get("position", Vector2.ZERO)
 		image.blend_rect(img, Rect2i(Vector2i.ZERO, target_size), Vector2i(p * CELL) - Vector2i(int(target_size.x / 2), target_size.y))
+	_update_spatial_overlay(spatial)
 	canvas.show_image(image)
 	canvas.selection = Rect2i(_selection.position * CELL, _selection.size * CELL)
 	canvas.queue_redraw()
@@ -201,6 +224,8 @@ func _release(at: Vector2i) -> void:
 				map.paint(_layer(), p, "")
 		for p in cells: map.paint(_layer(), p + cell - _start, cells[p])
 		_selection.position += cell - _start
+	elif name == "Move layout point":
+		_move_layout_point(Vector2(at) / CELL)
 	elif name == "Move object" and selected_object >= 0:
 		map.objects[selected_object].position = Vector2(cell) + Vector2.ONE * 0.5 if snap.button_pressed else Vector2(at) / CELL
 	if name not in ["Select", "Select object", "Eyedropper"]: _commit(_before, map.snapshot(), name)
@@ -241,6 +266,7 @@ func _select_object(at: Vector2i) -> void:
 	var distance := 2.0
 	var chosen := {}
 	for data in _preview_objects():
+		if data.get("preview_only", false): continue
 		var p: Vector2 = data.position
 		var d := p.distance_to(Vector2(at) / CELL)
 		if d < distance:
@@ -334,13 +360,14 @@ func _new() -> void:
 		dirty = true
 		selected_object = -1
 		_local_history.clear_history()
+		_spatial_entries()
 		refresh())
 
 func _load(source: String) -> void:
 	var loaded := load(source) as AuthoredMap
 	if loaded == null: studio.report("Select an AuthoredMap resource."); return
 	studio.confirm_discard(dirty, func() -> void:
-		map = loaded.duplicate(true)
+		map = loaded.copy_map()
 		_hidden = map.editor_hidden
 		_locked = map.editor_locked
 		path = source
@@ -383,9 +410,10 @@ func _decorate(seed_value: int) -> void:
 	map.seed_value = seed_value
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
+	var spatial := map.resolved_layout()
 	for i in 32:
 		var at := Vector2i(rng.randi_range(3, map.size.x - 4), rng.randi_range(3, map.size.y - 4))
-		if map.cell("Decoration", at).is_empty(): map.paint("Decoration", at, "flower")
+		if not spatial.reserved(Vector2(at) + Vector2.ONE * 0.5, 0.6) and map.cell("Decoration", at).is_empty(): map.paint("Decoration", at, "flower")
 	_commit(before, map.snapshot(), "Seed decoration")
 
 
@@ -402,8 +430,24 @@ func _preview_objects() -> Array[Dictionary]:
 				if override.get("base_id", "") == object.get("base_id", ""):
 					overridden = true
 					break
-			if not overridden: result.append(object)
+			if not overridden:
+				var proxy := object.duplicate(true)
+				var spatial := _preview_spatial if _preview_spatial else map.resolved_layout()
+				var id := str(proxy.get("base_id", ""))
+				if not spatial.anchor(id).is_empty(): proxy.position = spatial.position_of(id)
+				result.append(proxy)
 	result.append_array(map.objects)
+	var spatial := _preview_spatial if _preview_spatial else map.resolved_layout()
+	for entry in spatial.anchors:
+		var kind := str(entry.get("kind", ""))
+		if kind not in ["residence", "ruin"]: continue
+		result.append({"id": entry.id, "asset": "house", "position": entry.position, "scale": 0.78, "level": entry.get("level", 1), "preview_only": true})
+	for detail in spatial.scenery:
+		var at: Vector2 = detail.get("position", Vector2.ZERO)
+		if not str(detail.get("parent", "")).is_empty(): at += spatial.position_of(str(detail.parent))
+		result.append({"id": detail.id, "asset": "workspace/" + str(detail.get("asset", "baskets")), "position": at, "scale": detail.get("scale", 1), "preview_only": true})
+	result.append({"id": "jetty_preview", "asset": "jetty", "position": Vector2(9, 28.5), "preview_only": true})
+	result.append({"id": "boat_preview", "asset": "ship", "position": Vector2(7.5, 32.0), "preview_only": true})
 	return result
 
 
@@ -416,3 +460,91 @@ func _lock_base_properties(is_base: bool) -> void:
 	blocking.disabled = is_base
 	interactive.disabled = is_base
 	metadata.editable = not is_base
+
+
+func _spatial_entries() -> void:
+	spatial_entry.clear()
+	var spatial := map.resolved_layout()
+	for entry in spatial.get(spatial_kind.get_item_text(spatial_kind.selected)):
+		spatial_entry.add_item(str(entry.get("id", "")))
+
+func _editable_layout() -> WorldLayout:
+	if map.layout == null: map.layout = WorldLayout.village().copy_layout()
+	return map.layout
+
+func _move_layout_point(at: Vector2) -> void:
+	if not Rect2(Vector2.ZERO, Vector2(map.size)).has_point(at): return
+	var kind := spatial_kind.get_item_text(spatial_kind.selected)
+	var entries: Array = _editable_layout().get(kind)
+	if spatial_entry.selected < 0 or spatial_entry.selected >= entries.size(): return
+	var entry: Dictionary = entries[spatial_entry.selected]
+	if kind == "anchors": entry.position = at.snapped(Vector2.ONE * 0.25) if snap.button_pressed else at
+	else:
+		var key := "via" if kind == "routes" else "polygon"
+		var points: PackedVector2Array = entry.get(key, PackedVector2Array())
+		var index := int(spatial_vertex.value)
+		if index >= points.size():
+			studio.report("This route/zone has %d editable points; choose an existing vertex." % points.size())
+			return
+		points[index] = at
+		entry[key] = points
+
+func _apply_route_width() -> void:
+	if spatial_kind.get_item_text(spatial_kind.selected) != "routes": return
+	var before := map.snapshot()
+	if spatial_entry.selected >= 0:
+		_editable_layout().routes[spatial_entry.selected].width = route_width.value
+	_commit(before, map.snapshot(), "Change road width")
+
+func _update_spatial_overlay(spatial: WorldLayout) -> void:
+	canvas.spatial_overlay.clear()
+	if spatial_shown == null or not spatial_shown.button_pressed: return
+	var kind := spatial_kind.get_item_text(spatial_kind.selected)
+	var selected_id := spatial_entry.get_item_text(spatial_entry.selected) if spatial_entry.selected >= 0 else ""
+	# Show one spatial category at a time; label only the selected feature.
+	# This keeps overlapping district/road/footprint geometry legible at map scale.
+	if kind == "zones":
+		for zone in spatial.zones:
+			var points: PackedVector2Array = zone.get("polygon", PackedVector2Array()).duplicate()
+			if points.is_empty(): continue
+			points.append(points[0])
+			for i in points.size(): points[i] *= CELL
+			var overlay := {"points": points, "color": Color(0.5, 0.8, 0.95, 0.65)}
+			if zone.get("id", "") == selected_id: overlay.label = selected_id; overlay.width = 2.0
+			canvas.spatial_overlay.append(overlay)
+	elif kind == "routes":
+		for route in spatial.routes:
+			var points := spatial.route_points(route)
+			for i in points.size(): points[i] *= CELL
+			var overlay := {"points": points, "color": Color(1, 0.7, 0.3, 0.7), "width": 1.0}
+			if route.get("id", "") == selected_id: overlay.label = selected_id; overlay.width = 2.0
+			canvas.spatial_overlay.append(overlay)
+	else:
+		for entry in spatial.anchors:
+			var plot := spatial.world_footprint(str(entry.id))
+			if plot.has_area():
+				var corners := PackedVector2Array([plot.position, Vector2(plot.end.x, plot.position.y), plot.end, Vector2(plot.position.x, plot.end.y), plot.position])
+				for i in corners.size(): corners[i] *= CELL
+				canvas.spatial_overlay.append({"points": corners, "color": Color(0.4, 0.85, 0.6, 0.65)})
+			var at := spatial.approach(str(entry.id))
+			var clearance: Vector2 = entry.get("clearance", Vector2.ONE)
+			var rect := Rect2(at - clearance * 0.5, clearance)
+			var points := PackedVector2Array([rect.position, Vector2(rect.end.x, rect.position.y), rect.end, Vector2(rect.position.x, rect.end.y), rect.position])
+			for i in points.size(): points[i] *= CELL
+			var overlay := {"points": points, "color": Color(0.9, 0.3, 0.4, 0.8)}
+			if entry.get("id", "") == selected_id: overlay.label = selected_id; overlay.width = 2.0
+			canvas.spatial_overlay.append(overlay)
+
+
+func _preview_texture(data: Dictionary) -> Texture2D:
+	var id := str(data.get("base_id", ""))
+	var asset_id := str(data.get("asset", ""))
+	if id.begins_with("forest_"):
+		return MonsoonArt.tree_texture(MonsoonArt.family(id, data.get("position", Vector2.ZERO)))
+	if id == "house": return PixelArt.house_texture(1)
+	if id.begins_with("shop_"): return PixelArt.stall_texture(id.trim_prefix("shop_"))
+	if asset_id == "house": return PixelArt.house_texture(int(data.get("level", 1)))
+	if asset_id.begins_with("workspace/"): return WorldComposition.texture(asset_id.trim_prefix("workspace/"))
+	if asset_id == "jetty": return PixelArt.dock_texture()
+	if asset_id == "ship": return PixelArt.ship_texture()
+	return AuthoredMapRenderer.object_texture(asset_id)

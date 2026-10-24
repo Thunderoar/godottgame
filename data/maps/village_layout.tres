@@ -1,0 +1,1081 @@
+[gd_resource type="Resource" script_class="WorldLayout" format=3]
+
+[ext_resource type="Script" path="res://scripts/creative/world_layout.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+terrain_bake_path = "res://assets/authored/village/terrain.png"
+terrain_bake_hash = 3131421313
+terrain_palette_hash = 2346589738
+anchors = Array[Dictionary]([{
+"approach": Vector2(0, 1.2),
+"clearance": Vector2(3, 1.5),
+"destination": true,
+"footprint": Rect2(-4, -6.7, 8, 6.55),
+"id": "house",
+"kind": "house",
+"movable": true,
+"owner": "Lobby",
+"position": Vector2(34, 21.4),
+"priority": 100,
+"zone": "homestead"
+}, {
+"approach": Vector2(0, 0),
+"clearance": Vector2(3, 2.4),
+"destination": true,
+"footprint": Rect2(-0.5, -0.5, 1, 1),
+"id": "arrival",
+"kind": "landmark",
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(34, 24.3),
+"priority": 100,
+"zone": "homestead"
+}, {
+"approach": Vector2(0, 0),
+"clearance": Vector2(2, 1.5),
+"destination": true,
+"footprint": Rect2(-0.5, -0.5, 1, 1),
+"id": "recovery",
+"kind": "landmark",
+"movable": false,
+"offset": Vector2(0, 2.3),
+"owner": "Lobby",
+"position": Vector2(34, 23.7),
+"priority": 100,
+"relative_to": "house",
+"zone": "reserved_gameplay"
+}, {
+"approach": Vector2(0, 0),
+"clearance": Vector2(3.6, 2.8),
+"destination": true,
+"footprint": Rect2(-0.5, -0.5, 1, 1),
+"id": "market",
+"kind": "landmark",
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(25.2, 24.3),
+"priority": 100,
+"zone": "market"
+}, {
+"approach": Vector2(0.75, 0.9),
+"clearance": Vector2(2.4, 1.6),
+"destination": true,
+"footprint": Rect2(-1.9, -3.4, 3.8, 3.3),
+"id": "shop_potion",
+"kind": "shop",
+"lamp_color": Color(0.36078432, 0.5294118, 0.40392157, 1),
+"merchant": "Mara",
+"movable": true,
+"owner": "Lobby",
+"position": Vector2(23.8, 22.2),
+"priority": 100,
+"zone": "market"
+}, {
+"approach": Vector2(0.75, 0.9),
+"clearance": Vector2(2.4, 1.6),
+"destination": true,
+"footprint": Rect2(-1.9, -3.4, 3.8, 3.3),
+"id": "shop_equipment",
+"kind": "shop",
+"lamp_color": Color(0.5411765, 0.3529412, 0.25882354, 1),
+"merchant": "Garrick",
+"movable": true,
+"owner": "Lobby",
+"position": Vector2(21.2, 19.2),
+"priority": 100,
+"zone": "market"
+}, {
+"approach": Vector2(0.75, 0.9),
+"clearance": Vector2(2.4, 1.6),
+"destination": true,
+"footprint": Rect2(-1.9, -3.4, 3.8, 3.3),
+"id": "shop_pet",
+"kind": "shop",
+"lamp_color": Color(0.4509804, 0.35686275, 0.57254905, 1),
+"merchant": "Nia",
+"movable": true,
+"owner": "Lobby",
+"position": Vector2(26.8, 17.8),
+"priority": 100,
+"zone": "market"
+}, {
+"approach": Vector2(0.75, 0.9),
+"clearance": Vector2(2.4, 1.6),
+"destination": true,
+"footprint": Rect2(-1.9, -3.4, 3.8, 3.3),
+"id": "shop_house",
+"kind": "shop",
+"lamp_color": Color(0.56078434, 0.5019608, 0.3764706, 1),
+"merchant": "Bram",
+"movable": true,
+"owner": "Lobby",
+"position": Vector2(41.2, 16.2),
+"priority": 100,
+"zone": "market"
+}, {
+"approach": Vector2(0.75, 0.9),
+"clearance": Vector2(2.4, 1),
+"destination": true,
+"footprint": Rect2(-1.9, -3.4, 3.8, 3.3),
+"id": "shop_services",
+"kind": "shop",
+"lamp_color": Color(0.27450982, 0.49803922, 0.75686276, 1),
+"merchant": "Amina",
+"movable": true,
+"owner": "Lobby",
+"position": Vector2(32.5, 28.2),
+"priority": 100,
+"zone": "homestead"
+}, {
+"approach": Vector2(0, 1),
+"clearance": Vector2(2.5, 1.7),
+"destination": true,
+"footprint": Rect2(-1.1, -2.9, 2.2, 2.7),
+"id": "monster_portal",
+"kind": "portal",
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(30.8, 11.3),
+"priority": 100,
+"zone": "portal_grounds"
+}, {
+"approach": Vector2(0, 1),
+"clearance": Vector2(2.5, 1.7),
+"destination": true,
+"footprint": Rect2(-1.1, -2.9, 2.2, 2.7),
+"id": "pet_portal",
+"kind": "portal",
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(37.2, 11.3),
+"priority": 100,
+"zone": "portal_grounds"
+}, {
+"approach": Vector2(0, 0),
+"clearance": Vector2(2, 1.5),
+"destination": true,
+"footprint": Rect2(-0.5, -0.5, 1, 1),
+"id": "north_gate",
+"kind": "landmark",
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(34, 13.8),
+"priority": 100,
+"zone": "portal_grounds"
+}, {
+"approach": Vector2(0, 0),
+"clearance": Vector2(2, 1.5),
+"destination": true,
+"footprint": Rect2(-0.5, -0.5, 1, 1),
+"id": "west_gate",
+"kind": "landmark",
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(18.5, 22.5),
+"priority": 100,
+"zone": "transition"
+}, {
+"approach": Vector2(0, 0),
+"clearance": Vector2(2, 1.5),
+"destination": true,
+"footprint": Rect2(-0.5, -0.5, 1, 1),
+"id": "south_gate",
+"kind": "landmark",
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(28, 29.8),
+"priority": 100,
+"zone": "residential"
+}, {
+"approach": Vector2(0, 0),
+"clearance": Vector2(2, 1.5),
+"destination": true,
+"footprint": Rect2(-0.5, -0.5, 1, 1),
+"id": "east_gate",
+"kind": "landmark",
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(45.4, 21),
+"priority": 100,
+"zone": "forest_edge"
+}, {
+"approach": Vector2(0, 0),
+"clearance": Vector2(2, 1.5),
+"destination": true,
+"footprint": Rect2(-0.5, -0.5, 1, 1),
+"id": "garden_walk",
+"kind": "landmark",
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(41.2, 26.1),
+"priority": 100,
+"zone": "farmland"
+}, {
+"approach": Vector2(0, 0),
+"clearance": Vector2(2, 1.5),
+"destination": true,
+"footprint": Rect2(-0.5, -0.5, 1, 1),
+"id": "forest_defence",
+"kind": "landmark",
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(48.2, 20.9),
+"priority": 100,
+"zone": "forest_edge"
+}, {
+"approach": Vector2(0, 0),
+"clearance": Vector2(2, 1.5),
+"destination": true,
+"footprint": Rect2(-0.5, -0.5, 1, 1),
+"id": "forest_clearing",
+"kind": "landmark",
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(53.8, 23.1),
+"priority": 100,
+"zone": "forest_interior"
+}, {
+"approach": Vector2(0, 0),
+"clearance": Vector2(2, 1.5),
+"destination": true,
+"footprint": Rect2(-0.5, -0.5, 1, 1),
+"id": "forest_south",
+"kind": "landmark",
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(49, 29.4),
+"priority": 100,
+"zone": "forest_edge"
+}, {
+"approach": Vector2(0, 0),
+"clearance": Vector2(2, 1.5),
+"destination": true,
+"footprint": Rect2(-0.5, -0.5, 1, 1),
+"id": "waterfront",
+"kind": "landmark",
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(12.3, 25.9),
+"priority": 100,
+"zone": "waterfront"
+}, {
+"approach": Vector2(0, 0),
+"clearance": Vector2(2, 1.5),
+"destination": true,
+"footprint": Rect2(-0.5, -0.5, 1, 1),
+"id": "jetty_landing",
+"kind": "landmark",
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(12.5, 26.9),
+"priority": 100,
+"zone": "waterfront"
+}, {
+"approach": Vector2(0, 0),
+"clearance": Vector2(2, 1.5),
+"destination": true,
+"footprint": Rect2(-0.5, -0.5, 1, 1),
+"id": "beach_turtle",
+"kind": "landmark",
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(14, 29.6375),
+"priority": 100,
+"zone": "beach"
+}, {
+"approach": Vector2(0, 0),
+"clearance": Vector2(2, 1.5),
+"destination": true,
+"footprint": Rect2(-0.5, -0.5, 1, 1),
+"id": "cleaning",
+"kind": "landmark",
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(18.2, 31.1),
+"priority": 100,
+"zone": "beach"
+}, {
+"approach": Vector2(0, 0),
+"clearance": Vector2(2, 1.5),
+"destination": true,
+"footprint": Rect2(-0.5, -0.5, 1, 1),
+"id": "besut",
+"kind": "landmark",
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(29.5, 28.3),
+"priority": 100,
+"zone": "homestead"
+}, {
+"approach": Vector2(0, 0),
+"clearance": Vector2(2, 1.5),
+"destination": true,
+"footprint": Rect2(-0.5, -0.5, 1, 1),
+"id": "stable",
+"kind": "landmark",
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(35.8, 31.3),
+"priority": 100,
+"zone": "farmland"
+}, {
+"approach": Vector2(0, 0.8),
+"clearance": Vector2(2, 1.4),
+"destination": true,
+"footprint": Rect2(-2.8, -4.3, 5.6, 4.3),
+"id": "ResidentHouseEast",
+"kind": "residence",
+"level": 2,
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(48.1, 18.4),
+"priority": 100,
+"zone": "forest_edge"
+}, {
+"approach": Vector2(0, 0.8),
+"clearance": Vector2(2, 1.4),
+"destination": true,
+"footprint": Rect2(-2.8, -4.3, 5.6, 4.3),
+"id": "ResidentHouseWest",
+"kind": "residence",
+"level": 1,
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(14, 18.1),
+"priority": 100,
+"zone": "residential"
+}, {
+"approach": Vector2(0, 0.8),
+"clearance": Vector2(2, 1.4),
+"destination": true,
+"footprint": Rect2(-2.8, -4.3, 5.6, 4.3),
+"id": "ResidentHouseSouth",
+"kind": "residence",
+"level": 3,
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(39.4, 31.4),
+"priority": 100,
+"zone": "residential"
+}, {
+"approach": Vector2(0, 0.8),
+"clearance": Vector2(2, 1.4),
+"destination": true,
+"footprint": Rect2(-2.8, -4.3, 5.6, 4.3),
+"id": "ResidentHouseNorth",
+"kind": "residence",
+"level": 2,
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(25, 8),
+"priority": 100,
+"zone": "residential"
+}, {
+"approach": Vector2(0, 0.8),
+"clearance": Vector2(2, 1.4),
+"destination": true,
+"footprint": Rect2(-2.8, -4.3, 5.6, 4.3),
+"id": "ResidentHouseWestNorth",
+"kind": "residence",
+"level": 1,
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(11, 12),
+"priority": 100,
+"zone": "residential"
+}, {
+"approach": Vector2(0, 0.8),
+"clearance": Vector2(2, 1),
+"destination": true,
+"footprint": Rect2(-2.8, -4.3, 5.6, 4.3),
+"id": "ResidentHouseEastSouth",
+"kind": "residence",
+"level": 2,
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(54.5, 33),
+"priority": 100,
+"zone": "residential"
+}, {
+"approach": Vector2(0, 0.8),
+"clearance": Vector2(2, 1.4),
+"destination": true,
+"footprint": Rect2(-2.8, -4.3, 5.6, 4.3),
+"id": "ResidentHouseSouthWest",
+"kind": "residence",
+"level": 1,
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(29, 33),
+"priority": 100,
+"zone": "residential"
+}, {
+"approach": Vector2(0, 0.7),
+"clearance": Vector2(1.5, 1.5),
+"destination": false,
+"footprint": Rect2(-2.6, -2.1, 5.2, 2.1),
+"id": "AbandonedHouse",
+"kind": "ruin",
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(17.8, 13.6),
+"priority": 100,
+"state": "abandoned",
+"zone": "transition"
+}, {
+"approach": Vector2(0, 0.7),
+"clearance": Vector2(1.5, 1.5),
+"destination": false,
+"footprint": Rect2(-2.6, -2.1, 5.2, 2.1),
+"id": "DamagedHouse",
+"kind": "ruin",
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(52, 33.2),
+"priority": 100,
+"state": "damaged",
+"zone": "transition"
+}, {
+"approach": Vector2(0, 0.7),
+"clearance": Vector2(1.5, 1.5),
+"destination": false,
+"footprint": Rect2(-2.6, -2.1, 5.2, 2.1),
+"id": "DestroyedHouse",
+"kind": "ruin",
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(22.5, 32.4),
+"priority": 100,
+"state": "destroyed",
+"zone": "transition"
+}, {
+"approach": Vector2(0, 0.7),
+"clearance": Vector2(1.5, 1.5),
+"destination": false,
+"footprint": Rect2(-2.6, -2.1, 5.2, 2.1),
+"id": "RuinedHouse",
+"kind": "ruin",
+"movable": false,
+"owner": "Lobby",
+"position": Vector2(55.5, 7.8),
+"priority": 100,
+"state": "destroyed",
+"zone": "transition"
+}, {
+"approach": Vector2(0, 0.65),
+"clearance": Vector2(1.2, 0.8),
+"destination": false,
+"footprint": Rect2(-1.1, -0.5, 2.2, 1),
+"id": "garden_1",
+"kind": "garden",
+"movable": true,
+"owner": "Lobby",
+"position": Vector2(39.4, 24.7),
+"priority": 100,
+"zone": "farmland"
+}, {
+"approach": Vector2(0, 0.65),
+"clearance": Vector2(1.2, 0.8),
+"destination": false,
+"footprint": Rect2(-1.1, -0.5, 2.2, 1),
+"id": "garden_2",
+"kind": "garden",
+"movable": true,
+"owner": "Lobby",
+"position": Vector2(41.8, 24.7),
+"priority": 100,
+"zone": "farmland"
+}, {
+"approach": Vector2(0, 0.65),
+"clearance": Vector2(1.2, 0.8),
+"destination": false,
+"footprint": Rect2(-1.1, -0.5, 2.2, 1),
+"id": "garden_3",
+"kind": "garden",
+"movable": true,
+"owner": "Lobby",
+"position": Vector2(44.2, 24.7),
+"priority": 100,
+"zone": "farmland"
+}, {
+"approach": Vector2(0, 0.65),
+"clearance": Vector2(1.2, 0.8),
+"destination": false,
+"footprint": Rect2(-1.1, -0.5, 2.2, 1),
+"id": "garden_4",
+"kind": "garden",
+"movable": true,
+"owner": "Lobby",
+"position": Vector2(36.4, 27.8),
+"priority": 100,
+"zone": "farmland"
+}, {
+"approach": Vector2(0, 0.65),
+"clearance": Vector2(1.2, 0.8),
+"destination": false,
+"footprint": Rect2(-1.1, -0.5, 2.2, 1),
+"id": "garden_5",
+"kind": "garden",
+"movable": true,
+"owner": "Lobby",
+"position": Vector2(19.2, 27),
+"priority": 100,
+"zone": "farmland"
+}, {
+"approach": Vector2(0, 0.65),
+"clearance": Vector2(1.2, 0.8),
+"destination": false,
+"footprint": Rect2(-1.1, -0.5, 2.2, 1),
+"id": "garden_6",
+"kind": "garden",
+"movable": true,
+"owner": "Lobby",
+"position": Vector2(44.3, 20),
+"priority": 100,
+"zone": "farmland"
+}, {
+"approach": Vector2(0, 0),
+"clearance": Vector2(1.5, 1.2),
+"destination": true,
+"footprint": Rect2(-2.75, -1.05, 7.5, 2),
+"id": "jetty_deck",
+"kind": "deck",
+"movable": false,
+"position": Vector2(8, 26.8),
+"zone": "waterfront"
+}, {
+"axis": "horizontal",
+"gaps": PackedVector2Array(-9.35, -1.35),
+"id": "fence_south",
+"kind": "fence",
+"movable": true,
+"position": Vector2(31.85, 29.8),
+"span": Vector2(-13.35, 13.35),
+"zone": "residential"
+}, {
+"axis": "horizontal",
+"gaps": PackedVector2Array(-9.85, -5.85, -0.85, 4.85, 8.65, 13.45),
+"id": "fence_north",
+"kind": "fence",
+"movable": true,
+"position": Vector2(31.85, 13.8),
+"span": Vector2(-13.35, 13.35),
+"zone": "portal_grounds"
+}, {
+"axis": "vertical",
+"gaps": PackedVector2Array(-0.75, 2.25),
+"id": "fence_west",
+"kind": "fence",
+"movable": true,
+"position": Vector2(18.5, 21.75),
+"span": Vector2(-7.25, 7.25),
+"zone": "market"
+}, {
+"axis": "vertical",
+"gaps": PackedVector2Array(-2.75, 0.75),
+"id": "fence_east",
+"kind": "fence",
+"movable": true,
+"position": Vector2(45.4, 21.75),
+"span": Vector2(-7.25, 7.25),
+"zone": "forest_edge"
+}])
+routes = Array[Dictionary]([{
+"from": "arrival",
+"id": "market_lane",
+"material": "path",
+"role": "primary",
+"to": "market",
+"via": PackedVector2Array(30.7, 24.4, 28, 24.1),
+"width": 2.0
+}, {
+"from": "market",
+"id": "herbal_lane",
+"material": "path",
+"role": "secondary",
+"to": "shop_potion",
+"via": PackedVector2Array(),
+"width": 1.6
+}, {
+"from": "shop_potion",
+"id": "smith_lane",
+"material": "path",
+"role": "secondary",
+"to": "shop_equipment",
+"via": PackedVector2Array(21.5, 22.8, 21.7, 21.2),
+"width": 1.6
+}, {
+"from": "shop_equipment",
+"id": "market_crescent",
+"material": "path",
+"role": "primary",
+"to": "shop_pet",
+"via": PackedVector2Array(24, 20.9, 27.55, 20.1),
+"width": 2
+}, {
+"from": "arrival",
+"id": "north_lane",
+"material": "path",
+"role": "primary",
+"to": "north_gate",
+"via": PackedVector2Array(28.8, 22.9, 28.8, 19.8, 30.2, 17, 34, 15.4),
+"width": 1.9
+}, {
+"from": "shop_pet",
+"id": "pet_shop_link",
+"material": "path",
+"role": "secondary",
+"to": "north_gate",
+"via": PackedVector2Array(29.1, 18.7, 30.2, 17, 34, 15.4),
+"width": 1.6
+}, {
+"from": "north_gate",
+"id": "grotto_approach",
+"material": "stone",
+"role": "primary",
+"to": "monster_portal",
+"via": PackedVector2Array(34, 12.5),
+"width": 2
+}, {
+"from": "north_gate",
+"id": "duel_approach",
+"material": "stone",
+"role": "primary",
+"to": "pet_portal",
+"via": PackedVector2Array(34, 12.5),
+"width": 2
+}, {
+"from": "north_gate",
+"id": "workshop_lane",
+"material": "path",
+"role": "secondary",
+"to": "shop_house",
+"via": PackedVector2Array(34, 15, 38.4, 17.7, 41.95, 17.7),
+"width": 1.6
+}, {
+"from": "shop_house",
+"id": "east_lane",
+"material": "path",
+"role": "secondary",
+"to": "east_gate",
+"via": PackedVector2Array(43.4, 18.2, 43.2, 21.5),
+"width": 1.6
+}, {
+"from": "arrival",
+"id": "garden_lane",
+"material": "path",
+"role": "primary",
+"to": "garden_walk",
+"via": PackedVector2Array(37.2, 25.8),
+"width": 1.9
+}, {
+"from": "garden_walk",
+"id": "garden_workshop",
+"material": "path",
+"role": "secondary",
+"to": "east_gate",
+"via": PackedVector2Array(43, 26.1, 43.2, 23),
+"width": 1.5
+}, {
+"from": "garden_walk",
+"id": "village_promenade",
+"material": "path",
+"role": "primary",
+"to": "shop_services",
+"via": PackedVector2Array(38, 29, 35, 29.2),
+"width": 2
+}, {
+"from": "arrival",
+"id": "home_water_link",
+"material": "path",
+"role": "secondary",
+"to": "shop_services",
+"via": PackedVector2Array(35.3, 26.3, 35.4, 29.1),
+"width": 1.6
+}, {
+"from": "shop_services",
+"id": "besut_court",
+"material": "path",
+"role": "secondary",
+"to": "besut",
+"via": PackedVector2Array(31.5, 28.8, 29.5, 28.8),
+"width": 1.6
+}, {
+"from": "besut",
+"id": "south_gate_lane",
+"material": "path",
+"role": "secondary",
+"to": "south_gate",
+"via": PackedVector2Array(29.5, 29.4),
+"width": 1.6
+}, {
+"from": "market",
+"id": "market_west_gate",
+"material": "path",
+"role": "primary",
+"to": "west_gate",
+"via": PackedVector2Array(22.2, 24.1, 20, 22.6),
+"width": 2
+}, {
+"from": "west_gate",
+"id": "harbour_lane",
+"material": "path",
+"role": "primary",
+"to": "waterfront",
+"via": PackedVector2Array(16.9, 23.4, 15.5, 25.1),
+"width": 1.9
+}, {
+"from": "waterfront",
+"id": "jetty_approach",
+"material": "path",
+"role": "secondary",
+"to": "jetty_landing",
+"via": PackedVector2Array(),
+"width": 1.5
+}, {
+"from": "jetty_landing",
+"id": "turtle_walk",
+"material": "path",
+"role": "secondary",
+"to": "beach_turtle",
+"via": PackedVector2Array(13.4, 27.5),
+"width": 1.5
+}, {
+"from": "beach_turtle",
+"id": "shore_walk",
+"material": "sand",
+"role": "secondary",
+"to": "cleaning",
+"via": PackedVector2Array(16.5, 30.2, 17, 31.1),
+"width": 1.5
+}, {
+"from": "cleaning",
+"id": "coastal_loop",
+"material": "path",
+"role": "primary",
+"to": "south_gate",
+"via": PackedVector2Array(21, 31, 24, 31, 26, 30.8),
+"width": 1.6
+}, {
+"from": "west_gate",
+"id": "west_cottage_lane",
+"material": "path",
+"role": "secondary",
+"to": "ResidentHouseWest",
+"via": PackedVector2Array(16.4, 21.7, 14, 20.3),
+"width": 1.6
+}, {
+"from": "ResidentHouseWest",
+"id": "west_residence_lane",
+"material": "path",
+"role": "secondary",
+"to": "ResidentHouseWestNorth",
+"via": PackedVector2Array(10.1, 19.1, 9.1, 16, 11, 14),
+"width": 1.5
+}, {
+"from": "shop_pet",
+"id": "north_residence_lane",
+"material": "path",
+"role": "secondary",
+"to": "ResidentHouseNorth",
+"via": PackedVector2Array(29.1, 18.7, 28.8, 15.3, 25, 15.2, 24, 14.5, 24, 10.4),
+"width": 1.5
+}, {
+"from": "south_gate",
+"id": "stable_lane",
+"material": "path",
+"role": "secondary",
+"to": "stable",
+"via": PackedVector2Array(28, 30.9, 32, 31.2),
+"width": 1.5
+}, {
+"from": "stable",
+"id": "south_cottage_lane",
+"material": "path",
+"role": "secondary",
+"to": "ResidentHouseSouth",
+"via": PackedVector2Array(36.2, 32.6, 39.4, 32.9),
+"width": 1.6
+}, {
+"from": "south_gate",
+"id": "southwest_cottage_lane",
+"material": "path",
+"role": "secondary",
+"to": "ResidentHouseSouthWest",
+"via": PackedVector2Array(25.4, 31.2, 25.4, 34.2),
+"width": 1.6
+}, {
+"from": "east_gate",
+"id": "forest_gate_lane",
+"material": "path",
+"role": "primary",
+"to": "forest_defence",
+"via": PackedVector2Array(45.4, 21.8, 47.3, 21.8),
+"width": 1.6
+}, {
+"from": "forest_defence",
+"id": "forest_home_lane",
+"material": "path",
+"role": "secondary",
+"to": "ResidentHouseEast",
+"via": PackedVector2Array(48.3, 20.1),
+"width": 1.5
+}, {
+"from": "forest_defence",
+"id": "woodland_track",
+"material": "stone",
+"role": "informal",
+"to": "forest_clearing",
+"via": PackedVector2Array(48.8, 22, 48.5, 24.3, 50.1, 24.4, 52.7, 24.1),
+"width": 1.2
+}, {
+"from": "forest_defence",
+"id": "forest_edge_track",
+"material": "stone",
+"role": "informal",
+"to": "forest_south",
+"via": PackedVector2Array(47.4, 23.1, 47.7, 26.6),
+"width": 1.2
+}, {
+"from": "forest_south",
+"id": "outskirt_lane",
+"material": "path",
+"role": "secondary",
+"to": "ResidentHouseEastSouth",
+"via": PackedVector2Array(49, 34.6, 53, 35),
+"width": 1.5
+}, {
+"from": "arrival",
+"id": "ward_step",
+"material": "path",
+"role": "secondary",
+"to": "recovery",
+"via": PackedVector2Array(),
+"width": 1.6
+}, {
+"from": "recovery",
+"id": "home_step",
+"material": "path",
+"role": "secondary",
+"to": "house",
+"via": PackedVector2Array(),
+"width": 2
+}, {
+"from": "jetty_landing",
+"id": "jetty_boardwalk",
+"material": "deck",
+"role": "secondary",
+"to": "jetty_deck",
+"via": PackedVector2Array(),
+"width": 1.2
+}])
+zones = Array[Dictionary]([{
+"allowed": ["domestic", "flowers"],
+"density": 0.23,
+"id": "residential",
+"material": "grass_warm",
+"polygon": PackedVector2Array(8, 9, 27, 6, 30, 10, 28, 19, 16, 24, 8, 21)
+}, {
+"allowed": ["fern", "bush", "timber", "lantern"],
+"density": 0.65,
+"id": "forest_edge",
+"material": "grass_shadow",
+"polygon": PackedVector2Array(44, 5, 48, 3, 52, 10, 50, 19, 48, 28, 52, 36, 43, 36, 43, 27, 45, 21, 42, 16)
+}, {
+"allowed": ["fern", "leaf_litter", "rock"],
+"density": 0.8,
+"id": "forest_interior",
+"material": "leaf_deep",
+"polygon": PackedVector2Array(49, 1, 63, 1, 63, 38, 54, 38, 49, 31, 51, 24, 48, 16, 50, 9)
+}, {
+"allowed": ["domestic", "flowers", "bucket"],
+"density": 0.2,
+"id": "farmland",
+"material": "grass_warm",
+"polygon": PackedVector2Array(37, 22, 44.7, 22.5, 46, 26, 44.5, 29.5, 39, 30, 35, 28.6)
+}, {
+"allowed": ["planter", "baskets", "timber", "tools", "feed", "bucket"],
+"density": 0.06,
+"id": "market",
+"material": "path",
+"polygon": PackedVector2Array(19.2, 16, 28, 16, 30.3, 21, 28.5, 25.8, 21, 25.6, 19, 22)
+}, {
+"allowed": ["planter", "flowers", "domestic"],
+"density": 0.13,
+"id": "homestead",
+"material": "grass_light",
+"polygon": PackedVector2Array(29, 17, 38.7, 17.7, 40, 22, 38, 27, 34, 29.6, 29, 28, 28, 24)
+}, {
+"allowed": ["lantern", "rock"],
+"density": 0.08,
+"id": "portal_grounds",
+"material": "stone",
+"polygon": PackedVector2Array(28, 8.5, 39.8, 8.8, 41, 12, 39, 14.8, 32, 15.3, 28, 12.7)
+}, {
+"allowed": ["fishing_net", "baskets", "rope", "bucket"],
+"density": 0.1,
+"id": "waterfront",
+"material": "sand",
+"polygon": PackedVector2Array(10.2, 23, 13, 23.5, 15.8, 25, 14.5, 28.8, 11.4, 27.5, 10, 25)
+}, {
+"allowed": ["coastal", "rock", "driftwood"],
+"density": 0.2,
+"id": "beach",
+"material": "sand",
+"polygon": PackedVector2Array(3, 19, 8, 21, 14, 24.2, 20, 28.8, 24, 34.7, 24, 39, 20, 35, 15, 31, 9, 27, 3, 24)
+}, {
+"allowed": [],
+"density": 0,
+"id": "reserved_gameplay",
+"material": "grass_light",
+"polygon": PackedVector2Array(32.5, 22.8, 35.5, 22.8, 35.5, 25.2, 32.5, 25.2)
+}])
+scenery = Array[Dictionary]([{
+"asset": "fishing_net",
+"id": "net",
+"parent": "",
+"position": Vector2(10.8, 25.3),
+"scale": 1,
+"zone": "waterfront"
+}, {
+"asset": "baskets",
+"id": "fish_store",
+"parent": "",
+"position": Vector2(13.8, 25.6),
+"scale": 1,
+"zone": "waterfront"
+}, {
+"asset": "rope",
+"id": "mooring",
+"parent": "",
+"position": Vector2(11.1, 26.6),
+"scale": 1,
+"zone": "waterfront"
+}, {
+"asset": "driftwood",
+"id": "drift",
+"parent": "",
+"position": Vector2(16.7, 30.6),
+"scale": 1,
+"zone": "beach"
+}, {
+"asset": "lantern",
+"id": "portal_lamp_w",
+"parent": "",
+"position": Vector2(28.3, 12),
+"scale": 1,
+"zone": "portal_grounds"
+}, {
+"asset": "lantern",
+"id": "portal_lamp_e",
+"parent": "",
+"position": Vector2(39.6, 12),
+"scale": 1,
+"zone": "portal_grounds"
+}, {
+"asset": "lantern",
+"id": "forest_watch",
+"parent": "",
+"position": Vector2(46.9, 22.8),
+"scale": 1,
+"zone": "forest_edge"
+}, {
+"asset": "bucket",
+"id": "beach_store",
+"parent": "",
+"position": Vector2(13.9, 27),
+"scale": 1,
+"zone": "waterfront"
+}, {
+"asset": "planter",
+"id": "house_work_0",
+"parent": "house",
+"position": Vector2(-3.9, 0.1),
+"scale": 0.75,
+"zone": "homestead"
+}, {
+"asset": "bench",
+"id": "house_work_1",
+"parent": "house",
+"position": Vector2(3.7, 0.9),
+"scale": 0.75,
+"zone": "homestead"
+}, {
+"asset": "bucket",
+"id": "house_work_2",
+"parent": "house",
+"position": Vector2(-4.8, -0.1),
+"scale": 0.75,
+"zone": "homestead"
+}, {
+"asset": "planter",
+"id": "shop_potion_work_0",
+"parent": "shop_potion",
+"position": Vector2(-2.1, -0.25),
+"scale": 0.75,
+"zone": "market"
+}, {
+"asset": "planter",
+"id": "shop_potion_work_1",
+"parent": "shop_potion",
+"position": Vector2(2.1, -0.2),
+"scale": 0.75,
+"zone": "market"
+}, {
+"asset": "timber",
+"id": "shop_equipment_work_0",
+"parent": "shop_equipment",
+"position": Vector2(-2.1, -0.1),
+"scale": 0.75,
+"zone": "market"
+}, {
+"asset": "tools",
+"id": "shop_equipment_work_1",
+"parent": "shop_equipment",
+"position": Vector2(2, -0.1),
+"scale": 0.75,
+"zone": "market"
+}, {
+"asset": "baskets",
+"id": "shop_pet_work_0",
+"parent": "shop_pet",
+"position": Vector2(-2.1, -0.1),
+"scale": 0.75,
+"zone": "market"
+}, {
+"asset": "feed",
+"id": "shop_pet_work_1",
+"parent": "shop_pet",
+"position": Vector2(2, -0.1),
+"scale": 0.75,
+"zone": "market"
+}, {
+"asset": "timber",
+"id": "shop_house_work_0",
+"parent": "shop_house",
+"position": Vector2(-2, -0.2),
+"scale": 0.75,
+"zone": "market"
+}, {
+"asset": "tools",
+"id": "shop_house_work_1",
+"parent": "shop_house",
+"position": Vector2(2, -0.2),
+"scale": 0.75,
+"zone": "market"
+}, {
+"asset": "bucket",
+"id": "shop_services_work_0",
+"parent": "shop_services",
+"position": Vector2(-2.15, -0.1),
+"scale": 0.75,
+"zone": "market"
+}, {
+"asset": "planter",
+"id": "shop_services_work_1",
+"parent": "shop_services",
+"position": Vector2(2.15, -0.1),
+"scale": 0.75,
+"zone": "market"
+}])

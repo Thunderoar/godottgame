@@ -10,6 +10,7 @@ var pan := Vector2(24, 24)
 var grid := true
 var grid_step := 1
 var selection := Rect2i()
+var spatial_overlay: Array[Dictionary] = []
 var _drawing := false
 var _panning := false
 
@@ -68,3 +69,18 @@ func _draw() -> void:
 	if selection.has_area():
 		draw_rect(Rect2(pan + Vector2(selection.position) * zoom, Vector2(selection.size) * zoom), Color("ffe4a4"), false, 2.0)
 	draw_rect(bounds, Color("c5a66e"), false, 1.0)
+	draw_spatial_overlay()
+
+
+func draw_spatial_overlay() -> void:
+	var font := ThemeDB.fallback_font
+	for entry in spatial_overlay:
+		var color: Color = entry.get("color", Color.CORAL)
+		var points: PackedVector2Array = entry.get("points", PackedVector2Array())
+		var screen := PackedVector2Array()
+		for point in points: screen.append(pan + point * zoom)
+		if screen.size() > 1:
+			draw_polyline(screen, color, maxf(1.0, float(entry.get("width", 1.0)) * zoom))
+		for point in screen: draw_circle(point, 2.5, color.lightened(0.3))
+		if screen.size() > 0 and entry.has("label"):
+			draw_string(font, screen[0] + Vector2(3, -4), str(entry.label), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, color.lightened(0.4))
