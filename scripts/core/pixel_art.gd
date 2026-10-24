@@ -649,6 +649,24 @@ static func enemy_texture(kind: String, boss: bool = false, frame: int = 0) -> T
                                 px(img, 13, 21 + bob, OUTLINE)
                                 px(img, 19, 21 + bob, OUTLINE)
                                 hline(img, 13, 25 + bob, 6, OUTLINE)
+                        "urchin":
+                                ellipse(img, 16, 27, 13, 3, Color(0, 0, 0, 0.3))
+                                for i in 16:
+                                        var angle := float(i) * TAU / 16.0
+                                        var tip := Vector2(16, 17) + Vector2.from_angle(angle) * (14.0 if i % 2 == 0 else 12.0)
+                                        line(img, 16, 17, roundi(tip.x), roundi(tip.y) + bob, Color("#343052"))
+                                ellipse(img, 16, 18 + bob, 9, 8, Color("#41395e"))
+                                ellipse(img, 14, 16 + bob, 6, 5, Color("#665381"))
+                                rect(img, 11, 17 + bob, 3, 2, Color("#f4df8a"))
+                                rect(img, 19, 17 + bob, 3, 2, Color("#f4df8a"))
+                        "fire":
+                                ellipse(img, 16, 27, 12, 4, Color("#432c26"))
+                                _fill_polygon(img, [Vector2i(4, 26), Vector2i(7, 12 + bob), Vector2i(12, 17), Vector2i(16, 2 + bob), Vector2i(20, 15), Vector2i(26, 9), Vector2i(29, 26)], Color("#e95720"))
+                                ellipse(img, 16, 23 + bob, 9, 7, Color("#ffac35"))
+                                _fill_polygon(img, [Vector2i(10, 26), Vector2i(16, 11 + bob), Vector2i(23, 26)], Color("#ffe57b"))
+                                rect(img, 10, 20 + bob, 4, 3, OUTLINE)
+                                rect(img, 19, 20 + bob, 4, 3, OUTLINE)
+                                hline(img, 14, 26 + bob, 5, Color("#94351e"))
                         "raider":
                                 ellipse(img, 16, 24 + bob, 12, 7, Color("#1e1c23"))
                                 ellipse(img, 16, 21 + bob, 10, 7, Color("#342b31"))
@@ -734,6 +752,11 @@ static func npc_texture(kind: String) -> Texture2D:
                         "defender": [Color("#3b5368"), Color("#a8c8d8"), Color("#26343f")],
                         "resident": [Color("#5b5967"), Color("#c7c2d6"), Color("#34323d")],
                         "student": [Color("#b08a20"), Color("#ffe06a"), Color("#5a4312")],
+                        "water_keeper": [Color("#2078cb"), Color("#9ceaff"), Color("#153d7a")],
+                        "construction_worker": [Color("#ed7f28"), Color("#ffd395"), Color("#6b321d")],
+                        "tree_planter": [Color("#34984b"), Color("#bce786"), Color("#204c2a")],
+                        "swordsman": [Color("#20232c"), Color("#6c7483"), Color("#0d1018")],
+                        "mission_guide": [Color("#9b4bd1"), Color("#e7b7ff"), Color("#46225d")],
                 }.get(kind, [Color("#5c5c5c"), Color("#c9c9c9"), Color("#333333")])
                 var robe: Color = palette[0]
                 var accent: Color = palette[1]
@@ -1426,8 +1449,8 @@ static func rubbish_texture(frame: int = 0) -> Texture2D:
                 return img)
 
 
-static func fence_texture() -> Texture2D:
-        return cached_texture("fence", func() -> Image:
+static func fence_texture(level: int = 1) -> Texture2D:
+        return cached_texture("fence_tier_%d" % level, func() -> Image:
                 var img := image(48, 32)
                 rect(img, 2, 5, 5, 25, Color("#4a3220"))
                 rect(img, 3, 6, 3, 23, Color("#8a6138"))
@@ -1438,6 +1461,25 @@ static func fence_texture() -> Texture2D:
                 hline(img, 5, 11, 38, Color("#a37848"))
                 hline(img, 5, 21, 38, Color("#a37848"))
                 px(img, 24, 9, Color("#d3c79c"))
+                if level == 2:
+                        rect(img, 0, 25, 48, 6, Color("#72766c"))
+                        for x in range(0, 48, 10):
+                                rect(img, x + 1, 26, 8, 4, Color("#9da28d"))
+                elif level >= 3:
+                        img.fill(Color.TRANSPARENT)
+                        rect(img, 0, 10, 48, 21, Color("#414b4d"))
+                        for row in 3:
+                                for x in range(-8 if row % 2 else 0, 48, 16):
+                                        rect(img, x + 1, 12 + row * 6, 14, 5, Color("#979f94") if level == 3 else Color("#b1b9b4"))
+                        rect(img, 0, 8, 48, 4, Color("#c8cbbb"))
+                        if level >= 4:
+                                for x in [0, 39]:
+                                        rect(img, x, 3, 9, 28, Color("#59666b"))
+                                        rect(img, x + 1, 4, 7, 4, Color("#b7c7c2"))
+                        if level == 5:
+                                for x in range(0, 48, 12):
+                                        rect(img, x, 1, 7, 9, Color("#d5ded4"))
+                                        rect(img, x + 1, 2, 5, 2, Color("#f0e5b9"))
                 return img)
 
 
@@ -1578,4 +1620,105 @@ static func net_texture() -> Texture2D:
                 for y in [4, 7]:
                         line(img, 4, y, 12, y, Color("#62868d"))
                 line(img, 8, 10, 8, 15, Color("#80603e"))
+                return img)
+
+
+static func cave_ridge_texture() -> Texture2D:
+        return cached_texture("pb_twin_cave_ridge_v1", func() -> Image:
+                var img := image(512, 192)
+                _fill_polygon(img, [Vector2i(0, 191), Vector2i(8, 100), Vector2i(58, 55), Vector2i(124, 26), Vector2i(192, 42), Vector2i(260, 8), Vector2i(330, 36), Vector2i(410, 24), Vector2i(490, 76), Vector2i(511, 191)], Color("#39443d"))
+                _fill_polygon(img, [Vector2i(9, 179), Vector2i(20, 101), Vector2i(68, 67), Vector2i(129, 43), Vector2i(201, 58), Vector2i(265, 27), Vector2i(336, 53), Vector2i(414, 42), Vector2i(476, 91), Vector2i(502, 179)], Color("#6e7963"))
+                _fill_polygon(img, [Vector2i(8, 100), Vector2i(58, 55), Vector2i(124, 26), Vector2i(192, 42), Vector2i(260, 8), Vector2i(330, 36), Vector2i(410, 24), Vector2i(490, 76), Vector2i(474, 90), Vector2i(412, 43), Vector2i(334, 55), Vector2i(260, 28), Vector2i(192, 60), Vector2i(126, 44), Vector2i(64, 74), Vector2i(20, 112)], Color("#6c8d46"))
+                for y in range(75, 176, 18):
+                        for x in range(22, 490, 29):
+                                var shift := (x * 7 + y * 3) % 13
+                                hline(img, x, y + shift, 17, Color("#8d9680"))
+                                hline(img, x + 4, y + shift + 7, 12, Color("#4d5a4d"))
+                for cx in [154, 358]:
+                        ellipse(img, cx, 138, 52, 65, Color("#3a4038"))
+                        rect(img, cx - 51, 137, 103, 53, Color("#3a4038"))
+                        ellipse(img, cx, 139, 43, 56, Color("#151f25"))
+                        rect(img, cx - 42, 138, 85, 54, Color("#151f25"))
+                        ellipse(img, cx, 154, 31, 42, Color("#0c1119"))
+                        rect(img, cx - 30, 152, 61, 40, Color("#0c1119"))
+                        hline(img, cx - 50, 189, 101, Color("#a3956c"))
+                return img)
+
+
+static func home_accessory_texture(kind: String) -> Texture2D:
+        return cached_texture("pb_home_decor_%s_v1" % kind, func() -> Image:
+                var img := image(64, 64)
+                if kind == "chest":
+                        rect(img, 7, 30, 50, 28, Color("#38291f"))
+                        rect(img, 9, 32, 46, 23, Color("#a16a35"))
+                        rect(img, 7, 26, 50, 12, Color("#bc8749"))
+                        hline(img, 8, 37, 48, Color("#56351f"))
+                        for x in [15, 46]:
+                                rect(img, x, 26, 4, 31, Color("#d8b96d"))
+                        rect(img, 28, 35, 9, 10, Color("#eacb6f"))
+                        rect(img, 31, 39, 3, 4, Color("#513d28"))
+                elif kind == "wardrobe":
+                        rect(img, 8, 3, 48, 59, Color("#423023"))
+                        rect(img, 11, 6, 42, 51, Color("#9f774d"))
+                        rect(img, 15, 11, 34, 39, Color("#362c2c"))
+                        hline(img, 16, 13, 32, Color("#c2c6b6"))
+                        for x in [20, 36]:
+                                line(img, x + 4, 13, x + 4, 19, Color("#d2c091"))
+                                _fill_polygon(img, [Vector2i(x, 20), Vector2i(x + 4, 17), Vector2i(x + 8, 20), Vector2i(x + 11, 26), Vector2i(x + 8, 28), Vector2i(x + 8, 42), Vector2i(x, 42), Vector2i(x, 28), Vector2i(x - 3, 26)], Color("#439ac6") if x == 20 else Color("#ad5f93"))
+                        rect(img, 12, 52, 40, 4, Color("#c79b62"))
+                elif kind == "weapons":
+                        rect(img, 6, 5, 5, 55, Color("#684d32"))
+                        rect(img, 53, 5, 5, 55, Color("#684d32"))
+                        rect(img, 7, 14, 49, 6, Color("#a77b47"))
+                        rect(img, 7, 47, 49, 5, Color("#a77b47"))
+                        for x in [21, 41]:
+                                line(img, x, 11, x, 39, Color("#dae5e1"))
+                                line(img, x + 2, 11, x + 2, 39, Color("#9eaeb9"))
+                                hline(img, x - 5, 39, 13, Color("#d6ac59"))
+                                rect(img, x, 41, 3, 9, Color("#71523e"))
+                else:
+                        ellipse(img, 32, 47, 29, 13, Color("#403545"))
+                        ellipse(img, 32, 44, 27, 12, Color("#588996"))
+                        ellipse(img, 32, 43, 21, 8, Color("#9cc4c6"))
+                        ellipse(img, 32, 45, 5, 3, Color("#687f9c"))
+                        for at in [Vector2i(26, 39), Vector2i(31, 37), Vector2i(36, 38)]:
+                                ellipse(img, at.x, at.y, 2, 2, Color("#687f9c"))
+                        ellipse(img, 51, 58, 9, 4, Color("#b5b8b0"))
+                        ellipse(img, 51, 57, 6, 2, Color("#629cbc"))
+                return img)
+
+
+static func archer_hut_texture(level: int) -> Texture2D:
+        return cached_texture("pb_archer_hut_%d_v1" % level, func() -> Image:
+                var img := image(80, 96)
+                var stone := Color("#929c93") if level >= 3 else Color("#9c7045")
+                ellipse(img, 40, 89, 34, 6, Color(0, 0, 0, 0.25))
+                rect(img, 14, 40, 7, 48, OUTLINE)
+                rect(img, 60, 40, 7, 48, OUTLINE)
+                rect(img, 16, 42, 4, 44, stone)
+                rect(img, 61, 42, 4, 44, stone)
+                rect(img, 12, 67, 57, 12, stone.darkened(0.25))
+                rect(img, 12, 66, 57, 3, stone.lightened(0.2))
+                for x in range(17, 67, 10):
+                        rect(img, x, 56, 3, 13, stone)
+                for y in range(77, 95, 5):
+                        rect(img, 34, y, 15, 2, Color("#a48657"))
+                rect(img, 32, 77, 2, 19, Color("#674d33"))
+                rect(img, 49, 77, 2, 19, Color("#674d33"))
+                _fill_polygon(img, [Vector2i(3, 38), Vector2i(39, 9), Vector2i(76, 38)], OUTLINE)
+                _fill_polygon(img, [Vector2i(7, 35), Vector2i(39, 13), Vector2i(71, 35)], Color("#678c71") if level >= 4 else Color("#ad7850"))
+                for y in [25, 31, 37]:
+                        hline(img, 19 - (y - 25), y, 40 + (y - 25) * 2, Color("#d1b184") if level < 4 else Color("#93b9a1"))
+                # Archer: head, green tunic, raised bow and quiver.
+                rect(img, 34, 48, 13, 17, Color("#3e7254"))
+                ellipse(img, 40, 43, 7, 7, Color("#ddb28b"))
+                _fill_polygon(img, [Vector2i(30, 40), Vector2i(37, 30), Vector2i(49, 40)], Color("#416448"))
+                px(img, 42, 43, OUTLINE)
+                line(img, 45, 53, 54, 50, Color("#ddb28b"))
+                line(img, 54, 40, 59, 50, Color("#cba15f"))
+                line(img, 59, 50, 54, 60, Color("#cba15f"))
+                line(img, 54, 40, 54, 60, Color("#e7dfb7"))
+                line(img, 50, 50, 64, 50, Color("#d7d9ca"))
+                for i in level:
+                        rect(img, 21 + i * 8, 72, 4, 3, Color("#f1d78c"))
                 return img)

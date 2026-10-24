@@ -9,7 +9,7 @@ func _ready() -> void:
 	var game: Node = load("res://scenes/game.tscn").instantiate()
 	add_child(game)
 	await get_tree().process_frame
-	game.call("_on_character_selected", "qayyim")
+	await game.call("_on_character_selected", "qayyim")
 	await get_tree().process_frame
 	game.hud.tutorial_guide.call("_skip")
 	await DeepAuditChecks.run(game, _check)

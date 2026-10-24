@@ -35,6 +35,20 @@ var _bob := 0.0
 var _frightened := false
 var _threat_notified := false
 var _attack_timer := 0.0
+const WATER_RANGE := 2.6
+const WATER_INTERVAL := 1.25
+const WATER_HEAL := 5
+const PLANT_SECONDS := 2.0
+@export var water_power := false
+@export var worker_role := ""
+var _build_target: SettlementTarget
+var _tree_task: ForestTree
+var _care_clock := 0.0
+var _care_search := 0.0
+var _watering := false
+var dead := false
+var sheltered := false
+var _shelter_house: SettlementTarget
 
 
 func _ready() -> void:
@@ -51,6 +65,8 @@ func _ready() -> void:
 	_shopping_rng.seed = absi(resident_name.hash())
 	_visit_clock = _shopping_rng.randf_range(7.0, 22.0)
 	_build()
+	GameState.data_changed.connect(_refresh_life)
+	_refresh_life()
 	GameState.emergency_changed.connect(_on_emergency_changed)
 	if GameState.emergency_active():
 		_frightened = true
@@ -75,10 +91,23 @@ func _build() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if dead:
+		return
+	if GameState.game_over_active:
+		velocity = Vector2.ZERO
+		_watering = false
+		queue_redraw()
+		return
 	_bob += delta
 	if _attack_timer > 0.0:
 		_attack_timer = maxf(0.0, _attack_timer - delta)
-	if GameState.emergency_active() and combat_enabled:
+	if not worker_role.is_empty():
+		_run_worker(delta)
+	elif _seek_shelter(delta):
+		pass
+	elif water_power and _care_for_forest(delta):
+		pass
+	elif GameState.emergency_active() and combat_enabled:
 		_fight(delta)
 	elif not _frightened and _update_shopping(delta):
 		pass
@@ -89,6 +118,83 @@ func _physics_process(delta: float) -> void:
 	if _tool:
 		_tool.position.y = -0.62 + sin(_bob * 4.0) * 0.02
 		_tool.visible = not _frightened
+	queue_redraw()
+
+
+func _care_for_forest(delta: float) -> bool:
+	_watering = false
+	_care_search -= delta
+	if is_instance_valid(_tree_task) and not _accept_tree(_tree_task):
+		_release_tree_task()
+	if not is_instance_valid(_tree_task) and _care_search <= 0.0:
+		_care_search = 0.5
+		var lobby := get_parent() as Lobby
+		if lobby:
+			var best := INF
+			for tree in lobby._forest_trees:
+				if not is_instance_valid(tree) or not _accept_tree(tree):
+					continue
+				if is_instance_valid(tree.caretaker) and tree.caretaker != self:
+					continue
+				var distance := global_position.distance_to(tree.global_position)
+				# Fires have priority; distribute jobs through per-tree claims.
+				var score := distance + (0.0 if tree.burning else 80.0)
+				if score < best:
+					_tree_task = tree
+					best = score
+			if is_instance_valid(_tree_task):
+				_tree_task.caretaker = self
+				_end_visit()
+				_care_clock = 0.0
+	if not is_instance_valid(_tree_task):
+		return false
+	var offset := _tree_task.global_position - global_position
+	if offset.length() > WATER_RANGE:
+		_walk_to(_tree_task.global_position + Vector2(0, 1.2), 3.2, delta)
+		_care_clock = 0.0
+		# Do not let an unreachable claim block the other caretakers forever.
+		if _path.is_empty():
+			_release_tree_task()
+		return true
+	velocity = Vector2.ZERO
+	move_and_slide()
+	_care_clock += delta
+	if _sprite:
+		_sprite.flip_h = offset.x < 0.0
+	if _tree_task.fallen:
+		if _care_clock >= PLANT_SECONDS:
+			if _tree_task.replant():
+				GameState.save_game()
+			_release_tree_task()
+	else:
+		_watering = true
+		if _care_clock >= WATER_INTERVAL:
+			_care_clock -= WATER_INTERVAL
+			_tree_task.water(WATER_HEAL)
+	return true
+
+
+func _release_tree_task() -> void:
+	if is_instance_valid(_tree_task) and _tree_task.caretaker == self:
+		_tree_task.caretaker = null
+	_tree_task = null
+	_care_clock = 0.0
+	_watering = false
+
+
+func _draw() -> void:
+	var hp := GameState.resident_health(resident_name)
+	if hp < 100 and not dead and not sheltered:
+		draw_rect(Rect2(-0.4, -1.45, 0.8, 0.1), Color("#27353b"))
+		draw_rect(Rect2(-0.4, -1.45, 0.8 * hp / 100.0, 0.1), Color("#ef7676"))
+	if not _watering or not is_instance_valid(_tree_task):
+		return
+	var origin := Vector2(0.2, -0.65)
+	var end := to_local(_tree_task.global_position) + Vector2(0, -1.1)
+	for i in 12:
+		var t := float(i) / 12.0 if GameSettings.reduce_motion() else fmod(float(i) / 12.0 + _bob * 1.4, 1.0)
+		var point := origin.lerp(end, t) + Vector2(0, -sin(t * PI) * 0.65)
+		draw_rect(Rect2(point, Vector2(0.09, 0.13)), Color("#8ce9ff"))
 
 
 func _fight(delta: float) -> void:
@@ -158,12 +264,18 @@ func _current_waypoint() -> Variant:
 
 
 func _tool_icon() -> String:
+	if worker_role == "fighter":
+		return "sword"
+	if worker_role == "builder":
+		return "hammer"
+	if water_power:
+		return "mana"
 	match role:
 		"fisher":
 			return "food"
 		"gardener":
 			return "food"
-		"carpenter":
+		"carpenter", "builder":
 			return "hammer"
 		"woodcutter":
 			return "wood"
@@ -189,7 +301,10 @@ func _on_emergency_changed(active: bool, _remaining: int, _damage: int) -> void:
 		_threat_notified = false
 
 
-func take_attack_damage(_amount: int) -> void:
+func take_attack_damage(amount: int) -> void:
+	if dead or sheltered:
+		return
+	GameState.damage_resident(resident_name, amount)
 	if shopping_state != Shopping.ROUTINE:
 		_end_visit()
 	if not _frightened:
@@ -198,6 +313,62 @@ func take_attack_damage(_amount: int) -> void:
 			GameState.toast_requested.emit("%s joins the village defence!" % resident_name, "bad")
 		else:
 			GameState.toast_requested.emit("%s is in danger! Monsters are attacking the residents!" % resident_name, "bad")
+
+
+func take_damage(amount: int, _from_dir: Vector2 = Vector2.ZERO, _source: Node = null) -> void:
+	take_attack_damage(amount)
+
+
+func _refresh_life() -> void:
+	dead = GameState.resident_health(resident_name) <= 0
+	visible = not dead and not sheltered
+	if dead:
+		remove_from_group("settlement_target")
+		_release_tree_task()
+		_release_build_task()
+		_end_visit()
+	elif not is_in_group("repair_workers"):
+		add_to_group("settlement_target")
+
+
+func _seek_shelter(delta: float) -> bool:
+	var danger := GameState.emergency_active()
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if is_instance_valid(enemy) and enemy.get_parent() == get_parent() and enemy.kind == "urchin" and not enemy.dead and global_position.distance_to(enemy.global_position) < 10.0:
+			danger = true
+			break
+	if sheltered and (not is_instance_valid(_shelter_house) or not _shelter_house.is_intact()):
+		sheltered = false
+		visible = true
+	if not danger:
+		_frightened = false
+		sheltered = false
+		visible = true
+		return false
+	_release_tree_task()
+	if shopping_state != Shopping.ROUTINE:
+		_end_visit()
+	if sheltered:
+		return true
+	if not is_instance_valid(_shelter_house) or not _shelter_house.is_intact():
+		_shelter_house = null
+		var best := INF
+		for node in get_tree().get_nodes_in_group("structures"):
+			var house := node as SettlementTarget
+			if not is_instance_valid(house) or house.structure_kind != "house" or not house.is_intact() or house.get_parent().get_parent() != get_parent():
+				continue
+			var distance := global_position.distance_to(house.shelter_position())
+			if distance < best:
+				best = distance
+				_shelter_house = house
+	if not is_instance_valid(_shelter_house):
+		_move_route(delta)
+		return true
+	if _walk_to(_shelter_house.shelter_position(), 3.2, delta):
+		sheltered = true
+		visible = false
+		velocity = Vector2.ZERO
+	return true
 
 
 func _walk_to(destination: Vector2, pace: float, delta: float) -> bool:
@@ -335,5 +506,119 @@ func _end_visit() -> void:
 
 
 func _exit_tree() -> void:
+	_release_tree_task()
 	if is_instance_valid(_shop):
 		_shop.release_customer(self)
+
+
+func _accept_tree(tree: ForestTree) -> bool:
+	if worker_role == "water":
+		return tree.burning and not tree.fallen
+	if worker_role == "planter":
+		return tree.fallen
+	return tree.fallen or tree.burning
+
+func _run_worker(delta: float) -> void:
+	_watering = false
+	if worker_role == "fighter" and _fight_kind("urchin", delta, false):
+		return
+	if worker_role == "water":
+		if _care_for_forest(delta):
+			return
+		if _fight_kind("fire", delta, true):
+			return
+	if _seek_shelter(delta):
+		_release_build_task()
+		return
+	if worker_role == "builder" and _repair_buildings(delta):
+		return
+	if worker_role == "planter" and _care_for_forest(delta):
+		return
+	_move_route(delta)
+
+func _fight_kind(kind: String, delta: float, ranged: bool) -> bool:
+	var enemy: Enemy
+	var best := 12.0
+	for candidate in get_tree().get_nodes_in_group("enemies"):
+		if not is_instance_valid(candidate) or candidate.dead or candidate.is_queued_for_deletion() or candidate.get_parent() != get_parent() or candidate.kind != kind:
+			continue
+		var distance := global_position.distance_to(candidate.global_position)
+		if distance < best:
+			best = distance
+			enemy = candidate
+	if not is_instance_valid(enemy):
+		return false
+	sheltered = false
+	visible = true
+	_frightened = false
+	_end_visit()
+	var direction := enemy.global_position - global_position
+	if _sprite:
+		_sprite.flip_h = direction.x < 0
+	var reach := 5.0 if ranged else 1.35
+	if direction.length() > reach:
+		_walk_to(enemy.global_position, 2.8, delta)
+		return true
+	velocity = Vector2.ZERO
+	if _attack_timer <= 0:
+		_attack_timer = WATER_INTERVAL if ranged else combat_interval
+		if ranged:
+			var bolt := VillageBolt.new()
+			bolt.target = enemy
+			bolt.source = self
+			bolt.water = true
+			bolt.damage = 6
+			get_parent().add_child(bolt)
+			bolt.global_position = global_position + Vector2(0.2, -0.7)
+		else:
+			enemy.take_damage(10, direction.normalized(), self)
+			Vfx.ring(global_position + direction.normalized() * 0.6 + Vector2(0, -0.4), 0.5, Color("#e5f2ff"), 0.2)
+			if _tool and not GameSettings.reduce_motion():
+				_tool.rotation = -0.8
+				_tool.create_tween().tween_property(_tool, "rotation", 0.0, 0.25)
+	return true
+
+func _release_build_task() -> void:
+	if is_instance_valid(_build_target) and _build_target.builder == self:
+		_build_target.builder = null
+	_build_target = null
+
+func _repair_buildings(delta: float) -> bool:
+	if GameState.is_night():
+		_release_build_task()
+		return false
+	if is_instance_valid(_build_target):
+		var state := GameState.structure_state(_build_target.structure_id)
+		if int(state.get("health", 0)) >= int(state.get("maximum", 1)):
+			_release_build_task()
+	if not is_instance_valid(_build_target):
+		var best := INF
+		for node in get_tree().get_nodes_in_group("structures"):
+			if not is_instance_valid(node) or node.get_parent().get_parent() != get_parent() or node.is_queued_for_deletion():
+				continue
+			var state := GameState.structure_state(node.structure_id)
+			if int(state.get("health", 0)) >= int(state.get("maximum", 1)) or (is_instance_valid(node.builder) and node.builder != self):
+				continue
+			var distance := global_position.distance_to(node.attack_position(global_position))
+			if distance < best:
+				best = distance
+				_build_target = node
+		if is_instance_valid(_build_target):
+			_build_target.builder = self
+	if not is_instance_valid(_build_target):
+		return false
+	var point := _build_target.attack_position(global_position)
+	if _build_target.structure_kind == "house":
+		point = _build_target.shelter_position() + Vector2(0, 0.5)
+	else:
+		point += (global_position - point).normalized() * 0.8
+	if global_position.distance_to(point) > 0.4:
+		_walk_to(point, 2.8, delta)
+		return true
+	velocity = Vector2.ZERO
+	if GameState.start_structure_work(_build_target.structure_id):
+		if _tool:
+			_tool.rotation = 0.0 if GameSettings.reduce_motion() else sin(_bob * 12) * 0.5
+		if GameState.work_structure(_build_target.structure_id, delta):
+			_release_build_task()
+	return true

@@ -25,11 +25,14 @@ var sea_cleaning_panel: SeaCleaningPanel
 var house_panel: HousePanel
 var victory_panel: VictoryPanel
 var defeat_panel: DefeatPanel
+var field_guide_panel: FieldGuidePanel
+var mission_panel: MissionPanel
 var tutorial_guide: TutorialGuide
 var menu_panel: MenuPanel
 var settings_panel: SettingsPanel
 var dialogue_panel: DialoguePanel
 var game_over_panel: GameOverPanel
+var village_services_panel: VillageServicesPanel
 
 var _gui_layout: Dictionary = {}
 var _root: Control
@@ -135,118 +138,27 @@ func _build_menu_button() -> void:
 
 
 func _build_currency_panel() -> void:
-	var panel := GameUI.panel(Color(0.035, 0.08, 0.09, 0.88), Color("#3a565a"))
-	panel.position = Vector2(22, 18)
-	panel.custom_minimum_size = Vector2(292, 134)
-	_root.add_child(panel)
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 3)
-	panel.add_child(box)
-	var top := HBoxContainer.new()
-	top.add_theme_constant_override("separation", 10)
-	box.add_child(top)
-	_identity_label = GameUI.label("Mira  •  Lv 1", 16, GameUI.TEXT)
-	_identity_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_child(_identity_label)
-	_clock_label = GameUI.label("DAYTIME", 12, GameUI.GOLD)
-	top.add_child(_clock_label)
-	var currencies := HBoxContainer.new()
-	currencies.add_theme_constant_override("separation", 14)
-	box.add_child(currencies)
-	currencies.add_child(GameUI.icon_rect("gold", 20))
-	_gold_label = GameUI.label("120", 17, GameUI.GOLD)
-	currencies.add_child(_gold_label)
-	currencies.add_child(GameUI.icon_rect("diamond", 19))
-	_diamond_label = GameUI.label("12", 17, GameUI.DIAMOND)
-	currencies.add_child(_diamond_label)
-	_xp_bar = SegmentedBar.new()
-	_xp_bar.setup("XP", GameUI.TEAL, 10, true)
-	_xp_bar.custom_minimum_size = Vector2(268, 22)
-	box.add_child(_xp_bar)
-	_pet_xp_bar = SegmentedBar.new()
-	_pet_xp_bar.setup("PET XP", GameUI.PURPLE, 10, true)
-	_pet_xp_bar.custom_minimum_size = Vector2(268, 22)
-	box.add_child(_pet_xp_bar)
-
-
+	var clock := GameUI.panel(Color(0.035, 0.08, 0.09, 0.85), Color("#3a565a"))
+	clock.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	clock.offset_left = -110
+	clock.offset_right = 110
+	clock.offset_top = 16
+	clock.offset_bottom = 58
+	_root.add_child(clock)
+	_clock_label = GameUI.label(GameState.time_string(), 18, GameUI.GOLD)
+	_clock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	clock.add_child(_clock_label)
 
 func _build_objectives() -> void:
-	_objective_panel = GameUI.panel(Color(0.035, 0.08, 0.09, 0.84), Color("#3a565a"))
-	_objective_panel.anchor_left = 0.5
-	_objective_panel.anchor_right = 0.5
-	_objective_panel.offset_left = -202
-	_objective_panel.offset_right = 202
-	_objective_panel.offset_top = 18
-	_objective_panel.offset_bottom = 88
-	_root.add_child(_objective_panel)
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 2)
-	_objective_panel.add_child(box)
-	var head := HBoxContainer.new()
-	head.add_child(GameUI.label("JOURNAL", 10, GameUI.GOLD))
-	var zone := GameUI.label("Seaside Home", 10, GameUI.MUTED)
-	zone.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	zone.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	zone.name = "ZoneLabel"
-	head.add_child(zone)
-	box.add_child(head)
-	_objectives_box = VBoxContainer.new()
-	_objectives_box.add_theme_constant_override("separation", 1)
-	box.add_child(_objectives_box)
-
+	pass
 
 func _build_mission_guide() -> void:
-	_mission_panel = GameUI.panel(Color(0.025, 0.065, 0.075, 0.88), Color("#45666b"))
-	_mission_panel.anchor_left = 0.5
-	_mission_panel.anchor_right = 0.5
-	_mission_panel.anchor_top = 1.0
-	_mission_panel.anchor_bottom = 1.0
-	_mission_panel.offset_left = -252
-	_mission_panel.offset_right = 252
-	_mission_panel.offset_top = -136
-	_mission_panel.offset_bottom = -92
-	_mission_panel.visible = false
-	_root.add_child(_mission_panel)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 5)
-	_mission_panel.add_child(row)
-	for i in 3:
-		var arrow := MissionArrow.new()
-		arrow.custom_minimum_size = Vector2(160, 30)
-		arrow.visible = false
-		row.add_child(arrow)
-		_mission_arrows.append(arrow)
+	# Navigation is drawn on world paths; no bottom notification strip.
+	pass
 
 
 func _update_mission_guide() -> void:
-	if _mission_panel == null:
-		return
-	if world == null or not is_instance_valid(world):
-		_mission_panel.visible = false
-		return
-	var player := get_tree().get_first_node_in_group("player") as Node2D
-	if player == null:
-		_mission_panel.visible = false
-		return
-	var targets: Array = []
-	if world.has_method("get_guidance_targets"):
-		targets = world.call("get_guidance_targets") as Array
-	if targets.is_empty():
-		_mission_panel.visible = false
-		return
-	_mission_panel.visible = true
-	for i in _mission_arrows.size():
-		var arrow := _mission_arrows[i]
-		if i >= targets.size():
-			arrow.visible = false
-			continue
-		var target: Dictionary = targets[i]
-		var target_color: Color = target.get("color", GameUI.TEAL)
-		var target_position: Vector2 = target.get("position", player.global_position)
-		arrow.visible = true
-		arrow.setup(str(target.get("label", "OBJECTIVE")), target_color)
-		arrow.aim(player.global_position, target_position)
-
+	pass
 
 func _build_emergency_panel() -> void:
 	_emergency_panel = GameUI.panel(Color(0.16, 0.035, 0.045, 0.94), Color("#c44f55"))
@@ -273,31 +185,13 @@ func _build_build_mode_panel() -> void:
 	_build_mode_panel.offset_bottom = 138
 	_build_mode_panel.visible = false
 	_root.add_child(_build_mode_panel)
-	var label := GameUI.label("SETTLEMENT EDITOR  •  drag buildings inside the marked area", 13, Color("#b8f0c8"))
+	var label := GameUI.label("BUILD  •  drag buildings  •  Menu > Finish building to exit", 13, Color("#b8f0c8"))
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_build_mode_panel.add_child(label)
 
 
 func _build_boss_bar() -> void:
-	_boss_panel = GameUI.panel(Color(0.06, 0.04, 0.055, 0.92), Color("#7a3d46"))
-	_boss_panel.anchor_left = 0.5
-	_boss_panel.anchor_right = 0.5
-	_boss_panel.offset_left = -280
-	_boss_panel.offset_right = 280
-	_boss_panel.offset_top = 100
-	_boss_panel.offset_bottom = 168
-	_boss_panel.visible = false
-	_root.add_child(_boss_panel)
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 2)
-	_boss_panel.add_child(box)
-	_boss_label = GameUI.label("THE GROTTO WARDEN", 13, Color("#ffb0a8"))
-	_boss_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(_boss_label)
-	_boss_bar = SegmentedBar.new()
-	_boss_bar.setup("BOSS", Color("#c94750"), 20, true)
-	box.add_child(_boss_bar)
-
+	pass
 
 func _build_controls() -> void:
 	_joystick = TouchJoystick.new()
@@ -333,69 +227,12 @@ func _build_controls() -> void:
 	_inventory_button.icon_kind = "backpack"
 	_inventory_button.accent = Color("#c59b64")
 	_inventory_button.diameter = 64
-	_inventory_button.position = Vector2(24, 160)
+	_inventory_button.anchor_top = 1.0
+	_inventory_button.anchor_bottom = 1.0
+	_inventory_button.position = Vector2(235, -94)
 	_root.add_child(_inventory_button)
 
-	_build_button = TouchActionButton.new()
-	_build_button.action = "toggle_build"
-	_build_button.caption = "Build"
-	_build_button.icon_kind = "hammer"
-	_build_button.accent = Color("#79b98d")
-	_build_button.diameter = 64
-	_build_button.position = Vector2(96, 160)
-	_root.add_child(_build_button)
-
-	_health_potion_button = TouchActionButton.new()
-	_health_potion_button.action = "use_health_potion"
-	_health_potion_button.caption = "HP"
-	_health_potion_button.icon_kind = "health_potion"
-	_health_potion_button.accent = Color("#d45a61")
-	_health_potion_button.diameter = 58
-	_anchor_bottom_right(_health_potion_button, Vector2(-225, -210), Vector2(-167, -152))
-	_root.add_child(_health_potion_button)
-	_hp_count = GameUI.label("x2", 11, GameUI.TEXT)
-	_hp_count.anchor_left = 1.0
-	_hp_count.anchor_top = 1.0
-	_hp_count.anchor_right = 1.0
-	_hp_count.anchor_bottom = 1.0
-	_hp_count.offset_left = -140
-	_hp_count.offset_right = -110
-	_hp_count.offset_top = -184
-	_hp_count.offset_bottom = -166
-	_hp_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_root.add_child(_hp_count)
-
-	_mana_potion_button = TouchActionButton.new()
-	_mana_potion_button.action = "use_mana_potion"
-	_mana_potion_button.caption = "MP"
-	_mana_potion_button.icon_kind = "mana_potion"
-	_mana_potion_button.accent = Color("#608fd9")
-	_mana_potion_button.diameter = 58
-	_anchor_bottom_right(_mana_potion_button, Vector2(-226, -112), Vector2(-168, -54))
-	_root.add_child(_mana_potion_button)
-	_mp_count = GameUI.label("x1", 11, GameUI.TEXT)
-	_mp_count.anchor_left = 1.0
-	_mp_count.anchor_top = 1.0
-	_mp_count.anchor_right = 1.0
-	_mp_count.anchor_bottom = 1.0
-	_mp_count.offset_left = -208
-	_mp_count.offset_right = -178
-	_mp_count.offset_top = -116
-	_mp_count.offset_bottom = -98
-	_mp_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_root.add_child(_mp_count)
-	# Badges are drawn on the potion buttons themselves now.
-	_hp_count.visible = false
-	_mp_count.visible = false
-	_control_nodes = {
-		"joystick": _joystick,
-		"attack": _attack_button,
-		"interact": _interact_button,
-		"inventory": _inventory_button,
-		"build": _build_button,
-		"health_potion": _health_potion_button,
-		"mana_potion": _mana_potion_button,
-	}
+	_control_nodes = {"joystick": _joystick, "attack": _attack_button, "interact": _interact_button, "inventory": _inventory_button}
 	_default_transforms.clear()
 	for control_id in _control_nodes:
 		var node := _control_nodes[control_id] as Control
@@ -433,7 +270,7 @@ func set_gui_scale(value: float, persist: bool = true) -> void:
 
 func _capture_gui_layout() -> void:
 	for child in _root.get_children():
-		if child is Control and not child is ModalBase and child != tutorial_guide and child != _fade and child != _vignette:
+		if child is Control and not child is ModalBase and not child is TutorialSpotlight and child != tutorial_guide and child != _fade and child != _vignette:
 			_gui_layout[child] = {"left": child.offset_left, "top": child.offset_top, "size": child.size.max(child.get_combined_minimum_size())}
 
 
@@ -653,9 +490,19 @@ func _build_tutorial() -> void:
 	tutorial_guide = TutorialGuide.new()
 	tutorial_guide.name = "TutorialGuide"
 	_root.add_child(tutorial_guide)
+	var spotlight := TutorialSpotlight.new()
+	spotlight.hud = self
+	spotlight.name = "TutorialSpotlight"
+	_root.add_child(spotlight)
 
 
 func _build_modals() -> void:
+	field_guide_panel = FieldGuidePanel.new()
+	_root.add_child(field_guide_panel)
+	mission_panel = MissionPanel.new()
+	_root.add_child(mission_panel)
+	village_services_panel = VillageServicesPanel.new()
+	_root.add_child(village_services_panel)
 	shop_panel = ShopPanel.new()
 	_root.add_child(shop_panel)
 	inventory_panel = InventoryPanel.new()
@@ -739,10 +586,7 @@ func _process(delta: float) -> void:
 		inventory_requested.emit()
 	elif Input.is_action_just_pressed("toggle_build"):
 		build_mode_requested.emit()
-	elif Input.is_action_just_pressed("use_health_potion"):
-		_use_quick_potion("health_potion")
-	elif Input.is_action_just_pressed("use_mana_potion"):
-		_use_quick_potion("mana_potion")
+
 
 
 func _update_prompt() -> void:
@@ -774,11 +618,13 @@ func set_world(w: Node) -> void:
 	if _interact_button:
 		_interact_button.set_contextual("Use", "talk")
 	_prompt_panel.visible = false
-	_boss_panel.visible = false
+	if is_instance_valid(_boss_panel):
+		_boss_panel.visible = false
 	_sleep_panel.visible = false
-	var zone_label := _objective_panel.find_child("ZoneLabel", true, false) as Label
-	if zone_label and w != null:
-		zone_label.text = str(w.get("zone_name"))
+	if is_instance_valid(_objective_panel):
+		var zone_label := _objective_panel.find_child("ZoneLabel", true, false) as Label
+		if zone_label and w != null:
+			zone_label.text = str(w.get("zone_name"))
 	_on_emergency_changed(GameState.emergency_active(), GameState.emergency_monsters(), GameState.emergency_damage())
 	refresh_all()
 
@@ -786,66 +632,23 @@ func set_world(w: Node) -> void:
 func refresh_all() -> void:
 	if _root == null:
 		return
-	_identity_label.text = "%s  •  Lv %d" % [str(GameState.data.character_name), int(GameState.data.level)]
-	_gold_label.text = str(GameState.gold())
-	_diamond_label.text = str(GameState.diamonds())
-	_xp_bar.set_values(int(GameState.data.get("xp", 0)), int(GameState.data.get("xp_next", 60)))
-	_refresh_pet()
 	_refresh_objectives()
 	_refresh_loot()
-	_hp_count.text = "x%d" % GameState.item_count("health_potion")
-	_mp_count.text = "x%d" % GameState.item_count("mana_potion")
-	# Count badges live on the buttons now; the old floating labels stay hidden.
-	if _health_potion_button:
-		_health_potion_button.set_badge("x%d" % GameState.item_count("health_potion") if GameState.item_count("health_potion") > 0 else "")
-	if _mana_potion_button:
-		_mana_potion_button.set_badge("x%d" % GameState.item_count("mana_potion") if GameState.item_count("mana_potion") > 0 else "")
-	# The Strike icon follows the active hero's weapon discipline.
 	if _attack_button:
 		_attack_button.set_icon(GameState.character_weapon_style())
 
-
 func _refresh_pet() -> void:
-	var pet_xp := GameState.pet_xp_progress()
-	if bool(pet_xp.get("max", false)):
-		_pet_xp_bar.set_caption("PET XP MAX")
-		_pet_xp_bar.set_values(1, 1)
-	else:
-		_pet_xp_bar.set_caption("PET XP")
-		_pet_xp_bar.set_values(int(pet_xp.get("xp", 0)), int(pet_xp.get("next", 1)))
-
+	pass
 
 func _refresh_objectives() -> void:
-	var lines := GameState.objective_lines()
-	var joined := "\n".join(lines)
-	if joined == _last_objectives:
-		return
-	_last_objectives = joined
-	for child in _objectives_box.get_children():
-		child.queue_free()
-	for line in lines:
-		var label := GameUI.label("◆  " + line, 12, GameUI.TEXT)
-		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_objectives_box.add_child(label)
-
+	pass
 
 func _refresh_loot() -> void:
-	if _loot_label == null:
-		return
-	if GameState.expedition_active():
-		_loot_label.text = GameState.expedition_loot_summary()
-		_loot_label.visible = true
-	else:
+	if is_instance_valid(_loot_label):
 		_loot_label.visible = false
 
-
-func _on_boss_health(active: bool, boss_name: String, value: int, maximum: int) -> void:
-	_boss_panel.visible = active
-	if active:
-		_boss_label.text = boss_name.to_upper()
-		_boss_bar.set_values(value, maximum)
-	_update_toast_layout()
-
+func _on_boss_health(_active: bool, _boss_name: String, _value: int, _maximum: int) -> void:
+	pass
 
 func _update_toast_layout() -> void:
 	# Notifications were removed. Panels such as the boss bar manage their own layout.
@@ -858,8 +661,9 @@ func _on_emergency_changed(active: bool, remaining: int, damage: int) -> void:
 	_emergency_panel.visible = active
 	if active:
 		_emergency_label.text = "SETTLEMENT UNDER ATTACK  •  %d monsters  •  damage %d%%" % [remaining, damage]
-	_boss_panel.offset_top = 148 if active else 100
-	_boss_panel.offset_bottom = 216 if active else 168
+	if is_instance_valid(_boss_panel):
+		_boss_panel.offset_top = 148 if active else 100
+		_boss_panel.offset_bottom = 216 if active else 168
 	_update_toast_layout()
 
 
@@ -971,14 +775,18 @@ func set_build_mode(active: bool) -> void:
 
 
 func any_modal_open() -> bool:
-	for panel in [shop_panel, inventory_panel, portal_panel, pet_battle_panel, sea_cleaning_panel, house_panel, victory_panel, defeat_panel, menu_panel, settings_panel, dialogue_panel, game_over_panel]:
+	if village_services_panel != null and village_services_panel.visible:
+		return true
+	for panel in [field_guide_panel, mission_panel, shop_panel, inventory_panel, portal_panel, pet_battle_panel, sea_cleaning_panel, house_panel, victory_panel, defeat_panel, menu_panel, settings_panel, dialogue_panel, game_over_panel]:
 		if panel != null and panel.visible:
 			return true
 	return false
 
 
 func hide_modals() -> void:
-	for panel in [shop_panel, inventory_panel, portal_panel, pet_battle_panel, sea_cleaning_panel, house_panel, victory_panel, defeat_panel, menu_panel, settings_panel, dialogue_panel, game_over_panel]:
+	if village_services_panel != null and village_services_panel.visible:
+		village_services_panel.close_panel()
+	for panel in [field_guide_panel, mission_panel, shop_panel, inventory_panel, portal_panel, pet_battle_panel, sea_cleaning_panel, house_panel, victory_panel, defeat_panel, menu_panel, settings_panel, dialogue_panel, game_over_panel]:
 		if panel != null and panel.visible:
 			panel.close_panel()
 

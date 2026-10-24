@@ -30,6 +30,7 @@ enum State { SPAWN, WANDER, ALERT, CHASE, WINDUP, ATTACK, RECOVER, STAGGER, DEAD
 @export var diamond_chance := 0.12
 @export var settlement_mode := false
 @export var forest_mode := false
+@export var tutorial_raider := false
 @export var sight_range := 11.0
 @export var attack_interval := 1.35
 @export var boss_ability := "punch"
@@ -38,6 +39,7 @@ enum State { SPAWN, WANDER, ALERT, CHASE, WINDUP, ATTACK, RECOVER, STAGGER, DEAD
 @export var special_cooldown := 3.8
 @export var projectile_damage := 12
 
+var dungeon_alerted := false
 var hp := 42
 var dead := false
 var active := false
@@ -74,9 +76,20 @@ var _personality := {}
 var _wander_dir := Vector2.ZERO
 var _wander_timer := 0.0
 var _hit_dealt := false
+var _route := PackedVector2Array()
+var _route_clock := 0.0
+var _route_goal := Vector2(INF, INF)
+var _route_index := 0
 
 
 func _ready() -> void:
+	if is_boss:
+		var vitality := WorldHealthBar.new()
+		vitality.name = "BossHealth"
+		vitality.subject = self
+		vitality.boss_bar = true
+		vitality.position = Vector2(0, -2.3)
+		add_child(vitality)
 	add_to_group("enemies")
 	z_index = 6
 	if forest_mode:
@@ -158,6 +171,7 @@ func _physics_process(delta: float) -> void:
 		_freeze = maxf(0.0, _freeze - delta)
 		animation_delta = 0.0
 	_bob += animation_delta
+	_route_clock -= delta
 	_move_phase += delta
 	_state_time -= delta
 	_frame_timer += animation_delta
@@ -196,8 +210,18 @@ func _physics_process(delta: float) -> void:
 
 	if not is_instance_valid(_player):
 		_player = get_tree().get_first_node_in_group("player")
-	if forest_mode:
+	if kind == "fire":
+		_target = _nearest_forest_tree()
+		if is_instance_valid(_target) and _state == State.WANDER:
+			_enter(State.CHASE)
+	elif kind == "urchin":
+		_target = _choose_urchin_target()
+		if is_instance_valid(_target) and _state == State.WANDER:
+			_enter(State.CHASE)
+	elif forest_mode:
 		_update_forest_target()
+		if is_instance_valid(_target) and _state == State.WANDER:
+			_enter(State.CHASE)
 	elif settlement_mode:
 		_target = _choose_settlement_target()
 	else:
@@ -274,7 +298,7 @@ func _clear_windup_pose() -> void:
 
 func _wander(delta: float) -> void:
 	# Idle drift for un-aggroed dungeon monsters; aggro pulls them out of it.
-	if is_instance_valid(_player) and not settlement_mode and not forest_mode:
+	if is_instance_valid(_player) and not settlement_mode and not forest_mode and kind not in ["fire", "urchin"]:
 		if global_position.distance_to(_player.global_position) <= _aggro_range():
 			if not active:
 				active = true
@@ -298,9 +322,9 @@ func _chase(delta: float) -> void:
 	if not active:
 		active = true
 		_notify_boss_start()
-	var to_target: Vector2 = _target.global_position - global_position
+	var to_target: Vector2 = _target_point() - global_position
 	var distance := to_target.length()
-	if distance > _aggro_range() * 1.6 and not settlement_mode and not forest_mode:
+	if distance > _aggro_range() * 1.6 and not dungeon_alerted and not settlement_mode and not forest_mode and kind not in ["fire", "urchin"]:
 		# Lost the player: settle back down.
 		active = false
 		_enter(State.WANDER)
@@ -315,6 +339,8 @@ func _chase(delta: float) -> void:
 	# Hysteresis: only re-approach once clearly out of reach.
 	if distance > stop * 1.25:
 		var dir := to_target.normalized()
+		if kind in ["fire", "urchin"] or dungeon_alerted:
+			dir = _village_direction(_target_point())
 		dir = _apply_personality(dir)
 		velocity = velocity.move_toward(dir * speed, delta * 8.0)
 		_separate(delta)
@@ -322,6 +348,10 @@ func _chase(delta: float) -> void:
 	else:
 		velocity = Vector2.ZERO
 		move_and_slide()
+		# The approach band is already inside attack reach. Holding here without
+		# winding up strands a stationary attacker just outside its stop radius.
+		if _attack_timer <= 0.0:
+			_enter(State.WINDUP)
 	if is_boss and _boss_notified:
 		GameState.boss_health_changed.emit(true, _boss_name(), hp, max_hp)
 		if _special_timer <= 0.0:
@@ -338,7 +368,7 @@ func _windup(delta: float) -> void:
 	velocity = Vector2.ZERO
 	move_and_slide()
 	if is_instance_valid(_target):
-		var to_target := _target.global_position - global_position
+		var to_target := _target_point() - global_position
 		if sprite and to_target.length() > 0.1:
 			sprite.flip_h = to_target.x < 0.0
 	if _telegraph:
@@ -350,14 +380,23 @@ func _windup(delta: float) -> void:
 
 
 func _attack_active(_delta: float) -> void:
+	if kind == "fire" and not (_target is ForestTree):
+		_hit_dealt = true
+		return
 	# Damage lands once, on the first active frame.
 	if not _hit_dealt:
 		_hit_dealt = true
 		var reach := body_radius + 1.35
 		if is_instance_valid(_target):
-			var to_target := _target.global_position - global_position
+			var to_target := _target_point() - global_position
 			if to_target.length() <= reach:
-				if _target.has_method("take_damage"):
+				if _target is ForestTree:
+					if (_target as ForestTree).is_attackable():
+						if kind == "urchin":
+							(_target as ForestTree).take_physical_damage(damage)
+						else:
+							(_target as ForestTree).take_attack_damage(damage)
+				elif _target.has_method("take_damage"):
 					_target.call("take_damage", damage, global_position)
 				elif _target.has_method("take_attack_damage"):
 					_target.call("take_attack_damage", damage)
@@ -531,6 +570,10 @@ func _notify_boss_start() -> void:
 # ------------------------------------------------------------------ forest / settlement targeting
 
 func _update_forest_target() -> void:
+	if kind == "fire":
+		_saw_player = false
+		_target = _nearest_forest_tree()
+		return
 	if not is_instance_valid(_player):
 		_target = _nearest_forest_tree()
 		return
@@ -552,6 +595,8 @@ func _update_forest_target() -> void:
 
 
 func _can_see_player() -> bool:
+	if kind in ["fire", "urchin"]:
+		return false
 	if not is_instance_valid(_player) or not is_inside_tree():
 		return false
 	if global_position.distance_to(_player.global_position) > sight_range:
@@ -565,11 +610,62 @@ func _can_see_player() -> bool:
 
 func _nearest_forest_tree() -> Node2D:
 	var best: Node2D = null
-	var best_distance := 22.0
+	var best_distance := INF
 	for node in get_tree().get_nodes_in_group("forest_tree"):
 		if not is_instance_valid(node) or node.is_queued_for_deletion():
 			continue
+		if node.get_parent() != get_parent() or not (node as ForestTree).is_attackable():
+			continue
 		var distance := global_position.distance_to(node.global_position)
+		if distance < best_distance:
+			best = node
+			best_distance = distance
+	return best
+
+
+func _target_point() -> Vector2:
+	if _target is SettlementTarget:
+		return (_target as SettlementTarget).attack_position(global_position)
+	return _target.global_position if is_instance_valid(_target) else global_position
+
+
+func _village_direction(destination: Vector2) -> Vector2:
+	var world := get_parent()
+	if not world is Lobby and not world is Dungeon:
+		return (destination - global_position).normalized()
+	if _route_clock <= 0.0 or destination.distance_to(_route_goal) > 0.5:
+		_route_clock = 0.8
+		_route_goal = destination
+		_route = world.resident_path(global_position, destination) if world is Lobby else world.monster_path(global_position, destination)
+		_route_index = 0
+	if _route.is_empty():
+		return (destination - global_position).normalized()
+	while _route_index < _route.size() - 1 and global_position.distance_to(_route[_route_index]) < 0.3:
+		_route_index += 1
+	return (_route[_route_index] - global_position).normalized()
+
+func _choose_urchin_target() -> Node2D:
+	var best: Node2D
+	var best_distance := INF
+	for node in get_tree().get_nodes_in_group("settlement_target"):
+		if not is_instance_valid(node) or node.is_queued_for_deletion():
+			continue
+		var position: Vector2
+		if node is ForestTree:
+			if node.get_parent() != get_parent() or not node.is_attackable():
+				continue
+			position = node.global_position
+		elif node is Resident:
+			if node.get_parent() != get_parent() or node.dead or node.sheltered:
+				continue
+			position = node.global_position
+		elif node is SettlementTarget:
+			if node.get_parent().get_parent() != get_parent() or not node.is_intact():
+				continue
+			position = node.attack_position(global_position)
+		else:
+			continue
+		var distance := global_position.distance_to(position)
 		if distance < best_distance:
 			best = node
 			best_distance = distance
@@ -607,6 +703,8 @@ func _lunge(dir: Vector2) -> void:
 func take_damage(amount: int, from_dir: Vector2 = Vector2.ZERO, _source: Node = null) -> void:
 	if dead:
 		return
+	if is_boss and get_parent() is Dungeon:
+		get_parent().alert_intruders(true)
 	hp = maxi(0, hp - amount)
 	_hit_flash = 0.14
 	var opts := {"shake": 0.06, "shake_time": 0.1}
@@ -634,6 +732,10 @@ func _die() -> void:
 	if dead:
 		return
 	dead = true
+	if get_parent() is Lobby:
+		get_parent().forget_monster(self)
+	if kind == "fire":
+		GameState.record_mission_event("fire_kill")
 	_state = State.DEAD
 	if _alert_icon != null and is_instance_valid(_alert_icon):
 		_alert_icon.queue_free()
@@ -647,7 +749,7 @@ func _die() -> void:
 		GameState.toast_requested.emit("Emergency monster defeated: +%d Gold." % gold_reward, "gold")
 	else:
 		GameState.register_kill(xp_reward)
-	if kind == "rubbish":
+	if kind in ["rubbish", "urchin"] and not settlement_mode:
 		GameState.add_gold(gold_reward)
 		GameState.toast_requested.emit("Rubbish monster defeated: +%d Gold." % gold_reward, "gold")
 	elif not settlement_mode and not is_boss:

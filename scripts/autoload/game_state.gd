@@ -6,6 +6,9 @@ extends Node
 ## methods; they never keep their own copy of health, gold or progression.
 
 signal data_changed
+signal day_phase_changed(night: bool)
+
+var journey_serial := 0
 signal toast_requested(text: String, tone: String)
 signal pet_changed
 signal house_changed(level: int)
@@ -47,7 +50,6 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if data.is_empty():
 		return
-	# The settlement is deliberately locked in permanent daytime.
 	data.play_time = float(data.get("play_time", 0.0)) + delta
 
 
@@ -127,16 +129,27 @@ func _make_default(character_id: String) -> Dictionary:
 		"pet_battles": {},
 		"sea_cleaned": 0,
 		"forest_health": {},
+		"forest_growth": {},
+		"water_keeper_count": 1,
+		"worker_counts": {"builder": 1, "planter": 1, "fighter": 1},
+		"resident_health": {},
+		"structures": {},
+		"mission_step": 0,
+		"completed_missions": [],
 		"settings": {
 			"gui_scale": 1.0,
 			"control_layout": {},
 		},
 		"play_time": 0.0,
+		"world_time": 0.0,
+		"home_wave": -1,
+		"home_monsters": [],
 		"tutorial_seen": false,
 	}
 
 
 func new_game(character_id: String = DEFAULT_CHARACTER) -> void:
+	journey_serial += 1
 	var carried_settings: Dictionary = (data.get("settings", {}) as Dictionary).duplicate(true)
 	data = _make_default(character_id)
 	if not carried_settings.is_empty():
@@ -222,6 +235,8 @@ func buy_item(item_id: String, quantity: int = 1) -> Dictionary:
 			data.diamonds = diamonds() - price
 	# Only after the deduction is confirmed do we mutate inventory.
 	add_item(item_id, quantity, false)
+	if item_id == "health_potion":
+		record_mission_event("buy")
 	_purchase_serial += 1
 	_save_if_needed()
 	data_changed.emit()
@@ -652,6 +667,7 @@ func feed_pet(pet_id: String) -> Dictionary:
 		return {"ok": false, "message": "Pet food could not be used."}
 	var before := int(pet.get("level", 1))
 	var gained := _give_pet_xp(pet, amount)
+	record_mission_event("feed")
 	data_changed.emit()
 	_save_if_needed()
 	return {
@@ -744,10 +760,125 @@ func forest_tree_health(tree_id: String, max_health: int) -> int:
 	return clampi(int(healths.get(tree_id, max_health)), 0, max_health)
 
 
+const MAX_WATER_KEEPERS := 5
+
+
+func mission_step() -> int:
+	var completed: Array = data.get("completed_missions", [])
+	for index in MissionDB.phase_steps(is_night()):
+		if str(MissionDB.step(int(index)).get("event", "")) not in completed:
+			return int(index)
+	return MissionDB.STEPS.size()
+
+func completed_mission_count() -> int:
+	return (data.get("completed_missions", []) as Array).size()
+
+func record_mission_event(event: String) -> void:
+	var lesson := MissionDB.step(mission_step())
+	if lesson.is_empty() or str(lesson.get("event", "")) != event:
+		return
+	var completed: Array = data.get("completed_missions", [])
+	if event not in completed:
+		completed.append(event)
+	data.completed_missions = completed
+	data.mission_step = mission_step()
+	data_changed.emit()
+	_save_if_needed()
+
+func resident_health(id: String) -> int:
+	return clampi(int((data.get("resident_health", {}) as Dictionary).get(id, 100)), 0, 100)
+
+
+func damage_resident(id: String, amount: int) -> void:
+	var healths: Dictionary = data.get("resident_health", {})
+	healths[id] = maxi(0, resident_health(id) - maxi(0, amount))
+	data.resident_health = healths
+	data_changed.emit()
+	if int(healths[id]) == 0:
+		_save_if_needed()
+
+
+func water_keeper_count() -> int:
+	return clampi(maxi(house_level(), int(data.get("water_keeper_count", 1))), 1, MAX_WATER_KEEPERS)
+
+
+func water_hire_slot() -> int:
+	for i in water_keeper_count():
+		if resident_health("Water Keeper %d" % (i + 1)) <= 0:
+			return i
+	return water_keeper_count() if water_keeper_count() < MAX_WATER_KEEPERS else -1
+
+
+func water_hire_cost() -> int:
+	return 80 + maxi(0, water_hire_slot() - 1) * 60
+
+
+func hire_water_keeper() -> Dictionary:
+	return hire_worker("water")
+
+func register_structure(id: String, label: String, kind: String, maximum: int, initial_health: int = -1) -> void:
+	if id.is_empty():
+		return
+	var structures: Dictionary = data.get("structures", {})
+	var entry: Dictionary = structures.get(id, {})
+	entry["health"] = clampi(int(entry.get("health", maximum if initial_health < 0 else initial_health)), 0, maximum)
+	entry["maximum"] = maximum
+	entry["name"] = label
+	entry["kind"] = kind
+	entry["repair_remaining"] = clampf(float(entry.get("repair_remaining", 0.0)), 0.0, 10.0)
+	entry["level"] = house_level()
+	structures[id] = entry
+	data.structures = structures
+
+
+func structure_state(id: String) -> Dictionary:
+	return (data.get("structures", {}) as Dictionary).get(id, {}).duplicate(true)
+
+
+func damage_structure(id: String, amount: int) -> void:
+	var entry := structure_state(id)
+	if entry.is_empty() or game_over_active:
+		return
+	entry["health"] = maxi(0, int(entry.get("health", 0)) - maxi(1, amount))
+	data.structures[id] = entry
+	data_changed.emit()
+	if int(entry.health) == 0:
+		_save_if_needed()
+
+
+func repair_structure(id: String) -> Dictionary:
+	var entry := structure_state(id)
+	if entry.is_empty() or game_over_active:
+		return {"ok": false, "message": "This structure cannot be repaired."}
+	if int(entry.get("health", 0)) >= int(entry.get("maximum", 1)):
+		return {"ok": false, "message": "This structure is already intact."}
+	entry["health"] = int(entry.get("maximum", 100))
+	entry["repair_remaining"] = 0.0
+	entry["level"] = clampi(int(entry.get("level", 1)), 1, 5)
+	data.structures[id] = entry
+	data_changed.emit()
+	_save_if_needed()
+	return {"ok": true, "message": "Structure repaired."}
+
 func set_forest_tree_health(tree_id: String, health: int, max_health: int) -> void:
 	var healths: Dictionary = data.get("forest_health", {})
 	healths[tree_id] = clampi(health, 0, max_health)
 	data.forest_health = healths
+
+
+func forest_tree_growth(tree_id: String) -> float:
+	return clampf(float((data.get("forest_growth", {}) as Dictionary).get(tree_id, 0.0)), 0.0, 30.0)
+
+
+func set_forest_tree_growth(tree_id: String, remaining: float) -> void:
+	if tree_id.is_empty():
+		return
+	var growth: Dictionary = data.get("forest_growth", {})
+	if remaining <= 0.0:
+		growth.erase(tree_id)
+	else:
+		growth[tree_id] = clampf(remaining, 0.0, 30.0)
+	data.forest_growth = growth
 
 
 func trigger_game_over(reason: String) -> void:
@@ -834,6 +965,8 @@ func house_level() -> int:
 
 func upgrade_house() -> Dictionary:
 	var level := house_level()
+	if game_over_active or int(structure_state("cottage").get("health", 1)) <= 0:
+		return {"ok": false, "message": "Repair the main house first."}
 	if level >= HouseDB.max_level():
 		return {"ok": false, "message": "The cottage is already complete."}
 	var cost := HouseDB.upgrade_cost(level)
@@ -841,6 +974,11 @@ func upgrade_house() -> Dictionary:
 		return {"ok": false, "message": "You need %d diamonds." % cost}
 	data.diamonds = diamonds() - cost
 	data.house_level = level + 1
+	for id in data.get("structures", {}):
+		data.structures[id]["level"] = level + 1
+	data.water_keeper_count = water_keeper_count()
+	for worker_role in ["builder", "planter", "fighter"]:
+		data.worker_counts[worker_role] = worker_count(worker_role)
 	_save_if_needed()
 	data_changed.emit()
 	house_changed.emit(house_level())
@@ -998,6 +1136,8 @@ func complete_portal(portal_id: String) -> Dictionary:
 	state.cleared = true
 	data.portals[portal_id] = state
 	data.bosses = int(data.get("bosses", 0)) + 1
+	if portal_id == PortalDB.ordered_ids()[0]:
+		record_mission_event("boss")
 	if first:
 		var unlock_id := str(def.get("unlocks", ""))
 		if unlock_id != "":
@@ -1165,11 +1305,44 @@ func register_emergency_kill() -> void:
 
 # --------------------------------------------------------------- time / save
 
+const DAY_PHASE_SECONDS := 180.0
+
+
+func is_night() -> bool:
+	return fmod(float(data.get("world_time", 0.0)), DAY_PHASE_SECONDS * 2.0) >= DAY_PHASE_SECONDS
+
+
+func night_number() -> int:
+	return int(float(data.get("world_time", 0.0)) / (DAY_PHASE_SECONDS * 2.0))
+
+
+func advance_world_clock(delta: float) -> void:
+	if data.is_empty() or game_over_active or delta <= 0.0:
+		return
+	var before := float(data.get("world_time", 0.0))
+	var after := before + delta
+	data.world_time = after
+	if int(before / DAY_PHASE_SECONDS) != int(after / DAY_PHASE_SECONDS):
+		day_phase_changed.emit(is_night())
+
+
+func mark_home_wave() -> void:
+	data.home_wave = night_number()
+
+
+func store_home_monsters(monsters: Array) -> void:
+	data.home_monsters = monsters.duplicate(true)
+
+
 func time_string() -> String:
-	return "DAYTIME"
+	var remaining := ceili(DAY_PHASE_SECONDS - fmod(float(data.get("world_time", 0.0)), DAY_PHASE_SECONDS))
+	return "%s %d:%02d" % ["NIGHT" if is_night() else "DAY", remaining / 60, remaining % 60]
 
 
 func objective_lines() -> Array[String]:
+	var lesson := MissionDB.step(mission_step())
+	if not lesson.is_empty():
+		return [str(lesson.get("title", "Learn to play"))]
 	var out: Array[String] = []
 	if emergency_active():
 		out.append("Settlement under attack! Defend the residents and forest trees")
@@ -1186,7 +1359,7 @@ func objective_lines() -> Array[String]:
 		out.append("Upgrade the cottage")
 	if not bool(pet_battle_state("pet_duel_1").get("cleared", false)):
 		out.append("Challenge the Pet Battle Portal")
-	return out
+	return out.slice(0, 1)
 
 
 func save_game() -> void:
@@ -1203,6 +1376,11 @@ func _save_if_needed() -> void:
 func _save_now() -> void:
 	if data.is_empty():
 		return
+	# Capture living home enemies before any transaction saves, including kills.
+	for game in get_tree().get_nodes_in_group("game"):
+		if is_instance_valid(game) and is_instance_valid(game.world) and game.world is Lobby and game.world.is_node_ready() and game.world.journey_serial == journey_serial:
+			store_home_monsters(game.world.capture_monsters())
+			break
 	data.version = SAVE_VERSION
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
@@ -1231,6 +1409,11 @@ func load_game() -> bool:
 		loaded_id = DEFAULT_CHARACTER
 	var fallback := _make_default(loaded_id)
 	data = _merge(fallback, loaded)
+	if not loaded.has("completed_missions"):
+		var completed: Array = []
+		for index in mini(int(loaded.get("mission_step", 0)), MissionDB.STEPS.size()):
+			completed.append(str(MissionDB.step(index).get("event", "")))
+		data.completed_missions = completed
 	_sanitize()
 	_auto_heal_armed = true
 	game_over_active = false
@@ -1257,6 +1440,22 @@ func _merge(base: Dictionary, incoming: Dictionary) -> Dictionary:
 
 
 func _sanitize() -> void:
+	var completed: Array = []
+	var raw: Variant = data.get("completed_missions", [])
+	if raw is Array:
+		for event in raw:
+			if str(event) in MissionDB.STEPS.map(func(step: Dictionary) -> String: return str(step.get("event", ""))) and str(event) not in completed:
+				completed.append(str(event))
+	data.completed_missions = completed
+	data.world_time = maxf(0.0, float(data.get("world_time", 0.0)))
+	data.home_wave = clampi(int(data.get("home_wave", -1)), -1, night_number())
+	var monsters: Array = []
+	if data.get("home_monsters", []) is Array:
+		for record in data.get("home_monsters", []):
+			if not record is Dictionary or str(record.get("kind", "")) not in ["fire", "urchin"]:
+				continue
+			monsters.append({"kind": str(record.kind), "x": clampf(float(record.get("x", 32)), 0, 64), "y": clampf(float(record.get("y", 24)), 0, 40), "hp": clampi(int(record.get("hp", 30)), 1, 60), "raid": bool(record.get("raid", false))})
+	data.home_monsters = monsters.slice(0, 64)
 	data.gold = maxi(0, int(data.get("gold", 0)))
 	data.diamonds = maxi(0, int(data.get("diamonds", 0)))
 	data.hp_max = maxi(1, int(data.get("hp_max", 100)))
@@ -1279,6 +1478,31 @@ func _sanitize() -> void:
 	data.sea_cleaned = maxi(0, int(data.get("sea_cleaned", 0)))
 	if not (data.get("forest_health", {}) is Dictionary):
 		data.forest_health = {}
+	if not (data.get("forest_growth", {}) is Dictionary):
+		data.forest_growth = {}
+	if not data.get("worker_counts", {}) is Dictionary:
+		data.worker_counts = {}
+	for worker_role in ["builder", "planter", "fighter"]:
+		data.worker_counts[worker_role] = clampi(int(data.worker_counts.get(worker_role, 1)), 1, 8)
+	data.water_keeper_count = clampi(int(data.get("water_keeper_count", 1)), 1, MAX_WATER_KEEPERS)
+	data.mission_step = clampi(int(data.get("mission_step", 0)), 0, MissionDB.STEPS.size())
+	if not (data.get("resident_health", {}) is Dictionary):
+		data.resident_health = {}
+	for id in data.resident_health.keys():
+		data.resident_health[id] = clampi(int(data.resident_health[id]), 0, 100)
+	if not (data.get("structures", {}) is Dictionary):
+		data.structures = {}
+	for id in data.structures.keys():
+		if not (data.structures[id] is Dictionary):
+			data.structures.erase(id)
+			continue
+		var entry: Dictionary = data.structures[id]
+		entry["maximum"] = clampi(int(entry.get("maximum", 200)), 1, 1000)
+		entry["health"] = clampi(int(entry.get("health", 200)), 0, int(entry.maximum))
+		entry["repair_remaining"] = clampf(float(entry.get("repair_remaining", 0.0)), 0.0, 10.0)
+		entry["level"] = clampi(int(entry.get("level", 1)), 1, 5)
+	for id in data.forest_growth.keys():
+		data.forest_growth[id] = clampf(float(data.forest_growth[id]), 0.0, 30.0)
 	var settings: Dictionary = data.get("settings", {})
 	if not (settings.get("control_layout", {}) is Dictionary):
 		settings.control_layout = {}
@@ -1323,3 +1547,78 @@ func _sanitize() -> void:
 		data.inventory[starter] = 1
 		equipped.weapon = starter
 	data.equipped = equipped
+
+
+const WORKER_LABELS := {"water": "Water Keeper", "builder": "Builder", "planter": "Planter", "fighter": "Swordsman"}
+const BUILD_REPAIR_SECONDS := 10.0
+
+func worker_count(worker_role: String) -> int:
+	return water_keeper_count() if worker_role == "water" else clampi(maxi(house_level(), int(data.get("worker_counts", {}).get(worker_role, 1))), 1, 8)
+
+func worker_name(worker_role: String, index: int) -> String:
+	return "%s %d" % [str(WORKER_LABELS.get(worker_role, "Worker")), index + 1]
+
+func worker_hire_slot(worker_role: String) -> int:
+	if not WORKER_LABELS.has(worker_role):
+		return -1
+	for i in worker_count(worker_role):
+		if resident_health(worker_name(worker_role, i)) <= 0:
+			return i
+	var limit := MAX_WATER_KEEPERS if worker_role == "water" else 8
+	return worker_count(worker_role) if worker_count(worker_role) < limit else -1
+
+func worker_hire_cost(worker_role: String) -> int:
+	return 80 + maxi(0, worker_hire_slot(worker_role) - 1) * 60
+
+func hire_worker(worker_role: String) -> Dictionary:
+	var slot := worker_hire_slot(worker_role)
+	if slot < 0 or game_over_active:
+		return {"ok": false, "message": "No worker slots available."}
+	var cost := worker_hire_cost(worker_role)
+	if gold() < cost:
+		return {"ok": false, "message": "Not enough Gold."}
+	data.gold = gold() - cost
+	if worker_role == "water":
+		data.water_keeper_count = maxi(water_keeper_count(), slot + 1)
+	else:
+		var counts: Dictionary = data.get("worker_counts", {})
+		counts[worker_role] = maxi(worker_count(worker_role), slot + 1)
+		data.worker_counts = counts
+	var healths: Dictionary = data.get("resident_health", {})
+	healths[worker_name(worker_role, slot)] = 100
+	data.resident_health = healths
+	data_changed.emit()
+	_save_if_needed()
+	return {"ok": true, "message": "%s hired." % str(WORKER_LABELS.get(worker_role, "Worker"))}
+
+func structure_level(_id: String) -> int:
+	return house_level()
+
+func upgrade_structure(id: String) -> Dictionary:
+	var entry := structure_state(id)
+	if entry.is_empty() or str(entry.get("kind", "")) != "house" or game_over_active:
+		return {"ok": false, "message": "Choose the main house."}
+	return upgrade_house()
+
+func start_structure_work(id: String) -> bool:
+	var entry := structure_state(id)
+	if entry.is_empty() or game_over_active or is_night() or int(entry.get("health", 0)) >= int(entry.get("maximum", 1)):
+		return false
+	if float(entry.get("repair_remaining", 0.0)) <= 0.0:
+		entry["repair_remaining"] = BUILD_REPAIR_SECONDS
+		data.structures[id] = entry
+		data_changed.emit()
+	return true
+
+func work_structure(id: String, delta: float) -> bool:
+	if game_over_active or is_night():
+		return false
+	var entry := structure_state(id)
+	var remaining := float(entry.get("repair_remaining", 0.0))
+	if remaining <= 0.0:
+		return false
+	entry["repair_remaining"] = maxf(0, remaining - maxf(0, delta))
+	data.structures[id] = entry
+	if float(entry.repair_remaining) <= 0.0:
+		return bool(repair_structure(id).get("ok", false))
+	return false

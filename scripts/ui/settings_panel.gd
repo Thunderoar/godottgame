@@ -8,9 +8,6 @@ const CONTROL_ROWS := [
 	["attack", "Strike"],
 	["interact", "Use"],
 	["inventory", "Pack"],
-	["build", "Build"],
-	["health_potion", "HP"],
-	["mana_potion", "MP"],
 ]
 
 var _rows: Dictionary = {}

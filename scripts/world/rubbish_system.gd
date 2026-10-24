@@ -1,7 +1,7 @@
 class_name RubbishSystem
 extends Node2D
 ## Spawns flotsam in the shallows. The coastal guard nets some pieces for +1 Gold;
-## pieces that slip past transform into rubbish monsters on the sand.
+## pieces that slip past can become sea urchins on the sand at night only.
 
 @export var spawn_interval := 8.5
 @export var initial_delay := 3.0
@@ -45,6 +45,8 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if GameState.mission_step() < 4 or GameState.game_over_active:
+		return
 	if guard == null or not is_instance_valid(guard):
 		return
 	if GameState.emergency_active():
@@ -76,14 +78,6 @@ func on_rubbish_caught(piece: RubbishPiece) -> void:
 func on_rubbish_beached(piece: RubbishPiece) -> void:
 	beached_count += 1
 	var spawn_at: Vector2 = piece.target if piece else Vector2(17, 29)
-	var monster := Enemy.new()
-	monster.kind = "rubbish"
-	monster.max_hp = 30
-	monster.damage = 6
-	monster.speed = 1.35
-	monster.xp_reward = 5
-	monster.gold_reward = 7
-	monster.diamond_chance = 0.0
-	monster.body_radius = 0.4
-	monster.position = get_parent().to_local(spawn_at)
-	get_parent().add_child(monster)
+	var lobby := get_parent() as Lobby
+	if lobby:
+		lobby.spawn_sea_urchin(lobby.to_local(spawn_at))

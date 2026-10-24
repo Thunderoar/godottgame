@@ -41,7 +41,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 	await _shot("01_title")
 
-	game.call("_on_character_selected", "qayyim")
+	await game.call("_on_character_selected", "qayyim")
 	await get_tree().create_timer(0.6).timeout
 	hud = game.get("hud")
 	if hud != null and hud.tutorial_guide != null:

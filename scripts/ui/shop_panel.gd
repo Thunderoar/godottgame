@@ -29,11 +29,13 @@ var _pet_frame := 0
 var _sale_pens: Dictionary = {}
 var _owned_pens: Dictionary = {}
 var _currency_root: Control
+var _pet_grids: Array[GridContainer] = []
 
 
 func _ready() -> void:
 	_panel_size = Vector2(940, 660)
 	super._ready()
+	resized.connect(_fit_pet_grids)
 	GameState.data_changed.connect(func() -> void:
 		if visible:
 			_refresh_or_rebuild())
@@ -52,7 +54,7 @@ func open_shop(kind: String, keeper: String) -> void:
 	elif kind == "pet":
 		title = "Nia's Companions"
 	open_panel("%s  •  %s" % [title, keeper])
-	if _band != null:
+	if is_instance_valid(_band):
 		_band.keeper_say(ShopLinesDB.line(kind, "greeting"))
 
 
@@ -75,6 +77,21 @@ func _process(delta: float) -> void:
 
 
 # ------------------------------------------------------------------ structure
+
+func _clear_content() -> void:
+	# Closing frees previews at the end of the frame. A fast reopen must not
+	# animate or greet through references from the previous shop visit.
+	_band = null
+	_gold_label = null
+	_diamond_label = null
+	_selected_card = null
+	_currency_root = null
+	_sale_pens.clear()
+	_owned_pens.clear()
+	_pet_grids.clear()
+	_cards.clear()
+	_signature = ""
+	super._clear_content()
 
 func _refresh_or_rebuild() -> void:
 	if _current_signature() != _signature:
@@ -110,6 +127,7 @@ func _rebuild() -> void:
 	_cards.clear()
 	_sale_pens.clear()
 	_owned_pens.clear()
+	_pet_grids.clear()
 	_selected_card = null
 
 	_band = ShopScene.new()
@@ -275,6 +293,9 @@ func _add_sell_card() -> void:
 func _add_pet_sale_pens() -> void:
 	var grid := GridContainer.new()
 	grid.columns = 3
+	grid.set_meta("card_width", 220.0)
+	grid.set_meta("max_columns", 3)
+	_pet_grids.append(grid)
 	grid.add_theme_constant_override("h_separation", 10)
 	grid.add_theme_constant_override("v_separation", 10)
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -320,11 +341,15 @@ func _add_pet_sale_pens() -> void:
 		box.add_child(owned_row)
 		grid.add_child(pen)
 		_sale_pens[pet_id] = {"id": pet_id, "preview": preview, "price": price_label, "adopt": adopt, "owned": owned_row}
+	_fit_pet_grids()
 
 
 func _add_owned_pet_pens() -> void:
 	var grid := GridContainer.new()
 	grid.columns = 2
+	grid.set_meta("card_width", 440.0)
+	grid.set_meta("max_columns", 2)
+	_pet_grids.append(grid)
 	grid.add_theme_constant_override("h_separation", 10)
 	grid.add_theme_constant_override("v_separation", 10)
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -332,9 +357,12 @@ func _add_owned_pet_pens() -> void:
 	for pet_id in (GameState.data.get("pets", {}) as Dictionary):
 		var pen := GameUI.card("wood")
 		pen.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var layout := VBoxContainer.new()
+		layout.add_theme_constant_override("separation", 8)
+		pen.add_child(layout)
 		var hbox := HBoxContainer.new()
 		hbox.add_theme_constant_override("separation", 12)
-		pen.add_child(hbox)
+		layout.add_child(hbox)
 		var preview := TextureRect.new()
 		preview.texture = PixelArt.pet_texture(str(pet_id))
 		preview.custom_minimum_size = Vector2(56, 56)
@@ -363,7 +391,7 @@ func _add_owned_pet_pens() -> void:
 		info.add_child(xp_bar)
 		var buttons := HBoxContainer.new()
 		buttons.add_theme_constant_override("separation", 8)
-		hbox.add_child(buttons)
+		layout.add_child(buttons)
 		var feed := GameUI.button("Feed", Vector2(84, 34))
 		buttons.add_child(feed)
 		var upgrade := GameUI.button("Upgrade", Vector2(150, 34))
@@ -396,6 +424,16 @@ func _add_owned_pet_pens() -> void:
 			"atk": atk_pill, "shield": shield_pill, "xp": xp_bar, "feed": feed,
 			"upgrade": upgrade, "activate": activate,
 		}
+	_fit_pet_grids()
+
+
+func _fit_pet_grids() -> void:
+	var width := minf(_panel_size.x, get_viewport_rect().size.x - 32.0) - 48.0
+	for grid in _pet_grids:
+		if not is_instance_valid(grid):
+			continue
+		var minimum := float(grid.get_meta("card_width", 440.0))
+		grid.columns = clampi(floori((width + 10.0) / (minimum + 10.0)), 1, int(grid.get_meta("max_columns", 2)))
 
 
 func _stat_pill(kind: String, text: String) -> PanelContainer:

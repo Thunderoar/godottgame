@@ -24,6 +24,8 @@ func _rebuild() -> void:
 	add_body_text("Your companion supports you with healing, attacks and shields. Level gates and boss unlocks control entry.", GameUI.MUTED, 13)
 	content.add_child(GameUI.spacer(2))
 	for portal_id in PortalDB.ordered_ids():
+		if GameState.mission_step() in [8, 9] and portal_id != PortalDB.ordered_ids()[0]:
+			continue
 		_add_portal_card(portal_id)
 
 
@@ -34,6 +36,7 @@ func _add_portal_card(portal_id: String) -> void:
 	var cleared := bool(state.get("cleared", false))
 	var unlocked := bool(state.get("unlocked", false))
 	var card := PanelContainer.new()
+	card.set_meta("portal_id", portal_id)
 	card.add_theme_stylebox_override("panel", GameUI.style(Color("#152a31") if unlocked else Color("#141d20"), Color("#3e5c62") if unlocked else Color("#2a353a"), 2, 0))
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var hbox := HBoxContainer.new()

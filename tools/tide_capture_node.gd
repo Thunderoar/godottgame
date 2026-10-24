@@ -20,7 +20,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	await _shot("tide_title.png")
-	game.call("_on_character_selected", "qayyim")
+	await game.call("_on_character_selected", "qayyim")
 	await get_tree().create_timer(0.5).timeout
 	await _shot("tide_tutorial.png")
 	if game.hud.get("tutorial_guide") != null:

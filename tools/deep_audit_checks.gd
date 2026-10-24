@@ -200,8 +200,9 @@ static func run(game: Node, check: Callable) -> void:
 	customer.take_attack_damage(1)
 	check.call(customer.shopping_state == Resident.Shopping.ROUTINE and (reserved == null or reserved._customer == null), "audit: directly frightened customer releases its shop reservation")
 	customer.queue_free()
-	# Sprite layers must participate in the same actor depth comparison.
-	check.call(_effective_z(shop.sprite) == _effective_z(lobby.player._visual), "audit: merchant and player sprites share the y-sorted actor layer")
+	# Merchants are now seated behind the stall counter rather than outside it.
+	var counter_art := shop.get_parent().get_children().filter(func(node: Node) -> bool: return node is Sprite2D)[0] as Sprite2D
+	check.call(shop.position.y < 0 and _effective_z(shop.sprite) < _effective_z(counter_art), "audit: merchant is inside the stall behind its counter art")
 	# Low->high must work without rebuilding the dungeon.
 	var old_quality := GameSettings.effects_quality()
 	var old_motion := GameSettings.reduce_motion()
@@ -352,7 +353,7 @@ static func _check_physical_layout(game: Node, check: Callable) -> void:
 		for frame in 3:
 			await game.get_tree().process_frame
 		var resized_scale := minf(float(window.size.x) / hud._root.size.x, float(window.size.y) / hud._root.size.y)
-		check.call(hud._health_potion_button.get_global_rect().size.x * resized_scale >= 43.9, "audit: window resize refreshes physical hit areas without changing GUI scale at %dx%d" % [resolution.x, resolution.y])
+		check.call(hud._inventory_button.get_global_rect().size.x * resized_scale >= 43.9, "audit: window resize refreshes physical hit areas without changing GUI scale at %dx%d" % [resolution.x, resolution.y])
 		for gui in [0.75, 1.0, 1.3]:
 			hud.set_gui_scale(gui, false)
 			await game.get_tree().process_frame
@@ -377,7 +378,7 @@ static func _check_physical_layout(game: Node, check: Callable) -> void:
 			hud._joystick.cancel()
 			hud.set_control_layout("attack", 500, 300, 102)
 			var pack_right := hud._inventory_button.get_global_rect().end.x
-			check.call(hud._build_button.position.x >= pack_right, "audit: customizing Strike preserves Pack/Build separation at GUI %.2f" % gui)
+			check.call(hud._inventory_button.get_global_rect().end.x <= hud._attack_button.get_global_rect().position.x, "audit: customizing Strike preserves Pack/Strike separation at GUI %.2f" % gui)
 			hud.reset_control_layout()
 	window.size = old_size
 	for frame in 3:

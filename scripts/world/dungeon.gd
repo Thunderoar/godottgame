@@ -31,6 +31,8 @@ func setup(id: String) -> void:
 
 
 func _ready() -> void:
+	var guide := MissionPath.new()
+	add_child(guide)
 	add_to_group("world")
 	add_to_group("dungeon")
 	y_sort_enabled = true
@@ -45,6 +47,7 @@ func _ready() -> void:
 	_build_monsters()
 	_build_exit()
 	_build_camera()
+	call_deferred("alert_intruders")
 	Vfx.ensure_pool(self)
 	Shaders.apply_default_breeze()
 	GameState.player_defeated.connect(_on_player_defeated)
@@ -508,3 +511,28 @@ func minimap_markers() -> Array:
 
 func get_spawn_position() -> Vector2:
 	return SPAWN
+
+
+func alert_intruders(include_boss: bool = false) -> void:
+	if not is_instance_valid(player):
+		return
+	for enemy in get_children():
+		if not enemy is Enemy or enemy.dead or (enemy.is_boss and not include_boss):
+			continue
+		enemy.dungeon_alerted = true
+		enemy._player = player
+		enemy._target = player
+		enemy.active = true
+		enemy._enter(Enemy.State.CHASE)
+
+func _physics_process(_delta: float) -> void:
+	if is_instance_valid(boss) and not boss.dead and is_instance_valid(player) and boss.global_position.distance_to(player.global_position) <= boss.body_radius + 0.7:
+		alert_intruders(true)
+
+
+var _monster_routes: ResidentRoutes
+
+func monster_path(from: Vector2, destination: Vector2) -> PackedVector2Array:
+	if _monster_routes == null:
+		_monster_routes = ResidentRoutes.new(self, map_rect)
+	return _monster_routes.path(from, destination)

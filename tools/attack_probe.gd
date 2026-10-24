@@ -9,7 +9,7 @@ func _ready() -> void:
 	add_child(game)
 	await get_tree().process_frame
 	await get_tree().process_frame
-	game.call("_on_character_selected", "qayyim")
+	await game.call("_on_character_selected", "qayyim")
 	await get_tree().create_timer(0.4).timeout
 	var hud: GameHUD = game.get("hud")
 	hud.tutorial_guide.call("_skip")

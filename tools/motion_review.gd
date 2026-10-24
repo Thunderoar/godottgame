@@ -11,7 +11,7 @@ func _ready() -> void:
 	game = load("res://scenes/game.tscn").instantiate()
 	add_child(game)
 	await get_tree().process_frame
-	game.call("_on_character_selected", "qayyim")
+	await game.call("_on_character_selected", "qayyim")
 	await get_tree().process_frame
 	var hud: GameHUD = game.hud
 	hud.tutorial_guide.call("_skip")

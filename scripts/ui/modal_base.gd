@@ -12,6 +12,7 @@ var panel: PanelContainer
 var _title := "Panel"
 var _panel_size := Vector2(860, 590)
 var _close_button: Button
+var _entry_tween: Tween
 
 
 func _ready() -> void:
@@ -19,6 +20,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = false
 	_build_shell()
+	resized.connect(_fit_panel)
 
 
 func _build_shell() -> void:
@@ -51,6 +53,8 @@ func _build_shell() -> void:
 	outer.add_child(header)
 	header_label = GameUI.title(_title, 26, GameUI.TEXT)
 	header_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	header_label.clip_text = true
 	header.add_child(header_label)
 	var close := GameUI.button("Close", Vector2(92, 40))
 	close.pressed.connect(close_panel)
@@ -60,12 +64,26 @@ func _build_shell() -> void:
 	body = ScrollContainer.new()
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	body.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	# A wide content row must scroll inside the body rather than push Close
+	# outside the screen. Individual panels still lay their cards out to fit.
+	body.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	outer.add_child(body)
 	content = VBoxContainer.new()
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.add_theme_constant_override("separation", 10)
 	body.add_child(content)
+	_fit_panel()
+
+
+func _fit_panel() -> void:
+	if panel == null:
+		return
+	var available := (get_viewport_rect().size - Vector2(32, 32)).max(Vector2.ONE)
+	var fitted := _panel_size.min(available)
+	panel.offset_left = -fitted.x * 0.5
+	panel.offset_top = -fitted.y * 0.5
+	panel.offset_right = fitted.x * 0.5
+	panel.offset_bottom = fitted.y * 0.5
 
 
 func open_panel(title: String = "") -> void:
@@ -74,14 +92,20 @@ func open_panel(title: String = "") -> void:
 		if header_label:
 			header_label.text = title
 	visible = true
+	play_entry_fade()
+	_fit_panel()
 	move_to_front()
 	if is_inside_tree():
 		# Modal panels need a moment to lay out before we measure content.
 		await get_tree().process_frame
-	_rebuild()
+	if visible:
+		_rebuild()
 
 
 func close_panel() -> void:
+	if _entry_tween:
+		_entry_tween.kill()
+	modulate.a = 1
 	visible = false
 	_clear_content()
 	closed.emit()
@@ -116,3 +140,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		close_panel()
 		get_viewport().set_input_as_handled()
+
+
+func play_entry_fade() -> void:
+	if _entry_tween:
+		_entry_tween.kill()
+	modulate.a = 0
+	_entry_tween = create_tween()
+	_entry_tween.tween_property(self, "modulate:a", 1.0, 0.16)

@@ -21,19 +21,54 @@ XDG_DATA_HOME="$review_dir/userdata" TIDESWORN_TEST_ROOT="$review_dir" timeout 1
 XDG_DATA_HOME="$review_dir/movie-userdata" TIDESWORN_TEST_ROOT="$review_dir" timeout 180 godot --path . --write-movie "$review_dir/motion.avi" --fixed-fps 60 res://tools/motion_review.tscn -- --samples "$review_dir/motion.json"
 ```
 
-On Windows with the portable console binary, use the equivalent path to
-`Godot_v4.7.2-stable_win64_console.exe`.
+On Windows, run `powershell -File tools/test_isolated.ps1 -Godot <absolute-console-exe>`.
+Use `-ImportOnly` for the import pass. This wrapper backs up the current save,
+isolates APPDATA/LOCALAPPDATA, enforces a timeout and checks the full output.
+The scene refuses destructive operations unless its actual user data directory
+is inside the temporary test root.
+Use `-VisualReview` to render `tools/forest_review.tscn` at 1280x720. It checks
+an NPC's real approach to a fire and replanting, then captures fire, water,
+sapling, growth, maturity, devastation and the game-over panel in the temporary
+test directory. Any host certificate-store `ERROR:` still fails the wrapper;
+a passing gameplay summary alone is not a clean overall gate.
+Use `-VisualReview -Review village` for the village expansion review: it checks
+builder repair state, a resident entering shelter, then an actual
+sea urchin destroying that shelter and defeating its exposed occupant. It also
+captures the first mission, named shops and water-keeper hiring.
+Use `-VisualReview -Review interaction` for actual mouse/touch shop opening, tutorial spotlight targets, house level preview buttons, manual pet turns, night/dawn and the nearby free repair action.
+
+Forest restoration verification (2026-10-23, native Godot 4.7.2): the acceptance
+scene reported **430 checks, PASS** in verified temporary Windows user data.
+The rendered forest review completed all seven captures, including an NPC
+walking to water and replant a tree. Captures were inspected at 1280x720.
+The host emitted `ERROR: Failed to read the root certificate store`, so this
+is **not a clean overall gate**. The sandbox also denied reading the live save
+for backup; no live-save writes or restoration were attempted. The Windows
+wrapper requires a successful backup before starting when a live save exists.
+
+Historical village expansion verification, before free repairs and the day/night cycle (2026-10-23, native Godot 4.7.2): the updated
+acceptance scene reported **482 checks, PASS**, including the stationary-house
+attack regression, recruitment, all repair plans, shelter protection/loss and
+persistence. `village_review.tscn` reported **PASS** after real worker travel,
+timed repairs and a sea urchin destroying a shelter and killing the exposed
+resident. Eight 1280x720 captures were inspected. All test saves used verified
+temporary user data. The same host certificate-store error remains, so the
+strict wrapper still fails; this is not a clean overall gate.
 
 An agent must not declare success when the suite reports a failure, when the
 editor import reports `SCRIPT ERROR`/warnings, or when it has not inspected the
 new screenshots at 1280×720.
+
+Historical day/night and interaction verification: the isolated acceptance scene reported **494 checks, PASS**. The native interaction review exercised actual mouse/touch shop opening, exact tutorial targets, all house preview buttons, idle/manual pet turns, visible night/dawn and free nearby repairs. The host certificate-store ERROR still prevents a clean overall gate.
+
+All five supplied pet battle backgrounds are installed under assets/pet_battles, with one distinct path per duel in PetBattleDB. The supplied GIF is retained and its first frame is converted to PNG for Godot. Native captures verify all five backdrops.
 
 ## Acceptance checks
 
 ### 1. HUD and NPC presentation
 - No `Label` child is attached to `Resident`, `ShopNPC` or `CoastalGuard`.
 - `GameHUD` has no toast container and `show_toast()` creates no UI.
-- Important events remain visible through persistent HUD panels and the journal.
+- Important events remain visible through persistent HUD panels and the purple question-mark mission NPC.
 - Player and pet XP bars exist and their maxima match the next-level thresholds.
 
 ### 2. Two battle portals
@@ -50,15 +85,27 @@ new screenshots at 1280×720.
 - Only the first duel is unlocked initially; each win unlocks the next.
 - The active pet's real level and stats are used.
 - A duel shows two living combatants and two health bars.
-- Combat has exactly two mechanics: **Attack** and **Defend**.
-- The player has a two-second choice window; the enemy selects Attack or Defend.
-- When the timer expires, both actions execute simultaneously.
+- Each pet has three powers: **Serang**, **Perisai** and **Kuasa Khas**, with separate 2/5/8-second cooldowns.
+- Both pets wait indefinitely for an explicit player choice. An empty choice cannot resolve a turn, even after the former timeout.
+- An available power resolves the player action first, followed by one enemy reply. The next turn waits for player input. Powers on cooldown cannot be selected; an enemy with all powers cooling down waits. The old countdown is hidden.
 - Attacks create scratch/punch impact nodes; Defend creates a shield effect.
 - A win records the clear, grants Gold and pet XP, unlocks the next duel and
   raises the active companion's level by at least one.
 - A loss or forfeit grants no clear or level.
 
 ### 4. Pet progression and shop
+- Pet Shop close repair verification (2026-10-24): the full scene reported
+  490 checks, PASS. Native `tools/shop_close_review.tscn` also clicked Close
+  after scrolling at 1280x720 and 832x480 with all purchasable pets owned,
+  verified movement was restored and checked immediate reopen/close. Both
+  captures were inspected. The existing Windows certificate-store error still
+  prevents a clean overall gate; saves were verified isolated temporary data.
+- With every purchasable pet owned, the Pet Shop's Close button remains inside
+  both 1280x720 and 832x480 viewports. Owned-pet actions sit below each preview,
+  and the card grid adapts to available width without sideways scrolling.
+- Clicking Close after scrolling dismisses the panel and restores movement.
+  Reopening and immediately closing cannot use freed previews or rebuild a
+  hidden shop. Modal frames also refit when their viewport is resized.
 - `Pet Food` is a `pet` shop item with a positive Gold price.
 - Buying and feeding it consumes one item and increases pet XP.
 - Player XP and pet XP bars update after combat and feeding.
@@ -66,16 +113,32 @@ new screenshots at 1280×720.
 
 ### 5. Protected forest and monster behaviour
 - The `forest_tree` group contains at least 60 living trees.
-- Every tree is a `ForestTree` and is also a `settlement_target`.
+- Every mature tree is a `ForestTree` and is also a `settlement_target`.
 - Every tree has independent HP and persistent health.
 - `take_attack_damage()` reduces tree HP, increments feedback and plays VFX/SFX.
-- Tree HP reaches zero -> tree falls; all trees dead -> `GameState.game_over_active`.
+- Fire monsters ignite mature trees; flames deal ongoing damage and remain
+  visible at low effects quality and with reduced motion.
+- Zero HP makes the tree fall, disappear and release trunk collision.
+- One blue water keeper starts a new journey; Gold recruits up to five.
+  Recruitment costs 80/140/200 Gold for additional keepers, rejects insufficient
+  funds and duplicate purchases at the cap, and can replace a dead keeper.
+  Their reduced power heals 5 HP every 1.25 seconds. They walk to fires, channel
+  visible water and restore HP; full recovery extinguishes the fire. Green planters
+  walk to fallen trees and spend two seconds planting replacements. Blue NPCs also fire damaging water projectiles at fire monsters.
+- A replacement grows over 30 seconds of active lobby time, shows growth
+  progress and cannot be targeted, damaged or ignited until mature. Its remaining
+  growth time survives saves and world reconstruction; time away freezes growth.
+- With no mature trees, any planted sapling still prevents game over.
+- No mature trees and no planted saplings -> `GameState.game_over_active`.
+- Game over animates the ground to dry orange, sea to dark green and reveals
+  stranded dead fish/crabs on sand before the locked panel appears. Reduced
+  motion keeps the same end state with a short fade and no camera movement.
 - Game Over shows a locked panel and returns to title without a Continue save.
-- At least twelve `forest_monsters` patrol the woodland; emergencies add four more.
-- Forest monsters attack nearby trees at a faster cadence without needing the
-  player nearby.
-- A clear line of sight to the player immediately sets the player as target,
-  starts a charge and triggers the aggro sound.
+- At least 24 `forest_monsters` populate the woodland; raids can raise the cap to 30.
+- Fire monsters only choose mature trees. They cannot damage the player even if
+  handed a stale player target, and never charge a player in line of sight.
+- Each journey begins with a peaceful day. Day and night each last exactly 180 seconds; the HUD counts down. Only night creates new fire monsters or sea urchins, including beach and raid paths. Existing monsters continue attacking after sunrise. Each night replenishes the baseline population once, without duplicating surviving monsters.
+- Clock phase and living home monster position/HP survive save/load and returning from a dungeon; no wave is created merely by reopening the village.
 - Generated `tree_hit` and `aggro` sounds must exist in `Sfx`.
 
 ### 6. Lively village and ruins
@@ -89,27 +152,39 @@ new screenshots at 1280×720.
 ### 7. Sea cleaning
 - The coastal guard catches drifting rubbish.
 - Each catch awards exactly +1 Gold and increments `GameState.data.sea_cleaned`.
-- Beached dangerous rubbish becomes a monster and grants no catch reward.
-- Rubbish-monster kills grant their own separate Gold.
+- At night, beached dangerous rubbish becomes a spiked sea urchin (`kind == "urchin"`)
+  and grants no catch reward. Its kill grants separate Gold exactly once.
+- Sea urchins damage mature trees without igniting them, fences, intact houses
+  and exposed residents. Saplings remain immune.
 - Sea-cleaning progress survives save/load.
 
 ### 8. Construction Shop and existing contracts
 - A dedicated `shop_house` construction stall and Bram's `ShopNPC` exist.
-- Interacting with Bram opens the house panel, branded as the Construction Shop.
-- The panel exposes Levels 1-5 and only accepts diamonds.
+- Clicking/touching any stall opens its shop directly, including Bram's Construction Shop. Keyboard interaction remains available. Touches used by the settlement editor or an open modal do not open a shop.
+- The panel exposes clickable Levels 1-5. Each changes the design preview without spending diamonds or changing the owned house. Confirm Upgrade purchases only the next level, with diamonds.
+- The cottage, seven resident homes and four fence runs have stable IDs and
+  separate persistent HP. Destroyed structures collapse and release collision.
+- One orange builder starts each journey. They choose separate damaged structures, walk to them and work for ten seconds in daylight. Nighttime pauses progress; unfinished repair time persists across saves. Extra builders cost Gold at the Worker Shop. Repair restores HP, appearance, collision and shelter protection.
+- Residents walk into intact houses when sea urchins approach or a raid starts.
+  Sheltered residents cannot be damaged; a destroyed shelter exposes them.
+  Exposed residents can die, leave targeting and remain dead after save/load.
+- Merchants stand behind their stall counter, interact from outside and have no
+  personal name labels. Each of the five shops has its own shop-name sign.
 - Title reads `SAVE THE WORLD`; credit names Qayyim, Farhan and Ayiz.
 - The recovery ward heals at `GameState.sleep_recovery_seconds()` - the
   HouseDB rate for the current cottage level (10 s at Level 1 down to 2 s at
-  Level 5), matching the bed and the Construction Shop panel. The old
+  Level 5), matching the home interior and Construction Shop panel. The old
   hardcoded 8.0 s ward clock is gone.
 - Three weapons, ten monster portals, boss ability variety, Android touch
   controls, auto-loot, pet support, emergency defence, defeat/recovery and
-  permanent daytime remain intact.
+  the three-minute day/night cycle remain intact.
 
 ### 9. Guidance, dashboard and menus
-- The HUD has three `MissionArrow` nodes; at least one is visible in the lobby.
-- Mission arrows point toward Monster Portal, Pet Duel, Construction Shop or an
-  emergency target and display distance.
+- No bottom mission notification panel or `MissionArrow` widgets are built.
+  `MissionPath` draws dashed ground arrows along obstacle-aware routes in the
+  lobby and dungeon, pointing to one current objective.
+- Seven daytime lessons teach movement, gathering, shopping, Pack, workers, housing and pet feeding; three nighttime lessons teach fire combat, portals and a boss. Switching phase selects that phase’s next unfinished lesson. Only the current lesson’s action advances progress. Saved completed event IDs resume lessons after Continue, including migration from old numeric progress. Menu can show hidden mission tips again.
+- A non-blocking spotlight dims everything except the current action, draws a gold arrow and follows changing UI layout. It highlights the joystick, a shop, the exact potion Buy button, Pack, or Strike. The tips panel moves aside from the highlighted target.
 - The player owns a `PlayerVitalHud` that draws only Health and Mana above the
   player's head.
 - The top-right `MenuButton` opens the in-game menu.
@@ -201,7 +276,7 @@ results, negative probes and visual evidence.
 ## Regression rules for agents
 
 1. **Do not reintroduce timed toast pop-ups or floating NPC names.** Use the HUD,
-   journal, permanent prompt or modals for state.
+   mission guide, permanent prompt or modals for state.
 2. **Do not use fixed screen coordinates for new full-screen UI.** Controls must
    remain readable at 832×480 and 1280×720.
 3. **Keep all rewards atomic and non-negative.** Route Gold, items and XP through
@@ -224,8 +299,8 @@ Inspect these captures:
 - `tide_dialogue.png` - exact Unisza dialogue
 - `tide_lobby_portal.png` - paired Monster/Pet gates
 - `tide_pet_battles.png` - five-level tournament
-- `tide_pet_duel.png` - 1v1 arena during the two-second choice window
-- `tide_pet_resolution.png` - simultaneous turn, impact and shield effects
+- `tide_pet_duel.png` - 1v1 arena waiting for an explicit player choice
+- `tide_pet_resolution.png` - historical arena capture; current turns alternate
 - `tide_pet_shop.png` - Pet Food and Feed controls
 - `tide_house.png` - Construction Shop Level 1-5 progression
 - `tide_forest.png` - dense protected woodland and tree HP impacts
@@ -236,3 +311,63 @@ Inspect these captures:
 - `tide_game_over.png` - locked all-trees-destroyed game-over screen
 
 No NPC name labels or toast banners should be visible in any capture.
+
+
+## PB expansion acceptance (2026-10-24)
+
+The earlier PB expansion run reported **496 checks, PASS, exit 0**. Its separate PB suite reported **56 checks, PASS, exit 0**. The latest HUD/battle results are recorded below. The native PB review reports **PASS, exit 0**; its fourteen checks use actual mouse/touch events and real-time construction. Captures were inspected at 1280x720. All runs use separate temporary user data and leave live progress untouched.
+
+Commands:
+
+```powershell
+powershell -File tools/test_isolated.ps1 -Godot <console-exe>
+powershell -File tools/test_pb_isolated.ps1 -Godot <console-exe>
+powershell -File tools/test_pb_isolated.ps1 -Godot <console-exe> -Native -Scene res://tools/pb_review.tscn
+```
+
+- PB (Protect BESUT) replaces the title; the creator credit is permanent at the bottom. The old Permanent daytime footer is absent.
+- Orange builders, blue water fighters, green planters and black swordsmen have distinct appearances and jobs. Each starts with one; hiring and worker deaths survive saves. Existing Continue saves keep their workers. Ordinary residents shelter instead of performing specialist combat.
+- Every house, including former ruins, has persistent HP and an archer hut. One main-house upgrade controls the whole village tier (houses, archer huts, fences and specialist worker baseline). The main house must be intact and diamond cost is charged once. Arrow intervals are 2.1/1.7/1.3/1.0/0.7 seconds; destroyed houses disable their archers.
+- Only the central house is enterable. Touching it opens a furnished interior, brings the companion inside and restores health using the current house tier. There is no mattress interaction. The doorway returns player and pet outside; mandatory post-defeat recovery must finish first.
+- Two clickable portals sit inside the two mouths of a rocky hill at the map’s far northern edge. Clicking opens their respective monster/tournament selector.
+- The following pet attacks nearby enemies and carries its HP overhead. Boss HP is overhead too; the former screen boss bar is removed.
+- Dungeon enemies enter a persistent chase immediately. Touching or damaging the boss alerts every survivor, with routes around dungeon obstacles.
+- A clickable purple NPC with a question mark opens the current mission. The top Journal panel is removed; tutorial arrows remain available.
+- Each pet fight uses a different full-arena supplied background without combatant boxes. Neither pet acts until an available power is chosen; the player acts first, followed by one enemy reply. The supplied GIF is retained and its first frame is used as the Godot background.
+
+## HUD, phase tutorial and three-power duels (2026-10-24)
+
+The earlier HUD/battle update passed **494 checks, exit 0**. The focused PB suite passes **86 checks, exit 0**. The native HUD/battle review passes **22 checks, exit 0**, using actual touch events at 1280×720 and 832×480. The separate native PB review passes fourteen checks, including furnished home and all five arena backgrounds. Logs contain no FAIL, SCRIPT ERROR or ERROR entries. All runs use temporary user data and preserve live progress.
+
+```powershell
+powershell -File tools/test_pb_isolated.ps1 -Godot <console-exe> -Native -Scene res://tools/hud_battle_review.tscn
+```
+
+- Cave entrances occupy the far northern edge, with both clickable portals accessible.
+- Battles fill the arena with one image; both pets have three separate cooldowns. Player action precedes the enemy reply, and idle player turns never auto-resolve.
+- Only the day/night clock and Menu occupy the upper HUD. Player HP/MP/XP and level appear overhead; pet HP/XP appear overhead. Gold and diamond balances appear in shops.
+- HP/mana potion shortcuts are absent; Pack provides the potion actions beside the joystick. Menu provides Build settlement and Finish building.
+- The home has four visible accessories: chest, wardrobe, weapon rack and pet bed.
+- New journeys grant exactly one builder, water keeper, planter and swordsman; additional workers are bought. Existing worker ownership survives Continue.
+- Daytime and nighttime tutorials switch automatically and preserve each phase’s unfinished lessons.
+
+## Village tiers, loading and picture guide (2026-10-24)
+
+The full suite passes **494 checks, exit 0**. The focused headless scene and native touch review each pass **99 checks, exit 0**, with no FAIL, SCRIPT ERROR or ERROR entries. Native captures were inspected at 1280×720 and 832×480, including separate boss-name/HP text and readable night tutorial arrows. The retained PB suite passes 86 checks, and the native PB regression review passes fourteen checks. All runs use temporary user data.
+
+Run the full suite, then the focused scene with and without a renderer. The focused native scene uses real touch events at 1280×720 and 832×480; the headless variant activates button signals because no display is present.
+
+```powershell
+powershell -File tools/test_pb_isolated.ps1 -Godot <console-exe> -Scene res://tools/tide_test.tscn
+powershell -File tools/test_pb_isolated.ps1 -Godot <console-exe> -Scene res://tools/village_upgrade_test.tscn
+powershell -File tools/test_pb_isolated.ps1 -Godot <console-exe> -Native -Scene res://tools/village_upgrade_test.tscn
+```
+
+- New Journey, Continue, portal travel, home entry/exit and return to title show a loading cover and fade. Current and newly built players stay locked until the cover leaves. Modals and pet arenas fade in.
+- Buku BESUT opens from Menu. Its 23 NPC pages, five monster pages and ten boss pages explain actions using sprites and visual symbols, with character names as headings. It has no explanatory paragraphs. Page turn and Close work at both landscape sizes.
+- A new journey has one worker per specialist role. Main-house Levels 2-5 provide a baseline of 2-5 of each role. Hiring can add workers beyond that baseline within role limits, and ownership/deaths persist.
+- One main-house upgrade charges once and synchronizes the village house, archer-hut and fence tiers. Previews show the house, hut, fence and baseline worker count for each level. A ruined main house must be repaired before upgrading.
+- NPC archer huts replace roof machine guns; arrows visibly damage fire monsters and sea urchins. The shared home tier controls their fire interval, damage and range. Destroyed houses disable their archers.
+- Fences progress from wood to wood with a stone base, stone walls, fortified posts and battlements. Changing level refreshes existing fence sprites and survives save/load.
+- Night lessons retain the pointer without an extra dark overlay. The level-one portal is the only portal shown during that training. Other bosses cannot complete its final lesson; defeating The Grotto Warden ends that tutorial. All ten bosses show their distinct names above their HP.
+- Continue after finishing daytime lessons retains the unfinished nighttime tutorial and activates it at the next night. Build remains in Menu.

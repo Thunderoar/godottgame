@@ -1,4 +1,4 @@
-# Save The World — Tidesworn
+# PB (Protect BESUT)
 
 A playable 2D pixel-art survival action-RPG vertical slice for **Godot 4.7.2**.
 
@@ -27,23 +27,18 @@ notes are in [`docs/LEGACY_CONVERSION.md`](docs/LEGACY_CONVERSION.md).
 | --- | --- | --- |
 | Move | WASD / Arrow keys | Bottom-left joystick |
 | Attack | F | Bottom-right **Strike** |
-| Interact / talk / enter / sleep / gather | E | Bottom-right **Use** |
-| Backpack | I | **Pack** at top-left |
-| Settlement editor | B | **Build** at top-left |
-| Health potion | Q | **HP** |
-| Mana potion | R | **MP** |
+| Interact / enter home / gather | E | Bottom-right **Use** |
+| Backpack / potions | I | **Pack** beside joystick |
+| Settlement editor | B | Menu → **Build settlement** / **Finish building** |
 | Close modal | Esc | **Close** |
 
-The backpack and Build buttons are deliberately away from the movement joystick
-and combat buttons. There is no minimap and no collect button: loot is collected
+Pack sits beside the movement joystick; Build is inside Menu. HP and mana potions are used from Pack. There is no minimap and no collect button: loot is collected
 automatically by touch. Floating NPC name labels and timed pop-up notifications
-have been removed; persistent HUD panels and the journal carry that information.
+have been removed; persistent HUD panels and the purple mission guide carry that information.
 
 ## New Journey tutorial
 
-Every new game starts an eight-step, non-blocking tutorial covering:
-movement, combat, automatic item collection, shops, house upgrades, companions,
-portals and village defence. **Next** advances; **Skip** dismisses it.
+New games teach seven daytime lessons (movement, gathering, shopping, Pack, workers, housing and feeding a pet) and three nighttime lessons (fire monsters, portals and a boss). Only completing the current action advances the lesson. Only the Level 1 Tidebound Grotto boss is required for portal training. At night the tutorial retains its pointer without adding a dim overlay. A time change switches to that phase’s unfinished lessons; returning to daylight resumes daytime progress. Skip hides the tips, and Menu can reopen them.
 
 ![Tutorial](docs/screenshots/tide_tutorial.png)
 
@@ -59,8 +54,8 @@ hero's weapon discipline while sharing armour and shields.
 
 ## Settlement systems
 
-### Permanent daytime
-The world is locked in permanent daytime. There is no day/night cycle or timer.
+### Day and night
+A journey starts with a peaceful 180-second day, followed by a 180-second night. The HUD counts down each phase. Fire monsters and sea urchins spawn only at night. Survivors keep fighting after sunrise, including after returning home or loading a save.
 
 ### Lively residential village
 The fenced settlement contains three shops, Bram's cottage service, six garden
@@ -70,10 +65,10 @@ gardening, carpentry, wood hauling, animal keeping, farming, trading, stable wor
 and two village defenders. Four residents can join the defence.
 
 ### Custom settlement editing
-Press **B** or the top-left **Build** button to open the settlement editor.
+Press **B** or Menu → **Build settlement** to open the settlement editor.
 A marked building area appears. Drag the house, shop groups, fence runs, garden
 beds and decorations with mouse or touch; positions are grid-snapped, clamped to
-the area and saved. Press **Done** to resume play.
+the area and saved. Choose Menu → **Finish building** to resume play.
 
 ![Settlement editor](docs/screenshots/tide_build.png)
 
@@ -81,17 +76,27 @@ the area and saved. Press **Done** to resume play.
 While the player is in a portal, raiders may attack from **both the sea and the
 forest**. The persistent emergency HUD marks the danger. The player is never
 teleported and portal combat is never forcibly interrupted. Returning through
-the Shore Gate spawns the raiders, residents flee or fight according to their
-role, defenders automatically attack, and buildings and resident cottages take
+the Shore Gate spawns sea urchins, residents seek intact houses for shelter,
+and buildings and resident cottages take
 visible damage. The **73 forest trees have persistent HP**: forest monsters
-strike them with leaf/shake VFX and synthesized impact SFX, damaged trees show
-an HP bar, a tree falls when its health reaches zero, and losing every tree
-triggers a locked game-over screen. Eight forest monsters patrol the woodland
-outside raids, with three more joining during an emergency.
+ignite mature trees with visible flames and ongoing fire damage. Damaged trees
+show an HP bar and disappear at zero health. One blue-clothed water keeper starts in the village. They attack fire monsters with water and heal burning trees by 5 HP every 1.25 seconds. Green planters handle replanting. The Worker Shop hires extra specialists or replaces fallen workers. Fire monsters only attack mature trees, never players.
+Saplings grow for 30 seconds and cannot be attacked until mature. Losing all
+mature trees with no planted saplings triggers a dry-orange terrain animation,
+dark green sea and stranded dead sea life before the locked game-over screen.
+Night replenishes the woodland to twenty-four fire monsters and the beach to six sea urchins. Raids can raise the fire population to thirty. Existing survivors remain active throughout the day.
 
-Forest monsters attack trees without waiting for the player. As soon as the
-player enters a monster's line of sight, it immediately targets the player,
-charges and attacks. Every defeated raider grants gold; clearing all raiders
+Beached sea rubbish becomes sea urchins, which attack trees, fences, houses and
+exposed residents. Houses and fence runs have persistent individual HP. During
+danger, residents walk into an intact house and become protected; loss of all
+shelters leaves them vulnerable to permanent death for that journey. One orange builder initially repairs damaged houses and fences in daylight. Each job takes ten seconds of work after arrival; nighttime pauses unfinished work. Extra builders can be hired from the Worker Shop. Damage, recruitment and resident deaths survive saves.
+
+Every merchant stands inside a named shop. Click or touch the stall to open it directly; the keyboard interaction also remains available. New
+players receive one of ten action-based missions at a time. Dotted arrows on
+the ground follow paths around obstacles; the old bottom arrow notification bar
+is removed. A tutorial spotlight dims the rest of the screen and points at the exact action to take. Mission progress resumes after Continue; tips can be reopened in Menu.
+
+Fire monsters only attack mature trees. Black swordsmen fight sea urchins. In a dungeon, regular monsters pursue the player immediately; approaching or damaging the boss calls all living monsters to defend it. Every defeated raider grants gold; clearing all raiders
 restores the safe state.
 
 ![Protected forest](docs/screenshots/tide_forest.png)
@@ -110,7 +115,7 @@ guard to open a persistent sea-cleaning report instead of a timed notification.
 - Purchase debounce, insufficient-funds rejection, data-driven prices.
 - House upgrades accept **diamonds only** at Bram's dedicated **Construction
   Shop**, with a visible five-step Level 1-5 progression.
-- Five cottage levels and sleep recovery at **10 / 8 / 6 / 4 / 2 seconds**.
+- Five main-house levels and indoor recovery at **10 / 8 / 6 / 4 / 2 seconds**.
 - Coastal Guard rubbish catches award exactly **+1 Gold** without a pop-up.
 - Beached rubbish transforms into a gold-rewarding monster instead.
 - Driftwood gathering and selling provides a safe gold source.
@@ -124,6 +129,8 @@ guard to open a persistent sea-cleaning report instead of a timed notification.
 
 ## Companions and healing
 
+The central home contains a chest, wardrobe, weapon rack and pet bed. New journeys grant one builder, water keeper, planter and swordsman; further workers are purchased from the Worker Shop. Existing Continue saves keep their workers; a higher house level raises the baseline.
+
 - Starter **Ember** fox is granted automatically.
 - Companions provide gradual healing, automatic attacks and periodic shields;
   levels strengthen all three abilities.
@@ -135,14 +142,13 @@ guard to open a persistent sea-cleaning report instead of a timed notification.
 
 ## Two battle portals
 
-Two gates stand side by side on the north path:
+Two gates sit inside twin cave mouths at the far northern edge of the map:
 
 - **Monster Battle Portal** — opens the ten-level campaign, each with at least
   ten regular monsters and one boss. Boss ability sets include punches,
   projectiles, charges, area slams and a combined projectile-charge pattern.
 - **Pet Battle Portal** — opens a five-level 1v1 companion tournament. Both pets
-  choose from **Attack, Guard and Recover** during a two-second window; when the
-  timer ends, both chosen skills execute simultaneously. A victory grants Gold,
+  have **Serang**, **Perisai** and **Kuasa Khas**, with separate 2/5/8-second cooldowns for each pet. The player acts first, followed by one enemy reply, then the next player turn waits for input. Each arena uses one full background without combatant cards. A victory grants Gold,
   pet XP, unlocks the next duel and always raises the companion's level.
 
 ![Paired battle portals](docs/screenshots/tide_lobby_portal.png)
@@ -189,10 +195,10 @@ rules (see `docs/VISUAL_OVERHAUL.md` for the design decisions):
   and camera zoom sliders. Zoom spans 28–64 (38 default), with smooth changes
   and device-level persistence. The anchored HUD scales without moving controls
   off-screen; touch targets retain at least 44 physical pixels. The top-right
-  VITALS panel is removed; the player's world HP/MP indicator and XP bars remain.
+  VITALS panel is removed. Player HP/MP/XP and level appear overhead; the pet has overhead HP/XP. Only the phase clock and Menu remain at the top. Gold and diamonds appear in shops.
 - **Comfort settings.** Settings gains Effects quality (low/med/high) and
   Reduce motion. Touch buttons show keycap hints on keyboard layouts, a
-  cooldown sweep on Strike, count badges on potions and a context-sensitive
+  cooldown sweep on Strike and a context-sensitive
   Use icon.
 
 ## Project structure
@@ -252,10 +258,18 @@ see [`docs/ANDROID_BUILD.md`](docs/ANDROID_BUILD.md).
 
 - Music and ambient audio are not implemented; gameplay cues use generated SFX.
 - Android signing and device profiling still need to be run.
-- Building damage is visible after an emergency but has no repair interaction yet.
+- Orange builders repair damaged houses and fences by day, taking ten seconds after arrival.
 - Boss abilities are implemented as one primary pattern per boss rather than
   full multi-phase move sets.
 - Pet duels are resolved in an animated arena panel rather than a separate
   walkable world scene.
 - Additional resident dialogue and ambient animal species can follow.
 # godottgame
+
+The Construction Shop upgrades the main house through five levels. Its level controls every village house, archer hut and fence, and guarantees at least that many workers of each specialist role. Additional workers can still be purchased. Wooden fences gain a stone base at Level 2, become stone at Level 3 and gain fortified towers and battlements at Levels 4-5. Sheltered NPC archers replace roof machine guns, firing every 2.1 / 1.7 / 1.3 / 1.0 / 0.7 seconds. All five supplied pet battle backgrounds are installed, including a PNG first frame of the supplied GIF. Each duel waits for one of three powers each round.
+
+## Loading and picture guide
+
+New Journey, Continue, entering/leaving home, portal travel and returning to title use a loading cover with a fade. Opening shops, menus, the book and pet arenas uses a short entry fade. Inputs remain locked during world transitions.
+
+Menu → **Buku BESUT** opens a picture guide for NPCs, monsters and all ten named bosses. Each page identifies the character by name and explains its actions using game sprites, arrows, health symbols, daylight/night symbols and timers rather than explanatory sentences. Page controls and Close work with touch. Build remains inside Menu.

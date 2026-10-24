@@ -16,7 +16,7 @@ func open_inventory() -> void:
 
 func _rebuild() -> void:
 	_clear_content()
-	add_body_text("Gold %d     Diamonds %d     Level %d     XP %d/%d" % [GameState.gold(), GameState.diamonds(), int(GameState.data.level), int(GameState.data.xp), int(GameState.data.xp_next)], GameUI.GOLD, 17)
+	add_body_text("Level %d     XP %d/%d" % [int(GameState.data.level), int(GameState.data.xp), int(GameState.data.xp_next)], GameUI.TEAL, 17)
 	content.add_child(GameUI.spacer(2))
 	# Equipment cards.
 	add_section("EQUIPPED")
