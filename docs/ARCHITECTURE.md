@@ -14,7 +14,8 @@ Game (game.tscn)
 │   ├── HousePanel / VictoryPanel / DefeatPanel
 │   └── fade overlay (no toast layer)
 └── TitleLayer
-    └── Save The World title + Qayyim/Farhan/Ayiz cards + Continue
+    └── PB main menu → Start Game → Choose Your Road → Begin Journey
+        (Continue Journey resumes the saved world directly)
 ```
 
 `Game` owns world lifetimes, modal input locking, portal timer, emergency
@@ -234,8 +235,18 @@ over their respective heads and use `GameState.data.xp_next` and
 
 - Day and night each last 180 seconds. The HUD shows the phase/countdown and Lobby blends a readable night tint over three seconds (instant with Reduce Motion). Only night can create new fire monsters or sea urchins, including emergency and rubbish paths.
 - Living home enemies are captured as primitive kind/position/HP/raid records in `home_monsters` before saves and world transitions. Lobby restores these even during daylight. Saved `home_wave` prevents duplicate night refills. New journeys reset both clock and enemies.
-- `TitleScreen` shows **SAVE THE WORLD**, the creator credit, Continue and the
-  three-hero **CHOOSE YOUR ROAD** cards.
+- `TitleScreen` boots to the **PB (Protect BESUT)** main menu with Start Game,
+  Continue Journey, How to Play, Settings and Credits. Start Game opens the
+  separate **CHOOSE YOUR ROAD** page. Cards preview a hero; Begin Journey emits
+  the selected hero only after a separate confirmation if a save exists.
+  Browsing and Back do not save or construct a world. Continue loads the saved
+  village/expedition directly, and a failed load leaves inline feedback on the
+  usable menu without changing the file. Both handoffs reject repeat activation.
+- `TitleBackdrop` draws a presentation-only dusk harbour using cached village
+  art. It consumes no gameplay RNG and owns no world clock. Low quality or
+  Reduce Motion stops water/boat animation; the complete static scene remains.
+  Title settings use `GameSettings` before a journey exists. Title overlays own
+  their focus and Escape/back paths; the world HUD settings panel stays separate.
 - `MissionDB.DAY_STEPS` selects seven civilian lessons and `NIGHT_STEPS` selects three combat lessons. `GameState.completed_missions` stores completed event IDs, and `mission_step()` computes the next unfinished lesson for the active phase. Legacy numeric progress is migrated on load. Only the current lesson’s real event advances progress; Continue resumes
   the saved lesson. `TutorialSpotlight` darkens the rest of the screen and draws an arrow around the current control, stall, or modal action. It does not intercept input. Tips can be hidden/reopened from Menu.
 

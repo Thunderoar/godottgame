@@ -22,14 +22,19 @@ func _ready() -> void:
 	_check(GameState.has_existing_save == false, "clean save state")
 	_check(_has_label(game.title_screen, "PB (Protect BESUT)"), "title reads PB (Protect BESUT)")
 	_check(_has_label(game.title_screen, "Created by Qayyim, Farhan & Ayiz"), "creator credit is present")
-	_check(_has_label(game.title_screen, "CHOOSE YOUR ROAD"), "Choose Your Road menu is on the title screen")
+	_check(not game.title_screen._heroes.is_visible_in_tree(), "Choose Your Road stays hidden until Start Game")
 	_check(CharacterDB.ids() == ["qayyim", "farhan", "ayiz"], "three male heroes are defined")
 	_check(CharacterDB.weapon_style("qayyim") == "sword", "Qayyim uses a sword")
 	_check(CharacterDB.weapon_style("farhan") == "hammer", "Farhan uses a hammer")
 	_check(CharacterDB.weapon_style("ayiz") == "bow", "Ayiz uses a bow")
 	_check(not ItemDB.exists("pet_revival"), "Pet Revival Potion is removed")
 
-	await game.call("_on_character_selected", "qayyim")
+	await TitleChecks.run(game, _check)
+	game.title_screen._begin_button.pressed.emit()
+	for frame in 100:
+		if is_instance_valid(game.world) and not game._transitioning:
+			break
+		await get_tree().create_timer(0.05).timeout
 	await get_tree().process_frame
 	await get_tree().process_frame
 	hud = game.get("hud")

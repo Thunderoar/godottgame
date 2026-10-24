@@ -25,7 +25,9 @@ static artwork. [Art direction](docs/ART_DIRECTION.md),
 
 1. Open `project.godot` in **Godot 4.7.2**.
 2. Press **F5**. The main scene is `res://scenes/game.tscn`.
-3. Choose Qayyim, Farhan or Ayiz from **Choose Your Road**.
+3. Click **Start Game**, select Qayyim, Farhan or Ayiz in **Choose Your Road**,
+   then click **Begin Journey**. **Continue Journey** resumes your saved hero
+   directly. Starting over asks before replacing existing progress.
 
 The original converted Cainos demo remains at `res://scenes/main.tscn`; its
 notes are in [`docs/LEGACY_CONVERSION.md`](docs/LEGACY_CONVERSION.md).

@@ -162,9 +162,8 @@ func new_game(character_id: String = DEFAULT_CHARACTER) -> void:
 
 
 func continue_game() -> bool:
-	if not has_existing_save:
+	if not has_existing_save or not load_game():
 		return false
-	load_game()
 	game_over_active = false
 	return not data.is_empty()
 
@@ -1399,7 +1398,10 @@ func load_game() -> bool:
 		return false
 	var text := file.get_as_text()
 	file.close()
-	var parsed: Variant = JSON.parse_string(text)
+	var json := JSON.new()
+	if json.parse(text) != OK:
+		return false
+	var parsed: Variant = json.data
 	if not parsed is Dictionary:
 		return false
 	var loaded: Dictionary = parsed

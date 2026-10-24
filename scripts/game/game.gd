@@ -105,6 +105,8 @@ func _on_continue_requested() -> void:
 	if _transitioning:
 		return
 	if not GameState.continue_game():
+		if is_instance_valid(title_screen):
+			title_screen.show_continue_error()
 		return
 	_remove_title()
 	hud.visible = true

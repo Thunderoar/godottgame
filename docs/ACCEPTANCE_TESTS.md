@@ -306,7 +306,8 @@ results, negative probes and visual evidence.
 
 Inspect these captures:
 
-- `tide_title.png` - title, credit and responsive character cards
+- `tide_title.png` - boot menu, harbour, Start Game and creator credit
+- `tide_heroes.png` - separate hero-selection page after Start Game
 - `tide_lobby.png` - XP bars, mission arrows, Pack/Build, lively village
 - `tide_menu.png`, `tide_settings.png` - menu and settings
 - `tide_dialogue.png` - exact Unisza dialogue
@@ -487,6 +488,35 @@ powershell -File tools/test_pb_isolated.ps1 -Godot <console-exe> -Native -Scene 
 ```
 
 - PB (Protect BESUT) replaces the title; the creator credit is permanent at the bottom. The old Permanent daytime footer is absent.
+- The boot menu hides hero selection until **Start Game**. Hero cards only
+  preview a choice; **Begin Journey** starts it. Back/Escape preserves the
+  pending choice without creating a world or changing saved progress.
+- **Continue Journey** shows the saved hero, level and destination and resumes
+  the village or active dungeon directly. A missing/unreadable save keeps the
+  menu usable, displays inline feedback and leaves the file untouched.
+- Starting over with an existing save requires **Replace Save & Begin**.
+  **Keep Saved Journey** receives initial keyboard focus. Cancellation preserves
+  the exact save bytes; repeat handoffs cannot start duplicate journeys.
+- Title Settings, How to Play and Credits have mouse/touch and keyboard paths.
+  Overlay focus stays within the overlay and Escape restores the page. Title
+  settings persist through GameSettings without requiring a player save.
+- At 1280x720 and 832x480 every complete hero card and both journey actions fit
+  on screen. Narrow layouts stack hero cards inside a scrollable region while
+  retaining Back/Begin. Low/Reduce Motion retains the complete static harbour.
+
+The title regressions are included through `TitleChecks` in the isolated game
+gate. For real-renderer input and screenshot verification, run:
+
+```sh
+./tools/review_title.sh /absolute/output
+```
+
+This wrapper isolates player data, exercises actual mouse/touch/keyboard input,
+and rejects script errors, failure markers and message-queue overflow even if
+the scene prints PASS. Captures include the fresh/saved menu, every hero state,
+settings/guide/credits, replacement confirmation, compact/narrow layouts and
+failed Continue. See [TITLE_SCREEN_REDESIGN.md](TITLE_SCREEN_REDESIGN.md).
+
 - Orange builders, blue water fighters, green planters and black swordsmen have distinct appearances and jobs. Each starts with one; hiring and worker deaths survive saves. Existing Continue saves keep their workers. Ordinary residents shelter instead of performing specialist combat.
 - Every house, including former ruins, has persistent HP and an archer hut. One main-house upgrade controls the whole village tier (houses, archer huts, fences and specialist worker baseline). The main house must be intact and diamond cost is charged once. Arrow intervals are 2.1/1.7/1.3/1.0/0.7 seconds; destroyed houses disable their archers.
 - Only the central house is enterable. Touching it opens a furnished interior, brings the companion inside and restores health using the current house tier. There is no mattress interaction. The doorway returns player and pet outside; mandatory post-defeat recovery must finish first.
