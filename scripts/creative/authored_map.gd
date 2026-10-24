@@ -30,7 +30,7 @@ func paint(layer: String, at: Vector2i, material: String) -> void:
 	emit_changed()
 
 func snapshot() -> Dictionary:
-	return {"layers": layers.duplicate(true), "objects": objects.duplicate(true), "seed": seed_value, "layout": {"anchors": layout.anchors.duplicate(true), "routes": layout.routes.duplicate(true), "zones": layout.zones.duplicate(true), "scenery": layout.scenery.duplicate(true), "version": layout.version, "terrain_bake_path": layout.terrain_bake_path, "terrain_bake": layout.terrain_bake, "terrain_bake_hash": layout.terrain_bake_hash, "terrain_palette_hash": layout.terrain_palette_hash} if layout else {}}
+	return {"layers": layers.duplicate(true), "objects": objects.duplicate(true), "seed": seed_value, "layout": {"anchors": layout.anchors.duplicate(true), "routes": layout.routes.duplicate(true), "zones": layout.zones.duplicate(true), "scenery": layout.scenery.duplicate(true), "activities": layout.activities.duplicate(true), "version": layout.version, "terrain_bake_path": layout.terrain_bake_path, "terrain_bake": layout.terrain_bake, "terrain_bake_hash": layout.terrain_bake_hash, "terrain_palette_hash": layout.terrain_palette_hash} if layout else {}}
 
 func restore(state: Dictionary) -> void:
 	seed_value = int(state.get("seed", seed_value))
@@ -42,6 +42,7 @@ func restore(state: Dictionary) -> void:
 		layout.routes.assign(spatial.get("routes", []).duplicate(true))
 		layout.zones.assign(spatial.get("zones", []).duplicate(true))
 		layout.scenery.assign(spatial.get("scenery", []).duplicate(true))
+		layout.activities.assign(spatial.get("activities", []).duplicate(true))
 		layout.version = int(spatial.get("version", 1))
 		layout.terrain_bake_path = str(spatial.get("terrain_bake_path", ""))
 		layout.terrain_bake = spatial.get("terrain_bake", null)

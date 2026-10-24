@@ -27,8 +27,15 @@ func _ready() -> void:
 	for fixture in [["spawn", Vector2(34, 24.3)], ["market", Vector2(24, 22)], ["market-home", Vector2(29, 23)], ["portals", Vector2(34, 13)], ["forest-edge", Vector2(46, 22)], ["forest-interior", Vector2(55, 22)], ["beach-turtle", Vector2(14, 28)], ["jetty-ship", Vector2(9, 28.5)], ["farms-residential", Vector2(40, 28)], ["besut", Vector2(29.5, 28.3)], ["west-cottages", Vector2(15, 17)]]:
 		await _look(fixture[1])
 		await _shot(fixture[0])
+	GameSettings.set_camera_zoom(64, false)
+	await _look(Vector2(53.8, 23.1))
+	await _shot("deep-forest")
+	GameSettings.set_camera_zoom(38, false)
 	await _overview()
 	await _shot("overview")
+	game.hud.visible = false
+	await _shot("overview-clean")
+	game.hud.visible = true
 	game.world.camera.set_process(true)
 	game.world.camera.set_physics_process(true)
 	GameSettings.set_reduce_motion(false, false)
@@ -85,7 +92,7 @@ func _ready() -> void:
 	GameState.advance_world_clock(205 - float(GameState.data.get("world_time", 0)))
 	_freeze()
 	await get_tree().create_timer(0.4).timeout
-	for fixture in [["night-village", Lobby.SPAWN], ["night-forest", Vector2(53, 22)], ["night-coast", Vector2(12, 27)]]:
+	for fixture in [["night-village", Lobby.SPAWN], ["night-forest", Vector2(53, 22)], ["night-coast", Vector2(12, 27)], ["night-portals", Vector2(34, 13)], ["night-residential", Vector2(15, 17)], ["night-farm", Vector2(40, 28)]]:
 		await _look(fixture[1])
 		await _shot(fixture[0])
 	GameSettings.set_effects_quality("low", false)
@@ -123,8 +130,16 @@ func _ready() -> void:
 		metrics.quality[quality] = {"median_ms": times[90], "p95_ms": times[171], "mean_ms": times.reduce(func(a: float, b: float) -> float: return a + b, 0.0) / 180.0, "draw_calls": draws / 180, "physics_ms": physics / 180, "process_ms": process / 180, "nodes": Performance.get_monitor(Performance.OBJECT_NODE_COUNT), "texture_bytes": Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)}
 	var planner := ResidentRoutes.new(game.world)
 	var plan_start := Time.get_ticks_usec()
-	for at in [Vector2(24.55, 23.1), Vector2(21.95, 20.1), Vector2(27.55, 18.7), Vector2(30.8, 12.3), Vector2(37.2, 12.3), Vector2(41.95, 17.1), Vector2(12.5, 26.9), Vector2(48.2, 20.9)]:
-		planner.path(Lobby.SPAWN, at, false)
+	var distances := {}
+	for id in ["shop_potion", "shop_equipment", "shop_pet", "monster_portal", "pet_portal", "shop_house", "jetty_landing", "forest_defence"]:
+		var path := planner.path(Lobby.SPAWN, game.world._layout.approach(id), false)
+		var distance := 0.0
+		var from := Lobby.SPAWN
+		for point in path:
+			distance += from.distance_to(point)
+			from = point
+		distances[id] = {"distance": distance, "reachable": not path.is_empty()}
+	metrics.arrival_travel = distances
 	metrics.planning_eight_destinations_ms = float(Time.get_ticks_usec() - plan_start) / 1000.0
 	GameSettings.set_effects_quality("high", false)
 	for resident in (game.world as Lobby)._residents: resident.set_physics_process(true)
@@ -187,7 +202,7 @@ func _shot(label: String, settle: float = 0.1) -> void:
 	await RenderingServer.frame_post_draw
 	var img := get_viewport().get_texture().get_image()
 	_verify(img.save_png(output.path_join(label + ".png")) == OK, "capture " + label)
-	manifest.append({"name": label, "world_time": GameState.data.get("world_time", 0), "player": [game.player().position.x, game.player().position.y], "zoom": game.world.camera.zoom.x, "quality": GameSettings.effects_quality(), "reduce_motion": GameSettings.reduce_motion(), "size": [img.get_width(), img.get_height()]})
+	manifest.append({"name": label, "world_time": GameState.data.get("world_time", 0), "player": [game.player().position.x, game.player().position.y], "zoom": game.world.camera.zoom.x, "camera": [game.world.camera.get_screen_center_position().x, game.world.camera.get_screen_center_position().y], "quality": GameSettings.effects_quality(), "reduce_motion": GameSettings.reduce_motion(), "size": [img.get_width(), img.get_height()]})
 
 func _write(filename: String, value: Variant) -> void:
 	var file := FileAccess.open(output.path_join(filename), FileAccess.WRITE)

@@ -1,0 +1,610 @@
+[
+	{
+		"camera": [
+			34.0,
+			23.2999973297119
+		],
+		"name": "spawn",
+		"player": [
+			34.0,
+			24.2999992370605
+		],
+		"quality": "high",
+		"reduce_motion": true,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			24.0,
+			21.0
+		],
+		"name": "market",
+		"player": [
+			24.0,
+			22.5492248535156
+		],
+		"quality": "high",
+		"reduce_motion": true,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			29.0,
+			22.0
+		],
+		"name": "market-home",
+		"player": [
+			29.0,
+			23.0
+		],
+		"quality": "high",
+		"reduce_motion": true,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			34.0,
+			12.0
+		],
+		"name": "portals",
+		"player": [
+			34.0,
+			13.0
+		],
+		"quality": "high",
+		"reduce_motion": true,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			46.0,
+			21.0
+		],
+		"name": "forest-edge",
+		"player": [
+			46.0,
+			22.0
+		],
+		"quality": "high",
+		"reduce_motion": true,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			47.1578979492188,
+			21.0
+		],
+		"name": "forest-interior",
+		"player": [
+			55.0,
+			22.0
+		],
+		"quality": "high",
+		"reduce_motion": true,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			16.8421058654785,
+			26.9999980926514
+		],
+		"name": "beach-turtle",
+		"player": [
+			14.0,
+			28.0
+		],
+		"quality": "high",
+		"reduce_motion": true,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			16.8421058654785,
+			27.4999980926514
+		],
+		"name": "jetty-ship",
+		"player": [
+			9.0,
+			27.5010662078857
+		],
+		"quality": "high",
+		"reduce_motion": true,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			40.0,
+			26.9999980926514
+		],
+		"name": "farms-residential",
+		"player": [
+			40.0,
+			28.0
+		],
+		"quality": "high",
+		"reduce_motion": true,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			29.5,
+			27.2999973297119
+		],
+		"name": "besut",
+		"player": [
+			29.5,
+			28.2999992370605
+		],
+		"quality": "high",
+		"reduce_motion": true,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			16.8421058654785,
+			16.0
+		],
+		"name": "west-cottages",
+		"player": [
+			15.0,
+			16.7684764862061
+		],
+		"quality": "high",
+		"reduce_motion": true,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			53.7999992370605,
+			22.1000003814697
+		],
+		"name": "deep-forest",
+		"player": [
+			53.7999992370605,
+			23.1000003814697
+		],
+		"quality": "high",
+		"reduce_motion": true,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 64.0
+	},
+	{
+		"camera": [
+			31.9999961853027,
+			20.0000019073486
+		],
+		"name": "overview",
+		"player": [
+			53.7999992370605,
+			23.1000003814697
+		],
+		"quality": "high",
+		"reduce_motion": true,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 17.0
+	},
+	{
+		"camera": [
+			31.9999961853027,
+			20.0000019073486
+		],
+		"name": "overview-clean",
+		"player": [
+			53.7999992370605,
+			23.1000003814697
+		],
+		"quality": "high",
+		"reduce_motion": true,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 17.0
+	},
+	{
+		"camera": [
+			34.0,
+			23.2999973297119
+		],
+		"name": "effects-low",
+		"player": [
+			34.0,
+			24.2999992370605
+		],
+		"quality": "low",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			34.0,
+			23.2999973297119
+		],
+		"name": "effects-med",
+		"player": [
+			34.0,
+			24.2999992370605
+		],
+		"quality": "med",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			34.0,
+			23.2999973297119
+		],
+		"name": "effects-high",
+		"player": [
+			34.0,
+			24.2999992370605
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			34.0,
+			23.2999973297119
+		],
+		"name": "reduce-motion",
+		"player": [
+			34.0,
+			24.2999992370605
+		],
+		"quality": "high",
+		"reduce_motion": true,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			34.0,
+			23.2999973297119
+		],
+		"name": "zoom-28",
+		"player": [
+			34.0,
+			24.2999992370605
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 28.0
+	},
+	{
+		"camera": [
+			34.0,
+			23.2999992370605
+		],
+		"name": "zoom-64",
+		"player": [
+			34.0,
+			24.2999992370605
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 64.0
+	},
+	{
+		"camera": [
+			34.0,
+			23.2999973297119
+		],
+		"name": "small-screen",
+		"player": [
+			34.0,
+			24.2999992370605
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			832,
+			480
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			32.1292686462402,
+			23.3999977111816
+		],
+		"name": "traversal-00",
+		"player": [
+			32.2022247314453,
+			24.3999996185303
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			33.7197570800781,
+			23.3999977111816
+		],
+		"name": "traversal-14",
+		"player": [
+			33.7172317504883,
+			24.3999996185303
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			35.5568466186523,
+			23.3999977111816
+		],
+		"name": "traversal-29",
+		"player": [
+			35.3305740356445,
+			24.3999996185303
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			36.1746978759766,
+			23.4143295288086
+		],
+		"name": "combat",
+		"player": [
+			35.6795349121094,
+			24.3999996185303
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 45.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			34.0,
+			23.2999973297119
+		],
+		"name": "night-village",
+		"player": [
+			34.0,
+			24.2999992370605
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 205.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			47.1578979492188,
+			21.0
+		],
+		"name": "night-forest",
+		"player": [
+			53.0,
+			22.0
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 205.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			16.8421058654785,
+			25.9999980926514
+		],
+		"name": "night-coast",
+		"player": [
+			12.0,
+			27.0
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 205.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			34.0,
+			12.0
+		],
+		"name": "night-portals",
+		"player": [
+			34.0,
+			13.0
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 205.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			16.8421058654785,
+			16.0
+		],
+		"name": "night-residential",
+		"player": [
+			15.0,
+			16.7684764862061
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 205.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			40.0,
+			26.9999980926514
+		],
+		"name": "night-farm",
+		"player": [
+			40.0,
+			28.0
+		],
+		"quality": "high",
+		"reduce_motion": false,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 205.0,
+		"zoom": 38.0
+	},
+	{
+		"camera": [
+			40.0,
+			26.9999980926514
+		],
+		"name": "night-low-reduce-motion",
+		"player": [
+			40.0,
+			28.0
+		],
+		"quality": "low",
+		"reduce_motion": true,
+		"size": [
+			1280,
+			720
+		],
+		"world_time": 205.0,
+		"zoom": 38.0
+	}
+]

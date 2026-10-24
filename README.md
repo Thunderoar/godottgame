@@ -72,9 +72,10 @@ hero's weapon discipline while sharing armour and shields.
 A journey starts with a peaceful 180-second day, followed by a 180-second night. The HUD counts down each phase. Fire monsters and sea urchins spawn only at night. Survivors keep fighting after sunrise, including after returning home or loading a save.
 
 ### Lively residential village
-The fenced settlement contains three shops, Bram's cottage service, six garden
-beds, dense flower borders, twelve residents, an animal corner, two horses and
-four neighbouring resident cottages beyond the fence. Routines include fishing,
+The village contains five service shops, six garden beds, twelve residents,
+an animal yard, two stable horses and seven neighbouring cottages. Shared
+western household lanes, a market carpenter, fishing workspaces and paired
+portal courts are authored in one spatial resource. Routines include fishing,
 gardening, carpentry, wood hauling, animal keeping, farming, trading, stable work
 and two village defenders. Four residents can join the defence.
 
@@ -310,3 +311,11 @@ See [world design and measured evidence](docs/WORLD_OVERHAUL_REPORT.md) and the
 [layout/authoring guide](docs/WORLD_LAYOUT.md). Reproduce the actual-renderer tour
 with `./tools/review_world.sh /absolute/output`; gameplay and authoring checks
 remain `./tools/test_isolated.sh` and `./tools/test_creative_editor.sh`.
+
+## Kampung world structure
+
+The Besut-inspired composition, layout-owned routines, local workspaces, Map
+Studio controls, paired runtime evidence and measured limits are documented in
+[the kampung implementation report](docs/KAMPUNG_REDESIGN.md). The verified
+combined gate passes 812 checks, with 63 native graphical checks and 37 editor
+checks plus restart verification.

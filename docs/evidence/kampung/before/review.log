@@ -1,0 +1,44 @@
+Godot Engine v4.7.2.stable.arch_linux.ed1daf0bf (2026-08-17 01:18:38 UTC) - https://godotengine.org
+WARNING: Failed to create wd.xic as the input method or its xim server may not have started yet.
+     at: _create_xic (platform/linuxbsd/x11/display_server_x11.cpp:6347)
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 4.6 (Core Profile) Mesa 26.2.4-arch3.1 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 23.1.1, 256 bits)
+
+Verified isolated user data: /tmp/tidesworn-world-review-Hcl5X8r2/userdata/godot/app_userdata/Save The World
+[OK] capture spawn
+[OK] capture market
+[OK] capture market-home
+[OK] capture portals
+[OK] capture forest-edge
+[OK] capture forest-interior
+[OK] capture beach-turtle
+[OK] capture jetty-ship
+[OK] capture farms-residential
+[OK] capture besut
+[OK] capture west-cottages
+[OK] capture deep-forest
+[OK] capture overview
+[OK] capture overview-clean
+[OK] capture effects-low
+[OK] capture effects-med
+[OK] capture effects-high
+[OK] capture reduce-motion
+[OK] capture zoom-28
+[OK] capture zoom-64
+[OK] capture small-screen
+[OK] capture traversal-00
+[OK] capture traversal-14
+[OK] capture traversal-29
+[OK] player traverses the central lane under actual movement input
+[OK] representative combat attack starts
+[OK] capture combat
+[OK] representative combat delivers actual damage
+[OK] capture night-village
+[OK] capture night-forest
+[OK] capture night-coast
+[OK] capture night-portals
+[OK] capture night-residential
+[OK] capture night-farm
+[OK] capture night-low-reduce-motion
+WORLD_REVIEW PASS {"arrival_travel":{"forest_defence":{"distance":14.6013698577881,"reachable":true},"jetty_landing":{"distance":22.5956139564514,"reachable":true},"monster_portal":{"distance":15.4150099754333,"reachable":true},"pet_portal":{"distance":15.4150099754333,"reachable":true},"shop_equipment":{"distance":12.7662568092346,"reachable":true},"shop_house":{"distance":10.8791944980621,"reachable":true},"shop_pet":{"distance":8.7338719367981,"reachable":true},"shop_potion":{"distance":9.52588653564453,"reachable":true}},"cold_build_ms":229.73,"live_residents":{"median_ms":26.221,"p95_ms":29.327,"physics_ms":2.37965416666666,"resident_count":14},"planning_eight_destinations_ms":14.329,"quality":{"high":{"draw_calls":291.577777777778,"mean_ms":25.4040277777778,"median_ms":24.416,"nodes":1524.0,"p95_ms":30.592,"physics_ms":1.29774444444444,"process_ms":40.0799111111112,"texture_bytes":46000613.0},"low":{"draw_calls":289.0,"mean_ms":18.7047833333333,"median_ms":18.395,"nodes":1524.0,"p95_ms":21.918,"physics_ms":1.61018888888889,"process_ms":24.4857000000001,"texture_bytes":46000613.0},"med":{"draw_calls":290.0,"mean_ms":25.4099944444445,"median_ms":25.034,"nodes":1524.0,"p95_ms":28.937,"physics_ms":0.658666666666667,"process_ms":32.6426555555556,"texture_bytes":46000613.0}},"renderer":"llvmpipe (LLVM 23.1.1, 256 bits)","resolution":[1280,720],"warm_build_ms":27.848,"world_time":45.0}

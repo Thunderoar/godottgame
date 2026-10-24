@@ -416,3 +416,23 @@ imports/tests. Require `WORLD_REVIEW PASS`, exit 0 and no `[FAIL]`, `SCRIPT ERRO
 or `ERROR:` markers. Day/night, effects tiers, Reduce Motion, zoom, small screens,
 real movement frames and a damage-asserted combat encounter are included.
 See WORLD_OVERHAUL_REPORT.md for measured evidence and limits.
+
+## Kampung composition and spatial ownership
+
+`KampungChecks` runs inside the isolated gameplay gate before `WorldChecks`.
+It checks full building-plot overlap, exact player-sized work/animal/gathering
+points and routes, inherited routines for older maps, independent deep copies,
+undo snapshots and bounded artwork caches. All twelve ordinary residents also
+walk to a real authored destination under physics: every step is bounded by
+speed × delta, and arrival is required. A settlement completion hook moves the
+carpenter's workpoints without teleporting the worker; saved independent prop
+positions keep precedence over owner-local defaults.
+
+`tools/kampung_probe.tscn` is the focused spatial subset; run only with verified
+`TIDESWORN_TEST_ROOT` and isolated `XDG_DATA_HOME`. It never substitutes for the
+full gameplay gate. `./tools/test_creative_editor.sh` exercises activity-point
+and scenery-offset controls, native undo/redo, source save/reimport and restart
+in a disposable checkout. `./tools/review_world.sh /absolute/output` records
+paired actual gameplay fixtures, a diagnostic overview, a zoom-64 forest view,
+night districts, settings, movement, combat and software-renderer measurements.
+See [KAMPUNG_REDESIGN.md](KAMPUNG_REDESIGN.md) for actual results and limits.

@@ -14,12 +14,14 @@ static func build(lobby: Lobby, layout: WorldLayout) -> void:
 		var parent_id := str(entry.get("parent", ""))
 		var owner_node: Node2D = holder
 		if not parent_id.is_empty():
-			for node in lobby._placeables:
-				if node.placeable_id == parent_id:
+			for node in lobby.get_children():
+				if (node is SettlementPlaceable and node.placeable_id == parent_id) or (node is Node2D and str(node.get_meta("layout_anchor", "")) == parent_id):
 					owner_node = node
 					break
 		var at: Vector2 = entry.get("position", Vector2.ZERO)
-		var global_at := at if parent_id.is_empty() else owner_node.position + at
+		if not parent_id.is_empty() and owner_node == holder:
+			at += layout.position_of(parent_id)
+		var global_at := at if owner_node == holder else owner_node.position + at
 		if parent_id.is_empty() and layout.route_distance(global_at) < 0.35: continue
 		_add_prop(owner_node, entry, at)
 	# Existing tree silhouettes lead the composition. Understory is clustered at
@@ -59,9 +61,11 @@ static func _add_prop(parent: Node2D, data: Dictionary, at: Vector2) -> void:
 	sprite.scale = Vector2.ONE * PixelArt.PX * float(data.get("scale", 1.0))
 	sprite.position = at
 	sprite.z_index = 5 if not parent is SettlementPlaceable else 1
+	sprite.add_to_group("village_workspace")
 	parent.add_child(sprite)
 
 static func texture(kind: String) -> Texture2D:
+	if kind in KampungArt.KINDS: return KampungArt.texture(kind)
 	var imported := AssetRegistry.get_texture("village/" + kind)
 	if imported: return imported
 	if kind not in ["rope", "tools", "feed", "driftwood", "bench"]: return MonsoonArt.prop(kind)

@@ -116,3 +116,11 @@ static silhouettes, colour, windows and gameplay telegraphs remain.
 
 See [asset workflow](ASSET_WORKFLOW.md), [QA and delivery](MONSOON_AFTERGLOW_REPORT.md)
 and the actual paired captures in `evidence/monsoon/`.
+
+## Kampung compounds
+
+`KampungArt` adds original cached veranda, wakaf, clothesline, banana, drying-rack,
+herb, drain-cover, animal-yard and paired sanctuary artwork. Every kind supports
+an explicit `village/<kind>` AssetRegistry override. It uses the existing semantic
+palette, carries no physics bodies or particles, and remains present on Low and
+Reduce Motion. Context and source references: [KAMPUNG_REDESIGN.md](KAMPUNG_REDESIGN.md).

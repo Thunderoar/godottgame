@@ -1,0 +1,83 @@
+{
+	"arrival_travel": {
+		"forest_defence": {
+			"distance": 14.6013698577881,
+			"reachable": true
+		},
+		"jetty_landing": {
+			"distance": 22.5956139564514,
+			"reachable": true
+		},
+		"monster_portal": {
+			"distance": 15.4150099754333,
+			"reachable": true
+		},
+		"pet_portal": {
+			"distance": 15.4150099754333,
+			"reachable": true
+		},
+		"shop_equipment": {
+			"distance": 12.7609748840332,
+			"reachable": true
+		},
+		"shop_house": {
+			"distance": 14.0142590999603,
+			"reachable": true
+		},
+		"shop_pet": {
+			"distance": 8.7338719367981,
+			"reachable": true
+		},
+		"shop_potion": {
+			"distance": 9.47589111328125,
+			"reachable": true
+		}
+	},
+	"cold_build_ms": 367.024,
+	"live_residents": {
+		"median_ms": 26.32,
+		"p95_ms": 29.735,
+		"physics_ms": 1.56807916666667,
+		"resident_count": 14
+	},
+	"planning_eight_destinations_ms": 16.435,
+	"quality": {
+		"high": {
+			"draw_calls": 301.583333333333,
+			"mean_ms": 27.2802833333333,
+			"median_ms": 26.949,
+			"nodes": 1589.0,
+			"p95_ms": 30.963,
+			"physics_ms": 1.64066111111111,
+			"process_ms": 40.5749944444445,
+			"texture_bytes": 47005305.0
+		},
+		"low": {
+			"draw_calls": 299.0,
+			"mean_ms": 19.7927055555555,
+			"median_ms": 19.688,
+			"nodes": 1589.0,
+			"p95_ms": 22.437,
+			"physics_ms": 0.848583333333333,
+			"process_ms": 26.7721611111111,
+			"texture_bytes": 47010765.0
+		},
+		"med": {
+			"draw_calls": 300.0,
+			"mean_ms": 26.25155,
+			"median_ms": 25.817,
+			"nodes": 1589.0,
+			"p95_ms": 31.523,
+			"physics_ms": 0.922666666666666,
+			"process_ms": 32.6440333333333,
+			"texture_bytes": 47010765.0
+		}
+	},
+	"renderer": "llvmpipe (LLVM 23.1.1, 256 bits)",
+	"resolution": [
+		1280,
+		720
+	],
+	"warm_build_ms": 31.959,
+	"world_time": 45.0
+}

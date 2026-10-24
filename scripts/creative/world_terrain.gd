@@ -58,8 +58,9 @@ static func _make_terrain_image(layout: WorldLayout) -> Image:
 		var material := str(route.get("material", "path"))
 		if material == "deck": continue
 		if not materials.has(material): materials[material] = PixelArt.image(w, h)
-		_paint_path(materials[material], Array(layout.route_points(route)), float(route.get("width", 1.6)), material)
+		_paint_path(materials[material], Array(layout.route_points(route)), float(route.get("width", 1.6)), material, str(route.get("role", "secondary")))
 	for surface in materials.values(): img.blend_rect(surface, Rect2i(0, 0, w, h), Vector2i.ZERO)
+	_paint_sanctuary(img, layout)
 	for entry in layout.anchors:
 		var kind := str(entry.get("kind", ""))
 		var id := str(entry.get("id", ""))
@@ -151,12 +152,13 @@ static func _paint_coast(img: Image, rng: RandomNumberGenerator) -> void:
 		img.set_pixel(x - 1, shore - 10, col.darkened(0.15))
 
 
-static func _paint_path(img: Image, points: Array, width_units: float, material: String = "path") -> void:
+static func _paint_path(img: Image, points: Array, width_units: float, material: String = "path", role: String = "secondary") -> void:
 	var px_points: Array[Vector2] = []
 	for p in points:
 		px_points.append(Vector2(p.x * 32.0, p.y * 32.0))
 	var width_px := width_units * 32.0
-	var base := WorldPalette.color(material).lerp(WorldPalette.color("grass"), 0.23)
+	var base := WorldPalette.color(material).lerp(WorldPalette.color("grass"), 0.38)
+	if role == "informal": base = WorldPalette.color("grass_shadow").lerp(WorldPalette.color("path"), 0.30)
 	if material == "stone": base = WorldPalette.color("stone").lerp(WorldPalette.color("grass_shadow"), 0.18)
 	var light := WorldPalette.color("sand")
 	for i in px_points.size() - 1:
@@ -243,3 +245,18 @@ static func palette_signature() -> int:
 	var swatches: Array = []
 	for key in keys: swatches.append([key, (palette[key] as Color).to_rgba32()])
 	return hash(swatches)
+
+
+static func _paint_sanctuary(img: Image, layout: WorldLayout) -> void:
+	# Rings of inset stones distinguish companion court from ancient combat court.
+	# Both share the same cool material and keep their fronts clear.
+	var stone := WorldPalette.color("stone").lerp(WorldPalette.color("grass_shadow"), 0.25)
+	for id in ["monster_portal", "pet_portal"]:
+		var center := layout.approach(id) / PixelArt.PX
+		var radius := Vector2(73, 30)
+		_blend_ellipse(img, int(center.x), int(center.y), 77, 33, stone, 0.35)
+		for i in 16:
+			var angle := float(i) * TAU / 16.0
+			var point := center + Vector2(cos(angle), sin(angle)) * radius
+			PixelArt.rect(img, int(point.x) - 3, int(point.y) - 2, 7, 4, stone.darkened(0.12))
+			PixelArt.hline(img, int(point.x) - 2, int(point.y) - 2, 5, stone.lightened(0.15))

@@ -172,6 +172,27 @@ static func run(studio: Control) -> void:
 	map_panel.spatial_shown.button_pressed = true
 	map_panel.refresh()
 	check(not map_panel.canvas.spatial_overlay.is_empty(), "shared routes, zones, plots and approach reservations render as overlays")
+	map_panel.spatial_kind.select(4)
+	map_panel._spatial_entries()
+	map_panel.spatial_entry.select(0)
+	map_panel.spatial_vertex.value = 0
+	var before_activity: Dictionary = map_panel.map.snapshot()
+	var activity_point: Vector2 = map_panel.map.layout.activity_points(map_panel.map.layout.activities[0])[0]
+	map_panel._move_layout_point(activity_point + Vector2(0.25, 0))
+	map_panel._commit(before_activity, map_panel.map.snapshot(), "Move work point")
+	check(map_panel.map.layout.activity_points(map_panel.map.layout.activities[0])[0].distance_to(activity_point + Vector2(0.25, 0)) < 0.001, "activity control edits local work coordinates")
+	map_panel._history_step(false)
+	check(map_panel.map.snapshot() == before_activity, "native undo restores activity owners and offsets")
+	map_panel._history_step(true)
+	map_panel.spatial_kind.select(3)
+	map_panel._spatial_entries()
+	map_panel.spatial_entry.select(0)
+	var before_prop: Vector2 = map_panel.map.layout.scenery[0].position
+	var prop_owner := str(map_panel.map.layout.scenery[0].get("parent", ""))
+	map_panel._move_layout_point(map_panel.map.layout.position_of(prop_owner) + before_prop + Vector2(0, 0.25))
+	check(map_panel.map.layout.scenery[0].position.distance_to(before_prop + Vector2(0, 0.25)) < 0.001, "scenery control preserves parent-relative offsets")
+	map_panel.refresh()
+
 	map_panel._save(map_panel.path)
 	var loaded := ResourceLoader.load(map_panel.path, "", ResourceLoader.CACHE_MODE_IGNORE) as AuthoredMap
 	check(loaded.objects[0].id == identity and not map_panel.dirty, "map save/reload preserves object IDs and dirty state")

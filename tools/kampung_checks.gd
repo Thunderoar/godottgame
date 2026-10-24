@@ -1,0 +1,123 @@
+class_name KampungChecks
+extends RefCounted
+## Authored occupation/parcel regressions; all queries use synchronized physics.
+static func run(game: Game, check: Callable) -> void:
+	var lobby := game.world as Lobby
+	var layout := lobby._layout
+	var planner := ResidentRoutes.new(lobby)
+	planner.clearance = WorldLayout.ACTOR_CLEARANCE
+	var parcel_ids: Array[String] = []
+	for entry in layout.anchors:
+		if entry.get("kind", "") in ["house", "shop", "residence", "ruin"]: parcel_ids.append(str(entry.id))
+	var overlaps := PackedStringArray()
+	for i in parcel_ids.size():
+		for j in range(i + 1, parcel_ids.size()):
+			if layout.world_footprint(parcel_ids[i]).intersects(layout.world_footprint(parcel_ids[j])):
+				overlaps.append(parcel_ids[i] + "/" + parcel_ids[j])
+	check.call(overlaps.is_empty(), "kampung: complete building plots do not overlap: " + str(overlaps))
+	for entry in layout.activity_records():
+		var points := layout.activity_points(entry)
+		if entry.get("kind", "") in ["boat", "water_keeper"]: continue
+		var clear := not points.is_empty()
+		for at in points:
+			clear = clear and planner.point_clear(at)
+		check.call(clear, "kampung: activity points occupy clear land: " + str(entry.id))
+		if entry.get("kind", "") != "resident": continue
+		var reachable := true
+		for at in points:
+			reachable = reachable and not planner.path(layout.position_of("arrival"), at, false).is_empty()
+		check.call(reachable, "kampung: exact work destinations reachable: " + str(entry.id))
+	var road_style := layout.copy_layout()
+	road_style.routes[0].role = "informal"
+	check.call(road_style.signature() != layout.signature(), "kampung: road hierarchy changes invalidate the terrain bake")
+	var copy := layout.copy_layout()
+	var original := layout.position_of("shop_house")
+	var moved := layout.resolved([], {"shop_house": [original.x + 1.0, original.y + 0.5]})
+	check.call(moved.activity_points(moved.activity("Rami"))[0].distance_to(layout.activity_points(layout.activity("Rami"))[0] + Vector2(1, 0.5)) < 0.001, "kampung: workshop routine follows saved owner")
+	check.call(moved.position_of("barrel_3").distance_to(layout.position_of("barrel_3") + Vector2(1, 0.5)) < 0.001, "kampung: local prop default follows its workshop")
+	var independent := layout.resolved([], {"shop_house": [original.x + 1, original.y], "barrel_3": [40.0, 24.0]})
+	check.call(independent.position_of("barrel_3") == Vector2(40, 24), "kampung: older independent prop save wins over relative default")
+	copy.activities[0].points[0].offset += Vector2.ONE
+	check.call(copy.activities != layout.activities, "kampung: activity copies are independent source data")
+	var map := lobby._authored_map.copy_map()
+	var snapshot := map.snapshot()
+	map.layout.activities.clear()
+	map.restore(snapshot)
+	check.call(map.snapshot() == snapshot, "kampung: authoring undo restores complete activity data")
+	var old := layout.copy_layout()
+	old.activities.clear()
+	check.call(old.activity_points(old.activity("Rami")) == layout.activity_points(layout.activity("Rami")), "kampung: old custom layouts inherit semantic routines")
+	for kind in KampungArt.KINDS:
+		check.call(KampungArt.texture(kind) != null and KampungArt.texture(kind) == KampungArt.texture(kind), "kampung: bounded cached artwork: " + kind)
+	await _walk_workers(lobby, check)
+	# Exercise the same completion hook used by mouse and touch drags. No actor
+	# assignment: replanning starts from the resident's existing fractional position.
+	var workshop: SettlementPlaceable
+	for node in lobby._placeables:
+		if node.placeable_id == "shop_house": workshop = node
+	check.call(lobby._settlement_editor.building_area.encloses(Rect2(workshop.position - workshop.selection_size * 0.5, workshop.selection_size)), "kampung: workshop selection fits settlement edit area without pickup clamping")
+	var carpenter: Resident
+	for resident in lobby._residents:
+		if resident.resident_name == "Rami": carpenter = resident
+	var before := carpenter.position
+	var before_route := carpenter.waypoints.duplicate()
+	workshop.position += Vector2(0.5, 0)
+	GameState.set_placeable_position("shop_house", workshop.position)
+	lobby.refresh_spatial_layout()
+	check.call(carpenter.position == before and carpenter.waypoints[0].distance_to(before_route[0] + Vector2(0.5, 0)) < 0.001, "kampung: settlement completion moves work destinations without teleporting workers")
+	# Restore through the existing transaction; subsequent gate fixtures create a new game.
+	workshop.position = original
+	GameState.set_placeable_position("shop_house", original)
+	lobby.refresh_spatial_layout()
+	for frame in 6: await game.get_tree().physics_frame
+	print("KAMPUNG_SPATIAL ", JSON.stringify(metrics(layout)))
+	GameState.new_game("qayyim")
+	game.call("_load_lobby", false)
+	for frame in 4: await game.get_tree().physics_frame
+
+static func metrics(layout: WorldLayout) -> Dictionary:
+	var length := 0.0
+	var routes := {}
+	for route in layout.routes:
+		var points := layout.route_points(route)
+		var total := 0.0
+		for i in points.size() - 1: total += points[i].distance_to(points[i + 1])
+		length += total
+		routes[str(route.id)] = snappedf(total, 0.01)
+	var plots := 0.0
+	for entry in layout.anchors:
+		if entry.get("kind", "") in ["house", "shop", "residence", "ruin"]: plots += layout.world_footprint(str(entry.id)).get_area()
+	var shop_distances := {}
+	for id in ["shop_potion", "shop_equipment", "shop_pet", "shop_house", "shop_services"]:
+		shop_distances[id] = snappedf(layout.approach(id).distance_to(layout.position_of("arrival")), 0.01)
+	return {"bounds": [64, 40], "anchors": layout.anchors.size(), "routes": layout.routes.size(), "activities": layout.activities.size(), "scenery": layout.scenery.size(), "route_length": length, "building_plot_area": plots, "arrival_shop_direct_distances": shop_distances, "route_lengths": routes}
+
+
+static func _walk_workers(lobby: Lobby, check: Callable) -> void:
+	var workers: Array[Resident] = []
+	var goals: Array[Vector2] = []
+	var arrived: Array[bool] = []
+	var continuous: Array[bool] = []
+	for resident in lobby._residents:
+		resident.set_physics_process(false)
+		if not resident.has_meta("activity_id") or resident.role == "water_keeper": continue
+		workers.append(resident)
+		goals.append(resident.waypoints[-1])
+		arrived.append(false)
+		continuous.append(true)
+		resident._path_goal = Vector2(INF, INF)
+	for frame in 600:
+		await lobby.get_tree().physics_frame
+		var complete := true
+		for i in workers.size():
+			if arrived[i]: continue
+			var worker := workers[i]
+			var before := worker.position
+			var delta := worker.get_physics_process_delta_time()
+			arrived[i] = worker._walk_to(goals[i], worker.speed, delta)
+			continuous[i] = continuous[i] and before.distance_to(worker.position) <= worker.speed * delta + 0.005
+			complete = complete and arrived[i]
+		if complete: break
+	for i in workers.size():
+		check.call(arrived[i], "kampung: worker physically reaches authored destination: " + workers[i].resident_name)
+		check.call(continuous[i], "kampung: worker moves continuously without jumps: " + workers[i].resident_name)

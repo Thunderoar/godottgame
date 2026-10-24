@@ -66,6 +66,7 @@ func _ready() -> void:
 	var pet_xp_bar := hud.get("_pet_xp_bar") as SegmentedBar
 	_check(xp_bar != null and xp_bar.maximum == int(GameState.data.xp_next), "player XP bar shows the next-level requirement")
 	_check(pet_xp_bar != null and pet_xp_bar.maximum == PetDB.xp_for_level(2), "pet XP bar shows the next-level requirement")
+	await KampungChecks.run(game, _check)
 	await WorldChecks.run(game, _check)
 	await MonsoonChecks.run(game, _check)
 	await _test_day_night()

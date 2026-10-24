@@ -1,0 +1,72 @@
+Godot Engine v4.7.2.stable.arch_linux.ed1daf0bf (2026-08-17 01:18:38 UTC) - https://godotengine.org
+WARNING: Failed to create wd.xic as the input method or its xim server may not have started yet.
+     at: _create_xic (platform/linuxbsd/x11/display_server_x11.cpp:6347)
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 4.6 (Core Profile) Mesa 26.2.4-arch3.1 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 23.1.1, 256 bits)
+
+Verified isolated user data: /tmp/kampung-native/userdata/godot/app_userdata/Save The World
+[OK] audit: legacy GUI migration persists independently of a later new journey
+[OK] audit: joystick centre stays neutral at GUI 0.75
+[OK] audit: joystick right press has no vertical component at GUI 0.75
+[OK] audit: press and drag use consistent coordinate spaces at GUI 0.75
+[OK] audit: joystick centre stays neutral at GUI 1.00
+[OK] audit: joystick right press has no vertical component at GUI 1.00
+[OK] audit: press and drag use consistent coordinate spaces at GUI 1.00
+[OK] audit: joystick centre stays neutral at GUI 1.30
+[OK] audit: joystick right press has no vertical component at GUI 1.30
+[OK] audit: press and drag use consistent coordinate spaces at GUI 1.30
+[OK] audit: hidden joystick releases synthetic movement input
+[OK] audit: freed touch button releases its synthetic action
+[OK] audit: resetting enlarged Strike restores its actual rectangle
+[OK] audit: resetting enlarged joystick restores its actual rectangle
+[OK] audit: resident replans cached path after obstacles change
+[OK] audit: planned corner segments respect actor collision clearance
+[OK] audit: pet completes a detour around a blocking wall
+[OK] audit: pet detour stays continuous and does not cross the wall
+[OK] audit: tree falling invalidates route obstacles after releasing its collider
+[OK] audit: shopper rejects an obstructed counter instead of buying at a fallback point
+[OK] audit: directly frightened customer releases its shop reservation
+[OK] audit: merchant is inside the stall behind its counter art
+[OK] audit: ward, build grid and selection outlines stay proportionate at maximum zoom
+[OK] audit: Reduce Motion stops optional recovery ward rotation and pulse
+[OK] audit: enabling high effects creates dungeon ambience live
+[OK] audit: Reduce Motion immediately hides existing dungeon particles
+[OK] audit: dungeon restores the same emitter without allocation churn
+[OK] audit: Reduce Motion never changes enemy attack cooldown progression
+[OK] audit: optional hit-stop never changes ordinary enemy travel
+[OK] audit: VFX skips queued pools and children of queued worlds
+[OK] audit: window resize refreshes physical hit areas without changing GUI scale at 1280x720
+[OK] audit: physical touch minimum at 1280x720 GUI 0.75
+[OK] audit: native GUI dispatch keeps a centred joystick neutral at 1280x720 GUI 0.75
+[OK] audit: customizing Strike preserves Pack/Build separation at GUI 0.75
+[OK] audit: physical touch minimum at 1280x720 GUI 1.00
+[OK] audit: native GUI dispatch keeps a centred joystick neutral at 1280x720 GUI 1.00
+[OK] audit: customizing Strike preserves Pack/Build separation at GUI 1.00
+[OK] audit: physical touch minimum at 1280x720 GUI 1.30
+[OK] audit: native GUI dispatch keeps a centred joystick neutral at 1280x720 GUI 1.30
+[OK] audit: customizing Strike preserves Pack/Build separation at GUI 1.30
+[OK] audit: window resize refreshes physical hit areas without changing GUI scale at 832x468
+[OK] audit: physical touch minimum at 832x468 GUI 0.75
+[OK] audit: native GUI dispatch keeps a centred joystick neutral at 832x468 GUI 0.75
+[OK] audit: customizing Strike preserves Pack/Build separation at GUI 0.75
+[OK] audit: physical touch minimum at 832x468 GUI 1.00
+[OK] audit: native GUI dispatch keeps a centred joystick neutral at 832x468 GUI 1.00
+[OK] audit: customizing Strike preserves Pack/Build separation at GUI 1.00
+[OK] audit: physical touch minimum at 832x468 GUI 1.30
+[OK] audit: native GUI dispatch keeps a centred joystick neutral at 832x468 GUI 1.30
+[OK] audit: customizing Strike preserves Pack/Build separation at GUI 1.30
+[OK] audit: window resize refreshes physical hit areas without changing GUI scale at 832x480
+[OK] audit: physical touch minimum at 832x480 GUI 0.75
+[OK] audit: native GUI dispatch keeps a centred joystick neutral at 832x480 GUI 0.75
+[OK] audit: customizing Strike preserves Pack/Build separation at GUI 0.75
+[OK] audit: physical touch minimum at 832x480 GUI 1.00
+[OK] audit: native GUI dispatch keeps a centred joystick neutral at 832x480 GUI 1.00
+[OK] audit: customizing Strike preserves Pack/Build separation at GUI 1.00
+[OK] audit: physical touch minimum at 832x480 GUI 1.30
+[OK] audit: native GUI dispatch keeps a centred joystick neutral at 832x480 GUI 1.30
+[OK] audit: customizing Strike preserves Pack/Build separation at GUI 1.30
+[OK] audit: lethal lobby damage returns a living player to recovery
+[OK] audit: home defeat starts exactly one completed recovery transition
+[OK] audit: home recovery preserves inventory, currencies and player progression
+DEEP AUDIT: 63 checks, 0 failures

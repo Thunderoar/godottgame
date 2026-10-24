@@ -130,3 +130,32 @@ the old hashes immediately; Save may embed a customized layout in that selected
 map, while maps without one continue inheriting `village_layout.tres`. A new
 source PNG must be imported before exporting. The native editor runner tests
 baking, saving, reimporting and reopening in a disposable source copy.
+
+## Kampung compounds and activities
+
+The kampung redesign adds `activities` to WorldLayout. Each has a stable `id`,
+`kind`, semantic `owner` and `points` containing an anchor ID plus local `offset`.
+Resident records also carry role, activity and existing combat parameters. Animals,
+gathering piles, the moored boat, guard, student and water keepers use the same
+model. Runtime resolves against the saved/developer/canonical anchor hierarchy.
+Old WorldLayouts without activities inherit the village recipes using their
+existing anchors; new semantic points have canonical fallbacks.
+
+Scenery parents may be residences or semantic anchors as well as movable shops.
+Building children move with their owner; geography-only anchors resolve at world
+construction. Selected independently movable prop anchors and the jetty deck have
+`relative_to` and `offset`. A saved prop remains independent and wins over that
+relative default. Harbour art, mooring, boat, work routes and deck geometry now
+share harbour-relative placement. Coast shape itself remains unchanged.
+
+Map Studio's spatial category list now includes **scenery** and **activities**.
+Move layout point edits a scenery offset relative to its parent, or the selected
+activity point relative to its referenced anchor. Bend / vertex selects that
+activity's point index. The overlay shows work routes; native undo/redo and map
+snapshots include the complete activity collection. Owners/species/roles and new
+point insertion are edited in the resource, alongside the existing graph schema.
+Settlement drag completion refreshes semantic waypoints and route caches without
+repositioning residents. Cosmetic plot-edge bushes consume only decoration RNG.
+Road `role` participates in the bake signature because informal tracks now use
+a different ground treatment. Changing hierarchy alone therefore rejects stale
+terrain art. Source edits still require the explicit bake/import workflow above.

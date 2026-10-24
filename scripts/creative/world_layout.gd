@@ -12,6 +12,7 @@ var terrain_bake: Texture2D
 @export var routes: Array[Dictionary] = []
 @export var zones: Array[Dictionary] = []
 @export var scenery: Array[Dictionary] = []
+@export var activities: Array[Dictionary] = []
 const ACTOR_CLEARANCE := 0.38
 var _route_buckets: Dictionary = {}
 var _reserved_rects: Array[Rect2] = []
@@ -36,6 +37,23 @@ func approach(id: String) -> Vector2:
 	var entry := anchor(id)
 	return entry.get("position", Vector2.ZERO) + entry.get("approach", Vector2.ZERO)
 
+func activity_points(entry: Dictionary) -> Array[Vector2]:
+	var points: Array[Vector2] = []
+	for point in entry.get("points", []):
+		var id := str(point.get("anchor", ""))
+		points.append(position_of(id, village().position_of(id)) + point.get("offset", Vector2.ZERO))
+	return points
+
+func activity(id: String) -> Dictionary:
+	for entry in activity_records():
+		if str(entry.get("id", "")) == id: return entry
+	return {}
+
+func activity_records() -> Array[Dictionary]:
+	# Older custom WorldLayouts have no activity collection. Resolve their
+	# existing anchors against the compatible village routines without migration.
+	return activities if not activities.is_empty() else village().activities
+
 func resolved(objects: Array[Dictionary], saved: Dictionary) -> WorldLayout:
 	var result := copy_layout()
 	for entry in result.anchors:
@@ -46,6 +64,16 @@ func resolved(objects: Array[Dictionary], saved: Dictionary) -> WorldLayout:
 		var stored: Variant = saved.get(id)
 		if bool(entry.get("movable", false)) and stored is Array and stored.size() >= 2:
 			entry.position = Vector2(float(stored[0]), float(stored[1]))
+	# Local anchors follow the resolved owner unless explicitly customized.
+	# Scenery is parented; these independent movable props retain old save IDs.
+	for entry in result.anchors:
+		var parent := str(entry.get("relative_to", ""))
+		if parent.is_empty() or str(entry.get("id", "")) == "recovery" or saved.has(str(entry.get("id", ""))): continue
+		var developer_override := false
+		for object in objects:
+			if object.get("base_id", "") == entry.get("id", ""): developer_override = true
+		if not developer_override:
+			entry.position = result.position_of(parent) + entry.get("offset", position_of(str(entry.id)) - position_of(parent))
 	# Home-bound arrivals/recovery follow the whole cottage; never save defaults.
 	var home_delta := result.position_of("house") - position_of("house")
 	for id in ["arrival", "recovery"]:
@@ -122,7 +150,7 @@ func signature() -> int:
 	for route in routes:
 		var points: Array = []
 		for point in route.get("via", PackedVector2Array()): points.append(_point_key(point))
-		geometry.append([str(route.get("id", "")), str(route.get("from", "")), str(route.get("to", "")), roundi(float(route.get("width", 1.6)) * 10000), str(route.get("material", "path")), points])
+		geometry.append([str(route.get("id", "")), str(route.get("from", "")), str(route.get("to", "")), roundi(float(route.get("width", 1.6)) * 10000), str(route.get("material", "path")), str(route.get("role", "secondary")), points])
 	for zone in zones:
 		var points: Array = []
 		for point in zone.get("polygon", PackedVector2Array()): points.append(_point_key(point))
@@ -135,12 +163,19 @@ static func _point_key(at: Vector2) -> Array:
 func warnings() -> PackedStringArray:
 	var result := PackedStringArray()
 	var ids := {}
-	for collection in [anchors, routes, zones]:
+	for collection in [anchors, routes, zones, scenery, activities]:
 		ids = {}
 		for entry in collection:
 			var id := str(entry.get("id", ""))
 			if id.is_empty() or ids.has(id): result.append("Missing or duplicate spatial ID: " + id)
 			ids[id] = true
+	for entry in activities:
+		if anchor(str(entry.get("owner", ""))).is_empty(): result.append(str(entry.get("id", "")) + ": unknown activity owner")
+		for point in entry.get("points", []):
+			if anchor(str(point.get("anchor", ""))).is_empty(): result.append(str(entry.get("id", "")) + ": unknown activity anchor")
+	for entry in scenery:
+		var parent := str(entry.get("parent", ""))
+		if not parent.is_empty() and anchor(parent).is_empty(): result.append(str(entry.get("id", "")) + ": unknown scenery owner")
 	var reached := {"arrival": true}
 	for iteration in anchors.size():
 		var previous_count := reached.size()
@@ -174,6 +209,7 @@ func copy_layout() -> WorldLayout:
 	result.routes.assign(routes.duplicate(true))
 	result.zones.assign(zones.duplicate(true))
 	result.scenery.assign(scenery.duplicate(true))
+	result.activities.assign(activities.duplicate(true))
 	return result
 
 

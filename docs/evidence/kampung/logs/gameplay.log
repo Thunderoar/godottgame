@@ -1,0 +1,818 @@
+Isolated test artifacts: /tmp/tidesworn-tests-ss6BYGSU
+Godot Engine v4.7.2.stable.arch_linux.ed1daf0bf (2026-08-17 01:18:38 UTC) - https://godotengine.org
+
+Verified isolated user data: /tmp/tidesworn-tests-ss6BYGSU/userdata/godot/app_userdata/Save The World
+[OK] title screen exists
+[OK] clean save state
+[OK] title reads Save The World
+[OK] creator credit is present
+[OK] Choose Your Road menu is on the title screen
+[OK] three male heroes are defined
+[OK] Qayyim uses a sword
+[OK] Farhan uses a hammer
+[OK] Ayiz uses a bow
+[OK] Pet Revival Potion is removed
+[OK] lobby loads after character select
+[OK] player exists
+[OK] starter pet exists
+[OK] Qayyim owns a starter sword
+[OK] starter sword equipped
+[OK] starter pet active
+[OK] starter pet alive
+[OK] new journeys start with two water keepers
+[OK] player keeps its world HP/MP indicator
+[OK] obsolete top-right VITALS construction is removed
+[OK] no minimap exists
+[OK] emergency HUD exists
+[OK] recovery HUD exists
+[OK] touch joystick exists
+[OK] touch attack maps to attack action
+[OK] touch interact maps to interact action
+[OK] backpack touch action exists
+[OK] backpack sits away from movement/combat controls
+[OK] settlement Build button exists
+[OK] new journeys begin with a peaceful three-minute day
+[OK] no home monsters spawn on the first day
+[OK] New Journey tutorial starts on a new game
+[OK] New Journey teaches ten sequential actions
+[OK] lobby interactions present (74)
+[OK] in-game pop-up notifications are removed
+[OK] toast calls cannot create pop-up notifications
+[OK] player XP bar shows the next-level requirement
+[OK] pet XP bar shows the next-level requirement
+[OK] kampung: complete building plots do not overlap: []
+[OK] kampung: activity points occupy clear land: Sami
+[OK] kampung: exact work destinations reachable: Sami
+[OK] kampung: activity points occupy clear land: Hana
+[OK] kampung: exact work destinations reachable: Hana
+[OK] kampung: activity points occupy clear land: Rami
+[OK] kampung: exact work destinations reachable: Rami
+[OK] kampung: activity points occupy clear land: Daud
+[OK] kampung: exact work destinations reachable: Daud
+[OK] kampung: activity points occupy clear land: Noor
+[OK] kampung: exact work destinations reachable: Noor
+[OK] kampung: activity points occupy clear land: Bilal
+[OK] kampung: exact work destinations reachable: Bilal
+[OK] kampung: activity points occupy clear land: Yusuf
+[OK] kampung: exact work destinations reachable: Yusuf
+[OK] kampung: activity points occupy clear land: Tomas
+[OK] kampung: exact work destinations reachable: Tomas
+[OK] kampung: activity points occupy clear land: Sora
+[OK] kampung: exact work destinations reachable: Sora
+[OK] kampung: activity points occupy clear land: Amir
+[OK] kampung: exact work destinations reachable: Amir
+[OK] kampung: activity points occupy clear land: Laila
+[OK] kampung: exact work destinations reachable: Laila
+[OK] kampung: activity points occupy clear land: Zara
+[OK] kampung: exact work destinations reachable: Zara
+[OK] kampung: activity points occupy clear land: yard_0
+[OK] kampung: activity points occupy clear land: yard_1
+[OK] kampung: activity points occupy clear land: yard_2
+[OK] kampung: activity points occupy clear land: yard_3
+[OK] kampung: activity points occupy clear land: yard_4
+[OK] kampung: activity points occupy clear land: stable_horse_0
+[OK] kampung: activity points occupy clear land: stable_horse_1
+[OK] kampung: activity points occupy clear land: driftwood_0
+[OK] kampung: activity points occupy clear land: driftwood_1
+[OK] kampung: activity points occupy clear land: driftwood_2
+[OK] kampung: activity points occupy clear land: guard
+[OK] kampung: activity points occupy clear land: student
+[OK] kampung: road hierarchy changes invalidate the terrain bake
+[OK] kampung: workshop routine follows saved owner
+[OK] kampung: local prop default follows its workshop
+[OK] kampung: older independent prop save wins over relative default
+[OK] kampung: activity copies are independent source data
+[OK] kampung: authoring undo restores complete activity data
+[OK] kampung: old custom layouts inherit semantic routines
+[OK] kampung: bounded cached artwork: banana
+[OK] kampung: bounded cached artwork: veranda
+[OK] kampung: bounded cached artwork: clothesline
+[OK] kampung: bounded cached artwork: wakaf
+[OK] kampung: bounded cached artwork: drying_rack
+[OK] kampung: bounded cached artwork: herbs
+[OK] kampung: bounded cached artwork: parit
+[OK] kampung: bounded cached artwork: trough
+[OK] kampung: bounded cached artwork: garden_shed
+[OK] kampung: bounded cached artwork: sanctuary_arch
+[OK] kampung: bounded cached artwork: sentinel
+[OK] kampung: bounded cached artwork: companion_stone
+[OK] kampung: bounded cached artwork: moon_flower
+[OK] kampung: worker physically reaches authored destination: Sami
+[OK] kampung: worker moves continuously without jumps: Sami
+[OK] kampung: worker physically reaches authored destination: Hana
+[OK] kampung: worker moves continuously without jumps: Hana
+[OK] kampung: worker physically reaches authored destination: Rami
+[OK] kampung: worker moves continuously without jumps: Rami
+[OK] kampung: worker physically reaches authored destination: Daud
+[OK] kampung: worker moves continuously without jumps: Daud
+[OK] kampung: worker physically reaches authored destination: Noor
+[OK] kampung: worker moves continuously without jumps: Noor
+[OK] kampung: worker physically reaches authored destination: Bilal
+[OK] kampung: worker moves continuously without jumps: Bilal
+[OK] kampung: worker physically reaches authored destination: Yusuf
+[OK] kampung: worker moves continuously without jumps: Yusuf
+[OK] kampung: worker physically reaches authored destination: Tomas
+[OK] kampung: worker moves continuously without jumps: Tomas
+[OK] kampung: worker physically reaches authored destination: Sora
+[OK] kampung: worker moves continuously without jumps: Sora
+[OK] kampung: worker physically reaches authored destination: Amir
+[OK] kampung: worker moves continuously without jumps: Amir
+[OK] kampung: worker physically reaches authored destination: Laila
+[OK] kampung: worker moves continuously without jumps: Laila
+[OK] kampung: worker physically reaches authored destination: Zara
+[OK] kampung: worker moves continuously without jumps: Zara
+[OK] kampung: workshop selection fits settlement edit area without pickup clamping
+[OK] kampung: settlement completion moves work destinations without teleporting workers
+KAMPUNG_SPATIAL {"activities":30,"anchors":58,"arrival_shop_direct_distances":{"shop_equipment":12.76,"shop_house":13.33,"shop_pet":8.54,"shop_potion":9.48,"shop_services":4.86},"bounds":[64,40],"building_plot_area":307.739989280701,"route_length":252.962712228298,"route_lengths":{"besut_court":4.28,"coastal_loop":10.05,"court_link":3.02,"duel_approach":3.24,"east_lane":14.81,"forest_edge_track":8.94,"forest_gate_lane":3.97,"forest_home_lane":1.73,"garden_lane":7.55,"garden_workshop":7.88,"grotto_approach":3.24,"harbour_lane":7.34,"herbal_lane":0.96,"home_step":1.1,"home_water_link":7.34,"jetty_approach":1.02,"jetty_boardwalk":4.5,"market_crescent":7.24,"market_lane":8.83,"market_west_gate":7.17,"north_lane":17.34,"north_residence_lane":9.81,"outskirt_lane":11.14,"pet_shop_link":9.3,"sanctuary_threshold":2.0,"shore_walk":4.79,"smith_lane":6.78,"south_cottage_lane":5.25,"south_gate_lane":2.65,"southwest_cottage_lane":11.16,"stable_lane":8.21,"turtle_walk":3.3,"village_promenade":9.08,"ward_step":0.6,"west_cottage_lane":7.32,"west_residence_lane":10.37,"woodland_track":9.28,"workshop_front":1.36,"workshop_lane":9.03},"routes":39,"scenery":65}
+[OK] canonical village IDs, bounds, route widths and graph connectivity validate: []
+[OK] required spatial landmark exists: arrival
+[OK] required spatial landmark exists: house
+[OK] required spatial landmark exists: recovery
+[OK] required spatial landmark exists: market
+[OK] required spatial landmark exists: shop_potion
+[OK] required spatial landmark exists: shop_equipment
+[OK] required spatial landmark exists: shop_pet
+[OK] required spatial landmark exists: shop_house
+[OK] required spatial landmark exists: shop_services
+[OK] required spatial landmark exists: monster_portal
+[OK] required spatial landmark exists: pet_portal
+[OK] required spatial landmark exists: waterfront
+[OK] required spatial landmark exists: jetty_landing
+[OK] required spatial landmark exists: beach_turtle
+[OK] required spatial landmark exists: cleaning
+[OK] required spatial landmark exists: besut
+[OK] required spatial landmark exists: garden_walk
+[OK] required spatial landmark exists: forest_defence
+[OK] required spatial landmark exists: forest_clearing
+[OK] required spatial landmark exists: stable
+[OK] semantic zones admit fishing tools at the waterfront and reject them in woodland
+[OK] player-sized destination approach is clear: house
+[OK] actual physics route reaches exact destination: house
+[OK] player-sized destination approach is clear: arrival
+[OK] actual physics route reaches exact destination: arrival
+[OK] player-sized destination approach is clear: recovery
+[OK] actual physics route reaches exact destination: recovery
+[OK] player-sized destination approach is clear: market
+[OK] actual physics route reaches exact destination: market
+[OK] player-sized destination approach is clear: shop_potion
+[OK] actual physics route reaches exact destination: shop_potion
+[OK] player-sized destination approach is clear: shop_equipment
+[OK] actual physics route reaches exact destination: shop_equipment
+[OK] player-sized destination approach is clear: shop_pet
+[OK] actual physics route reaches exact destination: shop_pet
+[OK] player-sized destination approach is clear: shop_house
+[OK] actual physics route reaches exact destination: shop_house
+[OK] player-sized destination approach is clear: shop_services
+[OK] actual physics route reaches exact destination: shop_services
+[OK] player-sized destination approach is clear: monster_portal
+[OK] actual physics route reaches exact destination: monster_portal
+[OK] player-sized destination approach is clear: pet_portal
+[OK] actual physics route reaches exact destination: pet_portal
+[OK] player-sized destination approach is clear: north_gate
+[OK] actual physics route reaches exact destination: north_gate
+[OK] player-sized destination approach is clear: west_gate
+[OK] actual physics route reaches exact destination: west_gate
+[OK] player-sized destination approach is clear: south_gate
+[OK] actual physics route reaches exact destination: south_gate
+[OK] player-sized destination approach is clear: east_gate
+[OK] actual physics route reaches exact destination: east_gate
+[OK] player-sized destination approach is clear: garden_walk
+[OK] actual physics route reaches exact destination: garden_walk
+[OK] player-sized destination approach is clear: forest_defence
+[OK] actual physics route reaches exact destination: forest_defence
+[OK] player-sized destination approach is clear: forest_clearing
+[OK] actual physics route reaches exact destination: forest_clearing
+[OK] player-sized destination approach is clear: forest_south
+[OK] actual physics route reaches exact destination: forest_south
+[OK] player-sized destination approach is clear: waterfront
+[OK] actual physics route reaches exact destination: waterfront
+[OK] player-sized destination approach is clear: jetty_landing
+[OK] actual physics route reaches exact destination: jetty_landing
+[OK] player-sized destination approach is clear: beach_turtle
+[OK] actual physics route reaches exact destination: beach_turtle
+[OK] player-sized destination approach is clear: cleaning
+[OK] actual physics route reaches exact destination: cleaning
+[OK] player-sized destination approach is clear: besut
+[OK] actual physics route reaches exact destination: besut
+[OK] player-sized destination approach is clear: stable
+[OK] actual physics route reaches exact destination: stable
+[OK] player-sized destination approach is clear: ResidentHouseEast
+[OK] actual physics route reaches exact destination: ResidentHouseEast
+[OK] player-sized destination approach is clear: ResidentHouseWest
+[OK] actual physics route reaches exact destination: ResidentHouseWest
+[OK] player-sized destination approach is clear: ResidentHouseSouth
+[OK] actual physics route reaches exact destination: ResidentHouseSouth
+[OK] player-sized destination approach is clear: ResidentHouseNorth
+[OK] actual physics route reaches exact destination: ResidentHouseNorth
+[OK] player-sized destination approach is clear: ResidentHouseWestNorth
+[OK] actual physics route reaches exact destination: ResidentHouseWestNorth
+[OK] player-sized destination approach is clear: ResidentHouseEastSouth
+[OK] actual physics route reaches exact destination: ResidentHouseEastSouth
+[OK] player-sized destination approach is clear: ResidentHouseSouthWest
+[OK] actual physics route reaches exact destination: ResidentHouseSouthWest
+[OK] player-sized destination approach is clear: jetty_deck
+[OK] actual physics route reaches exact destination: jetty_deck
+[OK] player-sized destination approach is clear: residential_court
+[OK] actual physics route reaches exact destination: residential_court
+[OK] player-sized destination approach is clear: workshop_yard
+[OK] actual physics route reaches exact destination: workshop_yard
+[OK] player-sized destination approach is clear: portal_court
+[OK] actual physics route reaches exact destination: portal_court
+[OK] full declared entrance rectangles remain free of physical obstacles
+[OK] painted route has continuous actor clearance: market_lane []
+[OK] painted route has continuous actor clearance: herbal_lane []
+[OK] painted route has continuous actor clearance: smith_lane []
+[OK] painted route has continuous actor clearance: market_crescent []
+[OK] painted route has continuous actor clearance: north_lane []
+[OK] painted route has continuous actor clearance: pet_shop_link []
+[OK] painted route has continuous actor clearance: grotto_approach []
+[OK] painted route has continuous actor clearance: duel_approach []
+[OK] painted route has continuous actor clearance: workshop_lane []
+[OK] painted route has continuous actor clearance: east_lane []
+[OK] painted route has continuous actor clearance: garden_lane []
+[OK] painted route has continuous actor clearance: garden_workshop []
+[OK] painted route has continuous actor clearance: village_promenade []
+[OK] painted route has continuous actor clearance: home_water_link []
+[OK] painted route has continuous actor clearance: besut_court []
+[OK] painted route has continuous actor clearance: south_gate_lane []
+[OK] painted route has continuous actor clearance: market_west_gate []
+[OK] painted route has continuous actor clearance: harbour_lane []
+[OK] painted route has continuous actor clearance: jetty_approach []
+[OK] painted route has continuous actor clearance: turtle_walk []
+[OK] painted route has continuous actor clearance: shore_walk []
+[OK] painted route has continuous actor clearance: coastal_loop []
+[OK] painted route has continuous actor clearance: west_cottage_lane []
+[OK] painted route has continuous actor clearance: west_residence_lane []
+[OK] painted route has continuous actor clearance: north_residence_lane []
+[OK] painted route has continuous actor clearance: stable_lane []
+[OK] painted route has continuous actor clearance: south_cottage_lane []
+[OK] painted route has continuous actor clearance: southwest_cottage_lane []
+[OK] painted route has continuous actor clearance: forest_gate_lane []
+[OK] painted route has continuous actor clearance: forest_home_lane []
+[OK] painted route has continuous actor clearance: woodland_track []
+[OK] painted route has continuous actor clearance: forest_edge_track []
+[OK] painted route has continuous actor clearance: outskirt_lane []
+[OK] painted route has continuous actor clearance: ward_step []
+[OK] painted route has continuous actor clearance: home_step []
+[OK] painted route has continuous actor clearance: jetty_boardwalk []
+[OK] painted route has continuous actor clearance: court_link []
+[OK] painted route has continuous actor clearance: workshop_front []
+[OK] painted route has continuous actor clearance: sanctuary_threshold []
+[OK] sea collision agrees with painted shoreline at x=2.0
+[OK] sea collision agrees with painted shoreline at x=5.0
+[OK] sea collision agrees with painted shoreline at x=9.0
+[OK] sea collision agrees with painted shoreline at x=14.0
+[OK] sea collision agrees with painted shoreline at x=18.0
+[OK] sea collision agrees with painted shoreline at x=22.0
+[OK] visible jetty planks are walkable from the landing
+[OK] sea remains solid immediately beyond the visible jetty
+[OK] turtle remains grounded on shared beach shelf
+[OK] saved player service position wins over developer override and anchor
+[OK] developer base override wins over canonical default
+[OK] resolving and editing a copy never mutates source layout
+[OK] home arrival, ward and route endpoints follow relocated cottage
+[OK] layout anchors, routes and zones participate in snapshot undo/redo
+[OK] old authored maps inherit versioned village layout without save migration
+[OK] unchanged shipped geometry selects its imported terrain bake
+[OK] imported default terrain and live Map Studio generator have exact pixel parity
+[OK] geometry edits reject a stale bake and render directly from authored data
+[OK] unchanged resolved layout reuses terrain cache
+[OK] validator rejects duplicate canonical IDs
+[OK] flowers frame districts without occupying approaches or lanes
+[OK] land paint cannot hide permanent sea collision
+[OK] shore paint cannot disguise authored water as walkable land
+[OK] footprint validation catches a wall across a road away from destinations
+[OK] emergency, coastal and forest spawns resolve onto clear land
+[OK] developer spatial data saves outside source checkout
+[OK] existing-format settlement save reloads
+[OK] actual runtime player placements override developer source positions
+[OK] merchant, stall collider and local workspace travel with service owner
+[OK] actual recovery ward follows saved house position
+[OK] developer layout, saved buildings and decorative seed changes preserve original forest associations
+[OK] relocated shop remains reachable in actual physics
+[OK] re-entering a customized village produces deterministic resolved routes
+[OK] Monsoon preserves every original forest ID, creation order, position and maximum HP
+[OK] shipped village selects Monsoon Afterglow in runtime and authored map
+[OK] foliage ramp separates upper leaves, leaf body and deep interior
+[OK] tree family 0 split preserves pixels and trunk/crown pivot
+[OK] tree family 0 has transparent clearance without clipped silhouettes
+[OK] tree family 1 split preserves pixels and trunk/crown pivot
+[OK] tree family 1 has transparent clearance without clipped silhouettes
+[OK] tree family 2 split preserves pixels and trunk/crown pivot
+[OK] tree family 2 has transparent clearance without clipped silhouettes
+[OK] tree family 3 split preserves pixels and trunk/crown pivot
+[OK] tree family 3 has transparent clearance without clipped silhouettes
+[OK] tree family 4 split preserves pixels and trunk/crown pivot
+[OK] tree family 4 has transparent clearance without clipped silhouettes
+[OK] all five tree families have distinct silhouette bounds and proportions
+[OK] cottage tier 1 retains frame footprint and dedicated night windows
+[OK] cottage tier 2 retains frame footprint and dedicated night windows
+[OK] cottage tier 3 retains frame footprint and dedicated night windows
+[OK] cottage tier 4 retains frame footprint and dedicated night windows
+[OK] cottage tier 5 retains frame footprint and dedicated night windows
+[OK] lighting remains continuous at world-clock boundary 0
+[OK] lighting remains continuous at world-clock boundary 133
+[OK] lighting remains continuous at world-clock boundary 180
+[OK] lighting remains continuous at world-clock boundary 193
+[OK] lighting remains continuous at world-clock boundary 340
+[OK] lighting remains continuous at world-clock boundary 360
+[OK] lanterns follow the existing clock without advancing or mutating gameplay time
+[OK] previous palettes derive new semantic roles and invalidate generated artwork
+[OK] palette preview leaves imported source artwork untouched
+[OK] existing authored_tree semantic overrides retain priority
+[OK] legacy foliage overrides remain authoritative on existing forest trees
+[OK] imported house overrides never receive a procedural window mask
+[OK] unchanged palettes reuse the whole terrain texture
+[OK] low reduced motion retains the same complete static terrain and water
+[OK] med reduced motion retains the same complete static terrain and water
+[OK] high reduced motion retains the same complete static terrain and water
+[OK] Reduce Motion pauses the existing boat tween immediately
+[OK] Low quality pauses optional boat motion after a live settings change
+[OK] High quality restores the same owned boat tween
+[OK] first day stays peaceful before 180 seconds
+[OK] all fire, beach and emergency spawn paths reject daytime
+[OK] night begins exactly at three minutes
+[OK] night spawns twenty-four fire monsters
+[OK] night also spawns sea urchins at the beach
+[OK] day returns after three minutes of night
+[OK] dawn preserves living monsters and their HP
+[OK] surviving fire monsters continue attacking trees in daytime
+[OK] day/night phase survives save/load
+[OK] returning home in daytime restores survivors without a new wave
+[OK] killed monsters stay absent during the day
+[OK] the next night replenishes killed monsters
+[OK] a night wave cannot spawn twice during the same night
+[OK] monster and pet battle portals exist
+[OK] the two battle portals are paired
+[OK] monster and pet portals stand side by side
+[OK] the forest contains many protected trees (64)
+[OK] forest trees lose HP when monsters attack
+[OK] tree attacks still play visual feedback
+[OK] a damaged tree remains standing until its HP reaches zero
+[OK] many forest monsters patrol the woodland (25)
+[OK] tree-hit and aggro sounds are generated
+[OK] fire monsters ignore players in line of sight
+[OK] fire monsters target trees without charging the player
+[OK] more residents' houses stand around the village (7)
+[OK] abandoned, damaged and destroyed houses decorate the outskirts
+[OK] horses live in the village
+[OK] horse art generates
+[OK] selective flower borders remain around village plots
+[OK] more gardens fill the village
+[OK] decorative props are placed around the village (12)
+[OK] NPC name labels are removed
+[OK] pet battle portal has multiple levels
+[OK] pet_duel_1 defines a 1v1 opponent
+[OK] pet_duel_2 defines a 1v1 opponent
+[OK] pet_duel_3 defines a 1v1 opponent
+[OK] pet_duel_4 defines a 1v1 opponent
+[OK] pet_duel_5 defines a 1v1 opponent
+[OK] first pet duel is available
+[OK] later pet duels unlock in order
+[OK] bottom mission notifications are removed
+[OK] dashed mission path lives in the world
+[OK] player has a floating Health/Mana dashboard
+[OK] yellow Unisza NPC exists
+[OK] yellow NPC opens a dialogue box
+[OK] dialogue contains the Welcome to Unisza line
+[OK] dialogue contains the Unisza students line
+[OK] residents populate the settlement (14)
+[OK] capable residents are available for defence (4)
+[OK] portal campaign has at least ten levels
+[OK] tidebound_grotto has at least ten regular monsters
+[OK] tidebound_grotto defines a boss ability
+[OK] tidebound_grotto boss art generates
+[OK] sunken_crypt has at least ten regular monsters
+[OK] sunken_crypt defines a boss ability
+[OK] sunken_crypt boss art generates
+[OK] reef_hollow has at least ten regular monsters
+[OK] reef_hollow defines a boss ability
+[OK] reef_hollow boss art generates
+[OK] brine_cavern has at least ten regular monsters
+[OK] brine_cavern defines a boss ability
+[OK] brine_cavern boss art generates
+[OK] kelp_maze has at least ten regular monsters
+[OK] kelp_maze defines a boss ability
+[OK] kelp_maze boss art generates
+[OK] bone_gallery has at least ten regular monsters
+[OK] bone_gallery defines a boss ability
+[OK] bone_gallery boss art generates
+[OK] storm_shrine has at least ten regular monsters
+[OK] storm_shrine defines a boss ability
+[OK] storm_shrine boss art generates
+[OK] coral_throne has at least ten regular monsters
+[OK] coral_throne defines a boss ability
+[OK] coral_throne boss art generates
+[OK] abyss_gate has at least ten regular monsters
+[OK] abyss_gate defines a boss ability
+[OK] abyss_gate boss art generates
+[OK] drowned_throne has at least ten regular monsters
+[OK] drowned_throne defines a boss ability
+[OK] drowned_throne boss art generates
+[OK] boss abilities cover punches, projectiles, charges and area attacks
+[OK] Pet Food is sold in the Pet Shop for Gold
+[OK] every tree owns its actual sprites and trunk body
+[OK] tree sprites and collision inherit their holder world positions
+[OK] tree persistence IDs remain unique
+[OK] tree hit flashes its own visual without damaging neighbours
+[OK] tree damage persists under its original ID
+[OK] persisted fallen tree disables its own collider at startup
+[OK] water mask matches the painted sea and is transparent beyond its eastern edge
+[OK] water mask origin and art scale align with terrain
+[OK] water shader contains no random sparkle term
+[OK] ordinary lobby has no star pollen or butterfly placeholders
+[OK] beach turtle exists
+[OK] turtle is grounded on dry beach sand
+[OK] village sign has exact readable BESUT lettering
+[OK] removed VITALS panel is absent
+[OK] world-space player HP/MP HUD remains
+[OK] low quality applies water visibility immediately
+[OK] low reduce motion uses stable painted water fallback
+[OK] med quality applies water visibility immediately
+[OK] med reduce motion uses stable painted water fallback
+[OK] high quality applies water visibility immediately
+[OK] high reduce motion uses stable painted water fallback
+[OK] camera smoothly approaches isotropic zoom 28
+[OK] camera zoom leaves GUI scale unchanged
+[OK] camera smoothly approaches isotropic zoom 38
+[OK] camera zoom leaves GUI scale unchanged
+[OK] camera smoothly approaches isotropic zoom 64
+[OK] camera zoom leaves GUI scale unchanged
+[OK] zoom clamps below minimum
+[OK] zoom clamps above maximum
+[OK] zoom survives settings file reload
+[OK] GUI scale 0.75 has one authoritative value
+[OK] HUD root remains unscaled at 0.75
+[OK] touch controls stay inside viewport at GUI 0.75
+[OK] GUI scaling leaves camera zoom unchanged
+[OK] GUI scale 1.00 has one authoritative value
+[OK] HUD root remains unscaled at 1.00
+[OK] touch controls stay inside viewport at GUI 1.00
+[OK] GUI scaling leaves camera zoom unchanged
+[OK] GUI scale 1.30 has one authoritative value
+[OK] HUD root remains unscaled at 1.30
+[OK] touch controls stay inside viewport at GUI 1.30
+[OK] GUI scaling leaves camera zoom unchanged
+[OK] player diagonal movement traverses bounded fractional intermediate positions
+[OK] diagonal input has no speed advantage
+[OK] player decelerates to rest
+[OK] far-behind pet catches up continuously without leash teleport
+[OK] enemy chase traverses bounded intermediate positions with collision movement
+[OK] loot pop remains continuous and settles instead of drifting forever
+[OK] projectile preserves intentional speed through continuous positions
+[OK] resident reserves an accessible shop
+[OK] busy counters reject a simultaneous customer
+[OK] shopper walks through intermediate positions without state-change snaps
+[OK] shopping explicitly browses, purchases and leaves
+[OK] shopping completes one exchange and returns to routine
+[OK] ambient shopping leaves player gold and inventory unchanged
+[OK] ambient customer never opens player shop UI
+[OK] customer can reserve a counter for another visit
+[OK] repeated shopping completes without player economy changes
+[OK] customer frees its counter reservation
+[OK] audit: legacy GUI migration persists independently of a later new journey
+[OK] audit: joystick centre stays neutral at GUI 0.75
+[OK] audit: joystick right press has no vertical component at GUI 0.75
+[OK] audit: press and drag use consistent coordinate spaces at GUI 0.75
+[OK] audit: joystick centre stays neutral at GUI 1.00
+[OK] audit: joystick right press has no vertical component at GUI 1.00
+[OK] audit: press and drag use consistent coordinate spaces at GUI 1.00
+[OK] audit: joystick centre stays neutral at GUI 1.30
+[OK] audit: joystick right press has no vertical component at GUI 1.30
+[OK] audit: press and drag use consistent coordinate spaces at GUI 1.30
+[OK] audit: hidden joystick releases synthetic movement input
+[OK] audit: freed touch button releases its synthetic action
+[OK] audit: resetting enlarged Strike restores its actual rectangle
+[OK] audit: resetting enlarged joystick restores its actual rectangle
+[OK] audit: resident replans cached path after obstacles change
+[OK] audit: planned corner segments respect actor collision clearance
+[OK] audit: pet completes a detour around a blocking wall
+[OK] audit: pet detour stays continuous and does not cross the wall
+[OK] audit: tree falling invalidates route obstacles after releasing its collider
+[OK] audit: shopper rejects an obstructed counter instead of buying at a fallback point
+[OK] audit: directly frightened customer releases its shop reservation
+[OK] audit: merchant is inside the stall behind its counter art
+[OK] audit: ward, build grid and selection outlines stay proportionate at maximum zoom
+[OK] audit: Reduce Motion stops optional recovery ward rotation and pulse
+[OK] audit: enabling high effects creates dungeon ambience live
+[OK] audit: Reduce Motion immediately hides existing dungeon particles
+[OK] audit: dungeon restores the same emitter without allocation churn
+[OK] audit: Reduce Motion never changes enemy attack cooldown progression
+[OK] audit: optional hit-stop never changes ordinary enemy travel
+[OK] audit: VFX skips queued pools and children of queued worlds
+[OK] audit: lethal lobby damage returns a living player to recovery
+[OK] audit: home defeat starts exactly one completed recovery transition
+[OK] audit: home recovery preserves inventory, currencies and player progression
+[OK] creative palette separates named world and UI roles
+[OK] sand and deep water preserve material contrast
+[OK] area palette variant loads with distinct grass
+[OK] palette switch invalidates generated textures
+[OK] pixel document starts transparent
+[OK] rectangle and bounded flood fill preserve the outline
+[OK] pixel undo restores transparency
+[OK] pixel redo restores painted artwork
+[OK] eraser draws exact transparent pixels
+[OK] selection moves without scaling or antialiasing
+[OK] frame duplication and ordering preserve durations
+[OK] sprite sheet and duration metadata export
+[OK] sprite sheet and durations survive restart-style reload
+[OK] asset registry crops configured sprite frames
+[OK] missing required asset has a specific diagnostic
+[OK] map snapshot restores authored paint and decoration seed
+[OK] versioned map resource saves
+[OK] map reload preserves object identities and terrain layers
+[OK] map validator detects protected spawn obstruction
+[OK] authored water blocks actual runtime collision
+[OK] authored object footprint creates actual runtime collision
+[OK] base-object override moves the existing tree without renumbering it
+[OK] authored terrain is batched into native TileMapLayers
+[OK] saved imported asset appears on actual world object
+[OK] resident routing reads authored water collision
+[OK] micro-action priority safely interrupts work and rejects lower priority
+[OK] Reduce Motion suppresses optional action movement
+[OK] micro-action returns to clean idle state
+[OK] player walk cycle stops at zero actual motion
+[OK] player animation follows actual velocity
+[OK] keyboard/action movement works
+[OK] driftwood gathering point exists
+[OK] gathering yields driftwood
+[OK] driftwood can be sold
+[OK] selling driftwood grants gold
+[OK] health potion purchase succeeds
+[OK] potion deducts 25 gold
+[OK] potion added to inventory
+[OK] purchase rejected with insufficient gold
+[OK] first rapid treat tap succeeds
+[OK] repeat tap is debounced
+[OK] debounced tap buys only one item
+[OK] pet food can be fed to the active companion
+[OK] feeding pet food grants pet XP
+[OK] equipment purchase succeeds
+[OK] equipment can be equipped
+[OK] equipped weapon updates
+[OK] equipment counter filters by weapon discipline
+[OK] shop panel opens
+[OK] strike icon follows the hero's weapon
+[OK] 32px icon generates for sword
+[OK] 32px icon generates for hammer
+[OK] 32px icon generates for bow
+[OK] 32px icon generates for talk
+[OK] 32px icon generates for door
+[OK] 32px icon generates for bed
+[OK] 32px icon generates for gather
+[OK] 32px icon generates for chest
+[OK] 32px icon generates for gold
+[OK] 32px icon generates for diamond
+[OK] 32px icon generates for close
+[OK] 32px icon generates for pet
+[OK] grotto frame art generates (live and sealed)
+[OK] grotto swirl frames generate
+[OK] crypt frame art generates (live and sealed)
+[OK] crypt swirl frames generate
+[OK] reef frame art generates (live and sealed)
+[OK] reef swirl frames generate
+[OK] brine frame art generates (live and sealed)
+[OK] brine swirl frames generate
+[OK] kelp frame art generates (live and sealed)
+[OK] kelp swirl frames generate
+[OK] bone frame art generates (live and sealed)
+[OK] bone swirl frames generate
+[OK] storm frame art generates (live and sealed)
+[OK] storm swirl frames generate
+[OK] coral frame art generates (live and sealed)
+[OK] coral swirl frames generate
+[OK] abyss frame art generates (live and sealed)
+[OK] abyss swirl frames generate
+[OK] throne frame art generates (live and sealed)
+[OK] throne swirl frames generate
+[OK] all ten portal themes are distinct (10)
+[OK] pet upgrade price comes from GameState.pet_upgrade_cost
+[OK] unknown effects quality falls back to high
+[OK] effects quality accepts low
+[OK] reduce motion stores
+[OK] shop opens for the scroll test
+[OK] shop content is long enough to scroll (351)
+[OK] shop keeps its scroll position on data_changed
+[OK] shop keeps its scroll position across repeated updates
+[OK] dedicated construction shop keeper exists
+[OK] dedicated construction shop building exists
+[OK] construction shop opens the house upgrade panel
+[OK] house panel is branded as the construction shop
+[OK] house rejects gold-only upgrade
+[OK] house upgrade 2 succeeds
+[OK] house upgrade 3 succeeds
+[OK] house upgrade 4 succeeds
+[OK] house upgrade 5 succeeds
+[OK] house reaches level 5
+[OK] level 5 recovery is 2 seconds
+[OK] bed interaction exists
+[OK] sleep restores full health within 2 seconds
+[OK] sleep state ends
+[OK] Menu button sits in the top-right corner
+[OK] Menu button opens the in-game menu
+[OK] Settings can be opened from the menu system
+[OK] GUI scale setting applies and persists
+[OK] button positions and sizes are customizable
+[OK] critical health triggers an automatic potion
+[OK] auto-heal consumes one health potion
+[OK] pet shield absorbs damage before health
+[OK] shield value decreases when hit
+[OK] pet level upgrade succeeds
+[OK] pet healing grows with level
+[OK] pet attack grows with level
+[OK] pet shield grows with level
+[OK] pet no longer emits portal light
+[OK] pet can always be restored without a revival item
+[OK] pet battle gate is interactable
+[OK] pet battle portal opens the tournament
+[OK] pet combat has only Attack and Defend
+[OK] first pet duel starts
+[OK] pet duel starts with two living combatants
+[OK] pet duel displays both health bars
+[OK] the player pet has two skill buttons
+[OK] both pets wait indefinitely when no action is chosen
+[OK] the enemy pet chooses from Attack or Defend
+[OK] both pets execute their actions simultaneously
+[OK] pet hits create scratch/punch impact effects
+[OK] defending creates a shield effect
+[OK] pet duel victory is recorded
+[OK] pet duel victory unlocks the next level
+[OK] pet duel grants gold
+[OK] pet duel victory levels up the companion
+[OK] rubbish system exists
+[OK] coastal guard exists
+[OK] coastal guard catches rubbish
+[OK] caught rubbish grants exactly +1 gold
+[OK] sea-cleaning progress is recorded
+[OK] sea cleaning does not create pop-up notifications
+[OK] Coastal Guard opens a persistent sea-cleaning report
+[OK] uncaught rubbish reaches the beach
+[OK] beached rubbish does not grant the +1 catch reward
+[OK] beached rubbish transforms into a monster
+[OK] rubbish monster grants its own separate gold reward
+[OK] portal dungeon loads
+[OK] dungeon inherits saved camera zoom
+[OK] dungeon has at least 10 regular monsters plus boss (13)
+[OK] dungeon has exactly one main boss
+[OK] dungeon does not depend on a pet light
+[OK] dungeon world active
+[OK] dungeon ambient lighting exists
+[OK] sword attack executes
+[OK] sword attack damages a monster
+[OK] loot is auto-collected on touch without a collect button
+[OK] auto-collected loot disappears from the floor
+[OK] pet heals the player gradually in combat
+[OK] pet attacks nearby monsters
+[OK] pet grants a shield during combat
+[OK] emergency starts while exploring a portal
+[OK] emergency uses the persistent HUD instead of pop-ups
+[OK] emergency does not teleport the player out
+[OK] portal battle is not forcibly interrupted
+[OK] emergency HUD banner appears
+[OK] settlement damage is recorded
+[OK] portals are blocked while the settlement is under attack
+[OK] player can leave through the Shore Gate during an emergency
+[OK] settlement attackers appear in the residential area
+[OK] raiders can approach from the sea
+[OK] raiders can approach from the forest
+[OK] residents react by fleeing to shelter
+[OK] village defenders and capable residents are present
+[OK] residents seek houses instead of fighting sea urchins
+[OK] defeating all attackers completes the emergency
+[OK] emergency banner clears when the settlement is safe
+[OK] emergency monsters grant gold
+[OK] can re-enter portal after the emergency
+[OK] defeat clears unbanked expedition
+[OK] pet is not permanently killed by defeat
+[OK] defeat activates the recovery system
+[OK] defeat screen appears
+[OK] player respawns at critical health
+[OK] defeat returns the player home
+[OK] player respawns at the cottage
+[OK] recovery remains active at home
+[OK] pet remains available after respawn
+[OK] recovery ward prevents leaving early
+[OK] health regenerates inside the recovery ward
+[OK] recovery ward heals at the HouseDB rate for the cottage level
+[OK] full health releases the player from recovery
+[OK] recovery HUD hides when complete
+[OK] re-entered portal after recovery
+[OK] boss instance exists
+[OK] boss victory permanently clears portal
+[OK] boss victory unlocks next portal
+[OK] first clear grants unique companion
+[OK] victory panel is shown
+[OK] under-levelled portal entry is blocked
+[OK] victory returns to lobby
+[OK] returning lobby inherits saved camera zoom
+[OK] boss rewards retained after return
+[OK] second portal loads once requirements are met
+[OK] second portal meets monster count (14 + boss)
+[OK] second portal spawns its own boss
+[OK] boss bar appears during boss encounter
+[OK] boss bar names the active boss
+[OK] Shore Gate banks loot and returns home
+[OK] leaving through Shore Gate closes the expedition
+[OK] save file loads
+[OK] gold survives save/load
+[OK] house level survives save/load
+[OK] portal progress survives save/load
+[OK] pet level survives save/load
+[OK] pet duel progress survives save/load
+[OK] sea-cleaning progress survives save/load
+[OK] player controls are free before building
+[OK] settlement editor toggles on
+[OK] settlement editor HUD appears
+[OK] movement is locked while editing
+[OK] cottage is editable
+[OK] dragging repositions a settlement building
+[OK] edited position is saved to GameState
+[OK] settlement editor toggles off
+[OK] movement is restored after editing
+[OK] layout survives a lobby reload
+[OK] Farhan starts with the correct weapon
+[OK] Farhan strike icon matches the weapon style
+[OK] Farhan uses the hammer style
+[OK] Farhan attack executes
+[OK] Farhan hammer attack damages a target
+[OK] Ayiz starts with the correct weapon
+[OK] Ayiz strike icon matches the weapon style
+[OK] Ayiz uses the bow style
+[OK] Ayiz attack executes
+[OK] Ayiz bow attack damages a target
+[OK] forest has at least twenty-four fire monsters
+[OK] water power is reduced to four HP per second
+[OK] all five shops have shop-name signs
+[OK] merchants stand inside stalls and remain reachable from the counter
+[OK] Next cannot bypass a mission's required action
+[OK] out-of-order actions do not advance the lesson
+[OK] mission 0 advances exactly one step
+[OK] mission 1 advances exactly one step
+[OK] mission 2 advances exactly one step
+[OK] mission 3 advances exactly one step
+[OK] mission 4 advances exactly one step
+[OK] mission 5 advances exactly one step
+[OK] mission 6 advances exactly one step
+[OK] mission 7 advances exactly one step
+[OK] mission 8 advances exactly one step
+[OK] mission 9 advances exactly one step
+[OK] unaffordable recruitment does not add a keeper
+[OK] paid recruitment adds keeper 3
+[OK] paid recruitment adds keeper 4
+[OK] paid recruitment adds keeper 5
+[OK] keeper cap rejects purchase without charging
+[OK] fire attack cannot damage the player even with a stale target
+[OK] fire retargets mature trees rather than the nearby player
+[OK] fences and houses have individual damage targets
+[OK] sea damage can completely destroy a fence
+[OK] destroyed fence releases its collision bodies
+[OK] damaged fence has a nearby Betulkan interaction
+[OK] distant repair interaction cannot restore the fence
+[OK] nearby Betulkan restores a destroyed fence immediately for free
+[OK] intact structures hide repairs and reject duplicate work
+[OK] partially damaged houses can also be repaired without payment
+[OK] sea urchin chooses a nearby intact fence
+[OK] sea urchin attacks a stationary house from the approach band instead of stalling
+[OK] sea urchin damages a mature tree without igniting it
+[OK] resident enters an intact house when a sea urchin approaches
+[OK] intact shelter protects resident health
+[OK] destroyed houses leave residents exposed
+[OK] an exposed resident can die and leaves combat targeting
+[OK] purchased keepers, resident death and mission progress survive save/load
+[OK] repaired structures survive save/load
+[OK] water keeper population matches purchased capacity
+[OK] water keepers wear distinct blue clothes
+[OK] woodland attackers are fire monsters
+[OK] fire monster's active attack frame damages and ignites a mature tree
+[OK] attacking a mature tree ignites it and reduces HP
+[OK] fire continues damaging an unwatered tree
+[OK] nearby blue NPC channels water and restores tree HP
+[OK] watering extinguishes fire after restoring full HP
+[OK] zero HP fells the tree and stops its fire
+[OK] NPC plants a replacement with exactly 30 seconds of growth
+[OK] growing saplings reject fire attacks and ignition
+[OK] fire monster targeting skips growing saplings
+[OK] sapling growth survives save and load
+[OK] reconstructed sapling retains its protected growth phase
+[OK] sapling stays protected before the full 30 seconds
+[OK] mature tree regains targeting and trunk collision after 30 seconds
+[OK] a fully grown replacement can burn again
+[OK] pet shop Close stays on screen at 1280x720 with every purchasable pet owned
+[OK] pet cards fit without sideways scrolling
+[OK] clicking Close after scrolling dismisses the pet shop and unlocks movement
+[OK] fast reopen and close cannot rebuild a closed pet shop
+[OK] pet shop Close stays on screen at 832x480 with every purchasable pet owned
+[OK] pet cards fit without sideways scrolling
+[OK] clicking Close after scrolling dismisses the pet shop and unlocks movement
+[OK] fast reopen and close cannot rebuild a closed pet shop
+[OK] living forest trees remain before the game-over test
+[OK] last-stand sapling can be planted while other trees survive
+[OK] a planted sapling prevents game over even with no mature trees
+[OK] losing all mature trees and saplings triggers game over
+[OK] game over animates the orange dry terrain to completion
+[OK] game over adds the dark green poisoned sea
+[OK] dead fish and crabs appear on the sand
+[OK] game over screen appears when the forest is lost
+[OK] game flow enters the locked game-over state
+[OK] game over returns to the title screen
+--- tide test: 812 checks, PASS ---

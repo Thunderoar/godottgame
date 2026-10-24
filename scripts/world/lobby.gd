@@ -499,7 +499,7 @@ func _add_shop(kind: String, at: Vector2, npc_name: String, color: Color) -> voi
 func _build_special_npc() -> void:
 	var student := UniszaStudent.new()
 	student.name = "UniszaStudent"
-	student.position = Vector2(36.4, 23.2)
+	student.position = _layout.activity_points(_layout.activity("student"))[0]
 	add_child(student)
 
 
@@ -524,17 +524,6 @@ func _build_portals() -> void:
 	second.position = _layout.position_of("pet_portal", PET_GATE)
 	add_child(second)
 	_markers.append({"position": second.position, "color": Color("#58d6cf"), "size": 4.0, "shape": "arch"})
-	# Warning stones tie the paired gates together.
-	for p in [Vector2(28.4, 12.1), Vector2(39.6, 12.1), Vector2(34.0, 9.9)]:
-		var ruin := Sprite2D.new()
-		ruin.texture = load("res://assets/sprites/TX Props__TX Props - Stone 03.tres")
-		ruin.centered = false
-		var sz := ruin.texture.get_size()
-		ruin.offset = Vector2(-sz.x * 0.5, -sz.y)
-		ruin.scale = Vector2(PixelArt.PX, PixelArt.PX)
-		ruin.position = p
-		ruin.z_index = 3
-		add_child(ruin)
 
 
 func _on_forest_tree_felled(_tree: ForestTree) -> void:
@@ -684,7 +673,11 @@ func spawn_sea_urchin(at: Vector2, raid: bool = false, restoring: bool = false) 
 
 
 func _build_gathering() -> void:
-	for p in [Vector2(5.0, 21.4), Vector2(12.0, 26.4), Vector2(18.2, 31.1)]:
+	for entry in _layout.activity_records():
+		if entry.get("kind", "") != "gathering": continue
+		var points := _layout.activity_points(entry)
+		if points.is_empty(): continue
+		var p := points[0]
 		var pile := ResourcePile.new()
 		pile.name = "Driftwood"
 		pile.position = p
@@ -700,11 +693,12 @@ func _build_dock_and_ship() -> void:
 	dock.centered = false
 	dock.offset = Vector2(-128, -96)
 	dock.scale = Vector2(PixelArt.PX, PixelArt.PX)
-	dock.position = Vector2(9.0, 28.5)
+	dock.position = _layout.position_of("harbour", WorldLayout.village().position_of("harbour"))
 	dock.z_index = 2
 	add_child(dock)
 	var rope := Line2D.new()
-	rope.points = PackedVector2Array([Vector2(7.8, 27.7), Vector2(8.2, 28.3), Vector2(8, 29.2)])
+	rope.position = dock.position
+	rope.points = PackedVector2Array([Vector2(-1.2, -0.8), Vector2(-0.8, -0.2), Vector2(-1, 0.7)])
 	rope.width = PixelArt.PX * 2
 	rope.default_color = WorldPalette.color("wood_shadow")
 	rope.z_index = 3
@@ -715,30 +709,31 @@ func _build_dock_and_ship() -> void:
 	ship.centered = false
 	ship.offset = Vector2(-104, -112)
 	ship.scale = Vector2(PixelArt.PX, PixelArt.PX)
-	ship.position = Vector2(7.5, 32.0)
+	ship.position = _layout.activity_points(_layout.activity("boat"))[0]
 	ship.z_index = 3
 	add_child(ship)
 	# One owned optional tween responds even when settings change after loading.
 	ship.add_to_group("ambient_boat")
 	var bob := ship.create_tween().set_loops()
 	bob.set_parallel(true)
-	bob.tween_property(ship, "position:y", 32.05, 2.1).set_trans(Tween.TRANS_SINE)
+	bob.tween_property(ship, "position:y", ship.position.y + 0.05, 2.1).set_trans(Tween.TRANS_SINE)
 	bob.tween_property(ship, "rotation", 0.008, 2.1).set_trans(Tween.TRANS_SINE)
-	bob.chain().tween_property(ship, "position:y", 31.95, 2.1).set_trans(Tween.TRANS_SINE)
+	bob.chain().tween_property(ship, "position:y", ship.position.y - 0.05, 2.1).set_trans(Tween.TRANS_SINE)
 	bob.parallel().tween_property(ship, "rotation", -0.008, 2.1).set_trans(Tween.TRANS_SINE)
 	ship.set_meta("ambient_tween", bob)
 	# Lamps on the jetty.
-	for x in [3.4, 13.5]:
+	for x in [-5.6, 4.5]:
 		var lamp := PointLight2D.new()
 		lamp.texture = PixelArt.light_texture()
 		lamp.texture_scale = 0.024
 		lamp.energy = 0.12
 		lamp.color = Color("#ffd483")
-		lamp.position = Vector2(x, 29.5)
+		lamp.position = dock.position + Vector2(x, 1)
 		add_child(lamp)
 		_local_lights.append(lamp)
 	# A few crates for life.
-	for p in [Vector2(11.8, 27.8), Vector2(12.7, 28.2)]:
+	for offset in [Vector2(2.8, -0.7), Vector2(3.7, -0.3)]:
+		var p: Vector2 = dock.position + offset
 		var crate := Sprite2D.new()
 		crate.texture = load("res://assets/sprites/TX Props__TX Props Crate Small.tres")
 		crate.centered = false
@@ -917,14 +912,11 @@ func _build_scatter() -> void:
 	var flower_paths := [
 		"res://assets/sprites/TX Plant__TX Plant - Flower 01.tres",
 	]
-	# Bushes around the house and forest edge.
-	for p in [
-		Vector2(29.2, 22.4), Vector2(39.0, 23.4), Vector2(41.2, 21.0),
-		Vector2(15.1, 20.1), Vector2(21.9, 21.7), Vector2(14.8, 14.7),
-		Vector2(22.3, 13.2), Vector2(47.0, 18.0), Vector2(49.5, 24.5),
-		Vector2(26.0, 26.9), Vector2(20.0, 26.0), Vector2(11.0, 19.8),
-	]:
-		_add_wind_decor(bush_paths[_decor_rng.randi_range(0, bush_paths.size() - 1)], p, 1.0 + _decor_rng.randf_range(-0.12, 0.18), 4)
+	# Plot-edge shrubs follow authored compounds, rather than detached world points.
+	for id in ["house", "ResidentHouseWest", "ResidentHouseWestNorth", "ResidentHouseNorth", "ResidentHouseEast", "ResidentHouseSouth", "garden_walk"]:
+		var plot := _layout.world_footprint(id)
+		var p := Vector2(plot.position.x - 0.6, plot.end.y - 0.3)
+		_add_wind_decor(bush_paths[_decor_rng.randi_range(0, bush_paths.size() - 1)], p, 1.0, 4)
 	# Grass "rumput2": clustered MultiMesh fields (a handful of draw calls for
 	# hundreds of tufts) instead of one sprite per tuft. A dedicated seeded RNG
 	# keeps this fully deterministic and never touches the tree-id sequence.
@@ -1148,43 +1140,18 @@ func _build_residential_life() -> void:
 			"residence": _add_resident_house(str(entry.id), entry.position, int(entry.get("level", 1)))
 			"ruin": _add_ruin_house(str(entry.id), entry.position, str(entry.get("state", "destroyed")))
 			"garden": _add_garden(str(entry.id), entry.position)
-	# A small animal corner plus the village horses.
-	_add_animal("chicken", Vector2(41.6, 28.0))
-	_add_animal("chicken", Vector2(42.7, 28.3))
-	_add_animal("goat", Vector2(43.7, 28.0))
-	_add_animal("chicken", Vector2(40.4, 27.5))
-	_add_animal("goat", Vector2(44.4, 27.3))
-	_add_animal("horse", Vector2(36.8, 31.1), 1.55)
-	_add_animal("horse", Vector2(16.2, 22.5), 1.5)
-	# A few more movable decorations close to the cottages.
-	_add_decor_placeable("crate_1", "res://assets/sprites/TX Props__TX Props Crate.tres", Vector2(31.9, 25.1), 1.0, 5, Vector2(1.4, 1.5))
-	_add_decor_placeable("barrel_3", "res://assets/sprites/TX Props__TX Props Barrel.tres", Vector2(45.0, 18.8), 1.0, 5, Vector2(1.2, 1.4))
-	_add_decor_placeable("crate_2", "res://assets/sprites/TX Props__TX Props Crate Small.tres", Vector2(22.4, 28.6), 1.0, 5, Vector2(1.2, 1.3))
-	# More flower borders around the gardens, cottages and new homes.
-	for p in [
-		Vector2(38.4, 23.8), Vector2(39.0, 26.0), Vector2(42.7, 23.6),
-		Vector2(44.8, 25.3), Vector2(36.8, 24.8), Vector2(28.0, 24.6),
-		Vector2(31.8, 22.5), Vector2(35.8, 25.2), Vector2(43.8, 26.2),
-		Vector2(46.8, 19.8), Vector2(47.0, 18.6), Vector2(12.9, 19.0),
-		Vector2(15.2, 18.7), Vector2(37.8, 30.0), Vector2(40.8, 30.8),
-		Vector2(23.8, 9.3), Vector2(26.3, 9.4), Vector2(34.4, 25.9),
-		Vector2(18.3, 26.1), Vector2(45.2, 20.9),
-	]:
-		for i in 4:
-			_add_decor_sprite("res://assets/sprites/TX Plant__TX Plant - Flower 01.tres", p + Vector2(_decor_rng.randf_range(-0.55, 0.55), _decor_rng.randf_range(-0.35, 0.35)), 0.9, 3)
-	# Daily-activity residents.
-	_add_resident("Sami", "fisher", "Fishing the shallows", Vector2(12.6, 26.0), [Vector2(12.6, 26.0), Vector2(14.0, 25.5), Vector2(11.3, 26.7)], Vector2(33.8, 23.4))
-	_add_resident("Hana", "gardener", "Tending the garden", Vector2(40.3, 25.8), [Vector2(40.3, 25.8), Vector2(42.0, 25.8), Vector2(39.1, 25.1)], Vector2(33.6, 23.2))
-	_add_resident("Rami", "carpenter", "Repairing the cottage", Vector2(37.2, 22.6), [Vector2(37.2, 22.6), Vector2(38.7, 23.1), Vector2(36.4, 23.4)], Vector2(33.2, 23.0), true)
-	_add_resident("Daud", "woodcutter", "Hauling forest wood", Vector2(44.8, 27.0), [Vector2(44.8, 27.0), Vector2(41.0, 26.7), Vector2(37.0, 26.2)], Vector2(34.2, 23.5), true)
-	_add_resident("Noor", "keeper", "Feeding the animals", Vector2(43.2, 28.5), [Vector2(43.2, 28.5), Vector2(42.0, 28.2), Vector2(44.0, 28.2)], Vector2(33.4, 23.1))
-	_add_resident("Bilal", "farmer", "Harvesting crops", Vector2(42.9, 25.8), [Vector2(42.9, 25.8), Vector2(44.4, 25.4), Vector2(41.2, 25.9)], Vector2(33.5, 23.3))
-	_add_resident("Yusuf", "trader", "Trading village goods", Vector2(29.1, 21.0), [Vector2(29.1, 21.0), Vector2(27.2, 22.0), Vector2(25.2, 23.5)], Vector2(34.5, 23.2))
-	_add_resident("Tomas", "defender", "Watching the sea gate", Vector2(20.2, 25.7), [Vector2(20.2, 25.7), Vector2(22.3, 26.4)], Vector2(26.5, 25.5), true, 11, 4.8)
-	_add_resident("Sora", "defender", "Watching the forest gate", Vector2(44.4, 20.2), [Vector2(44.4, 20.2), Vector2(42.2, 21.4)], Vector2(39.5, 22.0), true, 11, 4.8)
-	_add_resident("Amir", "stablehand", "Tending the horses", Vector2(36.8, 30.2), [Vector2(36.8, 30.2), Vector2(38.2, 30.7), Vector2(35.7, 30.7)], Vector2(33.8, 23.4))
-	_add_resident("Laila", "gardener", "Watering the new gardens", Vector2(36.4, 27.0), [Vector2(36.4, 27.0), Vector2(44.0, 20.8), Vector2(19.8, 27.4)], Vector2(33.5, 23.2))
-	_add_resident("Zara", "resident", "Visiting the west cottages", Vector2(15.0, 19.4), [Vector2(15.0, 19.4), Vector2(23.0, 23.0), Vector2(30.5, 24.5)], Vector2(34.0, 23.2))
+	# All occupational and animal locations are authored relative to real places.
+	for entry in _layout.activity_records():
+		var points := _layout.activity_points(entry)
+		if points.is_empty(): continue
+		match str(entry.get("kind", "")):
+			"animal": _add_animal(str(entry.get("species", "chicken")), points[0], float(entry.get("scale", 1.25)))
+			"resident":
+				_add_resident(str(entry.get("id", "Resident")), str(entry.get("role", "resident")), str(entry.get("activity", "At work")), points[0], points, _house_position + Vector2(0, 1.8), bool(entry.get("combat", false)), int(entry.get("damage", 8)), float(entry.get("distance", 4.2)))
+				_residents[-1].set_meta("activity_id", str(entry.id))
+	_add_decor_placeable("crate_1", "res://assets/sprites/TX Props__TX Props Crate.tres", _layout.position_of("house") + Vector2(-4.8, 0.4), 1.0, 5, Vector2(1.4, 1.5))
+	_add_decor_placeable("barrel_3", "res://assets/sprites/TX Props__TX Props Barrel.tres", _layout.position_of("shop_house") + Vector2(2.7, -1.2), 1.0, 5, Vector2(1.2, 1.4))
+	_add_decor_placeable("crate_2", "res://assets/sprites/TX Props__TX Props Crate Small.tres", _layout.position_of("garden_5") + Vector2(-1.6, -0.8), 1.0, 5, Vector2(1.2, 1.3))
 
 
 func _add_resident_house(house_name: String, at: Vector2, level: int) -> void:
@@ -1433,15 +1400,15 @@ func _add_resident(resident_name: String, role: String, activity: String, start:
 	resident.resident_name = resident_name
 	resident.role = role
 	resident.activity = activity
-	resident.position = start + (_house_position - HOUSE_BASE if role == "carpenter" else Vector2.ZERO)
-	resident.shelter = shelter + _house_position - HOUSE_BASE
-	resident.set_meta("home_shelter_offset", shelter - HOUSE_BASE)
+	resident.position = start
+	resident.shelter = shelter
+	resident.set_meta("home_shelter_offset", shelter - _house_position)
 	resident.combat_enabled = combat
 	resident.combat_damage = damage
 	resident.combat_range = distance
 	var typed_points: Array[Vector2] = []
 	for p in points:
-		typed_points.append(p + (_house_position - HOUSE_BASE if role == "carpenter" else Vector2.ZERO))
+		typed_points.append(p)
 	resident.waypoints = typed_points
 	add_child(resident)
 	_residents.append(resident)
@@ -1449,7 +1416,8 @@ func _add_resident(resident_name: String, role: String, activity: String, start:
 
 func _build_water_keepers() -> void:
 	# No world RNG calls here: existing tree IDs and generation order stay stable.
-	var starts := [Vector2(46, 10), Vector2(49, 15), Vector2(46, 23), Vector2(50, 29), Vector2(55, 22)]
+	var starts: Array[Vector2] = []
+	for index in 5: starts.append(_layout.activity_points(_layout.activity("keeper_%d" % index))[0])
 	for i in GameState.water_keeper_count():
 		var already_exists := false
 		for resident in _residents:
@@ -1462,7 +1430,8 @@ func _build_water_keepers() -> void:
 		keeper.role = "water_keeper"
 		keeper.water_power = true
 		keeper.position = starts[i]
-		keeper.waypoints = [starts[i], starts[i] + Vector2(1.2, 0.5)]
+		keeper.waypoints = _layout.activity_points(_layout.activity("keeper_%d" % i))
+		keeper.set_meta("activity_id", "keeper_%d" % i)
 		keeper.activity = "Protecting and replanting the forest"
 		add_child(keeper)
 		_residents.append(keeper)
@@ -1550,7 +1519,7 @@ func _dead_sea_life_texture(kind: int) -> Texture2D:
 func _build_coastal_system() -> void:
 	_coastal_guard = CoastalGuard.new()
 	_coastal_guard.name = "CoastalGuard"
-	_coastal_guard.position = Vector2(11.2, 27.0)
+	_coastal_guard.position = _layout.activity_points(_layout.activity("guard"))[0]
 	add_child(_coastal_guard)
 	_rubbish_system = RubbishSystem.new()
 	_rubbish_system.name = "RubbishSystem"
@@ -1680,7 +1649,7 @@ func _apply_emergency_damage(damage: int) -> void:
 func _build_settlement_editor() -> void:
 	_settlement_editor = SettlementEditor.new()
 	_settlement_editor.name = "SettlementEditor"
-	_settlement_editor.building_area = Rect2(18.2, 13.0, 27.4, 17.4)
+	_settlement_editor.building_area = Rect2(18.2, 10.5, 27.4, 19.9)
 	add_child(_settlement_editor)
 	for placeable in _placeables:
 		_settlement_editor.register(placeable)
@@ -1834,9 +1803,14 @@ func refresh_spatial_layout() -> void:
 			_recovery_center = _house_position + Vector2(0, 2.3)
 			_player_spawn = _house_position + Vector2(0, 2.9)
 			if is_instance_valid(_recovery_ward): _recovery_ward.position = _recovery_center
+	for placeable in _placeables:
+		var entry := _layout.anchor(placeable.placeable_id)
+		if not str(entry.get("relative_to", "")).is_empty(): placeable.position = _layout.position_of(placeable.placeable_id)
 	for resident in _residents:
 		if is_instance_valid(resident) and resident.has_meta("home_shelter_offset"):
 			resident.shelter = _house_position + resident.get_meta("home_shelter_offset")
+		if is_instance_valid(resident) and resident.has_meta("activity_id"):
+			resident.waypoints = _layout.activity_points(_layout.activity(str(resident.get_meta("activity_id"))))
 	background.texture = WorldTerrain._make_terrain_texture(_layout)
 	invalidate_resident_routes()
 	call_deferred("_resolve_custom_routes")

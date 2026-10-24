@@ -130,7 +130,7 @@ tree, house, garden, flowers, fence, sign.")
 			child.custom_minimum_size.x = 230
 	bar = W.row(self)
 	spatial_shown = W.check(bar, "Spatial overlays", false)
-	spatial_kind = W.option(bar, ["anchors", "routes", "zones"])
+	spatial_kind = W.option(bar, ["anchors", "routes", "zones", "scenery", "activities"])
 	spatial_entry = W.option(bar, [])
 	spatial_vertex = W.number(bar, "Bend / vertex", 0, 0, 32)
 	route_width = W.number(bar, "Road width", 1.8, 0.8, 3.5)
@@ -446,8 +446,8 @@ func _preview_objects() -> Array[Dictionary]:
 		var at: Vector2 = detail.get("position", Vector2.ZERO)
 		if not str(detail.get("parent", "")).is_empty(): at += spatial.position_of(str(detail.parent))
 		result.append({"id": detail.id, "asset": "workspace/" + str(detail.get("asset", "baskets")), "position": at, "scale": detail.get("scale", 1), "preview_only": true})
-	result.append({"id": "jetty_preview", "asset": "jetty", "position": Vector2(9, 28.5), "preview_only": true})
-	result.append({"id": "boat_preview", "asset": "ship", "position": Vector2(7.5, 32.0), "preview_only": true})
+	result.append({"id": "jetty_preview", "asset": "jetty", "position": spatial.position_of("harbour", Vector2(9, 28.5)), "preview_only": true})
+	result.append({"id": "boat_preview", "asset": "ship", "position": spatial.activity_points(spatial.activity("boat"))[0], "preview_only": true})
 	return result
 
 
@@ -478,7 +478,20 @@ func _move_layout_point(at: Vector2) -> void:
 	var entries: Array = _editable_layout().get(kind)
 	if spatial_entry.selected < 0 or spatial_entry.selected >= entries.size(): return
 	var entry: Dictionary = entries[spatial_entry.selected]
-	if kind == "anchors": entry.position = at.snapped(Vector2.ONE * 0.25) if snap.button_pressed else at
+	if kind == "anchors":
+		entry.position = at.snapped(Vector2.ONE * 0.25) if snap.button_pressed else at
+		var parent := str(entry.get("relative_to", ""))
+		if not parent.is_empty(): entry.offset = entry.position - _editable_layout().position_of(parent)
+	elif kind == "scenery":
+		var parent := str(entry.get("parent", ""))
+		entry.position = at - (_editable_layout().position_of(parent) if not parent.is_empty() else Vector2.ZERO)
+	elif kind == "activities":
+		var points: Array = entry.get("points", [])
+		var index := int(spatial_vertex.value)
+		if index >= points.size():
+			studio.report("Choose an existing activity point.")
+			return
+		points[index].offset = at - _editable_layout().position_of(str(points[index].get("anchor", "")))
 	else:
 		var key := "via" if kind == "routes" else "polygon"
 		var points: PackedVector2Array = entry.get(key, PackedVector2Array())
@@ -511,6 +524,23 @@ func _update_spatial_overlay(spatial: WorldLayout) -> void:
 			for i in points.size(): points[i] *= CELL
 			var overlay := {"points": points, "color": Color(0.5, 0.8, 0.95, 0.65)}
 			if zone.get("id", "") == selected_id: overlay.label = selected_id; overlay.width = 2.0
+			canvas.spatial_overlay.append(overlay)
+	elif kind == "activities":
+		for entry in spatial.activities:
+			var points := PackedVector2Array(spatial.activity_points(entry))
+			if points.is_empty(): continue
+			if points.size() == 1: points.append(points[0] + Vector2(0.3, 0))
+			for i in points.size(): points[i] *= CELL
+			var overlay := {"points": points, "color": Color(0.9, 0.55, 0.95, 0.8), "width": 2.0}
+			if entry.get("id", "") == selected_id: overlay.label = selected_id
+			canvas.spatial_overlay.append(overlay)
+	elif kind == "scenery":
+		for entry in spatial.scenery:
+			var at: Vector2 = entry.get("position", Vector2.ZERO)
+			var parent := str(entry.get("parent", ""))
+			if not parent.is_empty(): at += spatial.position_of(parent)
+			var overlay := {"points": PackedVector2Array([at * CELL, (at + Vector2(0.4, 0)) * CELL]), "color": Color(0.9, 0.8, 0.5), "width": 3.0}
+			if entry.get("id", "") == selected_id: overlay.label = selected_id
 			canvas.spatial_overlay.append(overlay)
 	elif kind == "routes":
 		for route in spatial.routes:
