@@ -909,9 +909,6 @@ func _build_scatter() -> void:
 		"res://assets/sprites/TX Plant__TX Plant - Grass 07.tres",
 		"res://assets/sprites/TX Plant__TX Plant - Grass 13.tres",
 	]
-	var flower_paths := [
-		"res://assets/sprites/TX Plant__TX Plant - Flower 01.tres",
-	]
 	# Plot-edge shrubs follow authored compounds, rather than detached world points.
 	for id in ["house", "ResidentHouseWest", "ResidentHouseWestNorth", "ResidentHouseNorth", "ResidentHouseEast", "ResidentHouseSouth", "garden_walk"]:
 		var plot := _layout.world_footprint(id)
@@ -921,21 +918,6 @@ func _build_scatter() -> void:
 	# hundreds of tufts) instead of one sprite per tuft. A dedicated seeded RNG
 	# keeps this fully deterministic and never touches the tree-id sequence.
 	_build_grass_fields(grass_paths)
-	# Flower clumps.
-	for i in 34:
-		var p := Vector2(_decor_rng.randf_range(2, 60), _decor_rng.randf_range(4, 35))
-		if _too_close_to_landmarks(p) and _decor_rng.randf() > 0.2:
-			continue
-		if _authored_map:
-			var edited := false
-			for layer in ["Terrain", "Paths", "Water", "Shore"]:
-				if not _authored_map.cell(layer, Vector2i(p.floor())).is_empty(): edited = true
-			if edited: continue
-		var shore := float(_coast_pixel_y(int(p.x * 32))) / 32.0
-		if p.y > shore - 0.5:
-			continue
-		for j in _decor_rng.randi_range(2, 5):
-			_add_wind_decor(flower_paths[0], p + Vector2(_decor_rng.randf_range(-0.5, 0.5), _decor_rng.randf_range(-0.35, 0.35)), 0.9, 3)
 	# Moveable decorations near the cottage.
 	_add_decor_placeable("barrel_1", "res://assets/sprites/TX Props__TX Props Barrel.tres", Vector2(28.8, 23.8), 1.0, 5, Vector2(1.2, 1.4))
 	_add_decor_placeable("barrel_2", "res://assets/sprites/TX Props__TX Props Barrel.tres", Vector2(40.2, 22.8), 1.0, 5, Vector2(1.2, 1.4))
@@ -1180,7 +1162,7 @@ func _add_resident_house(house_name: String, at: Vector2, level: int) -> void:
 	_local_lights.append(glow)
 	var target := SettlementTarget.new()
 	target.name = "ResidentHouseTarget"
-	target.target_name = house_name.trim_prefix("ResidentHouse") + " cottage"
+	target.target_name = str(_layout.anchor(house_name).get("label", house_name.trim_prefix("ResidentHouse") + " cottage"))
 	target.structure_id = "home_" + house_name.to_snake_case()
 	target.damage_scale = 0.25
 	target.position = Vector2(0, -0.8)
@@ -1842,6 +1824,7 @@ func _resolve_custom_routes() -> void:
 		background.texture = WorldTerrain._make_terrain_texture(_layout)
 	for node in get_tree().get_nodes_in_group("flowers"):
 		if is_ancestor_of(node): node.visible = WorldComposition.allowed(self, _layout, node.global_position, 0.5)
+	WorldComposition.refresh(self, _layout)
 	_resolving_routes = false
 
 

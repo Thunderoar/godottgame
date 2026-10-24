@@ -14,8 +14,11 @@ var terrain_bake: Texture2D
 @export var scenery: Array[Dictionary] = []
 @export var activities: Array[Dictionary] = []
 const ACTOR_CLEARANCE := 0.38
+const BUILDING_GAP := 1.8
 var _route_buckets: Dictionary = {}
 var _reserved_rects: Array[Rect2] = []
+var _approach_rects: Array[Rect2] = []
+var _building_rects: Dictionary = {}
 var _segments_a := PackedVector2Array()
 var _segments_b := PackedVector2Array()
 var _segments_width := PackedFloat32Array()
@@ -98,6 +101,8 @@ func route_distance(at: Vector2) -> float:
 func _prepare() -> void:
 	_route_buckets.clear()
 	_reserved_rects.clear()
+	_approach_rects.clear()
+	_building_rects.clear()
 	_segments_a.clear()
 	_segments_b.clear()
 	_segments_width.clear()
@@ -119,8 +124,15 @@ func _prepare() -> void:
 		var p: Vector2 = entry.get("position", Vector2.ZERO)
 		var footprint: Rect2 = entry.get("footprint", Rect2(-0.5, -0.5, 1, 1))
 		_reserved_rects.append(Rect2(p + footprint.position, footprint.size))
+		if entry.get("kind", "") in ["house", "shop", "residence", "ruin"]:
+			_building_rects[str(entry.id)] = Rect2(p + footprint.position, footprint.size)
+		if entry.has("yard"):
+			var yard: Rect2 = entry.yard
+			_reserved_rects.append(Rect2(p + yard.position, yard.size))
 		var size: Vector2 = entry.get("clearance", Vector2(1.5, 1.5))
-		_reserved_rects.append(Rect2(approach(str(entry.id)) - size * 0.5, size))
+		var entrance := Rect2(approach(str(entry.id)) - size * 0.5, size)
+		_reserved_rects.append(entrance)
+		if entry.get("destination", false): _approach_rects.append(entrance)
 	_prepared = true
 
 func zone_record(at: Vector2) -> Dictionary:
@@ -195,6 +207,7 @@ func warnings() -> PackedStringArray:
 	for route in routes:
 		if float(route.get("width", 0.0)) < ACTOR_CLEARANCE * 2.0:
 			result.append(str(route.get("id", "route")) + ": narrower than actor clearance")
+	result.append_array(crowded_buildings())
 	return result
 
 
@@ -219,21 +232,60 @@ func world_footprint(id: String) -> Rect2:
 	return Rect2(position_of(id) + rect.position, rect.size)
 
 
+func scenery_position(entry: Dictionary) -> Vector2:
+	var parent := str(entry.get("parent", ""))
+	return entry.get("position", Vector2.ZERO) + (position_of(parent) if not parent.is_empty() else Vector2.ZERO)
+
+
+func scenery_area(entry: Dictionary) -> Rect2:
+	# Low ground occupancy, rather than the tall sprite's transparent canvas.
+	var area: Rect2 = entry.get("footprint", Rect2(-0.45, -0.35, 0.9, 0.35))
+	return Rect2(scenery_position(entry) + area.position, area.size)
+
+
+func scenery_fits(entry: Dictionary) -> bool:
+	var area := scenery_area(entry)
+	var owner := str(entry.get("parent", ""))
+	if conflicts(area.grow(0.1)): return false
+	for id: String in _building_rects:
+		if id != owner and (_building_rects[id] as Rect2).intersects(area): return false
+	# Mooring equipment may occupy only the actual visible timber deck.
+	return not WorldTerrain.is_sea(scenery_position(entry)) or world_footprint("jetty_deck").encloses(area)
+
+
+static func rectangle_gap(a: Rect2, b: Rect2) -> float:
+	return Vector2(maxf(0, maxf(a.position.x - b.end.x, b.position.x - a.end.x)), maxf(0, maxf(a.position.y - b.end.y, b.position.y - a.end.y))).length()
+
+
+func crowded_buildings() -> PackedStringArray:
+	var result := PackedStringArray()
+	var buildings: Array[Dictionary] = []
+	for entry in anchors:
+		if entry.get("kind", "") in ["house", "shop", "residence", "ruin", "portal"]: buildings.append(entry)
+	for i in buildings.size():
+		for j in range(i + 1, buildings.size()):
+			var a := buildings[i]
+			var b := buildings[j]
+			var minimum := 1.0 if "ruin" in [a.get("kind", ""), b.get("kind", "")] else BUILDING_GAP
+			var gap := rectangle_gap(world_footprint(str(a.id)), world_footprint(str(b.id)))
+			if gap + 0.001 < minimum: result.append("%s / %s: %.2f gap, %.2f required" % [a.id, b.id, gap, minimum])
+	return result
+
+
 func conflicts(area: Rect2) -> bool:
 	# Conservative authoring clearance for full footprints, not just centres.
-	for entry in anchors:
-		var id := str(entry.get("id", ""))
-		if not entry.get("destination", false): continue
-		var size: Vector2 = entry.get("clearance", Vector2.ONE)
-		if area.intersects(Rect2(approach(id) - size * 0.5, size)): return true
-	for route in routes:
-		var rect := area.grow(float(route.get("width", 1.6)) * 0.5)
-		var points := route_points(route)
+	if not _prepared: _prepare()
+	for entrance in _approach_rects:
+		if area.intersects(entrance): return true
+	for i in _segments_a.size():
+		var rect := area.grow(_segments_width[i])
+		var a := _segments_a[i]
+		var b := _segments_b[i]
+		if maxf(a.x, b.x) < rect.position.x or minf(a.x, b.x) > rect.end.x or maxf(a.y, b.y) < rect.position.y or minf(a.y, b.y) > rect.end.y: continue
 		var corners := [rect.position, Vector2(rect.end.x, rect.position.y), rect.end, Vector2(rect.position.x, rect.end.y)]
-		for i in points.size() - 1:
-			if rect.has_point(points[i]) or rect.has_point(points[i + 1]): return true
-			for edge in 4:
-				if Geometry2D.segment_intersects_segment(points[i], points[i + 1], corners[edge], corners[(edge + 1) % 4]) != null: return true
+		if rect.has_point(a) or rect.has_point(b): return true
+		for edge in 4:
+			if Geometry2D.segment_intersects_segment(a, b, corners[edge], corners[(edge + 1) % 4]) != null: return true
 	return false
 
 

@@ -6,6 +6,22 @@ static func run(game: Game, check: Callable) -> void:
 	var layout := lobby._layout
 	var planner := ResidentRoutes.new(lobby)
 	planner.clearance = WorldLayout.ACTOR_CLEARANCE
+	check.call(layout.crowded_buildings().is_empty(), "districts: full building footprints have deliberate breathing room: " + str(layout.crowded_buildings()))
+	var residences := 0
+	for anchor in layout.anchors:
+		var kind := str(anchor.get("kind", ""))
+		if kind == "residence" and anchor.get("zone", "") == "residential": residences += 1
+		if kind in ["residence", "shop", "garden"]:
+			check.call(layout.zone_at(anchor.position) == anchor.get("zone", ""), "districts: destination sits in its declared district: " + str(anchor.id))
+		if kind == "decoration":
+			var owner := str(anchor.get("relative_to", ""))
+			var detail := {"parent": owner, "position": layout.position_of(str(anchor.id)) - layout.position_of(owner), "footprint": anchor.get("footprint", Rect2(-0.4, -0.3, 0.8, 0.3))}
+			check.call(layout.scenery_fits(detail), "districts: movable default prop avoids public circulation: " + str(anchor.id))
+	check.call(residences == 5, "districts: five ordinary households share the western residential area")
+	for id in ["shop_potion", "shop_equipment", "shop_pet", "shop_house", "shop_services"]:
+		check.call(layout.anchor(id).get("zone", "") == "market", "districts: merchant belongs to shared commercial district: " + id)
+	for detail in layout.scenery:
+		check.call(layout.scenery_fits(detail), "districts: authored accessory keeps roads, doorways and neighbouring plots clear: " + str(detail.get("id", "")))
 	var parcel_ids: Array[String] = []
 	for entry in layout.anchors:
 		if entry.get("kind", "") in ["house", "shop", "residence", "ruin"]: parcel_ids.append(str(entry.id))
@@ -27,6 +43,13 @@ static func run(game: Game, check: Callable) -> void:
 		for at in points:
 			reachable = reachable and not planner.path(layout.position_of("arrival"), at, false).is_empty()
 		check.call(reachable, "kampung: exact work destinations reachable: " + str(entry.id))
+	var squeezed := layout.copy_layout()
+	squeezed.anchor("shop_pet").position = squeezed.position_of("shop_equipment") + Vector2(0, 3.7)
+	check.call(not squeezed.crowded_buildings().is_empty(), "districts: validator rejects non-overlapping buildings with too little space")
+	var blocked_accessory := {"position": layout.position_of("arrival"), "footprint": Rect2(-0.3, -0.3, 0.6, 0.6)}
+	check.call(not layout.scenery_fits(blocked_accessory), "districts: scenery validator rejects clutter in the arrival court")
+	var saved_prop := layout.resolved([], {"crate_1": [40.0, 24.0]})
+	check.call(saved_prop.position_of("crate_1") == Vector2(40, 24), "districts: player-owned decoration keeps its position above new defaults")
 	var road_style := layout.copy_layout()
 	road_style.routes[0].role = "informal"
 	check.call(road_style.signature() != layout.signature(), "kampung: road hierarchy changes invalidate the terrain bake")

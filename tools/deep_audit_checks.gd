@@ -75,21 +75,23 @@ static func run(game: Node, check: Callable) -> void:
 	await tree.process_frame
 	check.call(hud._attack_button.size.is_equal_approx(Vector2(102, 102)), "audit: resetting enlarged Strike restores its actual rectangle")
 	check.call(joy.size.is_equal_approx(Vector2(190, 190)), "audit: resetting enlarged joystick restores its actual rectangle")
+	# Translate the unchanged obstacle fixtures into the clear western pasture.
+	# Their old (35,36) site is now the authored farmhouse; never test through it.
 	# A cached route must change after editor invalidation, even with the same goal.
 	var walker := Resident.new()
 	walker.resident_name = "Audit walker"
-	walker.position = Vector2(33, 36)
+	walker.position = Vector2(26, 36)
 	lobby.add_child(walker)
 	walker.set_physics_process(false)
-	walker._walk_to(Vector2(39, 36), 1.0, 1.0 / 60.0)
-	var blocker := _box(lobby, Vector2(35, 36), Vector2(1, 1))
+	walker._walk_to(Vector2(32, 36), 1.0, 1.0 / 60.0)
+	var blocker := _box(lobby, Vector2(28, 36), Vector2(1, 1))
 	await tree.physics_frame
 	await tree.physics_frame
 	lobby._resident_routes.invalidate()
-	walker._walk_to(Vector2(39, 36), 1.0, 1.0 / 60.0)
+	walker._walk_to(Vector2(32, 36), 1.0, 1.0 / 60.0)
 	var crosses_block := false
 	for point in walker._path:
-		crosses_block = crosses_block or Rect2(34.5, 35.5, 1, 1).has_point(point)
+		crosses_block = crosses_block or Rect2(27.5, 35.5, 1, 1).has_point(point)
 	check.call(not crosses_block, "audit: resident replans cached path after obstacles change")
 	var clear_segments := true
 	var cursor := walker.global_position
@@ -107,15 +109,15 @@ static func run(game: Node, check: Callable) -> void:
 	var player_at := p.global_position
 	var player_facing := p.facing
 	var pet_at := lobby.pet.global_position
-	p.global_position = Vector2(38, 36)
+	p.global_position = Vector2(31, 36)
 	p.facing = Vector2.RIGHT
 	p.reset_physics_interpolation()
-	lobby.pet.global_position = Vector2(33, 36.5)
+	lobby.pet.global_position = Vector2(26, 36.5)
 	lobby.pet._follow_velocity = Vector2.ZERO
 	lobby.pet._follow_path.clear()
 	lobby.pet._route_timer = 0.0
 	lobby.pet.reset_physics_interpolation()
-	blocker = _box(lobby, Vector2(35, 36), Vector2(1, 2))
+	blocker = _box(lobby, Vector2(28, 36), Vector2(1, 2))
 	await tree.physics_frame
 	await tree.physics_frame
 	lobby.invalidate_resident_routes()
@@ -126,7 +128,7 @@ static func run(game: Node, check: Callable) -> void:
 		var before := lobby.pet.global_position
 		lobby.pet._follow(1.0 / float(Engine.physics_ticks_per_second))
 		pet_continuous = pet_continuous and before.distance_to(lobby.pet.global_position) <= 0.155
-		crossed_wall = crossed_wall or Rect2(34.5, 35, 1, 2).has_point(lobby.pet.global_position)
+		crossed_wall = crossed_wall or Rect2(27.5, 35, 1, 2).has_point(lobby.pet.global_position)
 	check.call(lobby.pet.global_position.distance_to(p.global_position + Vector2(-0.95, 0.5)) < 0.5, "audit: pet completes a detour around a blocking wall")
 	check.call(pet_continuous and not crossed_wall, "audit: pet detour stays continuous and does not cross the wall")
 	blocker.queue_free()
@@ -140,7 +142,7 @@ static func run(game: Node, check: Callable) -> void:
 	lobby.pet.reset_physics_interpolation()
 	# A newly fallen tree invalidates the shared grid after disabling collision.
 	var tree_fixture := ForestTree.new()
-	tree_fixture.position = Vector2(35, 36)
+	tree_fixture.position = Vector2(28, 36)
 	tree_fixture.felled.connect(lobby._on_forest_tree_felled)
 	var trunk := StaticBody2D.new()
 	trunk.name = "Body"
@@ -154,7 +156,7 @@ static func run(game: Node, check: Callable) -> void:
 	await tree.physics_frame
 	await tree.physics_frame
 	lobby.invalidate_resident_routes()
-	lobby.resident_path(Vector2(33, 36), Vector2(39, 36))
+	lobby.resident_path(Vector2(26, 36), Vector2(32, 36))
 	var old_revision := lobby.resident_routes_revision()
 	tree_fixture.take_attack_damage(999)
 	await tree.physics_frame

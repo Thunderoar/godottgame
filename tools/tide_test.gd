@@ -244,7 +244,7 @@ func _test_settlement_expansion() -> void:
 	_check(get_tree().get_nodes_in_group("ruin_house").size() >= 3, "abandoned, damaged and destroyed houses decorate the outskirts")
 	_check(get_tree().get_nodes_in_group("horses").size() >= 2, "horses live in the village")
 	_check(PixelArt.animal_texture("horse") != null, "horse art generates")
-	_check(get_tree().get_nodes_in_group("flowers").size() >= 12, "selective flower borders remain around village plots")
+	_check(get_tree().get_nodes_in_group("flowers").size() >= 4, "authored flower beds frame selected household plots")
 	_check(get_tree().get_nodes_in_group("garden").size() >= 6, "more gardens fill the village")
 	var decoration_count := 0
 	for node in get_tree().get_nodes_in_group("placeable"):

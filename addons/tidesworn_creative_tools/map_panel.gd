@@ -443,6 +443,7 @@ func _preview_objects() -> Array[Dictionary]:
 		if kind not in ["residence", "ruin"]: continue
 		result.append({"id": entry.id, "asset": "house", "position": entry.position, "scale": 0.78, "level": entry.get("level", 1), "preview_only": true})
 	for detail in spatial.scenery:
+		if not spatial.scenery_fits(detail): continue
 		var at: Vector2 = detail.get("position", Vector2.ZERO)
 		if not str(detail.get("parent", "")).is_empty(): at += spatial.position_of(str(detail.parent))
 		result.append({"id": detail.id, "asset": "workspace/" + str(detail.get("asset", "baskets")), "position": at, "scale": detail.get("scale", 1), "preview_only": true})
@@ -556,6 +557,12 @@ func _update_spatial_overlay(spatial: WorldLayout) -> void:
 				var corners := PackedVector2Array([plot.position, Vector2(plot.end.x, plot.position.y), plot.end, Vector2(plot.position.x, plot.end.y), plot.position])
 				for i in corners.size(): corners[i] *= CELL
 				canvas.spatial_overlay.append({"points": corners, "color": Color(0.4, 0.85, 0.6, 0.65)})
+			if entry.get("id", "") == selected_id and entry.has("yard"):
+				var yard: Rect2 = entry.yard
+				yard.position += spatial.position_of(selected_id)
+				var outline := PackedVector2Array([yard.position, Vector2(yard.end.x, yard.position.y), yard.end, Vector2(yard.position.x, yard.end.y), yard.position])
+				for i in outline.size(): outline[i] *= CELL
+				canvas.spatial_overlay.append({"points": outline, "color": Color(0.9, 0.85, 0.5, 0.8), "width": 2.0})
 			var at := spatial.approach(str(entry.id))
 			var clearance: Vector2 = entry.get("clearance", Vector2.ONE)
 			var rect := Rect2(at - clearance * 0.5, clearance)

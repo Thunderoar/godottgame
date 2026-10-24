@@ -1,5 +1,9 @@
 # Kampung world redesign
 
+This records the first implementation at `ed190ff`. The subsequent
+[district spacing pass](DISTRICT_SPACING_REPORT.md) supersedes its placement
+ledger, scenery counts, screenshots and performance figures for the current map.
+
 ## Baseline audit and master plan — 24 October 2026
 
 Started from fetched origin/main `1c9e77bef88e0cfe16d169cc80c9aed6ed2c692b`,

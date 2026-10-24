@@ -21,9 +21,10 @@ static func build(lobby: Lobby, layout: WorldLayout) -> void:
 		var at: Vector2 = entry.get("position", Vector2.ZERO)
 		if not parent_id.is_empty() and owner_node == holder:
 			at += layout.position_of(parent_id)
-		var global_at := at if owner_node == holder else owner_node.position + at
-		if parent_id.is_empty() and layout.route_distance(global_at) < 0.35: continue
+		# Customized layouts may hide an obstructing accessory without moving the save.
+		# Keep the node so moving the owner clear can reveal it again.
 		_add_prop(owner_node, entry, at)
+		(owner_node.get_child(-1) as CanvasItem).visible = layout.scenery_fits(entry)
 	# Existing tree silhouettes lead the composition. Understory is clustered at
 	# the sides of trunks, never on a road, doorway, combat clearing or sea.
 	var rng := RandomNumberGenerator.new()
@@ -62,9 +63,12 @@ static func _add_prop(parent: Node2D, data: Dictionary, at: Vector2) -> void:
 	sprite.position = at
 	sprite.z_index = 5 if not parent is SettlementPlaceable else 1
 	sprite.add_to_group("village_workspace")
+	sprite.set_meta("scenery_id", str(data.get("id", "")))
+	if data.get("asset", "") == "flowers": sprite.add_to_group("flowers")
 	parent.add_child(sprite)
 
 static func texture(kind: String) -> Texture2D:
+	if kind == "flowers": return PixelArt.coastal_prop("flowers")
 	if kind in KampungArt.KINDS: return KampungArt.texture(kind)
 	var imported := AssetRegistry.get_texture("village/" + kind)
 	if imported: return imported
@@ -101,3 +105,12 @@ static func texture(kind: String) -> Texture2D:
 				PixelArt.rect(img, 9, 29, 47, 6, wood)
 				PixelArt.hline(img, 9, 35, 47, dark)
 		return img)
+
+
+static func refresh(lobby: Lobby, layout: WorldLayout) -> void:
+	var records := {}
+	for entry in layout.scenery: records[str(entry.get("id", ""))] = entry
+	for node in lobby.get_tree().get_nodes_in_group("village_workspace"):
+		if not is_instance_valid(node) or not lobby.is_ancestor_of(node): continue
+		var id := str(node.get_meta("scenery_id", ""))
+		if records.has(id): node.visible = layout.scenery_fits(records[id])

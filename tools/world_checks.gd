@@ -106,7 +106,11 @@ static func run(game: Game, check: Callable) -> bool:
 				check.call(false, "route is protected from decorative placement")
 	var clear_flowers := true
 	for node in game.get_tree().get_nodes_in_group("flowers"):
-		if lobby.is_ancestor_of(node) and layout.reserved(node.global_position, 0.45): clear_flowers = false
+		if not lobby.is_ancestor_of(node): continue
+		if node.has_meta("scenery_id"):
+			for detail in layout.scenery:
+				if detail.get("id", "") == node.get_meta("scenery_id") and not layout.scenery_fits(detail): clear_flowers = false
+		elif layout.reserved(node.global_position, 0.45): clear_flowers = false
 	check.call(clear_flowers, "flowers frame districts without occupying approaches or lanes")
 	var shore_map := AuthoredMap.new()
 	shore_map.paint("Shore", Vector2i(3, 28), "sand")

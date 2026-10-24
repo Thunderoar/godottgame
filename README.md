@@ -316,6 +316,10 @@ remain `./tools/test_isolated.sh` and `./tools/test_creative_editor.sh`.
 
 The Besut-inspired composition, layout-owned routines, local workspaces, Map
 Studio controls, paired runtime evidence and measured limits are documented in
-[the kampung implementation report](docs/KAMPUNG_REDESIGN.md). The verified
-combined gate passes 812 checks, with 63 native graphical checks and 37 editor
+[the kampung implementation report](docs/KAMPUNG_REDESIGN.md). The subsequent
+[district spacing pass](docs/DISTRICT_SPACING_REPORT.md) groups five households
+around a western lane, all five merchants in one market, and six crop beds beside
+the southeast animal yard. Active building plots now keep at least 1.8 units of
+clearance (ruin pairs use 1.0), with curated accessories instead of scattered flowers. The verified
+combined gate passes 893 checks, with 63 native graphical checks and 37 editor
 checks plus restart verification.

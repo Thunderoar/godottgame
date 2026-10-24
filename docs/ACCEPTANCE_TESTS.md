@@ -154,7 +154,10 @@ Pet battle background wiring uses five per-duel paths in `PetBattleDB`. The supp
 ### 6. Lively village and ruins
 - At least seven `resident_house` nodes exist.
 - At least three `ruin_house` nodes include abandoned, damaged and destroyed art.
-- At least six `garden` nodes and 50 `flowers` nodes exist.
+- At least six `garden` nodes exist. At least four authored flower beds frame
+  selected household plots; the shipped layout contains five. Random flower
+  scatter is removed. Each bed must keep roads, entrances and neighbouring
+  building footprints clear.
 - At least two `horses` nodes exist and horse art generates.
 - At least nine editable `decoration` placeables exist.
 - The settlement editor still drags, clamps, saves and reloads layout.
@@ -403,7 +406,7 @@ Flower coverage is now a selective border-presence rule, with an additional
 reservation-clearance assertion. A large minimum flower count was inappropriate
 for keeping roads and entrances quiet; decoration quantity is not the design goal.
 
-`./tools/test_creative_editor.sh` exercises 34 editor checks in a disposable
+`./tools/test_creative_editor.sh` exercises 37 editor checks in a disposable
 source copy, including spatial anchor dragging, native undo/redo, route width,
 zone vertex edits, overlays, saving and a separate runtime restart. The restart
 checks that edited service coordinates and route width actually load in gameplay.
@@ -420,13 +423,23 @@ See WORLD_OVERHAUL_REPORT.md for measured evidence and limits.
 ## Kampung composition and spatial ownership
 
 `KampungChecks` runs inside the isolated gameplay gate before `WorldChecks`.
-It checks full building-plot overlap, exact player-sized work/animal/gathering
+It checks full building-plot overlap and minimum separation, exact player-sized work/animal/gathering
 points and routes, inherited routines for older maps, independent deep copies,
 undo snapshots and bounded artwork caches. All twelve ordinary residents also
 walk to a real authored destination under physics: every step is bounded by
 speed × delta, and arrival is required. A settlement completion hook moves the
 carpenter's workpoints without teleporting the worker; saved independent prop
 positions keep precedence over owner-local defaults.
+
+District checks require five ordinary homes in the western residential polygon,
+all five shops in the market, and residential/shop/garden positions inside their
+declared districts. Active building plots (including portals) require 1.8 units
+of edge clearance; pairs involving ruins require 1.0. Every authored accessory
+and default movable decoration must clear road ribbons, approach rectangles and
+neighbouring building footprints. Negative fixtures reject non-overlapping but
+cramped buildings and an accessory in the arrival court. Managed flower beds
+use these ground-footprint checks because maintained yards intentionally reserve
+their surroundings against wild plants. Independent saved prop positions still win.
 
 `tools/kampung_probe.tscn` is the focused spatial subset; run only with verified
 `TIDESWORN_TEST_ROOT` and isolated `XDG_DATA_HOME`. It never substitutes for the
@@ -435,4 +448,5 @@ and scenery-offset controls, native undo/redo, source save/reimport and restart
 in a disposable checkout. `./tools/review_world.sh /absolute/output` records
 paired actual gameplay fixtures, a diagnostic overview, a zoom-64 forest view,
 night districts, settings, movement, combat and software-renderer measurements.
-See [KAMPUNG_REDESIGN.md](KAMPUNG_REDESIGN.md) for actual results and limits.
+See [DISTRICT_SPACING_REPORT.md](DISTRICT_SPACING_REPORT.md) for current results
+and limits, and [KAMPUNG_REDESIGN.md](KAMPUNG_REDESIGN.md) for the first pass.

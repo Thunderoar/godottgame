@@ -10,15 +10,20 @@ village defaults. Existing layers, objects, stable IDs and save data remain vali
 
 | Collection | Fields and purpose |
 |---|---|
-| `anchors` | Stable `id`, `kind`, `position`, `zone`, local `footprint`, local `approach`, `clearance`, `owner`, `priority`, `movable`, `destination`; shop merchant/lamp, residence tier, ruin state and fence span/gaps |
+| `anchors` | Stable `id`, `kind`, `position`, `zone`, local `footprint`, optional local `yard`, local `approach`, `clearance`, `owner`, `priority`, `movable`, `destination`; shop merchant/lamp, residence tier, ruin state and fence span/gaps |
 | `routes` | Stable `id`, `from`/`to` anchor IDs, optional `via` points, full `width`, primary/secondary/informal `role`, ground `material` |
 | `zones` | Stable `id`, authored concave `polygon`, material, decoration `density` and allowed categories |
-| `scenery` | Stable `id`, asset, district, position, scale and optional owning building ID; building-local positions travel with that parent |
+| `scenery` | Stable `id`, asset, district, position, scale, optional ground `footprint` and owning building ID; building-local positions travel with that parent |
 
 Positions are world units (32 art pixels each). Building approach offsets are
 measured at the actual customer/door frontage. Footprints include their visual
 plot; runtime colliders remain the existing builder-owned shapes. Reserved
 approaches and road ribbons reject foliage and warn about blocking authoring.
+Maintained `yard` rectangles also exclude wild vegetation; they are intentionally
+larger than the building itself. Selected yards have a cream outline in Map Studio.
+`crowded_buildings()` validates full footprint edge separation: 1.8 units for
+house/shop/residence/portal pairs, or 1.0 when either is a ruin. This catches
+cramped plots even when their rectangles do not intersect.
 Fence span/gap coordinates are local to the fence anchor, so moving a fence moves
 its gates too. All runtime actors continue moving in continuous world space.
 
@@ -31,12 +36,15 @@ unrelated polylines happening to overlap visually.
 ## Districts
 
 - Homestead: open frontage, porch seating, planters and a short recovery/door link.
-- Market: connected merchant crescent; herb planters, smith tools/timber, pet
-  feed and baskets; a separate workshop joins the northern/eastern loop.
+- Residential: five ordinary homes along a shared western/northwestern lane and
+  wakaf court, with open fronts and selective household planting.
+- Market: all five merchants along one crescent; the carpenter anchors its
+  northern end, with tools/timber at the side and open customer approaches.
 - Portal grounds: cooler stone approaches and a shared northern gateway, framed
   by the existing warning stones and lanterns.
-- Farmland/residential: garden promenade, animal yard, cottages with front paths,
-  and ruins retained as settlement history.
+- Farmland: six beds in two columns, a shared garden aisle, animal yard, stable
+  and a working homestead to the southeast. A separate forest watch lodge serves
+  the eastern woodland edge. Ruins retain older outlying parcels.
 - Waterfront/beach: a fishing court, nets, stores, mooring details and reachable
   timber jetty. The turtle uses the shared sandy shoreline shelf.
 - Forest edge/interior: irregular overlapping regions, a shaded ground ramp,
@@ -61,8 +69,9 @@ placement; the editor reports such conflicts rather than deleting structures.
 Forest placement is a special compatibility boundary: the existing 64-tree
 fixture, RNG state, creation order, IDs, positions and maximum HP remain unchanged.
 Historical exclusion coordinates and the 160 pre-forest random draws are frozen
-solely for that compatibility. They do not position buildings. Optional flowers,
-understory and grass use separate seeded random streams.
+solely for that compatibility. They do not position buildings. Understory and
+grass use separate seeded random streams. Flowers are curated source records;
+there is no global random flower scatter.
 
 ## Edit in Map Studio
 
@@ -106,6 +115,14 @@ Spatial reservation lookups use prepared local buckets rather than rebuilding
 route arrays for every plant. There are no per-frame terrain images or new
 physics bodies on cosmetic props. Spawn clearance searches are bounded and
 consume no placement RNG.
+
+Accessory validation uses prepared route segments, destination approaches and
+building rectangles. `scenery_fits()` checks a low ground footprint plus 0.1-unit
+road/entrance margin, rather than treating transparent sprite canvas as occupied
+ground. Only a footprint enclosed by the visible jetty deck may occupy the sea.
+Runtime and Map Studio use the same checks. After a saved building moves, attached
+accessories that cross circulation are hidden and can reappear when clear; the
+saved building position is preserved. All shipped default accessories pass.
 
 ### Rebuild the default terrain bake
 

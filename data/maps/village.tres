@@ -10,47 +10,13 @@ script = ExtResource("1")
 version = 2
 layout = ExtResource("3")
 objects = Array[Dictionary]([{
-"asset": "monsoon/planter",
-"blocking": false,
-"depth": 6,
-"id": "planter_0",
-"label": "Harbour flowers",
-"position": Vector2(31.5, 24.6),
-"scale": 1.0
-}, {
-"asset": "monsoon/planter",
-"blocking": false,
-"depth": 6,
-"id": "planter_1",
-"label": "Harbour flowers",
-"position": Vector2(37.5, 25.7),
-"scale": 1.0
-}, {
-"asset": "monsoon/planter",
-"blocking": false,
-"depth": 6,
-"id": "planter_2",
-"label": "Harbour flowers",
-"position": Vector2(29.4, 21.5),
-"scale": 1.0
-}, {
-"asset": "monsoon/planter",
-"blocking": false,
-"depth": 6,
-"id": "planter_3",
-"label": "Harbour flowers",
-"position": Vector2(39, 18.2),
-"scale": 1.0
-}, {
 "asset": "bench",
 "blocking": false,
 "depth": 5,
 "id": "beach_bench_1",
 "interactive": true,
 "label": "A seat by the sea",
-"metadata": {
-"description": "The breeze carries the scent of salt and warm timber. A good place to rest."
-},
+"metadata": {"description": "The breeze carries the scent of salt and warm timber. A good place to rest."},
 "position": Vector2(16, 27),
 "scale": 1.0
 }])
