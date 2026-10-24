@@ -39,6 +39,7 @@ var _pose_offset := Vector2.ZERO
 var _pose_tween: Tween
 var _follow_path := PackedVector2Array()
 var _route_timer := 0.0
+var _route_bounds := Rect2()
 var _route_planner: ResidentRoutes
 var _last_level := 1
 
@@ -54,6 +55,14 @@ func _ready() -> void:
 	shape.shape = circle
 	add_child(shape)
 	_build()
+	if _level_label:
+		_level_label.visible = false
+	var vitality := WorldHealthBar.new()
+	vitality.name = "PetHealth"
+	vitality.subject = self
+	vitality.pet_bar = true
+	vitality.position = Vector2(0, -1.25)
+	add_child(vitality)
 	GameState.pet_changed.connect(_refresh)
 	_refresh()
 	_last_level = int(GameState.get_active_pet().get("level", 1)) if not GameState.get_active_pet().is_empty() else 1
@@ -145,11 +154,14 @@ func _follow(delta: float) -> void:
 		var ray := PhysicsRayQueryParameters2D.create(global_position, desired, 1)
 		if not get_world_2d().direct_space_state.intersect_ray(ray).is_empty():
 			var lobby := get_parent() as Lobby
-			if lobby:
+			var game := get_tree().get_first_node_in_group("game") as Game
+			var inside_home := is_instance_valid(game) and is_instance_valid(game.home_interior)
+			if lobby and not inside_home:
 				_follow_path = lobby.resident_path(global_position, desired)
 			else:
-				if _route_planner == null:
-					var world_bounds: Rect2 = get_parent().map_rect if get_parent() is Dungeon else Rect2(0, 0, 64, 40)
+				var world_bounds: Rect2 = Rect2(89, 19, 14, 10) if inside_home else (get_parent().map_rect if get_parent() is Dungeon else Rect2(0, 0, 64, 40))
+				if _route_planner == null or _route_bounds != world_bounds:
+					_route_bounds = world_bounds
 					_route_planner = ResidentRoutes.new(get_parent(), world_bounds)
 				_follow_path = _route_planner.path(global_position, desired)
 		else:
@@ -366,7 +378,7 @@ func _nearest_enemy(max_distance: float) -> Node2D:
 	var best: Node2D = null
 	var best_distance := max_distance
 	for enemy in get_tree().get_nodes_in_group("enemies"):
-		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
+		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion() or bool(enemy.get("dead")) or enemy.get_parent() != get_parent():
 			continue
 		if not enemy.has_method("take_damage"):
 			continue

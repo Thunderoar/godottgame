@@ -1,0 +1,108 @@
+Godot Engine v4.7.2.stable.arch_linux.ed1daf0bf (2026-08-17 01:18:38 UTC) - https://godotengine.org
+WARNING: Failed to create wd.xic as the input method or its xim server may not have started yet.
+     at: _create_xic (platform/linuxbsd/x11/display_server_x11.cpp:6347)
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 4.6 (Core Profile) Mesa 26.2.4-arch3.1 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 23.1.1, 256 bits)
+
+Verified isolated user data: /tmp/tidesworn-gdt2-upgrade-final/userdata/godot/app_userdata/Save The World
+[OK] New Journey shows a loading cover before world creation
+[OK] loading completes and restores movement
+[OK] level one starts with one water
+[OK] level one starts with one builder
+[OK] level one starts with one planter
+[OK] level one starts with one fighter
+[OK] Menu provides the book and Build
+[OK] touching Book opens an input-locked illustrated guide
+[OK] book category 0 page 1 explains its role in pictures
+[OK] book category 0 page 2 explains its role in pictures
+[OK] book category 0 page 3 explains its role in pictures
+[OK] book category 0 page 4 explains its role in pictures
+[OK] book category 0 page 5 explains its role in pictures
+[OK] book category 0 page 6 explains its role in pictures
+[OK] book category 0 page 7 explains its role in pictures
+[OK] book category 0 page 8 explains its role in pictures
+[OK] book category 0 page 9 explains its role in pictures
+[OK] book category 0 page 10 explains its role in pictures
+[OK] book category 0 page 11 explains its role in pictures
+[OK] book category 0 page 12 explains its role in pictures
+[OK] book category 0 page 13 explains its role in pictures
+[OK] book category 0 page 14 explains its role in pictures
+[OK] book category 0 page 15 explains its role in pictures
+[OK] book category 0 page 16 explains its role in pictures
+[OK] book category 0 page 17 explains its role in pictures
+[OK] book category 0 page 18 explains its role in pictures
+[OK] book category 0 page 19 explains its role in pictures
+[OK] book category 0 page 20 explains its role in pictures
+[OK] book category 0 page 21 explains its role in pictures
+[OK] book category 0 page 22 explains its role in pictures
+[OK] book category 0 page 23 explains its role in pictures
+[OK] book category 1 page 1 explains its role in pictures
+[OK] book category 1 page 2 explains its role in pictures
+[OK] book category 1 page 3 explains its role in pictures
+[OK] book category 1 page 4 explains its role in pictures
+[OK] book category 1 page 5 explains its role in pictures
+[OK] book category 2 page 1 explains its role in pictures
+[OK] book category 2 page 2 explains its role in pictures
+[OK] book category 2 page 3 explains its role in pictures
+[OK] book category 2 page 4 explains its role in pictures
+[OK] book category 2 page 5 explains its role in pictures
+[OK] book category 2 page 6 explains its role in pictures
+[OK] book category 2 page 7 explains its role in pictures
+[OK] book category 2 page 8 explains its role in pictures
+[OK] book category 2 page 9 explains its role in pictures
+[OK] book category 2 page 10 explains its role in pictures
+[OK] closing Book restores input
+[OK] village upgrade 2 charges one house price
+[OK] house level 2 supplies 2 water workers
+[OK] house level 2 supplies 2 builder workers
+[OK] house level 2 supplies 2 planter workers
+[OK] house level 2 supplies 2 fighter workers
+[OK] all house and fence tiers follow main house level 2
+[OK] all archer huts follow level 2
+[OK] village upgrade 3 charges one house price
+[OK] house level 3 supplies 3 water workers
+[OK] house level 3 supplies 3 builder workers
+[OK] house level 3 supplies 3 planter workers
+[OK] house level 3 supplies 3 fighter workers
+[OK] all house and fence tiers follow main house level 3
+[OK] all archer huts follow level 3
+[OK] village upgrade 4 charges one house price
+[OK] house level 4 supplies 4 water workers
+[OK] house level 4 supplies 4 builder workers
+[OK] house level 4 supplies 4 planter workers
+[OK] house level 4 supplies 4 fighter workers
+[OK] all house and fence tiers follow main house level 4
+[OK] all archer huts follow level 4
+[OK] village upgrade 5 charges one house price
+[OK] house level 5 supplies 5 water workers
+[OK] house level 5 supplies 5 builder workers
+[OK] house level 5 supplies 5 planter workers
+[OK] house level 5 supplies 5 fighter workers
+[OK] all house and fence tiers follow main house level 5
+[OK] all archer huts follow level 5
+[OK] level five rejects another charge
+[OK] shop still hires additional workers above the level baseline
+[OK] linked village level and bought workers persist
+[OK] home entry fades through loading and finishes inside
+[OK] home exit locks input under the fade
+[OK] home exit restores village movement
+[OK] night tutorial keeps the arrow without additional darkness
+[OK] portal tutorial shows only the level one dungeon
+[OK] another boss cannot complete the level one lesson
+[OK] first boss ends the nighttime tutorial
+[OK] every campaign boss has a distinct name
+[OK] portal travel locks input before fading out
+[OK] portal destination fades in after loading
+[OK] boss name is shown over its health bar
+[OK] boss name and HP text have separate readable space
+[OK] book fits width at 1280x720
+[OK] touch turns a book page at 1280x720
+[OK] book Close works at 1280x720
+[OK] book fits width at 832x480
+[OK] touch turns a book page at 832x480
+[OK] book Close works at 832x480
+[OK] return to title finishes its fade
+[OK] Continue remembers unfinished night lessons after day lessons finish
+[OK] Continue resumes night teaching when night arrives
+--- PB test: 99 checks, PASS ---

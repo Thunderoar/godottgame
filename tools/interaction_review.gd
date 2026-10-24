@@ -14,7 +14,7 @@ func _ready() -> void:
 	var game := load("res://scenes/game.tscn").instantiate() as Game
 	add_child(game)
 	await get_tree().process_frame
-	game._on_character_selected("qayyim")
+	await game._on_character_selected("qayyim")
 	await get_tree().create_timer(0.4).timeout
 	var lobby := game.world as Lobby
 	var hud := game.hud
@@ -111,7 +111,7 @@ func _ready() -> void:
 	await get_tree().physics_frame
 	await get_tree().physics_frame
 	Input.action_release("interact")
-	_check(repair.target.is_intact() and GameState.gold() == gold, "Use at the damaged house repairs it for free")
+	_check(not repair.target.is_intact() and GameState.gold() == gold and float(GameState.structure_state(repair.target.structure_id).get("repair_remaining", 0)) > 0, "Use at the damaged house requests a free builder repair")
 	print("interaction review: %s" % ("PASS" if _failures == 0 else "FAIL"))
 	get_tree().quit(0 if _failures == 0 else 1)
 

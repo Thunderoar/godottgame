@@ -4,6 +4,7 @@ extends PanelContainer
 ## can still move and fight while reading, and can skip at any time.
 
 var _step := 0
+var _tips_enabled := false
 var _title: Label
 var _body: Label
 var _counter: Label
@@ -27,6 +28,7 @@ func _ready() -> void:
 	visible = false
 	_build()
 	GameState.data_changed.connect(_on_mission_changed)
+	GameState.day_phase_changed.connect(func(_night: bool) -> void: _on_mission_changed())
 
 
 func _build() -> void:
@@ -58,24 +60,23 @@ func _build() -> void:
 
 
 func start() -> void:
+	_tips_enabled = true
 	_step = GameState.mission_step()
 	visible = _step < STEPS.size()
 	_render()
 
 
 func _on_mission_changed() -> void:
-	if _step != GameState.mission_step():
-		_step = GameState.mission_step()
-		if _step >= STEPS.size():
-			visible = false
-		_render()
-
+	_step = GameState.mission_step()
+	visible = _tips_enabled and _step < STEPS.size()
+	_render()
 
 func _advance() -> void:
 	# Lessons complete only when the player performs the requested action.
 	_render()
 
 func _skip() -> void:
+	_tips_enabled = false
 	visible = false
 	GameState.toast_requested.emit("Tutorial skipped. Open Backpack or speak to residents for help.", "info")
 
@@ -84,7 +85,9 @@ func _render() -> void:
 	if _step >= STEPS.size():
 		return
 	var entry: Dictionary = STEPS[_step]
-	_title.text = str(entry.title)
+	var title := str(entry.get("title", "Mission"))
+	_title.text = title.substr(title.find(". ") + 2) if title.contains(". ") else title
 	_body.text = str(entry.text)
-	_counter.text = "%d/%d" % [_step + 1, STEPS.size()]
+	var steps := MissionDB.phase_steps(GameState.is_night())
+	_counter.text = "%s %d/%d" % ["MALAM" if GameState.is_night() else "SIANG", steps.find(_step) + 1, steps.size()]
 	_next.text = "Do this task"

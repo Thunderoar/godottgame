@@ -16,6 +16,9 @@ var _portal_elapsed := 0.0
 var _emergency_triggered := false
 var _settlement_damage_accum := 0.0
 var _game_over := false
+var home_interior: HomeInterior
+var _outdoor_position := Vector2.ZERO
+var loading_screen: LoadingScreen
 
 const EMERGENCY_DELAY := 14.0
 const SETTLEMENT_DAMAGE_TICK := 5.0
@@ -30,6 +33,8 @@ func _ready() -> void:
 	hud.name = "HUD"
 	add_child(hud)
 	hud.visible = false
+	loading_screen = LoadingScreen.new()
+	add_child(loading_screen)
 	_connect_hud()
 	GameState.player_defeated.connect(_on_player_defeated)
 	GameState.game_over_triggered.connect(_on_game_over)
@@ -53,6 +58,8 @@ func _process(delta: float) -> void:
 
 
 func _connect_hud() -> void:
+	hud.field_guide_panel.closed.connect(_on_modal_closed)
+	hud.mission_panel.closed.connect(_on_modal_closed)
 	hud.village_services_panel.closed.connect(_on_modal_closed)
 	hud.shop_panel.closed.connect(_on_modal_closed)
 	hud.inventory_panel.closed.connect(_on_modal_closed)
@@ -90,22 +97,24 @@ func _on_character_selected(character_id: String) -> void:
 	_remove_title()
 	hud.visible = true
 	_game_over = false
-	_load_lobby(false)
+	await _load_lobby(true)
 	hud.start_tutorial()
 
 
 func _on_continue_requested() -> void:
+	if _transitioning:
+		return
 	if not GameState.continue_game():
 		return
 	_remove_title()
 	hud.visible = true
-	if GameState.mission_step() < MissionDB.STEPS.size():
+	if GameState.completed_mission_count() < MissionDB.STEPS.size():
 		hud.start_tutorial()
 	if GameState.expedition_active():
 		var portal_id := GameState.expedition_portal()
-		_load_dungeon(portal_id, false)
+		await _load_dungeon(portal_id, true)
 	else:
-		_load_lobby(false)
+		await _load_lobby(true)
 
 
 func _remove_title() -> void:
@@ -120,6 +129,7 @@ func _remove_title() -> void:
 # ------------------------------------------------------------------ world switching
 
 func _clear_world() -> void:
+	home_interior = null
 	if is_instance_valid(world) and world is Lobby and world.journey_serial == GameState.journey_serial:
 		GameState.store_home_monsters(world.capture_monsters())
 	if world and is_instance_valid(world):
@@ -133,8 +143,9 @@ func _load_lobby(transition: bool = true) -> void:
 		return
 	_transitioning = true
 	_input_locked = true
+	_apply_input_lock()
 	if transition:
-		await hud.fade_to_black(0.25)
+		await loading_screen.begin("Kampung Besut")
 	_clear_world()
 	hud.set_build_mode(false)
 	var lobby := Lobby.new()
@@ -143,14 +154,15 @@ func _load_lobby(transition: bool = true) -> void:
 	_world_holder.add_child(lobby)
 	hud.set_world(lobby)
 	_restore_player_visual()
+	_apply_input_lock()
 	hud.set_sleep_state(false, 0.0, "")
 	if GameState.health() <= 0:
 		GameState.set_health(GameState.health_max())
-	_input_locked = false
-	_apply_input_lock()
 	if transition:
-		await hud.fade_from_black(0.3)
+		await loading_screen.finish()
 	_transitioning = false
+	_input_locked = hud.any_modal_open()
+	_apply_input_lock()
 
 
 func _load_dungeon(portal_id: String, transition: bool = true) -> void:
@@ -158,8 +170,9 @@ func _load_dungeon(portal_id: String, transition: bool = true) -> void:
 		return
 	_transitioning = true
 	_input_locked = true
+	_apply_input_lock()
 	if transition:
-		await hud.fade_to_black(0.3)
+		await loading_screen.begin(str(PortalDB.get_portal(portal_id).get("name", "Portal")))
 	_clear_world()
 	hud.set_build_mode(false)
 	var dungeon := Dungeon.new()
@@ -169,13 +182,13 @@ func _load_dungeon(portal_id: String, transition: bool = true) -> void:
 	_world_holder.add_child(dungeon)
 	hud.set_world(dungeon)
 	_restore_player_visual()
-	hud.set_sleep_state(false, 0.0, "")
-	_input_locked = false
 	_apply_input_lock()
+	hud.set_sleep_state(false, 0.0, "")
 	if transition:
-		await hud.fade_from_black(0.35)
+		await loading_screen.finish()
 	_transitioning = false
-
+	_input_locked = hud.any_modal_open()
+	_apply_input_lock()
 
 func _restore_player_visual() -> void:
 	# Undo any pull-in shrink from the portal transition.
@@ -192,13 +205,16 @@ var _portal_fx_active := false
 
 
 func enter_portal(portal_id: String) -> void:
+	if _transitioning or _portal_fx_active:
+		return
 	var reason := GameState.portal_clear_reason(portal_id)
 	if not bool(reason.ok):
 		GameState.toast_requested.emit(str(reason.reason), "bad")
 		return
 	if not GameState.start_expedition(portal_id):
 		return
-	GameState.record_mission_event("portal")
+	if portal_id == PortalDB.ordered_ids()[0]:
+		GameState.record_mission_event("portal")
 	_defeat_pending = false
 	_portal_elapsed = 0.0
 	_emergency_triggered = false
@@ -298,7 +314,7 @@ func show_victory(summary: Dictionary, portal_id: String) -> void:
 
 
 func _on_modal_closed() -> void:
-	if hud.any_modal_open():
+	if hud.any_modal_open() or _transitioning:
 		return
 	_input_locked = false
 	_apply_input_lock()
@@ -412,6 +428,9 @@ func return_to_title(from_game_over: bool = false) -> void:
 	if _transitioning:
 		return
 	_transitioning = true
+	_input_locked = true
+	_apply_input_lock()
+	await loading_screen.begin("PB • Protect BESUT")
 	hud.hide_modals()
 	hud.game_over_panel.force_close()
 	_clear_world()
@@ -425,6 +444,7 @@ func return_to_title(from_game_over: bool = false) -> void:
 		GameState.autosave_enabled = true
 	_remove_title()
 	_show_title()
+	await loading_screen.finish()
 	_transitioning = false
 
 
@@ -477,3 +497,89 @@ func _exit_tree() -> void:
 	AssetRegistry.catalog = null
 	AssetRegistry._cache.clear()
 	PixelArt.CACHE.clear()
+
+
+func enter_home() -> void:
+	if not world is Lobby or _game_over or _input_locked or _transitioning or is_instance_valid(home_interior):
+		return
+	if int(GameState.structure_state("cottage").get("health", 0)) <= 0:
+		return
+	var p := player()
+	if not is_instance_valid(p):
+		return
+	_transitioning = true
+	_input_locked = true
+	_apply_input_lock()
+	await loading_screen.begin("Rumah Utama")
+	_outdoor_position = world._house_position + Vector2(0, 2.0)
+	home_interior = HomeInterior.new()
+	home_interior.game = self
+	world.add_child(home_interior)
+	p.global_position = home_interior.global_position
+	p.velocity = Vector2.ZERO
+	p.reset_physics_interpolation()
+	_place_home_pet(p.global_position)
+	world.camera.target = p
+	_set_home_camera(Rect2(89, 19, 14, 10))
+	world.camera.global_position = p.global_position
+	world.camera.set_physics_process(false)
+	world.camera.zoom = Vector2.ONE * minf(get_viewport_rect().size.x / 16.0, get_viewport_rect().size.y / 12.0)
+	await loading_screen.finish()
+	_transitioning = false
+	_input_locked = hud.any_modal_open()
+	_apply_input_lock()
+
+func leave_home() -> void:
+	if not world is Lobby or not is_instance_valid(home_interior) or GameState.recovery_active() or _transitioning:
+		return
+	_transitioning = true
+	_input_locked = true
+	_apply_input_lock()
+	await loading_screen.begin("Kampung Besut")
+	var p := player()
+	p.global_position = _outdoor_position
+	p.velocity = Vector2.ZERO
+	p.reset_physics_interpolation()
+	_place_home_pet(p.global_position)
+	home_interior.queue_free()
+	home_interior = null
+	world.camera.set_physics_process(true)
+	world.camera.zoom = Vector2.ONE * GameSettings.camera_zoom()
+	_set_home_camera(Lobby.MAP_RECT)
+	world.camera.global_position = p.global_position
+	await loading_screen.finish()
+	_transitioning = false
+	_input_locked = hud.any_modal_open()
+	_apply_input_lock()
+
+func _set_home_camera(bounds: Rect2) -> void:
+	world.camera.bounds = bounds
+	world.camera.limit_left = int(bounds.position.x)
+	world.camera.limit_top = int(bounds.position.y)
+	world.camera.limit_right = int(bounds.end.x)
+	world.camera.limit_bottom = int(bounds.end.y)
+
+
+func open_missions() -> void:
+	if not world is Lobby or _game_over:
+		return
+	_input_locked = true
+	_apply_input_lock()
+	hud.mission_panel.open_missions()
+
+
+func _place_home_pet(at: Vector2) -> void:
+	if is_instance_valid(world.pet):
+		world.pet.global_position = at + Vector2(-1, 0.5)
+		world.pet.velocity = Vector2.ZERO
+		world.pet._follow_velocity = Vector2.ZERO
+		world.pet._follow_path.clear()
+		world.pet.reset_physics_interpolation()
+
+
+func open_field_guide() -> void:
+	if _transitioning:
+		return
+	_input_locked = true
+	_apply_input_lock()
+	hud.field_guide_panel.open_book()

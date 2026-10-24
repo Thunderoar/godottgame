@@ -32,7 +32,7 @@ sapling, growth, maturity, devastation and the game-over panel in the temporary
 test directory. Any host certificate-store `ERROR:` still fails the wrapper;
 a passing gameplay summary alone is not a clean overall gate.
 Use `-VisualReview -Review village` for the village expansion review: it checks
-free immediate repair, a resident entering shelter, then an actual
+builder repair state, a resident entering shelter, then an actual
 sea urchin destroying that shelter and defeating its exposed occupant. It also
 captures the first mission, named shops and water-keeper hiring.
 Use `-VisualReview -Review interaction` for actual mouse/touch shop opening, tutorial spotlight targets, house level preview buttons, manual pet turns, night/dawn and the nearby free repair action.
@@ -71,14 +71,14 @@ PASS and exited 0 without failure/error markers. Screenshots were inspected,
 including the tutorial focus, fire/water/growth lifecycle, night/dawn, shelter
 loss, house previews and the pet-shop Close button at 1280x720 and 832x480.
 
-Pet battle background wiring uses five per-duel paths in `PetBattleDB`. The supplied attachments could not be downloaded in this sandbox, so the image assets remain pending and are not visually verified. `tools/import_pet_backgrounds.ps1 -SourceDirectory <local-folder>` copies the five named backgrounds and converts the supplied GIF's first frame to PNG for Godot, retaining the original.
+All five supplied pet battle backgrounds are installed under assets/pet_battles, with one distinct path per duel in PetBattleDB. The supplied GIF is retained and its first frame is converted to PNG for Godot. Native captures verify all five backdrops.
 
 ## Acceptance checks
 
 ### 1. HUD and NPC presentation
 - No `Label` child is attached to `Resident`, `ShopNPC` or `CoastalGuard`.
 - `GameHUD` has no toast container and `show_toast()` creates no UI.
-- Important events remain visible through persistent HUD panels and the journal.
+- Important events remain visible through persistent HUD panels and the purple question-mark mission NPC.
 - Player and pet XP bars exist and their maxima match the next-level thresholds.
 
 ### 2. Two battle portals
@@ -95,9 +95,9 @@ Pet battle background wiring uses five per-duel paths in `PetBattleDB`. The supp
 - Only the first duel is unlocked initially; each win unlocks the next.
 - The active pet's real level and stats are used.
 - A duel shows two living combatants and two health bars.
-- Combat has exactly two mechanics: **Attack** and **Defend**.
+- Each pet has three powers: **Serang**, **Perisai** and **Kuasa Khas**, with separate 2/5/8-second cooldowns.
 - Both pets wait indefinitely for an explicit player choice. An empty choice cannot resolve a turn, even after the former timeout.
-- Pressing Attack or Defend resolves both actions once; every subsequent round waits again. The old countdown is hidden.
+- An available power resolves the player action first, followed by one enemy reply. The next turn waits for player input. Powers on cooldown cannot be selected; an enemy with all powers cooling down waits. The old countdown is hidden.
 - Attacks create scratch/punch impact nodes; Defend creates a shield effect.
 - A win records the clear, grants Gold and pet XP, unlocks the next duel and
   raises the active companion's level by at least one.
@@ -129,12 +129,12 @@ Pet battle background wiring uses five per-duel paths in `PetBattleDB`. The supp
 - Fire monsters ignite mature trees; flames deal ongoing damage and remain
   visible at low effects quality and with reduced motion.
 - Zero HP makes the tree fall, disappear and release trunk collision.
-- Two blue water keepers start a new journey; Gold recruits up to five.
+- One blue water keeper starts a new journey; Gold recruits up to five.
   Recruitment costs 80/140/200 Gold for additional keepers, rejects insufficient
   funds and duplicate purchases at the cap, and can replace a dead keeper.
   Their reduced power heals 5 HP every 1.25 seconds. They walk to fires, channel
-  visible water and restore HP; full recovery extinguishes the fire. They also
-  walk to fallen trees and spend two seconds planting replacements.
+  visible water and restore HP; full recovery extinguishes the fire. Green planters
+  walk to fallen trees and spend two seconds planting replacements. Blue NPCs also fire damaging water projectiles at fire monsters.
 - A replacement grows over 30 seconds of active lobby time, shows growth
   progress and cannot be targeted, damaged or ignited until mature. Its remaining
   growth time survives saves and world reconstruction; time away freezes growth.
@@ -177,7 +177,7 @@ Pet battle background wiring uses five per-duel paths in `PetBattleDB`. The supp
 - The panel exposes clickable Levels 1-5. Each changes the design preview without spending diamonds or changing the owned house. Confirm Upgrade purchases only the next level, with diamonds.
 - The cottage, seven resident homes and four fence runs have stable IDs and
   separate persistent HP. Destroyed structures collapse and release collision.
-- Approach a damaged or destroyed house doorway or any segment of a damaged fence and press E / Use (Betulkan). Repair restores full HP immediately, free of Gold, without a shop or worker. A distant interaction cannot repair; intact structures hide the action and reject duplicate work. Appearance, collision and shelter protection return.
+- One orange builder starts each journey. They choose separate damaged structures, walk to them and work for ten seconds in daylight. Nighttime pauses progress; unfinished repair time persists across saves. Extra builders cost Gold at the Worker Shop. Repair restores HP, appearance, collision and shelter protection.
 - Residents walk into intact houses when sea urchins approach or a raid starts.
   Sheltered residents cannot be damaged; a destroyed shelter exposes them.
   Exposed residents can die, leave targeting and remain dead after save/load.
@@ -186,7 +186,7 @@ Pet battle background wiring uses five per-duel paths in `PetBattleDB`. The supp
 - Title reads `SAVE THE WORLD`; credit names Qayyim, Farhan and Ayiz.
 - The recovery ward heals at `GameState.sleep_recovery_seconds()` - the
   HouseDB rate for the current cottage level (10 s at Level 1 down to 2 s at
-  Level 5), matching the bed and the Construction Shop panel. The old
+  Level 5), matching the home interior and Construction Shop panel. The old
   hardcoded 8.0 s ward clock is gone.
 - Three weapons, ten monster portals, boss ability variety, Android touch
   controls, auto-loot, pet support, emergency defence, defeat/recovery and
@@ -196,11 +196,7 @@ Pet battle background wiring uses five per-duel paths in `PetBattleDB`. The supp
 - No bottom mission notification panel or `MissionArrow` widgets are built.
   `MissionPath` draws dashed ground arrows along obstacle-aware routes in the
   lobby and dungeon, pointing to one current objective.
-- Ten sequential missions teach movement, gathering, buying a potion, Pack,
-  defending a tree, water keepers, house repairs, pet feeding, a portal and a boss.
-  Only the current lesson's completed action advances progress; Next and future
-  actions cannot skip lessons. Save/load preserves the step and Continue resumes
-  teaching. Menu can show hidden mission tips again.
+- Seven daytime lessons teach movement, gathering, shopping, Pack, workers, housing and pet feeding; three nighttime lessons teach fire combat, portals and a boss. Switching phase selects that phase’s next unfinished lesson. Only the current lesson’s action advances progress. Saved completed event IDs resume lessons after Continue, including migration from old numeric progress. Menu can show hidden mission tips again.
 - A non-blocking spotlight dims everything except the current action, draws a gold arrow and follows changing UI layout. It highlights the joystick, a shop, the exact potion Buy button, Pack, or Strike. The tips panel moves aside from the highlighted target.
 - The player owns a `PlayerVitalHud` that draws only Health and Mana above the
   player's head.
@@ -293,7 +289,7 @@ results, negative probes and visual evidence.
 ## Regression rules for agents
 
 1. **Do not reintroduce timed toast pop-ups or floating NPC names.** Use the HUD,
-   journal, permanent prompt or modals for state.
+   mission guide, permanent prompt or modals for state.
 2. **Do not use fixed screen coordinates for new full-screen UI.** Controls must
    remain readable at 832×480 and 1280×720.
 3. **Keep all rewards atomic and non-negative.** Route Gold, items and XP through
@@ -317,7 +313,7 @@ Inspect these captures:
 - `tide_lobby_portal.png` - paired Monster/Pet gates
 - `tide_pet_battles.png` - five-level tournament
 - `tide_pet_duel.png` - 1v1 arena waiting for an explicit player choice
-- `tide_pet_resolution.png` - simultaneous turn, impact and shield effects
+- `tide_pet_resolution.png` - historical arena capture; current turns alternate
 - `tide_pet_shop.png` - Pet Food and Feed controls
 - `tide_house.png` - Construction Shop Level 1-5 progression
 - `tide_forest.png` - dense protected woodland and tree HP impacts
@@ -476,3 +472,66 @@ invalidate terrain caches, broader blending measurably softens generated pixels,
 road feather invalidates the cache, and softened road-edge pixels keep the same
 navigation ribbon. The unchanged default full-RGBA bake comparison still passes.
 Current evidence and limits: [MAP_STUDIO_UPGRADE.md](MAP_STUDIO_UPGRADE.md).
+
+
+## PB expansion acceptance (2026-10-24)
+
+The earlier PB expansion run reported **496 checks, PASS, exit 0**. Its separate PB suite reported **56 checks, PASS, exit 0**. The latest HUD/battle results are recorded below. The native PB review reports **PASS, exit 0**; its fourteen checks use actual mouse/touch events and real-time construction. Captures were inspected at 1280x720. All runs use separate temporary user data and leave live progress untouched.
+
+Commands:
+
+```powershell
+powershell -File tools/test_isolated.ps1 -Godot <console-exe>
+powershell -File tools/test_pb_isolated.ps1 -Godot <console-exe>
+powershell -File tools/test_pb_isolated.ps1 -Godot <console-exe> -Native -Scene res://tools/pb_review.tscn
+```
+
+- PB (Protect BESUT) replaces the title; the creator credit is permanent at the bottom. The old Permanent daytime footer is absent.
+- Orange builders, blue water fighters, green planters and black swordsmen have distinct appearances and jobs. Each starts with one; hiring and worker deaths survive saves. Existing Continue saves keep their workers. Ordinary residents shelter instead of performing specialist combat.
+- Every house, including former ruins, has persistent HP and an archer hut. One main-house upgrade controls the whole village tier (houses, archer huts, fences and specialist worker baseline). The main house must be intact and diamond cost is charged once. Arrow intervals are 2.1/1.7/1.3/1.0/0.7 seconds; destroyed houses disable their archers.
+- Only the central house is enterable. Touching it opens a furnished interior, brings the companion inside and restores health using the current house tier. There is no mattress interaction. The doorway returns player and pet outside; mandatory post-defeat recovery must finish first.
+- Two clickable portals sit inside the two mouths of a rocky hill. The integrated
+  village resolves them from its authored sanctuary anchors; source-era fixed
+  far-north coordinates do not override the current layout. Clicking opens their
+  respective monster/tournament selector.
+- The following pet attacks nearby enemies and carries its HP overhead. Boss HP is overhead too; the former screen boss bar is removed.
+- Dungeon enemies enter a persistent chase immediately. Touching or damaging the boss alerts every survivor, with routes around dungeon obstacles.
+- A clickable purple NPC with a question mark opens the current mission. The top Journal panel is removed; tutorial arrows remain available.
+- Each pet fight uses a different full-arena supplied background without combatant boxes. Neither pet acts until an available power is chosen; the player acts first, followed by one enemy reply. The supplied GIF is retained and its first frame is used as the Godot background.
+
+## HUD, phase tutorial and three-power duels (2026-10-24)
+
+The earlier HUD/battle update passed **494 checks, exit 0**. The focused PB suite passes **86 checks, exit 0**. The native HUD/battle review passes **22 checks, exit 0**, using actual touch events at 1280×720 and 832×480. The separate native PB review passes fourteen checks, including furnished home and all five arena backgrounds. Logs contain no FAIL, SCRIPT ERROR or ERROR entries. All runs use temporary user data and preserve live progress.
+
+```powershell
+powershell -File tools/test_pb_isolated.ps1 -Godot <console-exe> -Native -Scene res://tools/hud_battle_review.tscn
+```
+
+- Cave entrances occupy the far northern edge, with both clickable portals accessible.
+- Battles fill the arena with one image; both pets have three separate cooldowns. Player action precedes the enemy reply, and idle player turns never auto-resolve.
+- Only the day/night clock and Menu occupy the upper HUD. Player HP/MP/XP and level appear overhead; pet HP/XP appear overhead. Gold and diamond balances appear in shops.
+- HP/mana potion shortcuts are absent; Pack provides the potion actions beside the joystick. Menu provides Build settlement and Finish building.
+- The home has four visible accessories: chest, wardrobe, weapon rack and pet bed.
+- New journeys grant exactly one builder, water keeper, planter and swordsman; additional workers are bought. Existing worker ownership survives Continue.
+- Daytime and nighttime tutorials switch automatically and preserve each phase’s unfinished lessons.
+
+## Village tiers, loading and picture guide (2026-10-24)
+
+The full suite passes **494 checks, exit 0**. The focused headless scene and native touch review each pass **99 checks, exit 0**, with no FAIL, SCRIPT ERROR or ERROR entries. Native captures were inspected at 1280×720 and 832×480, including separate boss-name/HP text and readable night tutorial arrows. The retained PB suite passes 86 checks, and the native PB regression review passes fourteen checks. All runs use temporary user data.
+
+Run the full suite, then the focused scene with and without a renderer. The focused native scene uses real touch events at 1280×720 and 832×480; the headless variant activates button signals because no display is present.
+
+```powershell
+powershell -File tools/test_pb_isolated.ps1 -Godot <console-exe> -Scene res://tools/tide_test.tscn
+powershell -File tools/test_pb_isolated.ps1 -Godot <console-exe> -Scene res://tools/village_upgrade_test.tscn
+powershell -File tools/test_pb_isolated.ps1 -Godot <console-exe> -Native -Scene res://tools/village_upgrade_test.tscn
+```
+
+- New Journey, Continue, portal travel, home entry/exit and return to title show a loading cover and fade. Current and newly built players stay locked until the cover leaves. Modals and pet arenas fade in.
+- Buku BESUT opens from Menu. Its 23 NPC pages, five monster pages and ten boss pages explain actions using sprites and visual symbols, with character names as headings. It has no explanatory paragraphs. Page turn and Close work at both landscape sizes.
+- A new journey has one worker per specialist role. Main-house Levels 2-5 provide a baseline of 2-5 of each role. Hiring can add workers beyond that baseline within role limits, and ownership/deaths persist.
+- One main-house upgrade charges once and synchronizes the village house, archer-hut and fence tiers. Previews show the house, hut, fence and baseline worker count for each level. A ruined main house must be repaired before upgrading.
+- NPC archer huts replace roof machine guns; arrows visibly damage fire monsters and sea urchins. The shared home tier controls their fire interval, damage and range. Destroyed houses disable their archers.
+- Fences progress from wood to wood with a stone base, stone walls, fortified posts and battlements. Changing level refreshes existing fence sprites and survives save/load.
+- Night lessons retain the pointer without an extra dark overlay. The level-one portal is the only portal shown during that training. Other bosses cannot complete its final lesson; defeating The Grotto Warden ends that tutorial. All ten bosses show their distinct names above their HP.
+- Continue after finishing daytime lessons retains the unfinished nighttime tutorial and activates it at the next night. Build remains in Menu.

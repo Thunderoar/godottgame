@@ -39,6 +39,7 @@ enum State { SPAWN, WANDER, ALERT, CHASE, WINDUP, ATTACK, RECOVER, STAGGER, DEAD
 @export var special_cooldown := 3.8
 @export var projectile_damage := 12
 
+var dungeon_alerted := false
 var hp := 42
 var dead := false
 var active := false
@@ -82,6 +83,13 @@ var _route_index := 0
 
 
 func _ready() -> void:
+	if is_boss:
+		var vitality := WorldHealthBar.new()
+		vitality.name = "BossHealth"
+		vitality.subject = self
+		vitality.boss_bar = true
+		vitality.position = Vector2(0, -2.3)
+		add_child(vitality)
 	add_to_group("enemies")
 	z_index = 6
 	if forest_mode:
@@ -316,7 +324,7 @@ func _chase(delta: float) -> void:
 		_notify_boss_start()
 	var to_target: Vector2 = _target_point() - global_position
 	var distance := to_target.length()
-	if distance > _aggro_range() * 1.6 and not settlement_mode and not forest_mode and kind not in ["fire", "urchin"]:
+	if distance > _aggro_range() * 1.6 and not dungeon_alerted and not settlement_mode and not forest_mode and kind not in ["fire", "urchin"]:
 		# Lost the player: settle back down.
 		active = false
 		_enter(State.WANDER)
@@ -331,7 +339,7 @@ func _chase(delta: float) -> void:
 	# Hysteresis: only re-approach once clearly out of reach.
 	if distance > stop * 1.25:
 		var dir := to_target.normalized()
-		if kind in ["fire", "urchin"]:
+		if kind in ["fire", "urchin"] or dungeon_alerted:
 			dir = _village_direction(_target_point())
 		dir = _apply_personality(dir)
 		velocity = velocity.move_toward(dir * speed, delta * 8.0)
@@ -622,20 +630,19 @@ func _target_point() -> Vector2:
 
 
 func _village_direction(destination: Vector2) -> Vector2:
-	var lobby := get_parent() as Lobby
-	if lobby == null:
+	var world := get_parent()
+	if not world is Lobby and not world is Dungeon:
 		return (destination - global_position).normalized()
 	if _route_clock <= 0.0 or destination.distance_to(_route_goal) > 0.5:
 		_route_clock = 0.8
 		_route_goal = destination
-		_route = lobby.resident_path(global_position, destination)
+		_route = world.resident_path(global_position, destination) if world is Lobby else world.monster_path(global_position, destination)
 		_route_index = 0
 	if _route.is_empty():
 		return (destination - global_position).normalized()
 	while _route_index < _route.size() - 1 and global_position.distance_to(_route[_route_index]) < 0.3:
 		_route_index += 1
 	return (_route[_route_index] - global_position).normalized()
-
 
 func _choose_urchin_target() -> Node2D:
 	var best: Node2D
@@ -696,6 +703,8 @@ func _lunge(dir: Vector2) -> void:
 func take_damage(amount: int, from_dir: Vector2 = Vector2.ZERO, _source: Node = null) -> void:
 	if dead:
 		return
+	if is_boss and get_parent() is Dungeon:
+		get_parent().alert_intruders(true)
 	hp = maxi(0, hp - amount)
 	_hit_flash = 0.14
 	var opts := {"shake": 0.06, "shake_time": 0.1}

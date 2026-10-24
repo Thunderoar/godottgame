@@ -13,7 +13,7 @@ func _ready() -> void:
 	var game := load("res://scenes/game.tscn").instantiate() as Game
 	add_child(game)
 	await get_tree().process_frame
-	game._on_character_selected("qayyim")
+	await game._on_character_selected("qayyim")
 	await get_tree().create_timer(0.5).timeout
 	game.hud.tutorial_guide._skip()
 	GameState.advance_world_clock(GameState.DAY_PHASE_SECONDS)
@@ -56,12 +56,22 @@ func _ready() -> void:
 	await _shot("02_water_rescue")
 	await get_tree().create_timer(3.0).timeout
 	tree.take_attack_damage(9999)
+	keeper.set_physics_process(false)
+	keeper._release_tree_task()
+	for resident in lobby._residents:
+		if resident.worker_role == "planter":
+			keeper = resident
+			break
+	keeper.global_position = tree.global_position + Vector2(-4, 1.5)
+	keeper._tree_task = tree
+	tree.caretaker = keeper
+	keeper.set_physics_process(true)
 	elapsed = 0.0
 	while tree.fallen and elapsed < 10.0:
 		await get_tree().physics_frame
 		elapsed += get_physics_process_delta_time()
 	if tree.fallen:
-		push_error("Water keeper failed to plant the fallen tree.")
+		push_error("Green planter failed to plant the fallen tree.")
 		get_tree().quit(1)
 		return
 	await _shot("03_sapling")

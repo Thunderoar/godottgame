@@ -103,7 +103,9 @@ func _resolve_target() -> Rect2:
 			return _control_rect(hud._clock_label)
 	if step == 9 and game.world is Dungeon:
 		return _control_rect(hud._attack_button)
-	if step in [1, 8] and is_instance_valid(player.nearby):
+	if step == 1 and player.nearby is ResourcePile:
+		return _control_rect(hud._interact_button)
+	if step == 8 and player.nearby is PortalEntrance and player.nearby.gate_kind == "monster":
 		return _control_rect(hud._interact_button)
 	return _control_rect(hud._joystick)
 
@@ -112,7 +114,7 @@ func _draw() -> void:
 	if target_rect.size == Vector2.ZERO:
 		return
 	var hole := target_rect.intersection(Rect2(Vector2.ZERO, size))
-	var dim := Color(0.015, 0.025, 0.045, 0.72)
+	var dim := Color(0.015, 0.025, 0.045, dim_strength())
 	draw_rect(Rect2(0, 0, size.x, maxf(0, hole.position.y)), dim)
 	draw_rect(Rect2(0, hole.end.y, size.x, maxf(0, size.y - hole.end.y)), dim)
 	draw_rect(Rect2(0, hole.position.y, maxf(0, hole.position.x), hole.size.y), dim)
@@ -127,3 +129,7 @@ func _draw() -> void:
 	var tail := tip - direction * 40.0
 	draw_line(tail, tip - direction * 5, gold, 6, true)
 	draw_colored_polygon(PackedVector2Array([tip, tip - direction * 18 + Vector2(13, 0), tip - direction * 18 - Vector2(13, 0)]), gold)
+
+
+func dim_strength() -> float:
+	return 0.0 if GameState.is_night() else 0.72

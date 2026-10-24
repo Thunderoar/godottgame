@@ -7,6 +7,8 @@ extends Node2D
 @export var structure_id := ""
 @export var structure_kind := "house"
 @export var max_health := 200
+@export var starts_ruined := false
+var builder: Resident
 var _flash_timer := 0.0
 var _destroyed := false
 var _originals: Dictionary = {}
@@ -18,10 +20,12 @@ func _ready() -> void:
 	add_to_group("settlement_target")
 	if not structure_id.is_empty():
 		add_to_group("structures")
-		GameState.register_structure(structure_id, target_name, structure_kind, max_health)
+		GameState.register_structure(structure_id, target_name, structure_kind, max_health, 0 if starts_ruined else -1)
 		GameState.data_changed.connect(_refresh)
 		call_deferred("_refresh")
 		call_deferred("_build_repair_points")
+		if structure_kind == "house":
+			call_deferred("_build_defense")
 		_status = Label.new()
 		_status.scale = Vector2.ONE * PixelArt.PX
 		_status.position = Vector2(-1.2, -2.0)
@@ -99,7 +103,8 @@ func _process(delta: float) -> void:
 				if is_instance_valid(npc) and npc.sheltered and npc._shelter_house == self and not npc.dead:
 					sheltered_count += 1
 		var damaged := int(entry.get("health", 0)) < int(entry.get("maximum", 1))
-		_status.text = "Rosak - dekat & tekan Betulkan (percuma)" if damaged else ("Shelter: %d" % sheltered_count if sheltered_count > 0 else "")
+		var remaining := float(entry.get("repair_remaining", 0.0))
+		_status.text = ("Repair %.1fs%s" % [remaining, " - resumes by day" if GameState.is_night() else ""]) if remaining > 0 else ("Builder repairs by day (10s)" if damaged else ("Shelter: %d" % sheltered_count if sheltered_count > 0 else ""))
 	if _flash_timer > 0.0:
 		_flash_timer -= delta
 		queue_redraw()
@@ -109,8 +114,15 @@ func _refresh() -> void:
 	if structure_id.is_empty() or not is_inside_tree():
 		return
 	var ruined := not is_intact()
+	if structure_kind == "house":
+		var level := GameState.structure_level(structure_id)
+		for art in get_parent().get_children():
+			if art is Sprite2D and (art.name == "HouseArt" or art.name == "ResidentHouseArt"):
+				art.texture = PixelArt.house_texture(level)
 	for child in get_parent().get_children():
 		if child is Sprite2D:
+			if structure_kind == "fence":
+				child.texture = PixelArt.fence_texture(GameState.house_level())
 			if not _originals.has(child):
 				_originals[child] = {"scale": child.scale, "tint": child.modulate}
 			var original: Dictionary = _originals[child]
@@ -120,7 +132,7 @@ func _refresh() -> void:
 			child.set_deferred("collision_layer", 0 if ruined else 1)
 		elif child is PointLight2D:
 			child.visible = not ruined
-		elif child is HouseBed:
+		elif child is HomeEntrance:
 			child.available = not ruined
 	if ruined:
 		remove_from_group("settlement_target")
@@ -146,3 +158,11 @@ func _draw() -> void:
 	draw_rect(Rect2(-0.9, -1.5, 1.8 * ratio, 0.12), Color("#e9ae55"))
 	if _flash_timer > 0.0:
 		draw_circle(Vector2(0, -0.5), 0.25, Color(1, 0.5, 0.2, 0.7))
+
+
+func _build_defense() -> void:
+	var gun := HouseDefense.new()
+	gun.name = "ArcherHut"
+	gun.structure = self
+	gun.position = Vector2(4.2, -0.6) if structure_id == "cottage" else Vector2(3.0, -0.5)
+	get_parent().add_child(gun)

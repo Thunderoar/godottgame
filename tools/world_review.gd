@@ -14,7 +14,7 @@ func _ready() -> void:
 	add_child(game)
 	await get_tree().process_frame
 	var start := Time.get_ticks_usec()
-	game.call("_on_character_selected", "qayyim")
+	await game.call("_on_character_selected", "qayyim")
 	var cold := float(Time.get_ticks_usec() - start) / 1000.0
 	game.set_process(false)
 	game.hud.tutorial_guide.call("_skip")

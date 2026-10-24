@@ -13,7 +13,7 @@ func _ready() -> void:
 	var game := load("res://scenes/game.tscn").instantiate() as Game
 	add_child(game)
 	await get_tree().process_frame
-	game._on_character_selected("qayyim")
+	await game._on_character_selected("qayyim")
 	await get_tree().create_timer(0.8).timeout
 	var lobby := game.world as Lobby
 	for enemy in lobby._forest_monsters:

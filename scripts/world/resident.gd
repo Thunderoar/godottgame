@@ -45,6 +45,8 @@ const WATER_INTERVAL := 1.25
 const WATER_HEAL := 5
 const PLANT_SECONDS := 2.0
 @export var water_power := false
+@export var worker_role := ""
+var _build_target: SettlementTarget
 var _tree_task: ForestTree
 var _care_clock := 0.0
 var _care_search := 0.0
@@ -113,7 +115,9 @@ func _physics_process(delta: float) -> void:
 	_bob += delta
 	if _attack_timer > 0.0:
 		_attack_timer = maxf(0.0, _attack_timer - delta)
-	if _seek_shelter(delta):
+	if not worker_role.is_empty():
+		_run_worker(delta)
+	elif _seek_shelter(delta):
 		pass
 	elif water_power and _care_for_forest(delta):
 		pass
@@ -130,7 +134,7 @@ func _physics_process(delta: float) -> void:
 func _care_for_forest(delta: float) -> bool:
 	_watering = false
 	_care_search -= delta
-	if is_instance_valid(_tree_task) and (not _tree_task.fallen and not _tree_task.burning):
+	if is_instance_valid(_tree_task) and not _accept_tree(_tree_task):
 		_release_tree_task()
 	if not is_instance_valid(_tree_task) and _care_search <= 0.0:
 		_care_search = 0.5
@@ -138,7 +142,7 @@ func _care_for_forest(delta: float) -> bool:
 		if lobby:
 			var best := INF
 			for tree in lobby._forest_trees:
-				if not is_instance_valid(tree) or (not tree.fallen and not tree.burning):
+				if not is_instance_valid(tree) or not _accept_tree(tree):
 					continue
 				if is_instance_valid(tree.caretaker) and tree.caretaker != self:
 					continue
@@ -270,6 +274,10 @@ func _current_waypoint() -> Variant:
 
 
 func _tool_icon() -> String:
+	if worker_role == "fighter":
+		return "sword"
+	if worker_role == "builder":
+		return "hammer"
 	if water_power:
 		return "mana"
 	match role:
@@ -327,6 +335,7 @@ func _refresh_life() -> void:
 	if dead:
 		remove_from_group("settlement_target")
 		_release_tree_task()
+		_release_build_task()
 		_end_visit()
 	elif not is_in_group("repair_workers"):
 		add_to_group("settlement_target")
@@ -546,3 +555,116 @@ func _update_personality(delta: float) -> void:
 		_tool.position.y = -0.62 - expression.lift
 		if role == "gardener" and expression.state == "work":
 			_tool.rotation += 0.35 if not GameSettings.reduce_motion() else 0.0
+
+
+func _accept_tree(tree: ForestTree) -> bool:
+	if worker_role == "water":
+		return tree.burning and not tree.fallen
+	if worker_role == "planter":
+		return tree.fallen
+	return tree.fallen or tree.burning
+
+func _run_worker(delta: float) -> void:
+	_watering = false
+	if worker_role == "fighter" and _fight_kind("urchin", delta, false):
+		return
+	if worker_role == "water":
+		if _care_for_forest(delta):
+			return
+		if _fight_kind("fire", delta, true):
+			return
+	if _seek_shelter(delta):
+		_release_build_task()
+		return
+	if worker_role == "builder" and _repair_buildings(delta):
+		return
+	if worker_role == "planter" and _care_for_forest(delta):
+		return
+	_move_route(delta)
+
+func _fight_kind(kind: String, delta: float, ranged: bool) -> bool:
+	var enemy: Enemy
+	var best := 12.0
+	for candidate in get_tree().get_nodes_in_group("enemies"):
+		if not is_instance_valid(candidate) or candidate.dead or candidate.is_queued_for_deletion() or candidate.get_parent() != get_parent() or candidate.kind != kind:
+			continue
+		var distance := global_position.distance_to(candidate.global_position)
+		if distance < best:
+			best = distance
+			enemy = candidate
+	if not is_instance_valid(enemy):
+		return false
+	sheltered = false
+	visible = true
+	_frightened = false
+	_end_visit()
+	var direction := enemy.global_position - global_position
+	if _sprite:
+		_sprite.flip_h = direction.x < 0
+	var reach := 5.0 if ranged else 1.35
+	if direction.length() > reach:
+		_walk_to(enemy.global_position, 2.8, delta)
+		return true
+	velocity = Vector2.ZERO
+	if _attack_timer <= 0:
+		_attack_timer = WATER_INTERVAL if ranged else combat_interval
+		if ranged:
+			var bolt := VillageBolt.new()
+			bolt.target = enemy
+			bolt.source = self
+			bolt.water = true
+			bolt.damage = 6
+			get_parent().add_child(bolt)
+			bolt.global_position = global_position + Vector2(0.2, -0.7)
+		else:
+			enemy.take_damage(10, direction.normalized(), self)
+			Vfx.ring(global_position + direction.normalized() * 0.6 + Vector2(0, -0.4), 0.5, Color("#e5f2ff"), 0.2)
+			if _tool and not GameSettings.reduce_motion():
+				_tool.rotation = -0.8
+				_tool.create_tween().tween_property(_tool, "rotation", 0.0, 0.25)
+	return true
+
+func _release_build_task() -> void:
+	if is_instance_valid(_build_target) and _build_target.builder == self:
+		_build_target.builder = null
+	_build_target = null
+
+func _repair_buildings(delta: float) -> bool:
+	if GameState.is_night():
+		_release_build_task()
+		return false
+	if is_instance_valid(_build_target):
+		var state := GameState.structure_state(_build_target.structure_id)
+		if int(state.get("health", 0)) >= int(state.get("maximum", 1)):
+			_release_build_task()
+	if not is_instance_valid(_build_target):
+		var best := INF
+		for node in get_tree().get_nodes_in_group("structures"):
+			if not is_instance_valid(node) or node.get_parent().get_parent() != get_parent() or node.is_queued_for_deletion():
+				continue
+			var state := GameState.structure_state(node.structure_id)
+			if int(state.get("health", 0)) >= int(state.get("maximum", 1)) or (is_instance_valid(node.builder) and node.builder != self):
+				continue
+			var distance := global_position.distance_to(node.attack_position(global_position))
+			if distance < best:
+				best = distance
+				_build_target = node
+		if is_instance_valid(_build_target):
+			_build_target.builder = self
+	if not is_instance_valid(_build_target):
+		return false
+	var point := _build_target.attack_position(global_position)
+	if _build_target.structure_kind == "house":
+		point = _build_target.shelter_position() + Vector2(0, 0.5)
+	else:
+		point += (global_position - point).normalized() * 0.8
+	if global_position.distance_to(point) > 0.4:
+		_walk_to(point, 2.8, delta)
+		return true
+	velocity = Vector2.ZERO
+	if GameState.start_structure_work(_build_target.structure_id):
+		if _tool:
+			_tool.rotation = 0.0 if GameSettings.reduce_motion() else sin(_bob * 12) * 0.5
+		if GameState.work_structure(_build_target.structure_id, delta):
+			_release_build_task()
+	return true

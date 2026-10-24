@@ -1,15 +1,27 @@
 class_name PetBattlePanel
 extends ModalBase
-## Five-level 1v1 companion tournament with simultaneous turns.
+## Three-skill 1v1 duels: player acts first, then the rival replies.
 ## Both pets wait for an explicit player choice, then resolve together.
 ## A victory always grants a pet level.
 
 const SKILLS := {
-	"attack": {"name": "Attack", "description": "Deal full attack damage this turn."},
-	"defend": {"name": "Defend", "description": "Raise a shield and reduce incoming damage by 65% this turn."},
+	"attack": {"name": "1. Serang", "description": "Serangan biasa. Cooldown 2 saat.", "cooldown": 2.0, "power": 1.0},
+	"defend": {"name": "2. Perisai", "description": "Kurangkan serangan seterusnya sebanyak 65%. Cooldown 5 saat.", "cooldown": 5.0, "power": 0.0},
+	"burst": {"name": "3. Kuasa Khas", "description": "Serangan berganda. Cooldown 8 saat.", "cooldown": 8.0, "power": 2.0},
 }
 
 var selected := ""
+var _arena_frame_timer := 0.0
+var _arena_frame := 0
+var _player_cooldowns: Dictionary = {}
+var _enemy_cooldowns: Dictionary = {}
+var _player_guard := false
+var _enemy_guard := false
+var _enemy_pending := false
+var _enemy_wait := 0.0
+var _arena_backdrop: TextureRect
+var _arena_veil: ColorRect
+var _enemy_cd_label: Label
 
 var _battle_level := ""
 var _battle_active := false
@@ -55,6 +67,7 @@ func _ready() -> void:
 
 
 func open_pet_battles() -> void:
+	_panel_size = Vector2(920, 640)
 	_battle_active = false
 	_battle_resolved = false
 	_result_visible = false
@@ -74,8 +87,8 @@ func _rebuild() -> void:
 	var xp := GameState.pet_xp_progress()
 	add_body_text("Active companion: %s  •  Lv %d  •  HP %d/%d" % [PetDB.name_of(pet_id), pet_level, int(pet.get("hp", 0)), int(pet.get("hp_max", 0))], GameUI.TEXT, 17)
 	var xp_text := "PET XP MAX" if bool(xp.get("max", false)) else "Pet XP %d/%d" % [int(xp.get("xp", 0)), int(xp.get("next", 1))]
-	add_body_text("%s  •  Gold %d" % [xp_text, GameState.gold()], GameUI.PURPLE, 14)
-	add_body_text("Choose a duel. Nothing happens until you press Attack or Defend. Both pets then act together.", GameUI.MUTED, 13)
+	add_body_text(xp_text, GameUI.PURPLE, 14)
+	add_body_text("Pilih duel 1 lawan 1. Anda mempunyai tiga kuasa dengan cooldown masing-masing. Pemain bergerak dahulu, kemudian musuh membalas.", GameUI.MUTED, 13)
 	content.add_child(GameUI.spacer(2))
 	for level_id in PetBattleDB.ordered_ids():
 		_add_level_card(level_id)
@@ -154,6 +167,12 @@ func start_battle(level_id: String) -> bool:
 	_player_damage = PetDB.attack_damage(_player_pet_id, _player_level) + 3
 	_enemy_damage = int(def.get("damage", 5))
 	_turn_number = 1
+	_player_cooldowns = {"attack": 0.0, "defend": 0.0, "burst": 0.0}
+	_enemy_cooldowns = {"attack": 0.0, "defend": 0.0, "burst": 0.0}
+	_player_guard = false
+	_enemy_guard = false
+	_enemy_pending = false
+	_awaiting_next = false
 	_rng.seed = 4471 + level_id.hash()
 	_render_battle()
 	_begin_turn()
@@ -164,17 +183,19 @@ func _process(delta: float) -> void:
 	if not visible or not _battle_active or _battle_resolved:
 		return
 	_arena_idle(delta)
-	if _awaiting_next:
+	for skill_id in SKILLS:
+		_player_cooldowns[skill_id] = maxf(0, float(_player_cooldowns.get(skill_id, 0)) - delta)
+		_enemy_cooldowns[skill_id] = maxf(0, float(_enemy_cooldowns.get(skill_id, 0)) - delta)
+	_refresh_skill_buttons()
+	if _enemy_pending:
+		_enemy_wait -= delta
+		if _enemy_wait <= 0:
+			_resolve_enemy_turn()
+	elif _awaiting_next:
 		_next_turn_timer -= delta
-		if _next_turn_timer <= 0.0:
+		if _next_turn_timer <= 0:
 			_awaiting_next = false
 			_begin_turn()
-		return
-
-
-var _arena_frame_timer := 0.0
-var _arena_frame := 0
-
 
 func _arena_idle(delta: float) -> void:
 	# Both duelists idle-bob on their cushions while waiting.
@@ -193,118 +214,108 @@ func _begin_turn() -> void:
 	if not _battle_active or _battle_resolved:
 		return
 	_player_choice = ""
-	_enemy_choice = _choose_enemy_skill()
-	_turn_timer = 0.0
+	_enemy_choice = ""
 	_turn_active = true
-	for button in _skill_buttons:
-		if is_instance_valid(button):
-			button.disabled = false
-	if _timer_bar != null:
-		_timer_bar.value = 2.0
-	if _timer_label != null:
-		_timer_label.text = "Your turn - press Attack or Defend. No time limit."
-	if _status != null:
-		_status.text = "Round %d. Waiting for your choice." % _turn_number
+	if is_instance_valid(_status):
+		_status.text = "Giliran anda - pilih satu kuasa."
 	_update_timer_ui()
-
+	_refresh_skill_buttons()
 
 func choose_skill(skill_id: String) -> void:
-	if not _battle_active or _battle_resolved or not _turn_active:
+	if not _battle_active or _battle_resolved or not _turn_active or not _player_choice.is_empty() or not SKILLS.has(skill_id):
 		return
-	if _player_choice != "" or not SKILLS.has(skill_id):
+	if float(_player_cooldowns.get(skill_id, 0)) > 0:
 		return
 	_player_choice = skill_id
-	for button in _skill_buttons:
-		if is_instance_valid(button):
-			button.disabled = true
 	Sfx.play("select", -9.0)
-	if _timer_label != null:
-		_timer_label.text = "Chosen: %s." % str(SKILLS[skill_id].name)
-	if _status != null:
-		_status.text = "Your companion uses %s." % str(SKILLS[skill_id].name)
 	_resolve_turn()
-
 
 func _resolve_turn() -> void:
 	if not _turn_active or _player_choice.is_empty():
 		return
 	_turn_active = false
-	var player_action := _player_choice
-	var enemy_action := _enemy_choice if _enemy_choice != "" else _choose_enemy_skill()
-	var player_damage := _player_damage if player_action == "attack" else 0
-	var enemy_damage := _enemy_damage if enemy_action == "attack" else 0
-	if player_action == "defend":
-		enemy_damage = int(ceil(float(enemy_damage) * 0.35))
-	if enemy_action == "defend":
-		player_damage = int(ceil(float(player_damage) * 0.35))
-	_opponent_hp = clampi(_opponent_hp - player_damage, 0, _opponent_max)
-	_player_hp = clampi(_player_hp - enemy_damage, 0, _player_max)
-	_play_skill_sound(player_action)
-	_play_skill_sound(enemy_action)
-	if player_action == "defend":
+	var skill: Dictionary = SKILLS[_player_choice]
+	_player_cooldowns[_player_choice] = float(skill.get("cooldown", 2))
+	var damage := roundi(_player_damage * float(skill.get("power", 1)))
+	if _player_choice == "defend":
+		_player_guard = true
 		_spawn_hit_fx("shield", true)
-	if enemy_action == "defend":
-		_spawn_hit_fx("shield", false)
-	if player_damage > 0:
-		_spawn_hit_fx("scratch" if _turn_number % 2 == 1 else "punch", false)
-	if enemy_damage > 0:
-		_spawn_hit_fx("punch" if _turn_number % 2 == 1 else "scratch", true)
+	elif damage > 0:
+		if _enemy_guard:
+			damage = ceili(damage * 0.35)
+			_enemy_guard = false
+		_opponent_hp = maxi(0, _opponent_hp - damage)
+		_spawn_hit_fx("punch" if _player_choice == "burst" else "scratch", false)
+	_play_skill_sound(_player_choice)
+	_play_resolve_animation(_player_choice, "", damage > 0, false)
 	_update_bars()
-	_play_resolve_animation(player_action, enemy_action, player_damage > 0, enemy_damage > 0)
-	var bits: Array[String] = []
-	bits.append("You: %s   •   Rival: %s" % [str(SKILLS[player_action].name), str(SKILLS[enemy_action].name)])
-	if player_damage > 0:
-		bits.append("You dealt %d." % player_damage)
-	if enemy_damage > 0:
-		bits.append("Rival dealt %d." % enemy_damage)
-	if player_action == "defend" and enemy_damage > 0:
-		bits.append("Your shield absorbed the worst of it.")
-	if enemy_action == "defend" and player_damage > 0:
-		bits.append("The rival's shield held.")
-	if _status != null:
-		_status.text = "  ".join(bits)
-	if _opponent_hp <= 0 or _player_hp <= 0:
-		var won := _opponent_hp <= 0 and _player_hp > 0
-		_finish_battle(won)
+	_status.text = "%s%s. Musuh membalas selepas ini." % [skill.get("name", "Kuasa"), " - %d damage" % damage if damage > 0 else " diaktifkan"]
+	if _opponent_hp <= 0:
+		_finish_battle(true)
+		return
+	_enemy_pending = true
+	_enemy_wait = 0.7
+	_refresh_skill_buttons()
+
+func _resolve_enemy_turn() -> void:
+	if not _battle_active or _battle_resolved or not _enemy_pending:
+		return
+	if not SKILLS.has(_enemy_choice) or float(_enemy_cooldowns.get(_enemy_choice, 0)) > 0:
+		_enemy_choice = _choose_enemy_skill()
+	if _enemy_choice.is_empty():
+		_enemy_wait = 0.1
+		_status.text = "Kuasa musuh sedang cooldown..."
+		return
+	_enemy_pending = false
+	var skill: Dictionary = SKILLS[_enemy_choice]
+	_enemy_cooldowns[_enemy_choice] = float(skill.get("cooldown", 2))
+	var damage := roundi(_enemy_damage * float(skill.get("power", 1)))
+	if _enemy_choice == "defend":
+		_enemy_guard = true
+		_spawn_hit_fx("shield", false)
+	elif damage > 0:
+		if _player_guard:
+			damage = ceili(damage * 0.35)
+			_player_guard = false
+		_player_hp = maxi(0, _player_hp - damage)
+		_spawn_hit_fx("punch" if _enemy_choice == "burst" else "scratch", true)
+	_play_skill_sound(_enemy_choice)
+	_play_resolve_animation("", _enemy_choice, false, damage > 0)
+	_update_bars()
+	_status.text = "Musuh: %s%s." % [skill.get("name", "Kuasa"), " - %d damage" % damage if damage > 0 else " diaktifkan"]
+	if _player_hp <= 0:
+		_finish_battle(false)
 		return
 	_turn_number += 1
-	for button in _skill_buttons:
-		if is_instance_valid(button):
-			button.disabled = true
 	_awaiting_next = true
-	_next_turn_timer = 0.9
-	if _timer_label != null:
-		_timer_label.text = "Next round in 0.9s."
-
+	_next_turn_timer = 0.6
+	_refresh_skill_buttons()
 
 func _play_resolve_animation(player_action: String, enemy_action: String, player_hit: bool, enemy_hit: bool) -> void:
-	# Attacker lunges toward the centre; a defender flashes behind a shield.
 	if GameSettings.reduce_motion():
 		return
-	if player_hit and _player_sprite != null and is_instance_valid(_player_sprite):
-		var lunge := _player_sprite.create_tween()
-		lunge.tween_property(_player_sprite, "position:x", 46.0, 0.1).set_trans(Tween.TRANS_SINE)
-		lunge.tween_property(_player_sprite, "position:x", 0.0, 0.2).set_trans(Tween.TRANS_BACK)
-	if enemy_hit and _enemy_sprite != null and is_instance_valid(_enemy_sprite):
-		var lunge2 := _enemy_sprite.create_tween()
-		lunge2.tween_property(_enemy_sprite, "position:x", -46.0, 0.1).set_trans(Tween.TRANS_SINE)
-		lunge2.tween_property(_enemy_sprite, "position:x", 0.0, 0.2).set_trans(Tween.TRANS_BACK)
-	if player_action == "defend" and _player_sprite != null and is_instance_valid(_player_sprite):
-		var guard := _player_sprite.create_tween()
-		_player_sprite.modulate = Color(0.62, 0.92, 1.05)
-		guard.tween_property(_player_sprite, "modulate", Color.WHITE, 0.4)
-	if enemy_action == "defend" and _enemy_sprite != null and is_instance_valid(_enemy_sprite):
-		var guard2 := _enemy_sprite.create_tween()
-		_enemy_sprite.modulate = Color(0.62, 0.92, 1.05)
-		guard2.tween_property(_enemy_sprite, "modulate", Color.WHITE, 0.4)
-
+	for entry in [[_player_sprite, player_action, player_hit, 1.0], [_enemy_sprite, enemy_action, enemy_hit, -1.0]]:
+		var sprite := entry[0] as TextureRect
+		if not is_instance_valid(sprite):
+			continue
+		if bool(entry[2]):
+			var origin := sprite.position
+			var lunge := sprite.create_tween()
+			lunge.tween_property(sprite, "position", origin + Vector2(float(entry[3]) * 28, 0), 0.12)
+			lunge.tween_property(sprite, "position", origin, 0.22)
+		elif str(entry[1]) == "defend":
+			var normal := sprite.modulate
+			sprite.modulate = Color("#9bdbff")
+			sprite.create_tween().tween_property(sprite, "modulate", normal, 0.4)
 
 func _choose_enemy_skill() -> String:
-	var hp_ratio := float(_opponent_hp) / float(maxi(1, _opponent_max))
-	if hp_ratio <= 0.35 and _rng.randf() < 0.58:
-		return "defend"
-	return "attack" if _rng.randf() < 0.64 else "defend"
-
+	var ready: Array[String] = []
+	for skill_id in SKILLS:
+		if float(_enemy_cooldowns.get(skill_id, 0)) <= 0:
+			ready.append(str(skill_id))
+	if ready.is_empty():
+		return ""
+	return ready[_rng.randi_range(0, ready.size() - 1)]
 
 func _play_skill_sound(skill_id: String) -> void:
 	if skill_id == "defend":
@@ -325,96 +336,153 @@ func _spawn_hit_fx(kind: String, on_player: bool) -> void:
 
 
 func _update_timer_ui() -> void:
-	if _timer_bar != null:
-		_timer_bar.value = _turn_timer
-	if _timer_label != null and _turn_active and _player_choice == "":
-		_timer_label.text = "Waiting for Attack or Defend - no time limit."
+	if is_instance_valid(_timer_label):
+		_timer_label.text = "Tiga kuasa berasingan. Musuh hanya membalas selepas anda bertindak."
 
+func _refresh_skill_buttons() -> void:
+	for button in _skill_buttons:
+		if not is_instance_valid(button):
+			continue
+		var id := str(button.get_meta("skill_id", "attack"))
+		var remaining := float(_player_cooldowns.get(id, 0))
+		button.disabled = not _turn_active or remaining > 0 or not _battle_active
+		button.text = "%s\n%s" % [SKILLS[id].get("name", id), "%.1fs" % remaining if remaining > 0 else "Sedia"]
+	if is_instance_valid(_enemy_cd_label):
+		var parts: Array[String] = []
+		for id in SKILLS:
+			var remaining := float(_enemy_cooldowns.get(id, 0))
+			parts.append("%s: %s" % [str(SKILLS[id].get("name", id)), "%.1fs" % remaining if remaining > 0 else "Sedia"])
+		_enemy_cd_label.text = " | ".join(parts)
 
 func _render_battle() -> void:
 	_clear_content()
+	play_entry_fade()
 	_result_visible = false
-	_skill_buttons.clear()
-	var def := PetBattleDB.get_level(_battle_level)
-	add_section("%s  •  %s" % [str(def.get("name", "Pet Duel")), str(def.get("subtitle", "Duel"))], GameUI.GOLD)
-	add_body_text("Press Attack or Defend to act. Both pets wait for your choice every round.", GameUI.MUTED, 13)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 26)
-	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var arena := PanelContainer.new()
-	arena.name = "BattleArena"
-	arena.clip_contents = true
-	content.add_child(arena)
-	var background_path := str(def.get("background", ""))
-	if not background_path.is_empty() and ResourceLoader.exists(background_path):
-		var backdrop := TextureRect.new()
-		backdrop.name = "ArenaBackground"
-		backdrop.texture = load(background_path) as Texture2D
-		backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		arena.add_child(backdrop)
-	arena.add_child(row)
-	var left := _battle_card(_player_pet_id, PetDB.name_of(_player_pet_id), "Your companion  •  Lv %d" % _player_level, Color.WHITE)
-	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(left)
-	_player_bar = left.get_meta("hp_bar") as SegmentedBar
-	_player_hp_label = left.get_meta("hp_label") as Label
-	_player_sprite = left.get_meta("preview") as TextureRect
-	var middle := VBoxContainer.new()
-	middle.custom_minimum_size = Vector2(80, 0)
-	middle.add_child(GameUI.spacer(74))
-	var vs := GameUI.title("VS", 30, GameUI.GOLD)
-	vs.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	middle.add_child(vs)
-	row.add_child(middle)
-	var tint: Color = def.get("opponent_tint", Color.WHITE)
-	var right := _battle_card(str(def.get("opponent_pet", "ember")), str(def.get("opponent_name", "Rival")), "Arena rival  •  Attack / Defend", tint)
-	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(right)
-	_enemy_bar = right.get_meta("hp_bar") as SegmentedBar
-	_enemy_hp_label = right.get_meta("hp_label") as Label
-	_enemy_sprite = right.get_meta("preview") as TextureRect
-	var skills_line := GameUI.label("Rival skills: Attack  •  Defend", 12, GameUI.MUTED)
-	skills_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	content.add_child(skills_line)
-	_status = GameUI.label("", 14, GameUI.TEXT)
+	_panel_size = get_viewport_rect().size
+	_fit_panel()
+	var definition := PetBattleDB.get_level(_battle_level)
+	_arena_backdrop = TextureRect.new()
+	_arena_backdrop.name = "FullArenaBackground"
+	_arena_backdrop.texture = load(str(definition.get("background", ""))) as Texture2D
+	_arena_backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_arena_backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_arena_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(_arena_backdrop)
+	panel.move_child(_arena_backdrop, 0)
+	_arena_veil = ColorRect.new()
+	_arena_veil.color = Color(0, 0, 0, 0.25)
+	_arena_veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(_arena_veil)
+	panel.move_child(_arena_veil, 1)
+	var stage := Control.new()
+	stage.name = "OpenBattleStage"
+	stage.custom_minimum_size = Vector2(0, maxf(155, get_viewport_rect().size.y - 330))
+	stage.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_child(stage)
+	_player_sprite = _arena_pet(stage, _player_pet_id, Vector2(0.23, 0.70), Color.WHITE)
+	_enemy_sprite = _arena_pet(stage, str(definition.get("opponent_pet", "ember")), Vector2(0.77, 0.70), definition.get("opponent_tint", Color.WHITE))
+	_player_sprite.name = "PlayerPet"
+	_enemy_sprite.name = "RivalPet"
+	var left := VBoxContainer.new()
+	left.position = Vector2(18, 8)
+	left.custom_minimum_size = Vector2(260, 0)
+	stage.add_child(left)
+	left.add_child(_arena_label("%s - Lv %d" % [PetDB.name_of(_player_pet_id), _player_level], 22))
+	_player_bar = SegmentedBar.new()
+	_player_bar.setup("HP", GameUI.RED, 10, true)
+	_player_bar.custom_minimum_size = Vector2(260, 25)
+	left.add_child(_player_bar)
+	_player_hp_label = _arena_label("", 14)
+	left.add_child(_player_hp_label)
+	var right := VBoxContainer.new()
+	right.anchor_left = 1
+	right.anchor_right = 1
+	right.offset_left = -278
+	right.offset_right = -18
+	right.offset_top = 8
+	right.custom_minimum_size = Vector2(260, 0)
+	stage.add_child(right)
+	right.add_child(_arena_label(str(definition.get("opponent_name", "Rival")), 22))
+	_enemy_bar = SegmentedBar.new()
+	_enemy_bar.setup("HP", GameUI.RED, 10, true)
+	_enemy_bar.custom_minimum_size = Vector2(260, 25)
+	right.add_child(_enemy_bar)
+	_enemy_hp_label = _arena_label("", 14)
+	right.add_child(_enemy_hp_label)
+	_enemy_cd_label = _arena_label("", 12)
+	_enemy_cd_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_enemy_cd_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	content.add_child(_enemy_cd_label)
+	_status = _arena_label("Giliran anda.", 18)
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_status.custom_minimum_size = Vector2(780, 38)
+	_status.custom_minimum_size = Vector2(0, 28)
 	content.add_child(_status)
-	_timer_bar = ProgressBar.new()
-	_timer_bar.max_value = 2.0
-	_timer_bar.value = 2.0
-	_timer_bar.show_percentage = false
-	_timer_bar.custom_minimum_size = Vector2(780, 14)
-	_timer_bar.visible = false
-	_timer_bar.add_theme_stylebox_override("background", GameUI.style(Color("#102126"), Color("#3e5c62"), 1, 0))
-	_timer_bar.add_theme_stylebox_override("fill", GameUI.style(GameUI.PURPLE, GameUI.PURPLE.lightened(0.25), 1, 0))
-	content.add_child(_timer_bar)
-	_timer_label = GameUI.label("", 12, GameUI.PURPLE)
+	_timer_label = _arena_label("", 13)
 	_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	content.add_child(_timer_label)
-	var skill_row := HBoxContainer.new()
-	skill_row.add_theme_constant_override("separation", 10)
-	content.add_child(skill_row)
-	for skill_id in SKILLS:
-		var skill: Dictionary = SKILLS[skill_id]
-		var button := GameUI.button(str(skill.name), Vector2(0, 54))
+	var skills := HBoxContainer.new()
+	skills.add_theme_constant_override("separation", 12)
+	content.add_child(skills)
+	for id in SKILLS:
+		var button := GameUI.button(str(SKILLS[id].get("name", id)), Vector2(0, 64))
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		button.tooltip_text = str(skill.description)
-		button.pressed.connect(func() -> void: choose_skill(str(skill_id)))
-		skill_row.add_child(button)
+		button.set_meta("skill_id", id)
+		button.tooltip_text = str(SKILLS[id].get("description", ""))
+		button.pressed.connect(choose_skill.bind(str(id)))
+		skills.add_child(button)
 		_skill_buttons.append(button)
-	var forfeit := GameUI.button("Forfeit", Vector2(120, 46))
-	forfeit.pressed.connect(_forfeit)
-	content.add_child(forfeit)
 	_update_bars()
 	_update_timer_ui()
 
+func _arena_pet(stage: Control, id: String, at: Vector2, tint: Color) -> TextureRect:
+	var sprite := TextureRect.new()
+	sprite.texture = PixelArt.pet_texture(id)
+	sprite.modulate = tint
+	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.anchor_left = at.x
+	sprite.anchor_right = at.x
+	sprite.anchor_top = at.y
+	sprite.anchor_bottom = at.y
+	var extent := minf(170, maxf(80, stage.custom_minimum_size.y * 0.44))
+	sprite.offset_left = -extent / 2
+	sprite.offset_right = extent / 2
+	sprite.offset_top = -extent / 2
+	sprite.offset_bottom = extent / 2
+	sprite.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stage.add_child(sprite)
+	return sprite
+
+func _arena_label(text: String, size: int) -> Label:
+	var label := GameUI.label(text, size, GameUI.TEXT)
+	label.add_theme_constant_override("outline_size", 3)
+	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	return label
+
+func _clear_content() -> void:
+	for backdrop in [_arena_backdrop, _arena_veil]:
+		if is_instance_valid(backdrop):
+			backdrop.queue_free()
+	_arena_backdrop = null
+	_arena_veil = null
+	_player_sprite = null
+	_enemy_sprite = null
+	_player_bar = null
+	_enemy_bar = null
+	_player_hp_label = null
+	_enemy_hp_label = null
+	_status = null
+	_timer_label = null
+	_timer_bar = null
+	_enemy_cd_label = null
+	_skill_buttons.clear()
+	super._clear_content()
 
 func _battle_card(pet_id: String, display_name: String, subtitle: String, tint: Color) -> PanelContainer:
-	var card := GameUI.panel(Color(0.04, 0.08, 0.10, 0.62), Color("#4a6a70"))
+	var card := GameUI.panel(Color(0.04, 0.08, 0.10, 0.24), Color("#4a6a70"))
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 4)
 	card.add_child(box)

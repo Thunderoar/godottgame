@@ -120,6 +120,8 @@ func _build_visuals(palette: Dictionary, shown_title: String, is_pet: bool) -> v
 	add_child(_aura)
 
 	var label := Label.new()
+	label.z_as_relative = false
+	label.z_index = 710
 	label.text = shown_title
 	label.add_theme_font_size_override("font_size", 12)
 	label.add_theme_color_override("font_color", Color("#a8f5ea") if gate_kind == "pet" else (PixelArt.portal_theme_palette(_theme)["glow_light"] as Color))
@@ -129,6 +131,8 @@ func _build_visuals(palette: Dictionary, shown_title: String, is_pet: bool) -> v
 	add_child(label)
 
 	_banner = Label.new()
+	_banner.z_as_relative = false
+	_banner.z_index = 711
 	_banner.text = "CLEARED"
 	_banner.add_theme_font_size_override("font_size", 11)
 	_banner.add_theme_color_override("font_color", Color("#ffd88a"))
@@ -203,3 +207,23 @@ func interact(_player: Node) -> void:
 		return
 	if game.has_method("open_portals"):
 		game.call("open_portals", portal_id)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	var point := Vector2.ZERO
+	var pressed := false
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		point = event.position
+		pressed = true
+	elif event is InputEventScreenTouch and event.pressed:
+		point = event.position
+		pressed = true
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if not pressed or not is_instance_valid(game) or game._input_locked or game.world != get_parent() or is_instance_valid(game.home_interior):
+		return
+	if game.world is Lobby and game.world._settlement_editor.active:
+		return
+	var local := to_local(get_canvas_transform().affine_inverse() * point)
+	if Rect2(-1.5, -3.8, 3, 4.3).has_point(local):
+		interact(game.player())
+		get_viewport().set_input_as_handled()

@@ -48,11 +48,12 @@ func _build() -> void:
 
 	_kicker = GameUI.label("A SEASIDE SURVIVAL TALE", 13, GameUI.TEAL)
 	column.add_child(_kicker)
-	_title_label = GameUI.title("SAVE THE WORLD", 58, GameUI.TEXT)
+	_title_label = GameUI.title("PB (Protect BESUT)", 58, GameUI.TEXT)
 	_title_label.add_theme_constant_override("outline_size", 4)
 	_title_label.add_theme_color_override("font_outline_color", Color(0.03, 0.07, 0.08, 0.9))
 	column.add_child(_title_label)
-	_credit = GameUI.label("Created by Qayyim, Farhan and Ayiz", 16, GameUI.GOLD)
+	_credit = GameUI.label("Created by Qayyim, Farhan & Ayiz", 16, GameUI.GOLD)
+	_credit.visible = false
 	column.add_child(_credit)
 	_blurb = GameUI.label("Keep the cottage. Raise a companion. Shop, build and defend the settlement from what comes from the sea and the forest.", 15, Color("#d9e6d8"))
 	_blurb.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -77,7 +78,7 @@ func _build() -> void:
 	for character in CharacterDB.CHARACTERS:
 		_cards.add_child(_character_card(character))
 
-	_footer = GameUI.label("Permanent daytime  •  mobile touch HUD  •  ten-portal campaign  •  village defence", 11, Color(0.86, 0.9, 0.84, 0.72))
+	_footer = GameUI.label("Created by Qayyim, Farhan & Ayiz", 11, Color(0.86, 0.9, 0.84, 0.72))
 	column.add_child(_footer)
 
 
@@ -129,7 +130,7 @@ func _layout() -> void:
 	_credit.add_theme_font_size_override("font_size", 13 if _compact else 16)
 	_blurb.visible = not _compact
 	_hint.visible = not _compact
-	_footer.visible = not _compact
+	_footer.visible = true
 	_choose_header.add_theme_font_size_override("font_size", 17 if _compact else 20)
 	_continue_button.custom_minimum_size = Vector2(190 if _compact else 230, 36 if _compact else 44)
 	for i in _card_portraits.size():

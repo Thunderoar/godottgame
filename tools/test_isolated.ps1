@@ -32,6 +32,8 @@ try {
 	$stderr = Join-Path $runRoot 'errors.log'
 	Write-Output "Isolated test artifacts: $runRoot"
 	$process = Start-Process -FilePath $Godot -ArgumentList $arguments -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+	$nativeHandle = $process.Handle
+	$process.EnableRaisingEvents = $true
 	$limit = if ($ImportOnly) { 90000 } else { 600000 }
 	if (-not $process.WaitForExit($limit)) {
 		$process.Kill()

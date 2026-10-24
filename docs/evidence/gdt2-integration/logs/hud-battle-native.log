@@ -1,0 +1,31 @@
+Godot Engine v4.7.2.stable.arch_linux.ed1daf0bf (2026-08-17 01:18:38 UTC) - https://godotengine.org
+WARNING: Failed to create wd.xic as the input method or its xim server may not have started yet.
+     at: _create_xic (platform/linuxbsd/x11/display_server_x11.cpp:6347)
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 4.6 (Core Profile) Mesa 26.2.4-arch3.1 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 23.1.1, 256 bits)
+
+Verified isolated user data: /tmp/tidesworn-gdt2-hud/userdata/godot/app_userdata/Save The World
+[OK] manual three-power duel starts at 1280x720
+[OK] Close and all three powers fit onscreen
+[OK] arena has no sideways scrolling
+[OK] touching power one makes player act first
+[OK] rival replies after the player's animation
+[OK] touching a cooling-down power cannot trigger it
+[OK] power two shields and displays its cooldown
+[OK] power three deals double damage and cools down
+[OK] Close exits full arena and restores input
+[OK] manual three-power duel starts at 832x480
+[OK] Close and all three powers fit onscreen
+[OK] arena has no sideways scrolling
+[OK] touching power one makes player act first
+[OK] rival replies after the player's animation
+[OK] touching a cooling-down power cannot trigger it
+[OK] power two shields and displays its cooldown
+[OK] power three deals double damage and cools down
+[OK] Close exits full arena and restores input
+[OK] Menu Build enters editor without a HUD shortcut
+[OK] Menu Finish building exits editor
+[OK] daytime tips identify the day track
+[OK] night switches tutorial to combat automatically
+PB review: PASS

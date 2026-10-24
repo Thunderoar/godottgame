@@ -7,7 +7,7 @@ func _ready() -> void:
 	var game := load("res://scenes/game.tscn").instantiate() as Game
 	add_child(game)
 	await get_tree().process_frame
-	game.call("_on_character_selected", "qayyim")
+	await game.call("_on_character_selected", "qayyim")
 	game.hud.tutorial_guide.call("_skip")
 	game.set_process(false)
 	for frame in 4: await get_tree().physics_frame

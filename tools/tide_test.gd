@@ -20,8 +20,8 @@ func _ready() -> void:
 	await get_tree().process_frame
 	_check(game.title_screen != null, "title screen exists")
 	_check(GameState.has_existing_save == false, "clean save state")
-	_check(_has_label(game.title_screen, "SAVE THE WORLD"), "title reads Save The World")
-	_check(_has_label(game.title_screen, "Created by Qayyim, Farhan and Ayiz"), "creator credit is present")
+	_check(_has_label(game.title_screen, "PB (Protect BESUT)"), "title reads PB (Protect BESUT)")
+	_check(_has_label(game.title_screen, "Created by Qayyim, Farhan & Ayiz"), "creator credit is present")
 	_check(_has_label(game.title_screen, "CHOOSE YOUR ROAD"), "Choose Your Road menu is on the title screen")
 	_check(CharacterDB.ids() == ["qayyim", "farhan", "ayiz"], "three male heroes are defined")
 	_check(CharacterDB.weapon_style("qayyim") == "sword", "Qayyim uses a sword")
@@ -29,7 +29,7 @@ func _ready() -> void:
 	_check(CharacterDB.weapon_style("ayiz") == "bow", "Ayiz uses a bow")
 	_check(not ItemDB.exists("pet_revival"), "Pet Revival Potion is removed")
 
-	game.call("_on_character_selected", "qayyim")
+	await game.call("_on_character_selected", "qayyim")
 	await get_tree().process_frame
 	await get_tree().process_frame
 	hud = game.get("hud")
@@ -40,7 +40,7 @@ func _ready() -> void:
 	_check(GameState.equipped_item("weapon") == "rusty_sword", "starter sword equipped")
 	_check(GameState.active_pet_id() == "ember", "starter pet active")
 	_check(GameState.has_living_pet(), "starter pet alive")
-	_check(GameState.water_keeper_count() == 2, "new journeys start with two water keepers")
+	_check(GameState.water_keeper_count() == 1, "new journeys start with one water keeper")
 	_check(game.call("player").get_node_or_null("VitalHud") is PlayerVitalHud, "player keeps its world HP/MP indicator")
 	_check(not _has_label(hud, "VITALS") and hud.get("_health_bar") == null and hud.get("_pet_bar") == null, "obsolete top-right VITALS construction is removed")
 	_check(hud.get("_minimap") == null, "no minimap exists")
@@ -50,8 +50,8 @@ func _ready() -> void:
 	_check(hud.get("_attack_button").action == "attack", "touch attack maps to attack action")
 	_check(hud.get("_interact_button").action == "interact", "touch interact maps to interact action")
 	_check(hud.get("_inventory_button").action == "open_inventory", "backpack touch action exists")
-	_check(hud.get("_inventory_button").position.x < 200 and hud.get("_inventory_button").position.y < 200, "backpack sits away from movement/combat controls")
-	_check(hud.get("_build_button").action == "toggle_build", "settlement Build button exists")
+	_check(hud.get("_inventory_button").position.x > 210, "Pack sits beside the joystick away from combat controls")
+	_check(hud.get("_build_button") == null, "Build lives in Menu rather than the world HUD")
 	_check(not GameState.is_night() and GameState.time_string().begins_with("DAY"), "new journeys begin with a peaceful three-minute day")
 	_check(game.world.capture_monsters().is_empty(), "no home monsters spawn on the first day")
 	_check(hud.tutorial_guide.visible, "New Journey tutorial starts on a new game")
@@ -64,8 +64,8 @@ func _ready() -> void:
 	_check(hud.get("_toast_box") == null, "toast calls cannot create pop-up notifications")
 	var xp_bar := hud.get("_xp_bar") as SegmentedBar
 	var pet_xp_bar := hud.get("_pet_xp_bar") as SegmentedBar
-	_check(xp_bar != null and xp_bar.maximum == int(GameState.data.xp_next), "player XP bar shows the next-level requirement")
-	_check(pet_xp_bar != null and pet_xp_bar.maximum == PetDB.xp_for_level(2), "pet XP bar shows the next-level requirement")
+	_check(xp_bar == null and game.player().get_node_or_null("VitalHud") != null, "player XP is displayed overhead")
+	_check(pet_xp_bar == null and game.world.pet.get_node_or_null("PetHealth") != null, "pet XP is displayed overhead")
 	await KampungChecks.run(game, _check)
 	await WorldChecks.run(game, _check)
 	await MonsoonChecks.run(game, _check)
@@ -142,8 +142,12 @@ func _test_movement() -> void:
 
 
 func _test_day_night() -> void:
+	for gun in get_tree().get_nodes_in_group("house_defenses"):
+		gun.set_process(false)
 	game.set_process(false)
 	var lobby := game.world as Lobby
+	for gun in game.get_tree().get_nodes_in_group("house_defenses"):
+		gun.set_process(false)
 	GameState.advance_world_clock(179.0 - float(GameState.data.get("world_time", 0.0)))
 	_check(not GameState.is_night() and lobby.capture_monsters().is_empty(), "first day stays peaceful before 180 seconds")
 	lobby._spawn_forest_monsters(5)
@@ -195,6 +199,8 @@ func _test_day_night() -> void:
 	for enemy in lobby.get_children():
 		if enemy is Enemy:
 			enemy.set_physics_process(false)
+	for gun in get_tree().get_nodes_in_group("house_defenses"):
+		gun.set_process(false)
 	game.set_process(true)
 
 
@@ -423,16 +429,16 @@ func _test_house_and_sleep() -> void:
 	_check(is_equal_approx(GameState.sleep_recovery_seconds(), 2.0), "level 5 recovery is 2 seconds")
 	GameState.set_health(10)
 	var p: Player = game.call("player")
-	var bed: Node = null
+	var entrance: HomeEntrance
 	for node in get_tree().get_nodes_in_group("interactable"):
-		if node is HouseBed:
-			bed = node
-	_check(bed != null, "bed interaction exists")
-	if bed != null:
-		bed.call("interact", p)
-		await get_tree().create_timer(2.3).timeout
-	_check(GameState.health() == GameState.health_max(), "sleep restores full health within 2 seconds")
-	_check(not p.sleeping, "sleep state ends")
+		if node is HomeEntrance:
+			entrance = node
+	_check(entrance != null, "main-house entrance replaces the bed")
+	entrance.interact(p)
+	await get_tree().create_timer(2.3).timeout
+	_check(GameState.health() == GameState.health_max(), "home interior restores health at the house level rate")
+	await game.leave_home()
+	_check(not is_instance_valid(game.home_interior), "home doorway returns the player outside")
 
 
 func _test_menu_and_settings() -> void:
@@ -493,68 +499,45 @@ func _test_pet_support() -> void:
 
 
 func _test_pet_battle_portal() -> void:
-	var pet_gate: PortalEntrance = null
+	var pet_gate: PortalEntrance
 	for node in get_tree().get_nodes_in_group("battle_portal"):
-		if node is PortalEntrance and str(node.gate_kind) == "pet":
+		if node is PortalEntrance and node.gate_kind == "pet":
 			pet_gate = node
 	_check(pet_gate != null, "pet battle gate is interactable")
-	if pet_gate != null:
-		pet_gate.call("interact", game.call("player"))
-		await get_tree().process_frame
-	_check(hud.pet_battle_panel.visible, "pet battle portal opens the tournament")
+	pet_gate.interact(game.player())
+	await get_tree().process_frame
+	await get_tree().process_frame
 	var panel := hud.pet_battle_panel as PetBattlePanel
-	panel.close_panel()
-	await get_tree().process_frame
-	game.call("open_pet_battles")
-	await get_tree().process_frame
+	_check(panel.visible, "pet portal opens tournament")
 	var gold_before := GameState.gold()
-	var pet_before := GameState.get_active_pet()
-	var pet_level_before := int(pet_before.get("level", 1))
-	_check(PetBattlePanel.SKILLS.size() == 2, "pet combat has only Attack and Defend")
-	var started: bool = bool(panel.start_battle("pet_duel_1"))
-	_check(started, "first pet duel starts")
-	_check(int(panel.get("_player_hp")) > 0 and int(panel.get("_opponent_hp")) > 0, "pet duel starts with two living combatants")
-	_check(panel.get("_player_bar") != null and panel.get("_enemy_bar") != null, "pet duel displays both health bars")
-	var skill_buttons := panel.get("_skill_buttons") as Array
-	_check(skill_buttons.size() == 2, "the player pet has two skill buttons")
-	var idle_player := int(panel.get("_player_hp"))
-	var idle_enemy := int(panel.get("_opponent_hp"))
-	panel.call("_process", 30.0)
-	panel.call("_resolve_turn")
-	_check(int(panel.get("_player_hp")) == idle_player and int(panel.get("_opponent_hp")) == idle_enemy and int(panel.get("_turn_number")) == 1, "both pets wait indefinitely when no action is chosen")
-	_check(PetBattlePanel.SKILLS.has(str(panel.get("_enemy_choice"))), "the enemy pet chooses from Attack or Defend")
-	var enemy_before := int(panel.get("_opponent_hp"))
-	var player_before := int(panel.get("_player_hp"))
-	panel.set("_enemy_choice", "attack")
-	panel.call("choose_skill", "attack")
-	panel.set("_turn_timer", 0.0)
-	panel.call("_process", 0.01)
-	_check(int(panel.get("_opponent_hp")) < enemy_before and int(panel.get("_player_hp")) < player_before, "both pets execute their actions simultaneously")
-	var hit_fx := 0
-	for child in panel.get_children():
-		if child is PetHitEffect:
-			hit_fx += 1
-	_check(hit_fx >= 2, "pet hits create scratch/punch impact effects")
-	panel.call("_process", 0.95)
-	panel.set("_opponent_hp", 1)
-	panel.set("_enemy_choice", "defend")
-	panel.call("choose_skill", "attack")
-	panel.set("_turn_timer", 0.0)
-	panel.call("_process", 0.01)
-	var shield_fx := false
-	for child in panel.get_children():
-		if child is PetHitEffect and str(child.get("kind")) == "shield":
-			shield_fx = true
-	_check(shield_fx, "defending creates a shield effect")
+	var level_before := int(GameState.get_active_pet().get("level", 1))
+	_check(panel.start_battle("pet_duel_1"), "first duel starts")
+	_check(PetBattlePanel.SKILLS.size() == 3 and panel._skill_buttons.size() == 3, "three manual powers are available")
+	var hp := panel._player_hp
+	var enemy_hp := panel._opponent_hp
+	panel._process(30)
+	_check(panel._player_hp == hp and panel._opponent_hp == enemy_hp, "duel waits indefinitely for player input")
+	panel._enemy_choice = "attack"
+	panel.choose_skill("attack")
+	_check(panel._opponent_hp < enemy_hp and panel._player_hp == hp, "player acts before opponent")
+	panel._process(0.71)
+	_check(panel._player_hp < hp and float(panel._enemy_cooldowns.attack) > 0, "enemy replies on its own turn and cooldown")
+	panel._process(0.61)
+	enemy_hp = panel._opponent_hp
+	panel.choose_skill("attack")
+	_check(panel._turn_active and panel._opponent_hp == enemy_hp, "cooling-down power is blocked")
+	panel._enemy_choice = "burst"
+	panel.choose_skill("defend")
+	panel._process(0.71)
+	_check(panel.get_children().any(func(n: Node) -> bool: return n is PetHitEffect and n.kind == "shield"), "shield power has visible defense effect")
+	panel._process(0.61)
+	panel._opponent_hp = 1
+	panel.choose_skill("burst")
 	await get_tree().process_frame
-	_check(bool(GameState.pet_battle_state("pet_duel_1").get("cleared", false)), "pet duel victory is recorded")
-	_check(bool(GameState.pet_battle_state("pet_duel_2").get("unlocked", false)), "pet duel victory unlocks the next level")
-	_check(GameState.gold() > gold_before, "pet duel grants gold")
-	var pet_after := GameState.get_active_pet()
-	_check(int(pet_after.get("level", 1)) >= pet_level_before + 1, "pet duel victory levels up the companion")
+	_check(GameState.pet_battle_state("pet_duel_1").get("cleared", false), "pet duel victory is recorded")
+	_check(GameState.pet_battle_state("pet_duel_2").get("unlocked", false), "victory unlocks next duel")
+	_check(GameState.gold() > gold_before and int(GameState.get_active_pet().get("level", 1)) > level_before, "victory grants Gold and pet level")
 	panel.close_panel()
-	await get_tree().process_frame
-
 
 func _test_rubbish_system() -> void:
 	var system := get_tree().get_first_node_in_group("rubbish_system") as RubbishSystem
@@ -606,6 +589,8 @@ func _test_portal_combat_and_auto_loot() -> void:
 	_check(game.world is Dungeon, "portal dungeon loads")
 	_check(game.world.camera.zoom.distance_to(Vector2.ONE * GameSettings.camera_zoom()) < 0.1, "dungeon inherits saved camera zoom")
 	var enemies := get_tree().get_nodes_in_group("enemies")
+	for enemy in enemies:
+		enemy.set_physics_process(false)
 	var boss_count := 0
 	for enemy in enemies:
 		if enemy.get("is_boss"):
@@ -829,8 +814,8 @@ func _test_second_portal() -> void:
 		var p: Player = game.call("player")
 		p.global_position = boss.global_position + Vector2(0, 3.5)
 		await get_tree().create_timer(0.35).timeout
-		_check(hud.get("_boss_panel").visible, "boss bar appears during boss encounter")
-		_check("DROWNED" in hud.get("_boss_label").text, "boss bar names the active boss")
+		_check(boss.get_node_or_null("BossHealth") != null, "boss health appears overhead")
+		_check("DROWNED" in boss._boss_name().to_upper(), "overhead bar belongs to the active boss")
 	var dungeon: Dungeon = game.world
 	dungeon.call("exit_to_lobby", true)
 	await get_tree().create_timer(0.9).timeout
@@ -965,6 +950,8 @@ func _test_forest_game_over() -> void:
 		await get_tree().create_timer(0.35).timeout
 	var trees := get_tree().get_nodes_in_group("forest_tree")
 	var lobby := game.world as Lobby
+	for gun in game.get_tree().get_nodes_in_group("house_defenses"):
+		gun.set_process(false)
 	for resident in lobby._residents:
 		resident.set_physics_process(false)
 	for enemy in lobby._forest_monsters:
@@ -1003,6 +990,8 @@ func _test_village_systems() -> void:
 	if not GameState.is_night():
 		GameState.advance_world_clock(GameState.DAY_PHASE_SECONDS)
 	var lobby := game.world as Lobby
+	for gun in game.get_tree().get_nodes_in_group("house_defenses"):
+		gun.set_process(false)
 	for enemy in lobby._forest_monsters:
 		if is_instance_valid(enemy):
 			enemy.set_physics_process(false)
@@ -1021,14 +1010,17 @@ func _test_village_systems() -> void:
 	var wrong_event := "move" if original_mission != 0 else "boss"
 	GameState.record_mission_event(wrong_event)
 	_check(GameState.mission_step() == original_mission, "out-of-order actions do not advance the lesson")
-	while GameState.mission_step() < MissionDB.STEPS.size():
-		var before := GameState.mission_step()
-		GameState.record_mission_event(str(MissionDB.step(before).get("event", "")))
-		_check(GameState.mission_step() == before + 1, "mission %d advances exactly one step" % before)
+	for phase in 2:
+		while GameState.mission_step() < MissionDB.STEPS.size():
+			var before := GameState.completed_mission_count()
+			GameState.record_mission_event(str(MissionDB.step(GameState.mission_step()).get("event", "")))
+			_check(GameState.completed_mission_count() == before + 1, "current phase lesson advances exactly one action")
+		GameState.advance_world_clock(180)
+	_check(GameState.completed_mission_count() == MissionDB.STEPS.size(), "both day and night lessons complete")
 	GameState.add_gold(-GameState.gold())
-	_check(not GameState.hire_water_keeper().ok and GameState.water_keeper_count() == 2, "unaffordable recruitment does not add a keeper")
+	_check(not GameState.hire_water_keeper().ok and GameState.water_keeper_count() == 1, "unaffordable recruitment does not add a keeper")
 	GameState.add_gold(2500)
-	for count in [3, 4, 5]:
+	for count in [2, 3, 4, 5]:
 		_check(GameState.hire_water_keeper().ok and GameState.water_keeper_count() == count, "paid recruitment adds keeper %d" % count)
 	var balance := GameState.gold()
 	_check(not GameState.hire_water_keeper().ok and GameState.gold() == balance, "keeper cap rejects purchase without charging")
@@ -1065,6 +1057,8 @@ func _test_village_systems() -> void:
 			repair = point
 			break
 	_check(repair != null and repair.is_interactable_available(), "damaged fence has a nearby Betulkan interaction")
+	if GameState.is_night():
+		GameState.advance_world_clock(180)
 	var gold_before := GameState.gold()
 	var p := game.player() as Player
 	p.global_position = repair.global_position + Vector2(5, 0)
@@ -1072,7 +1066,9 @@ func _test_village_systems() -> void:
 	_check(not fence.is_intact(), "distant repair interaction cannot restore the fence")
 	p.global_position = repair.global_position + Vector2(0, 0.4)
 	repair.interact(p)
-	_check(fence.is_intact() and GameState.gold() == gold_before, "nearby Betulkan restores a destroyed fence immediately for free")
+	_check(not fence.is_intact() and GameState.gold() == gold_before and float(GameState.structure_state(fence.structure_id).get("repair_remaining", 0)) == 10, "nearby repair requests ten seconds of builder work for free")
+	_check(not GameState.work_structure(fence.structure_id, 9.9) and not fence.is_intact(), "fence repair cannot finish early")
+	_check(GameState.work_structure(fence.structure_id, 0.2) and fence.is_intact(), "builder repairs fence after ten seconds")
 	_check(not repair.is_interactable_available() and not GameState.repair_structure(fence.structure_id).ok, "intact structures hide repairs and reject duplicate work")
 	house.take_attack_damage(10)
 	_check(GameState.repair_structure(house.structure_id).ok and house.is_intact() and GameState.gold() == gold_before, "partially damaged houses can also be repaired without payment")
@@ -1129,6 +1125,8 @@ func _test_village_systems() -> void:
 
 func _test_forest_restoration() -> void:
 	var lobby := game.world as Lobby
+	for gun in game.get_tree().get_nodes_in_group("house_defenses"):
+		gun.set_process(false)
 	var keepers: Array[Resident] = []
 	for resident in lobby._residents:
 		resident.set_physics_process(false)
@@ -1173,10 +1171,12 @@ func _test_forest_restoration() -> void:
 	keeper._release_tree_task()
 	tree.take_attack_damage(9999)
 	_check(tree.fallen and not tree.burning, "zero HP fells the tree and stops its fire")
+	keeper = lobby._residents.filter(func(npc: Resident) -> bool: return npc.worker_role == "planter")[0]
+	keeper.global_position = tree.global_position + Vector2(0, 1.5)
 	keeper._tree_task = tree
 	tree.caretaker = keeper
 	keeper._care_for_forest(Resident.PLANT_SECONDS)
-	_check(not tree.fallen and tree.growth_remaining == 30.0, "NPC plants a replacement with exactly 30 seconds of growth")
+	_check(not tree.fallen and tree.growth_remaining == 30.0, "green NPC plants a replacement with exactly 30 seconds of growth")
 	var sapling_hp := tree.health
 	tree.take_attack_damage(99)
 	attacker.global_position = tree.global_position + Vector2(0.8, 0)
@@ -1250,6 +1250,8 @@ func _check(condition: bool, label: String) -> void:
 
 func _test_visual_repairs() -> void:
 	var lobby := game.world as Lobby
+	for gun in game.get_tree().get_nodes_in_group("house_defenses"):
+		gun.set_process(false)
 	var p := game.call("player") as Player
 	var pet := lobby.pet
 	var trees: Array[ForestTree] = lobby._forest_trees

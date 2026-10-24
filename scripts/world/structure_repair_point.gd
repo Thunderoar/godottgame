@@ -20,7 +20,7 @@ func is_interactable_available() -> bool:
 
 
 func get_prompt() -> String:
-	return "Betulkan pagar" if target.structure_kind == "fence" else "Betulkan rumah"
+	return "Repair fence (builder)" if target.structure_kind == "fence" else "Repair house (builder)"
 
 
 func interact(player: Node) -> void:
@@ -28,6 +28,5 @@ func interact(player: Node) -> void:
 		return
 	if global_position.distance_to(player.global_position) > interact_radius:
 		return
-	var result := GameState.repair_structure(target.structure_id)
-	if bool(result.get("ok", false)):
+	if GameState.start_structure_work(target.structure_id):
 		Vfx.ring(global_position, 0.8, Color("#83dfb2"), 0.5)

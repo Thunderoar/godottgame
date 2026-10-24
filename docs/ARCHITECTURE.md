@@ -73,7 +73,7 @@ toast_requested(text, tone)  # internal only; no toast UI exists
 The HUD reads these signals/values; it does not keep duplicate health,
 currency, inventory, pet or portal progression state. Pop-up notifications and
 floating NPC names were deliberately removed in favour of persistent HUD panels,
-the journal and modal screens.
+the purple mission guide and modal screens.
 
 ## Data catalogues
 
@@ -136,7 +136,7 @@ Currency is deducted only after validation and never becomes negative.
   `GameState.recovery_active` is true and heals over
   `GameState.sleep_recovery_seconds()` - the HouseDB rate for the current
   cottage level (10 s at Level 1 down to 2 s at Level 5), the same clock the
-  bed and the Construction Shop panel use.
+  home interior and Construction Shop panel use.
 - `finish_recovery()` releases the player at full health. Potions bypass waiting
   by restoring health directly.
 
@@ -151,19 +151,19 @@ within 7 units, it:
 - grants a shield on a longer interval.
 
 Pet health is persisted; a downed pet recovers automatically after five seconds.
-There is no revival item and no pet light requirement. Player and pet XP bars sit
-in the top-left HUD panel and use `GameState.data.xp_next` and
+There is no revival item and no pet light requirement. Player and pet XP bars appear
+over their respective heads and use `GameState.data.xp_next` and
 `PetDB.xp_for_level(level + 1)` as their maxima.
 
 ## Two battle portals and pet duels
 
 - `Lobby` places two `PortalEntrance` gates side by side; both join the
-  `battle_portal` group.
+  `battle_portal` group. Their positions are (30.8, 5.7) and (37.2, 5.7); the shared hill reaches the far northern edge.
 - Monster mode opens `PortalPanel`; pet mode opens `PetBattlePanel`.
 - `PetBattlePanel` starts a 1v1 duel with the active pet's real level/stats.
-  Both pets have `Attack` and `Defend`.
-- Each round waits indefinitely for an explicit player Attack or Defend. `choose_skill` resolves both actions together; `_resolve_turn` rejects an empty player choice. Defend reduces incoming
-  damage by 65%.
+  Both pets have attack, defend and burst, with independent 2/5/8-second cooldown dictionaries.
+- Each round waits indefinitely for an available player power. `_resolve_turn` applies the player action, schedules one enemy reply after 0.7 seconds, then returns control to the player. An enemy with all powers cooling down waits until one becomes ready. Defend reduces the next incoming damage by 65%; burst deals double damage.
+- A viewport-sized backdrop and shared transparent stage replace combatant cards. Health, cooldown labels and three touch buttons sit over the image.
 - `PetHitEffect` adds scratch/punch impacts on damage and a shield shell when a
   pet defends.
 - `PetBattleDB` supplies five opponents. The first duel is open; each clear
@@ -201,11 +201,11 @@ in the top-left HUD panel and use `GameState.data.xp_next` and
   `ForestTree` marks the protected trees throughout the woodland. Every tree
   has persistent HP, shakes/flashes, emits small leaf VFX and plays `tree_hit`.
   Fire attacks ignite mature trees, causing ongoing damage with visible flames.
-  At zero HP a tree falls, disappears and leaves the target group. Two blue
+  At zero HP a tree falls, disappears and leaves the target group. Blue
   `Resident.water_power` keepers claim separate jobs, walk to fires and water
   trees to restore 5 HP per 1.25 seconds and extinguish them at full health.
   `VillageServicesPanel` recruits up to five keepers with saved ownership.
-  They also walk to
+  Green planters walk to
   fallen trees and plant replacements after two seconds of work. Replacements
   grow for 30 seconds of active lobby time, tracked in `forest_growth`; they
   have no trunk collision and cannot be targeted or damaged until mature.
@@ -222,7 +222,7 @@ in the top-left HUD panel and use `GameState.data.xp_next` and
   applies per-structure HP, collapse, collision release and restoration. Residents
   walk to intact homes during danger and hide/protect themselves only after arrival.
   Destruction exposes occupants; resident HP and deaths persist by resident name.
-- `VillageServicesPanel` hires blue water keepers. Houses have a `StructureRepairPoint` at the doorway; every fence segment has a repair point. These Interactables check player distance, then call `GameState.repair_structure` to restore HP immediately without payment. There are no repair workers or paid plans.
+- VillageServicesPanel hires the four worker roles. Orange builders claim separate damaged structures and call GameState timed-work transactions only in daylight. StructureRepairPoint requests work without charging Gold; completion takes ten seconds of active builder work after arrival.
 - `Game` triggers an emergency after at least 14 seconds inside a portal, once it is night, and applies
   damage ticks every 5 seconds until the player returns.
 - `Lobby` spawns `settlement_mode` raiders from sea and forest approaches. Each
@@ -236,8 +236,7 @@ in the top-left HUD panel and use `GameState.data.xp_next` and
 - Living home enemies are captured as primitive kind/position/HP/raid records in `home_monsters` before saves and world transitions. Lobby restores these even during daylight. Saved `home_wave` prevents duplicate night refills. New journeys reset both clock and enemies.
 - `TitleScreen` shows **SAVE THE WORLD**, the creator credit, Continue and the
   three-hero **CHOOSE YOUR ROAD** cards.
-- New games start `TutorialGuide` with ten action-based lessons from `MissionDB`.
-  Only the current lesson's real event advances `mission_step`; Continue resumes
+- `MissionDB.DAY_STEPS` selects seven civilian lessons and `NIGHT_STEPS` selects three combat lessons. `GameState.completed_missions` stores completed event IDs, and `mission_step()` computes the next unfinished lesson for the active phase. Legacy numeric progress is migrated on load. Only the current lesson’s real event advances progress; Continue resumes
   the saved lesson. `TutorialSpotlight` darkens the rest of the screen and draws an arrow around the current control, stall, or modal action. It does not intercept input. Tips can be hidden/reopened from Menu.
 
 ## Guidance, dashboard and menus
@@ -248,10 +247,8 @@ in the top-left HUD panel and use `GameState.data.xp_next` and
 - `MissionPath` draws dashed arrows along routes around world collision. Lobby
   shares its resident route planner; Dungeon has a separate planner. The old HUD
   arrow strip is no longer constructed; compatibility methods remain inert.
-- `PlayerVitalHud` is a child of `Player` with `light_mask = 0`; it draws only HP
-  and MP above the player's head.
-- `GameHUD.MenuButton` emits `menu_requested`. `MenuPanel` opens Settings or
-  returns to title.
+- `PlayerVitalHud` is a child of `Player` with `light_mask = 0`; it draws HP, MP, XP and level above the player’s head. `WorldHealthBar` draws pet HP/XP and boss HP. The top HUD contains the clock and Menu; shops own currency readouts. Pack contains potion controls.
+- `GameHUD.MenuButton` emits `menu_requested`. `MenuPanel` opens Settings, toggles Build settlement / Finish building, or returns to title. No separate Build or potion touch buttons are constructed.
 - `SettingsPanel` controls device-level `GameSettings.ui_scale` and `camera_zoom`,
   and per-save `GameState.settings.control_layout`. GameState's GUI methods are
   compatibility delegates; legacy scale migrates only when settings.cfg has none.
@@ -367,8 +364,6 @@ the actual game and imported art without the editor code.
 
 HousePanel keeps a local selected preview level. Every Level button can show that design and recovery rate without changing GameState or charging diamonds; Confirm Upgrade still purchases only the next level. ShopNPC handles unhandled mouse/touch hits against the full stall footprint, guarded by current world, modal lock and editor state.
 
-PetBattleDB assigns a separate background resource path to each duel. The supplied image bytes could not be downloaded in this sandbox; those assets are pending. `tools/import_pet_backgrounds.ps1` accepts a local source folder and prepares the files, including a PNG first frame of the GIF.
-
 ## Coordinated village geography
 
 AuthoredMap version 2 references an optional WorldLayout. The shipped source is
@@ -388,3 +383,26 @@ customized layouts can repair road centreline routing once after synchronization
 Sea collision follows the shared shore sampler, with an explicit exception only
 for the visible timber deck. Authored water always blocks, and land paint cannot
 hide water collision. Details and workflow: [WORLD_LAYOUT.md](WORLD_LAYOUT.md).
+
+PetBattleDB assigns a separate installed background resource to each duel. All five supplied files are preserved; the supplied GIF also has a PNG first frame for Godot. Native review captures each backdrop.
+
+
+## PB village systems
+
+GameState owns worker_counts, resident health, the central house level and repair_remaining. Resident.worker_role selects builder, water, planter or fighter AI. Builders claim a SettlementTarget.builder, navigate to the structure and spend ten seconds repairing during daylight. Blue workers water burning trees or launch VillageBolt water projectiles at fire monsters; green workers alone plant trees; black workers engage sea urchins with a sword. Ordinary residents retain their shelter/routine behavior. New journeys start with one specialist per role. worker_count() is the greater of purchased ownership and main-house level, within role limits; upgrading raises the baseline while hiring can add further workers.
+
+Every house has a HouseDefense archer hut with an NPC/bow sprite. Its central-house tier selects range, arrow damage and intervals (2.1/1.7/1.3/1.0/0.7 seconds). VillageBolt.arrow draws a directional arrow. structure_level() returns the central house tier for all structures; upgrades synchronize stored tiers and raise the worker baseline. Existing worker purchases and deaths remain saved. HousePanel previews the house, hut, fence and worker baseline before charging once for the next main-house level. SettlementTarget refreshes fence sprites from the cached five-tier PixelArt.fence_texture(level). Ruins retain independent health/repairs.
+
+HomeEntrance handles direct input on the central house. Game.enter_home keeps Lobby alive while adding HomeInterior outside the outdoor map, moves player and pet inside and fits the camera to the room. HomeInterior applies HouseDB recovery and offers an exit; no HouseBed is constructed. Cached PixelArt sprites furnish a chest, wardrobe, weapon rack and pet bed. Leaving restores outdoor positions and camera preferences.
+
+MissionNPC is purple with a question mark and routes to MissionPanel. GameHUD no longer constructs Journal or a screen boss bar. WorldHealthBar follows pets/bosses above their heads.
+
+WorldHealthBar also displays the unique PortalDB boss name. Only completing the first portal records the tutorial boss event, and PortalPanel limits active portal-training lessons to that first dungeon. TutorialSpotlight.dim_strength() is zero at night while its outline/pointer remain.
+
+Dungeon.alert_intruders sets persistent enemy chase flags. Regular monsters start chasing on entry; touching/damaging a boss also activates the boss and all survivors. A shared route planner steers them around dungeon obstacles.
+
+## Loading and illustrated field guide
+
+LoadingScreen is a CanvasLayer above title and HUD. Game awaits its opaque cover before world/home rebuilds, locks both current and newly created players, then fades it away before releasing input. Continue activates unfinished tutorials across both phases. ModalBase owns a short cancellable entry fade; PetBattlePanel reuses it when entering its arena.
+
+FieldGuideDB supplies NPC, monster and ten boss entries. FieldGuidePanel, reached through Menu, pages through GuideIllustration drawings. The storyboard uses sprites and pictograms rather than prose: actor on the left, two action/result rows on paper on the right. It uses the normal modal input-lock and close paths and fits small landscape viewports.

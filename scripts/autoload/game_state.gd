@@ -130,10 +130,12 @@ func _make_default(character_id: String) -> Dictionary:
 		"sea_cleaned": 0,
 		"forest_health": {},
 		"forest_growth": {},
-		"water_keeper_count": 2,
+		"water_keeper_count": 1,
+		"worker_counts": {"builder": 1, "planter": 1, "fighter": 1},
 		"resident_health": {},
 		"structures": {},
 		"mission_step": 0,
+		"completed_missions": [],
 		"settings": {
 			"gui_scale": 1.0,
 			"control_layout": {},
@@ -762,17 +764,26 @@ const MAX_WATER_KEEPERS := 5
 
 
 func mission_step() -> int:
-	return int(data.get("mission_step", 0))
+	var completed: Array = data.get("completed_missions", [])
+	for index in MissionDB.phase_steps(is_night()):
+		if str(MissionDB.step(int(index)).get("event", "")) not in completed:
+			return int(index)
+	return MissionDB.STEPS.size()
 
+func completed_mission_count() -> int:
+	return (data.get("completed_missions", []) as Array).size()
 
 func record_mission_event(event: String) -> void:
 	var lesson := MissionDB.step(mission_step())
 	if lesson.is_empty() or str(lesson.get("event", "")) != event:
 		return
-	data.mission_step = mini(MissionDB.STEPS.size(), mission_step() + 1)
+	var completed: Array = data.get("completed_missions", [])
+	if event not in completed:
+		completed.append(event)
+	data.completed_missions = completed
+	data.mission_step = mission_step()
 	data_changed.emit()
 	_save_if_needed()
-
 
 func resident_health(id: String) -> int:
 	return clampi(int((data.get("resident_health", {}) as Dictionary).get(id, 100)), 0, 100)
@@ -788,7 +799,7 @@ func damage_resident(id: String, amount: int) -> void:
 
 
 func water_keeper_count() -> int:
-	return clampi(int(data.get("water_keeper_count", 2)), 2, MAX_WATER_KEEPERS)
+	return clampi(maxi(house_level(), int(data.get("water_keeper_count", 1))), 1, MAX_WATER_KEEPERS)
 
 
 func water_hire_slot() -> int:
@@ -799,36 +810,23 @@ func water_hire_slot() -> int:
 
 
 func water_hire_cost() -> int:
-	return 80 + maxi(0, water_hire_slot() - 2) * 60
+	return 80 + maxi(0, water_hire_slot() - 1) * 60
 
 
 func hire_water_keeper() -> Dictionary:
-	var slot := water_hire_slot()
-	if slot < 0:
-		return {"ok": false, "message": "All five water keepers are already hired."}
-	var cost := water_hire_cost()
-	if gold() < cost:
-		return {"ok": false, "message": "Not enough Gold."}
-	data.gold = gold() - cost
-	data.water_keeper_count = maxi(water_keeper_count(), slot + 1)
-	var healths: Dictionary = data.get("resident_health", {})
-	healths["Water Keeper %d" % (slot + 1)] = 100
-	data.resident_health = healths
-	data_changed.emit()
-	_save_if_needed()
-	return {"ok": true, "message": "Water keeper hired. They are heading to the forest."}
+	return hire_worker("water")
 
-
-func register_structure(id: String, label: String, kind: String, maximum: int) -> void:
+func register_structure(id: String, label: String, kind: String, maximum: int, initial_health: int = -1) -> void:
 	if id.is_empty():
 		return
 	var structures: Dictionary = data.get("structures", {})
 	var entry: Dictionary = structures.get(id, {})
-	entry["health"] = clampi(int(entry.get("health", maximum)), 0, maximum)
+	entry["health"] = clampi(int(entry.get("health", maximum if initial_health < 0 else initial_health)), 0, maximum)
 	entry["maximum"] = maximum
 	entry["name"] = label
 	entry["kind"] = kind
-	entry["repair_remaining"] = 0.0
+	entry["repair_remaining"] = clampf(float(entry.get("repair_remaining", 0.0)), 0.0, 10.0)
+	entry["level"] = house_level()
 	structures[id] = entry
 	data.structures = structures
 
@@ -856,11 +854,11 @@ func repair_structure(id: String) -> Dictionary:
 		return {"ok": false, "message": "This structure is already intact."}
 	entry["health"] = int(entry.get("maximum", 100))
 	entry["repair_remaining"] = 0.0
+	entry["level"] = clampi(int(entry.get("level", 1)), 1, 5)
 	data.structures[id] = entry
 	data_changed.emit()
 	_save_if_needed()
 	return {"ok": true, "message": "Structure repaired."}
-
 
 func set_forest_tree_health(tree_id: String, health: int, max_health: int) -> void:
 	var healths: Dictionary = data.get("forest_health", {})
@@ -967,6 +965,8 @@ func house_level() -> int:
 
 func upgrade_house() -> Dictionary:
 	var level := house_level()
+	if game_over_active or int(structure_state("cottage").get("health", 1)) <= 0:
+		return {"ok": false, "message": "Repair the main house first."}
 	if level >= HouseDB.max_level():
 		return {"ok": false, "message": "The cottage is already complete."}
 	var cost := HouseDB.upgrade_cost(level)
@@ -974,6 +974,11 @@ func upgrade_house() -> Dictionary:
 		return {"ok": false, "message": "You need %d diamonds." % cost}
 	data.diamonds = diamonds() - cost
 	data.house_level = level + 1
+	for id in data.get("structures", {}):
+		data.structures[id]["level"] = level + 1
+	data.water_keeper_count = water_keeper_count()
+	for worker_role in ["builder", "planter", "fighter"]:
+		data.worker_counts[worker_role] = worker_count(worker_role)
 	_save_if_needed()
 	data_changed.emit()
 	house_changed.emit(house_level())
@@ -1131,7 +1136,8 @@ func complete_portal(portal_id: String) -> Dictionary:
 	state.cleared = true
 	data.portals[portal_id] = state
 	data.bosses = int(data.get("bosses", 0)) + 1
-	record_mission_event("boss")
+	if portal_id == PortalDB.ordered_ids()[0]:
+		record_mission_event("boss")
 	if first:
 		var unlock_id := str(def.get("unlocks", ""))
 		if unlock_id != "":
@@ -1403,6 +1409,11 @@ func load_game() -> bool:
 		loaded_id = DEFAULT_CHARACTER
 	var fallback := _make_default(loaded_id)
 	data = _merge(fallback, loaded)
+	if not loaded.has("completed_missions"):
+		var completed: Array = []
+		for index in mini(int(loaded.get("mission_step", 0)), MissionDB.STEPS.size()):
+			completed.append(str(MissionDB.step(index).get("event", "")))
+		data.completed_missions = completed
 	_sanitize()
 	_auto_heal_armed = true
 	game_over_active = false
@@ -1429,6 +1440,13 @@ func _merge(base: Dictionary, incoming: Dictionary) -> Dictionary:
 
 
 func _sanitize() -> void:
+	var completed: Array = []
+	var raw: Variant = data.get("completed_missions", [])
+	if raw is Array:
+		for event in raw:
+			if str(event) in MissionDB.STEPS.map(func(step: Dictionary) -> String: return str(step.get("event", ""))) and str(event) not in completed:
+				completed.append(str(event))
+	data.completed_missions = completed
 	data.world_time = maxf(0.0, float(data.get("world_time", 0.0)))
 	data.home_wave = clampi(int(data.get("home_wave", -1)), -1, night_number())
 	var monsters: Array = []
@@ -1462,7 +1480,11 @@ func _sanitize() -> void:
 		data.forest_health = {}
 	if not (data.get("forest_growth", {}) is Dictionary):
 		data.forest_growth = {}
-	data.water_keeper_count = clampi(int(data.get("water_keeper_count", 2)), 2, MAX_WATER_KEEPERS)
+	if not data.get("worker_counts", {}) is Dictionary:
+		data.worker_counts = {}
+	for worker_role in ["builder", "planter", "fighter"]:
+		data.worker_counts[worker_role] = clampi(int(data.worker_counts.get(worker_role, 1)), 1, 8)
+	data.water_keeper_count = clampi(int(data.get("water_keeper_count", 1)), 1, MAX_WATER_KEEPERS)
 	data.mission_step = clampi(int(data.get("mission_step", 0)), 0, MissionDB.STEPS.size())
 	if not (data.get("resident_health", {}) is Dictionary):
 		data.resident_health = {}
@@ -1477,7 +1499,8 @@ func _sanitize() -> void:
 		var entry: Dictionary = data.structures[id]
 		entry["maximum"] = clampi(int(entry.get("maximum", 200)), 1, 1000)
 		entry["health"] = clampi(int(entry.get("health", 200)), 0, int(entry.maximum))
-		entry["repair_remaining"] = 0.0
+		entry["repair_remaining"] = clampf(float(entry.get("repair_remaining", 0.0)), 0.0, 10.0)
+		entry["level"] = clampi(int(entry.get("level", 1)), 1, 5)
 	for id in data.forest_growth.keys():
 		data.forest_growth[id] = clampf(float(data.forest_growth[id]), 0.0, 30.0)
 	var settings: Dictionary = data.get("settings", {})
@@ -1524,3 +1547,78 @@ func _sanitize() -> void:
 		data.inventory[starter] = 1
 		equipped.weapon = starter
 	data.equipped = equipped
+
+
+const WORKER_LABELS := {"water": "Water Keeper", "builder": "Builder", "planter": "Planter", "fighter": "Swordsman"}
+const BUILD_REPAIR_SECONDS := 10.0
+
+func worker_count(worker_role: String) -> int:
+	return water_keeper_count() if worker_role == "water" else clampi(maxi(house_level(), int(data.get("worker_counts", {}).get(worker_role, 1))), 1, 8)
+
+func worker_name(worker_role: String, index: int) -> String:
+	return "%s %d" % [str(WORKER_LABELS.get(worker_role, "Worker")), index + 1]
+
+func worker_hire_slot(worker_role: String) -> int:
+	if not WORKER_LABELS.has(worker_role):
+		return -1
+	for i in worker_count(worker_role):
+		if resident_health(worker_name(worker_role, i)) <= 0:
+			return i
+	var limit := MAX_WATER_KEEPERS if worker_role == "water" else 8
+	return worker_count(worker_role) if worker_count(worker_role) < limit else -1
+
+func worker_hire_cost(worker_role: String) -> int:
+	return 80 + maxi(0, worker_hire_slot(worker_role) - 1) * 60
+
+func hire_worker(worker_role: String) -> Dictionary:
+	var slot := worker_hire_slot(worker_role)
+	if slot < 0 or game_over_active:
+		return {"ok": false, "message": "No worker slots available."}
+	var cost := worker_hire_cost(worker_role)
+	if gold() < cost:
+		return {"ok": false, "message": "Not enough Gold."}
+	data.gold = gold() - cost
+	if worker_role == "water":
+		data.water_keeper_count = maxi(water_keeper_count(), slot + 1)
+	else:
+		var counts: Dictionary = data.get("worker_counts", {})
+		counts[worker_role] = maxi(worker_count(worker_role), slot + 1)
+		data.worker_counts = counts
+	var healths: Dictionary = data.get("resident_health", {})
+	healths[worker_name(worker_role, slot)] = 100
+	data.resident_health = healths
+	data_changed.emit()
+	_save_if_needed()
+	return {"ok": true, "message": "%s hired." % str(WORKER_LABELS.get(worker_role, "Worker"))}
+
+func structure_level(_id: String) -> int:
+	return house_level()
+
+func upgrade_structure(id: String) -> Dictionary:
+	var entry := structure_state(id)
+	if entry.is_empty() or str(entry.get("kind", "")) != "house" or game_over_active:
+		return {"ok": false, "message": "Choose the main house."}
+	return upgrade_house()
+
+func start_structure_work(id: String) -> bool:
+	var entry := structure_state(id)
+	if entry.is_empty() or game_over_active or is_night() or int(entry.get("health", 0)) >= int(entry.get("maximum", 1)):
+		return false
+	if float(entry.get("repair_remaining", 0.0)) <= 0.0:
+		entry["repair_remaining"] = BUILD_REPAIR_SECONDS
+		data.structures[id] = entry
+		data_changed.emit()
+	return true
+
+func work_structure(id: String, delta: float) -> bool:
+	if game_over_active or is_night():
+		return false
+	var entry := structure_state(id)
+	var remaining := float(entry.get("repair_remaining", 0.0))
+	if remaining <= 0.0:
+		return false
+	entry["repair_remaining"] = maxf(0, remaining - maxf(0, delta))
+	data.structures[id] = entry
+	if float(entry.repair_remaining) <= 0.0:
+		return bool(repair_structure(id).get("ok", false))
+	return false

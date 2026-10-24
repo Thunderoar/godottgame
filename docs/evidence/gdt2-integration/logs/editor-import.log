@@ -1,0 +1,352 @@
+Godot Engine v4.7.2.stable.arch_linux.ed1daf0bf (2026-08-17 01:18:38 UTC) - https://godotengine.org
+
+[   0% ] [90m[1mfirst_scan_filesystem[22m | Started Project initialization (5 steps)[39m[0m
+[   0% ] [90m[1mfirst_scan_filesystem[22m | Scanning file structure...[39m[0m
+[  16% ] [90m[1mfirst_scan_filesystem[22m | Loading global class names...[39m[0m
+[  33% ] [90m[1mfirst_scan_filesystem[22m | Verifying GDExtensions...[39m[0m
+[  50% ] [90m[1mfirst_scan_filesystem[22m | Creating autoload scripts...[39m[0m
+[  66% ] [90m[1mfirst_scan_filesystem[22m | Initializing plugins...[39m[0m
+Tidesworn Studio: Editor-time authoring • source maps stay separate from player settlement saves. Wheel zoom / middle mouse pan in canvases.
+[  83% ] [90m[1mfirst_scan_filesystem[22m | Starting file scan...[39m[0m
+[92m[ DONE ][39m [1mfirst_scan_filesystem[22m
+[0m
+[   0% ] [90m[1mupdate_scripts_classes[22m | Started Registering global classes... (163 steps)[39m[0m
+[   0% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   0% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   1% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   1% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   2% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   3% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   3% ] [90m[1mupdate_scripts_classes[22m | TidePixelDocument[39m[0m
+[   4% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   4% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   5% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   6% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   6% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   7% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   7% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   8% ] [90m[1mupdate_scripts_classes[22m | BossProjectile[39m[0m
+[   9% ] [90m[1mupdate_scripts_classes[22m | Enemy[39m[0m
+[   9% ] [90m[1mupdate_scripts_classes[22m | HitFeedback[39m[0m
+[  10% ] [90m[1mupdate_scripts_classes[22m | VillageBolt[39m[0m
+[  10% ] [90m[1mupdate_scripts_classes[22m | FollowCamera[39m[0m
+[  11% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  12% ] [90m[1mupdate_scripts_classes[22m | IconArt[39m[0m
+[  12% ] [90m[1mupdate_scripts_classes[22m | PixelArt[39m[0m
+[  13% ] [90m[1mupdate_scripts_classes[22m | Shaders[39m[0m
+[  14% ] [90m[1mupdate_scripts_classes[22m | GameUI[39m[0m
+[  14% ] [90m[1mupdate_scripts_classes[22m | Vfx[39m[0m
+[  15% ] [90m[1mupdate_scripts_classes[22m | VfxPool[39m[0m
+[  15% ] [90m[1mupdate_scripts_classes[22m | AssetCatalog[39m[0m
+[  16% ] [90m[1mupdate_scripts_classes[22m | AssetRegistry[39m[0m
+[  17% ] [90m[1mupdate_scripts_classes[22m | AuthoredInteraction[39m[0m
+[  17% ] [90m[1mupdate_scripts_classes[22m | AuthoredMap[39m[0m
+[  18% ] [90m[1mupdate_scripts_classes[22m | AuthoredSprite[39m[0m
+[  18% ] [90m[1mupdate_scripts_classes[22m | KampungArt[39m[0m
+[  19% ] [90m[1mupdate_scripts_classes[22m | AuthoredMapRenderer[39m[0m
+[  20% ] [90m[1mupdate_scripts_classes[22m | MicroAction[39m[0m
+[  20% ] [90m[1mupdate_scripts_classes[22m | MonsoonArt[39m[0m
+[  21% ] [90m[1mupdate_scripts_classes[22m | MonsoonLighting[39m[0m
+[  21% ] [90m[1mupdate_scripts_classes[22m | PersonalityProfile[39m[0m
+[  22% ] [90m[1mupdate_scripts_classes[22m | WorldComposition[39m[0m
+[  23% ] [90m[1mupdate_scripts_classes[22m | WorldLayout[39m[0m
+[  23% ] [90m[1mupdate_scripts_classes[22m | WorldPalette[39m[0m
+[  24% ] [90m[1mupdate_scripts_classes[22m | WorldTerrain[39m[0m
+[  25% ] [90m[1mupdate_scripts_classes[22m | AttackDB[39m[0m
+[  25% ] [90m[1mupdate_scripts_classes[22m | CharacterDB[39m[0m
+[  26% ] [90m[1mupdate_scripts_classes[22m | FieldGuideDB[39m[0m
+[  26% ] [90m[1mupdate_scripts_classes[22m | HouseDB[39m[0m
+[  27% ] [90m[1mupdate_scripts_classes[22m | ItemDB[39m[0m
+[  28% ] [90m[1mupdate_scripts_classes[22m | MissionDB[39m[0m
+[  28% ] [90m[1mupdate_scripts_classes[22m | PetBattleDB[39m[0m
+[  29% ] [90m[1mupdate_scripts_classes[22m | PetDB[39m[0m
+[  29% ] [90m[1mupdate_scripts_classes[22m | PortalDB[39m[0m
+[  30% ] [90m[1mupdate_scripts_classes[22m | ShopLinesDB[39m[0m
+[  31% ] [90m[1mupdate_scripts_classes[22m | Game[39m[0m
+[  31% ] [90m[1mupdate_scripts_classes[22m | Pet[39m[0m
+[  32% ] [90m[1mupdate_scripts_classes[22m | Arrow[39m[0m
+[  32% ] [90m[1mupdate_scripts_classes[22m | Player[39m[0m
+[  33% ] [90m[1mupdate_scripts_classes[22m | PlayerSprite[39m[0m
+[  34% ] [90m[1mupdate_scripts_classes[22m | PlayerVitalHud[39m[0m
+[  34% ] [90m[1mupdate_scripts_classes[22m | ConfirmDialog[39m[0m
+[  35% ] [90m[1mupdate_scripts_classes[22m | DefeatPanel[39m[0m
+[  35% ] [90m[1mupdate_scripts_classes[22m | DialoguePanel[39m[0m
+[  36% ] [90m[1mupdate_scripts_classes[22m | FieldGuidePanel[39m[0m
+[  37% ] [90m[1mupdate_scripts_classes[22m | GameHUD[39m[0m
+[  37% ] [90m[1mupdate_scripts_classes[22m | GameOverPanel[39m[0m
+[  38% ] [90m[1mupdate_scripts_classes[22m | GuideIllustration[39m[0m
+[  39% ] [90m[1mupdate_scripts_classes[22m | HousePanel[39m[0m
+[  39% ] [90m[1mupdate_scripts_classes[22m | InventoryPanel[39m[0m
+[  40% ] [90m[1mupdate_scripts_classes[22m | ItemCard[39m[0m
+[  40% ] [90m[1mupdate_scripts_classes[22m | LoadingScreen[39m[0m
+[  41% ] [90m[1mupdate_scripts_classes[22m | MenuPanel[39m[0m
+[  42% ] [90m[1mupdate_scripts_classes[22m | MissionArrow[39m[0m
+[  42% ] [90m[1mupdate_scripts_classes[22m | MissionPanel[39m[0m
+[  43% ] [90m[1mupdate_scripts_classes[22m | ModalBase[39m[0m
+[  43% ] [90m[1mupdate_scripts_classes[22m | PauseMenu[39m[0m
+[  44% ] [90m[1mupdate_scripts_classes[22m | PetBattlePanel[39m[0m
+[  45% ] [90m[1mupdate_scripts_classes[22m | PetHitEffect[39m[0m
+[  45% ] [90m[1mupdate_scripts_classes[22m | PortalPanel[39m[0m
+[  46% ] [90m[1mupdate_scripts_classes[22m | SeaCleaningPanel[39m[0m
+[  46% ] [90m[1mupdate_scripts_classes[22m | SegmentedBar[39m[0m
+[  47% ] [90m[1mupdate_scripts_classes[22m | SettingsPanel[39m[0m
+[  48% ] [90m[1mupdate_scripts_classes[22m | ShopPanel[39m[0m
+[  48% ] [90m[1mupdate_scripts_classes[22m | ShopScene[39m[0m
+[  49% ] [90m[1mupdate_scripts_classes[22m | TitleScreen[39m[0m
+[  50% ] [90m[1mupdate_scripts_classes[22m | TouchActionButton[39m[0m
+[  50% ] [90m[1mupdate_scripts_classes[22m | TutorialGuide[39m[0m
+[  51% ] [90m[1mupdate_scripts_classes[22m | TutorialSpotlight[39m[0m
+[  51% ] [90m[1mupdate_scripts_classes[22m | VictoryPanel[39m[0m
+[  52% ] [90m[1mupdate_scripts_classes[22m | VillageServicesPanel[39m[0m
+[  53% ] [90m[1mupdate_scripts_classes[22m | TouchJoystick[39m[0m
+[  53% ] [90m[1mupdate_scripts_classes[22m | WorldHealthBar[39m[0m
+[  54% ] [90m[1mupdate_scripts_classes[22m | BeachTurtle[39m[0m
+[  54% ] [90m[1mupdate_scripts_classes[22m | CoastalGuard[39m[0m
+[  55% ] [90m[1mupdate_scripts_classes[22m | Dungeon[39m[0m
+[  56% ] [90m[1mupdate_scripts_classes[22m | ForestTree[39m[0m
+[  56% ] [90m[1mupdate_scripts_classes[22m | HomeEntrance[39m[0m
+[  57% ] [90m[1mupdate_scripts_classes[22m | HomeInterior[39m[0m
+[  57% ] [90m[1mupdate_scripts_classes[22m | HouseBed[39m[0m
+[  58% ] [90m[1mupdate_scripts_classes[22m | HouseDefense[39m[0m
+[  59% ] [90m[1mupdate_scripts_classes[22m | Interactable[39m[0m
+[  59% ] [90m[1mupdate_scripts_classes[22m | Lobby[39m[0m
+[  60% ] [90m[1mupdate_scripts_classes[22m | LootDrop[39m[0m
+[  60% ] [90m[1mupdate_scripts_classes[22m | MissionNPC[39m[0m
+[  61% ] [90m[1mupdate_scripts_classes[22m | MissionPath[39m[0m
+[  62% ] [90m[1mupdate_scripts_classes[22m | PortalEntrance[39m[0m
+[  62% ] [90m[1mupdate_scripts_classes[22m | PortalExit[39m[0m
+[  63% ] [90m[1mupdate_scripts_classes[22m | RecoveryWard[39m[0m
+[  64% ] [90m[1mupdate_scripts_classes[22m | Resident[39m[0m
+[  64% ] [90m[1mupdate_scripts_classes[22m | ResidentRoutes[39m[0m
+[  65% ] [90m[1mupdate_scripts_classes[22m | ResourcePile[39m[0m
+[  65% ] [90m[1mupdate_scripts_classes[22m | RubbishPiece[39m[0m
+[  66% ] [90m[1mupdate_scripts_classes[22m | RubbishSystem[39m[0m
+[  67% ] [90m[1mupdate_scripts_classes[22m | SettlementEditor[39m[0m
+[  67% ] [90m[1mupdate_scripts_classes[22m | SettlementPlaceable[39m[0m
+[  68% ] [90m[1mupdate_scripts_classes[22m | SettlementTarget[39m[0m
+[  68% ] [90m[1mupdate_scripts_classes[22m | ShopNPC[39m[0m
+[  69% ] [90m[1mupdate_scripts_classes[22m | UniszaStudent[39m[0m
+[  70% ] [90m[1mupdate_scripts_classes[22m | StructureRepairPoint[39m[0m
+[  70% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  71% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  71% ] [90m[1mupdate_scripts_classes[22m | ControlModePrefs[39m[0m
+[  72% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  73% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  73% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  74% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  75% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  75% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  76% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  76% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  77% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  78% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  78% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  79% ] [90m[1mupdate_scripts_classes[22m | CreativeChecks[39m[0m
+[  79% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  80% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  81% ] [90m[1mupdate_scripts_classes[22m | DeepAuditChecks[39m[0m
+[  81% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  82% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  82% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  83% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  84% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  84% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  85% ] [90m[1mupdate_scripts_classes[22m | KampungChecks[39m[0m
+[  85% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  86% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  87% ] [90m[1mupdate_scripts_classes[22m | MonsoonChecks[39m[0m
+[  87% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  88% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  89% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  89% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  90% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  90% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  91% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  92% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  92% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  93% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  93% ] [90m[1mupdate_scripts_classes[22m | TestEnvironment[39m[0m
+[  94% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  95% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  95% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  96% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  96% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  97% ] [90m[1mupdate_scripts_classes[22m | WorldChecks[39m[0m
+[  98% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  98% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[92m[ DONE ][39m [1mupdate_scripts_classes[22m
+[0m
+[   0% ] [90m[1m_update_scan_actions[22m | Started Scanning actions... (53 steps)[39m[0m
+[   0% ] [90m[1m_update_scan_actions[22m | baskets.png[39m[0m
+[   1% ] [90m[1m_update_scan_actions[22m | bucket.png[39m[0m
+[   3% ] [90m[1m_update_scan_actions[22m | fishing_net.png[39m[0m
+[   5% ] [90m[1m_update_scan_actions[22m | house_1.png[39m[0m
+[   7% ] [90m[1m_update_scan_actions[22m | house_2.png[39m[0m
+[   9% ] [90m[1m_update_scan_actions[22m | house_3.png[39m[0m
+[  11% ] [90m[1m_update_scan_actions[22m | house_4.png[39m[0m
+[  12% ] [90m[1m_update_scan_actions[22m | house_5.png[39m[0m
+[  14% ] [90m[1m_update_scan_actions[22m | lantern.png[39m[0m
+[  16% ] [90m[1m_update_scan_actions[22m | planter.png[39m[0m
+[  18% ] [90m[1m_update_scan_actions[22m | stall_equipment.png[39m[0m
+[  20% ] [90m[1m_update_scan_actions[22m | stall_house.png[39m[0m
+[  22% ] [90m[1m_update_scan_actions[22m | stall_pet.png[39m[0m
+[  24% ] [90m[1m_update_scan_actions[22m | stall_potion.png[39m[0m
+[  25% ] [90m[1m_update_scan_actions[22m | timber.png[39m[0m
+[  27% ] [90m[1m_update_scan_actions[22m | tree_0_lower.png[39m[0m
+[  29% ] [90m[1m_update_scan_actions[22m | tree_0_upper.png[39m[0m
+[  31% ] [90m[1m_update_scan_actions[22m | tree_0_whole.png[39m[0m
+[  33% ] [90m[1m_update_scan_actions[22m | tree_1_lower.png[39m[0m
+[  35% ] [90m[1m_update_scan_actions[22m | tree_1_upper.png[39m[0m
+[  37% ] [90m[1m_update_scan_actions[22m | tree_1_whole.png[39m[0m
+[  38% ] [90m[1m_update_scan_actions[22m | tree_2_lower.png[39m[0m
+[  40% ] [90m[1m_update_scan_actions[22m | tree_2_upper.png[39m[0m
+[  42% ] [90m[1m_update_scan_actions[22m | tree_2_whole.png[39m[0m
+[  44% ] [90m[1m_update_scan_actions[22m | tree_3_lower.png[39m[0m
+[  46% ] [90m[1m_update_scan_actions[22m | tree_3_upper.png[39m[0m
+[  48% ] [90m[1m_update_scan_actions[22m | tree_3_whole.png[39m[0m
+[  50% ] [90m[1m_update_scan_actions[22m | tree_4_lower.png[39m[0m
+[  51% ] [90m[1m_update_scan_actions[22m | tree_4_upper.png[39m[0m
+[  53% ] [90m[1m_update_scan_actions[22m | tree_4_whole.png[39m[0m
+[  55% ] [90m[1m_update_scan_actions[22m | undergrowth_0.png[39m[0m
+[  57% ] [90m[1m_update_scan_actions[22m | undergrowth_1.png[39m[0m
+[  59% ] [90m[1m_update_scan_actions[22m | undergrowth_2.png[39m[0m
+[  61% ] [90m[1m_update_scan_actions[22m | undergrowth_3.png[39m[0m
+[  62% ] [90m[1m_update_scan_actions[22m | undergrowth_4.png[39m[0m
+[  64% ] [90m[1m_update_scan_actions[22m | undergrowth_5.png[39m[0m
+[  66% ] [90m[1m_update_scan_actions[22m | harbour_planter.png[39m[0m
+[  68% ] [90m[1m_update_scan_actions[22m | terrain.png[39m[0m
+[  70% ] [90m[1m_update_scan_actions[22m | bg haiwan fight pantai.jpg[39m[0m
+[  72% ] [90m[1m_update_scan_actions[22m | bg haiwan fight rumah.png[39m[0m
+[  74% ] [90m[1m_update_scan_actions[22m | bg haiwan fight universe.webp[39m[0m
+[  75% ] [90m[1m_update_scan_actions[22m | bg haiwan fight.jpg[39m[0m
+[  77% ] [90m[1m_update_scan_actions[22m | bg haiwan fight.png[39m[0m
+[  79% ] [90m[1m_update_scan_actions[22m | TX Plant.png[39m[0m
+[  81% ] [90m[1m_update_scan_actions[22m | TX Player.png[39m[0m
+[  83% ] [90m[1m_update_scan_actions[22m | TX Props.png[39m[0m
+[  85% ] [90m[1m_update_scan_actions[22m | TX Shadow Plant.png[39m[0m
+[  87% ] [90m[1m_update_scan_actions[22m | TX Shadow.png[39m[0m
+[  88% ] [90m[1m_update_scan_actions[22m | TX Struct.png[39m[0m
+[  90% ] [90m[1m_update_scan_actions[22m | TX Tileset Grass.png[39m[0m
+[  92% ] [90m[1m_update_scan_actions[22m | TX Tileset Stone Ground.png[39m[0m
+[  94% ] [90m[1m_update_scan_actions[22m | TX Tileset Wall.png[39m[0m
+[  96% ] [90m[1m_update_scan_actions[22m | icon.svg[39m[0m
+[92m[ DONE ][39m [1m_update_scan_actions[22m
+[0m
+[   0% ] [90m[1mreimport[22m | Started (Re)Importing Assets (52 steps)[39m[0m
+[   0% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[   1% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[   3% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[   5% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[   7% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[   9% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  11% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  13% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  15% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  16% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  18% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  20% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  22% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  24% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  26% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  28% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  30% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  32% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  33% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  35% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  37% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  39% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  41% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  43% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  45% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  47% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  49% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  50% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  52% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  54% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  56% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  58% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  60% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  62% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  64% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  66% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  67% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  69% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  71% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  73% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  75% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  77% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  79% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  81% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  83% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  84% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  86% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  88% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  90% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  92% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  94% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  96% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[   0% ] [90m[1mreimport[22m | Executing pre-reimport operations...[39m[0m
+[   0% ] [90m[1mreimport[22m | tree_3_whole.png[39m[0m
+[   1% ] [90m[1mreimport[22m | tree_4_lower.png[39m[0m
+[   3% ] [90m[1mreimport[22m | tree_4_upper.png[39m[0m
+[   5% ] [90m[1mreimport[22m | tree_4_whole.png[39m[0m
+[   7% ] [90m[1mreimport[22m | undergrowth_0.png[39m[0m
+[   9% ] [90m[1mreimport[22m | undergrowth_1.png[39m[0m
+[  11% ] [90m[1mreimport[22m | undergrowth_2.png[39m[0m
+[  13% ] [90m[1mreimport[22m | undergrowth_3.png[39m[0m
+[  15% ] [90m[1mreimport[22m | undergrowth_4.png[39m[0m
+[  16% ] [90m[1mreimport[22m | undergrowth_5.png[39m[0m
+[  18% ] [90m[1mreimport[22m | terrain.png[39m[0m
+[  20% ] [90m[1mreimport[22m | bg haiwan fight pantai.jpg[39m[0m
+[  22% ] [90m[1mreimport[22m | bg haiwan fight rumah.png[39m[0m
+[  24% ] [90m[1mreimport[22m | bg haiwan fight universe.webp[39m[0m
+[  26% ] [90m[1mreimport[22m | bg haiwan fight.jpg[39m[0m
+[  28% ] [90m[1mreimport[22m | bg haiwan fight.png[39m[0m
+[  30% ] [90m[1mreimport[22m | TX Plant.png[39m[0m
+[  32% ] [90m[1mreimport[22m | TX Player.png[39m[0m
+[  33% ] [90m[1mreimport[22m | TX Props.png[39m[0m
+[  35% ] [90m[1mreimport[22m | TX Shadow Plant.png[39m[0m
+[  37% ] [90m[1mreimport[22m | TX Shadow.png[39m[0m
+[  39% ] [90m[1mreimport[22m | TX Struct.png[39m[0m
+[  41% ] [90m[1mreimport[22m | TX Tileset Grass.png[39m[0m
+[  43% ] [90m[1mreimport[22m | TX Tileset Stone Ground.png[39m[0m
+[  45% ] [90m[1mreimport[22m | TX Tileset Wall.png[39m[0m
+[  47% ] [90m[1mreimport[22m | icon.svg[39m[0m
+[  49% ] [90m[1mreimport[22m | baskets.png[39m[0m
+[  50% ] [90m[1mreimport[22m | bucket.png[39m[0m
+[  52% ] [90m[1mreimport[22m | fishing_net.png[39m[0m
+[  54% ] [90m[1mreimport[22m | house_1.png[39m[0m
+[  56% ] [90m[1mreimport[22m | house_2.png[39m[0m
+[  58% ] [90m[1mreimport[22m | house_3.png[39m[0m
+[  60% ] [90m[1mreimport[22m | house_4.png[39m[0m
+[  62% ] [90m[1mreimport[22m | house_5.png[39m[0m
+[  64% ] [90m[1mreimport[22m | lantern.png[39m[0m
+[  66% ] [90m[1mreimport[22m | planter.png[39m[0m
+[  67% ] [90m[1mreimport[22m | stall_equipment.png[39m[0m
+[  69% ] [90m[1mreimport[22m | stall_house.png[39m[0m
+[  71% ] [90m[1mreimport[22m | stall_pet.png[39m[0m
+[  73% ] [90m[1mreimport[22m | stall_potion.png[39m[0m
+[  75% ] [90m[1mreimport[22m | timber.png[39m[0m
+[  77% ] [90m[1mreimport[22m | tree_0_lower.png[39m[0m
+[  79% ] [90m[1mreimport[22m | tree_0_upper.png[39m[0m
+[  81% ] [90m[1mreimport[22m | tree_0_whole.png[39m[0m
+[  83% ] [90m[1mreimport[22m | tree_1_lower.png[39m[0m
+[  84% ] [90m[1mreimport[22m | tree_1_upper.png[39m[0m
+[  86% ] [90m[1mreimport[22m | tree_1_whole.png[39m[0m
+[  88% ] [90m[1mreimport[22m | tree_2_lower.png[39m[0m
+[  90% ] [90m[1mreimport[22m | tree_2_upper.png[39m[0m
+[  92% ] [90m[1mreimport[22m | tree_2_whole.png[39m[0m
+[  94% ] [90m[1mreimport[22m | tree_3_lower.png[39m[0m
+[  96% ] [90m[1mreimport[22m | tree_3_upper.png[39m[0m
+[  98% ] [90m[1mreimport[22m | Finalizing Asset Import...[39m[0m
+[92m[ DONE ][39m [1mreimport[22m
+[0m
+[   0% ] [90m[1mreimport[22m | Started (Re)Importing Assets (52 steps)[39m[0m
+[   0% ] [90m[1mreimport[22m | Executing post-reimport operations...[39m[0m
+[92m[ DONE ][39m [1mreimport[22m
+[0m
+[   0% ] [90m[1mloading_editor_layout[22m | Started Loading editor (5 steps)[39m[0m
+[   0% ] [90m[1mloading_editor_layout[22m | Loading editor layout...[39m[0m
+[  16% ] [90m[1mloading_editor_layout[22m | Loading docks...[39m[0m
+[92m[ DONE ][39m [1mloading_editor_layout[22m
+[0m

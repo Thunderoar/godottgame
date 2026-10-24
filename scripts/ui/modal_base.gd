@@ -12,6 +12,7 @@ var panel: PanelContainer
 var _title := "Panel"
 var _panel_size := Vector2(860, 590)
 var _close_button: Button
+var _entry_tween: Tween
 
 
 func _ready() -> void:
@@ -91,6 +92,7 @@ func open_panel(title: String = "") -> void:
 		if header_label:
 			header_label.text = title
 	visible = true
+	play_entry_fade()
 	_fit_panel()
 	move_to_front()
 	if is_inside_tree():
@@ -101,6 +103,9 @@ func open_panel(title: String = "") -> void:
 
 
 func close_panel() -> void:
+	if _entry_tween:
+		_entry_tween.kill()
+	modulate.a = 1
 	visible = false
 	_clear_content()
 	closed.emit()
@@ -135,3 +140,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		close_panel()
 		get_viewport().set_input_as_handled()
+
+
+func play_entry_fade() -> void:
+	if _entry_tween:
+		_entry_tween.kill()
+	modulate.a = 0
+	_entry_tween = create_tween()
+	_entry_tween.tween_property(self, "modulate:a", 1.0, 0.16)

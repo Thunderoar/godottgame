@@ -1,0 +1,90 @@
+Godot Engine v4.7.2.stable.arch_linux.ed1daf0bf (2026-08-17 01:18:38 UTC) - https://godotengine.org
+
+Verified isolated user data: /tmp/tidesworn-gdt2-pb/userdata/godot/app_userdata/Save The World
+[OK] PB title
+[OK] permanent creator footer
+[OK] obsolete footer removed
+[OK] XP bars removed from screen HUD
+[OK] balances and player identity removed from top HUD
+[OK] potion shortcuts and screen Build button removed
+[OK] only four world touch controls remain and clock is visible
+[OK] cave presentation follows the authored sanctuary portals
+[OK] Build is available inside Menu
+[OK] shop still displays the player's money
+[OK] potions remain available in Pack
+[OK] day training ignores night combat events
+[OK] day lessons advance in order
+[OK] night immediately selects the combat tutorial
+[OK] night tutorial advances to the cave portal
+[OK] unfinished day tutorial resumes next day
+[OK] all seven day lessons complete separately from night training
+[OK] night lessons complete the remaining training
+[OK] three-power duel starts
+[OK] both pets have three available powers
+[OK] one full arena backdrop replaces boxed pet cards
+[OK] both duelists wait while no power is chosen
+[OK] player acts first while enemy waits its turn
+[OK] using one power starts only its own cooldown
+[OK] cannot act twice before the rival reply
+[OK] enemy replies later and starts its own cooldown
+[OK] a cooling-down player power cannot be used
+[OK] second power shields against the enemy special attack
+[OK] third power deals double damage and has a separate cooldown
+[OK] enemy cannot ignore its own cooldowns
+[OK] enemy resumes when one of its powers is ready
+[OK] closing full arena restores world controls
+[OK] journal and screen boss bar removed
+[OK] one purple question-mark mission NPC
+[OK] two portals stand in twin hillside caves
+[OK] porch mattress removed
+[OK] only the main house is enterable
+[OK] one starting builder worker
+[OK] live builder population matches state
+[OK] one starting water worker
+[OK] live water population matches state
+[OK] one starting planter worker
+[OK] live planter population matches state
+[OK] one starting fighter worker
+[OK] live fighter population matches state
+[OK] builder hiring charges once and adds worker
+[OK] water hiring charges once and adds worker
+[OK] planter hiring charges once and adds worker
+[OK] fighter hiring charges once and adds worker
+[OK] builder cannot repair before ten seconds
+[OK] builder restores house after ten seconds of work
+[OK] construction pauses at night
+[OK] day returns after three minutes
+[OK] partial repair persists across save/load
+[OK] daytime repair resumes remaining work
+[OK] blue NPC chooses a fire monster
+[OK] blue water projectile damages fire monster
+[OK] black NPC strikes sea urchin with sword
+[OK] blue water restores burning tree HP
+[OK] water workers do not take planting jobs
+[OK] green NPC plants a protected thirty-second sapling
+[OK] every house has an archer hut
+[OK] archer hut fires a damaging arrow
+[OK] house upgrade raises the whole village for one payment
+[OK] house advances through weapon tier 3
+[OK] house advances through weapon tier 4
+[OK] house advances through weapon tier 5
+[OK] five levels cap upgrades and accelerate archery
+[OK] companion health floats overhead
+[OK] following companion attacks nearby monsters
+[OK] main house opens a separate furnished interior
+[OK] home contains chest, clothes, weapon rack and pet bed
+[OK] being inside home regenerates health
+[OK] doorway returns player to village
+[OK] purple guide opens mission panel
+[OK] closing mission panel restores controls
+[OK] pet_duel_1 supplied background imports
+[OK] pet_duel_2 supplied background imports
+[OK] pet_duel_3 supplied background imports
+[OK] pet_duel_4 supplied background imports
+[OK] pet_duel_5 supplied background imports
+[OK] each pet battle has its own supplied background
+[OK] house levels and recruited specialists persist
+[OK] dungeon monsters pursue immediately on entry
+[OK] boss health floats above the boss
+[OK] touching boss calls every living monster to defend it
+--- PB test: 86 checks, PASS ---

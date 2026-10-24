@@ -91,6 +91,9 @@ func _ready() -> void:
 	_build_house()
 	_build_shops()
 	_build_special_npc()
+	var mission_guide := MissionNPC.new()
+	mission_guide.position = Vector2(29.0, 26.0)
+	add_child(mission_guide)
 	_build_residential_life()
 	_build_portals()
 	_build_gathering()
@@ -374,10 +377,10 @@ func _build_house() -> void:
 	_emergency_fire.visible = false
 	_emergency_fire.z_index = 9
 	house.add_child(_emergency_fire)
-	var bed := HouseBed.new()
-	bed.name = "Bed"
-	bed.position = Vector2(-5.0, 0.55)
-	house.add_child(bed)
+	var entrance := HomeEntrance.new()
+	entrance.name = "EnterHome"
+	entrance.position = Vector2(0, 0.9)
+	house.add_child(entrance)
 	_markers.append({"position": _house_position, "color": Color("#e4c571"), "size": 6.0, "shape": "square"})
 	_markers.append({"position": Vector2(38, 15), "color": Color("#8ac36b"), "size": 3.0, "shape": "disc"})
 
@@ -472,7 +475,7 @@ func _add_shop(kind: String, at: Vector2, npc_name: String, color: Color) -> voi
 	npc.interact_radius = 2.8
 	shop.add_child(npc)
 	var sign := Label.new()
-	sign.text = {"potion": "Potion Shop", "equipment": "Equipment Shop", "pet": "Pet Shop", "house": "Construction Shop", "services": "Water Shop"}.get(kind, "Shop")
+	sign.text = {"potion": "Potion Shop", "equipment": "Equipment Shop", "pet": "Pet Shop", "house": "Construction Shop", "services": "Worker Shop"}.get(kind, "Shop")
 	sign.add_theme_font_size_override("font_size", 12)
 	sign.add_theme_color_override("font_color", Color("#ffe0a3"))
 	sign.add_theme_color_override("font_shadow_color", Color("#172329"))
@@ -506,6 +509,15 @@ func _build_special_npc() -> void:
 # ------------------------------------------------------------------ portals
 
 func _build_portals() -> void:
+	var ridge := Sprite2D.new()
+	ridge.name = "TwinCaveHill"
+	ridge.texture = PixelArt.cave_ridge_texture()
+	ridge.centered = false
+	ridge.offset = Vector2(-256, -192)
+	ridge.scale = Vector2.ONE * PixelArt.PX
+	ridge.position = (_layout.position_of("monster_portal", MONSTER_GATE) + _layout.position_of("pet_portal", PET_GATE)) * 0.5 + Vector2(0, 0.7)
+	ridge.z_index = 3
+	add_child(ridge)
 	# The two gates stand side by side on the north path: campaign monsters on
 	# the left, companion duels on the right.
 	var first := PortalEntrance.new()
@@ -1136,15 +1148,18 @@ func _build_residential_life() -> void:
 	_add_decor_placeable("crate_2", "res://assets/sprites/TX Props__TX Props Crate Small.tres", _layout.position_of("garden_5") + Vector2(-1.6, -0.8), 1.0, 5, Vector2(1.2, 1.3))
 
 
-func _add_resident_house(house_name: String, at: Vector2, level: int) -> void:
+func _add_resident_house(house_name: String, at: Vector2, level: int, ruined: bool = false) -> void:
 	var holder := Node2D.new()
 	holder.name = house_name
 	holder.z_index = 6
 	holder.position = _layout.position_of(house_name, at)
 	holder.set_meta("layout_anchor", house_name)
 	holder.add_to_group("resident_house")
+	if ruined:
+		holder.add_to_group("ruin_house")
 	add_child(holder)
 	var art := Sprite2D.new()
+	art.name = "ResidentHouseArt"
 	art.texture = PixelArt.house_texture(level)
 	art.centered = false
 	art.offset = Vector2(-112, -176)
@@ -1162,6 +1177,7 @@ func _add_resident_house(house_name: String, at: Vector2, level: int) -> void:
 	_local_lights.append(glow)
 	var target := SettlementTarget.new()
 	target.name = "ResidentHouseTarget"
+	target.starts_ruined = ruined
 	target.target_name = str(_layout.anchor(house_name).get("label", house_name.trim_prefix("ResidentHouse") + " cottage"))
 	target.structure_id = "home_" + house_name.to_snake_case()
 	target.damage_scale = 0.25
@@ -1179,53 +1195,8 @@ func _add_resident_house(house_name: String, at: Vector2, level: int) -> void:
 	_markers.append({"position": at, "color": Color("#e4c571"), "size": 3.5, "shape": "square"})
 
 
-func _add_ruin_house(house_name: String, at: Vector2, state: String) -> void:
-	var holder := Node2D.new()
-	holder.name = house_name
-	holder.z_index = 6
-	holder.position = _layout.position_of(house_name, at)
-	holder.set_meta("layout_anchor", house_name)
-	holder.add_to_group("ruin_house")
-	add_child(holder)
-	var art := Sprite2D.new()
-	art.texture = PixelArt.house_texture(2 if state == "abandoned" else 1)
-	art.centered = false
-	art.offset = Vector2(-112, -176)
-	art.scale = Vector2(PixelArt.PX, PixelArt.PX) * 0.74
-	art.z_index = 0
-	holder.add_child(art)
-	match state:
-		"abandoned":
-			art.modulate = Color(0.58, 0.58, 0.52)
-			art.rotation = -0.07
-		"damaged":
-			art.modulate = Color(0.74, 0.64, 0.56)
-			art.rotation = 0.08
-			_add_smoke(holder, Vector2(0.3, -3.0))
-		"destroyed":
-			art.modulate = Color(0.45, 0.4, 0.36, 0.92)
-			art.scale.y *= 0.42
-			art.rotation = 0.2
-			for i in 4:
-				var rubble := Sprite2D.new()
-				rubble.texture = PixelArt.icon("wood")
-				rubble.scale = Vector2(0.055, 0.055)
-				rubble.rotation = randf_range(-0.8, 0.8)
-				rubble.position = Vector2(randf_range(-2.0, 2.0), randf_range(-0.4, 0.3))
-				rubble.modulate = Color("#8a6a47")
-				holder.add_child(rubble)
-			_add_smoke(holder, Vector2(0.0, -2.0))
-	var body := StaticBody2D.new()
-	body.collision_layer = 1
-	var shape := CollisionShape2D.new()
-	var rect := RectangleShape2D.new()
-	rect.size = Vector2(4.6, 1.0) if state != "destroyed" else Vector2(3.8, 0.6)
-	shape.shape = rect
-	shape.position = Vector2(0, -0.5)
-	body.add_child(shape)
-	holder.add_child(body)
-	_markers.append({"position": at, "color": Color("#8b7b62"), "size": 3.0, "shape": "square"})
-
+func _add_ruin_house(house_name: String, at: Vector2, _state: String) -> void:
+	_add_resident_house(house_name, at, 1, true)
 
 func _add_smoke(holder: Node2D, at: Vector2) -> void:
 	for i in 2:
@@ -1297,7 +1268,7 @@ func _add_fence_horizontal(id: String, x0: float, x1: float, y: float, gaps: Arr
 				skip = true
 		if not skip:
 			var fence := Sprite2D.new()
-			fence.texture = PixelArt.fence_texture()
+			fence.texture = PixelArt.fence_texture(GameState.house_level())
 			fence.centered = false
 			fence.offset = Vector2(-24, -32)
 			fence.scale = Vector2(PixelArt.PX, PixelArt.PX)
@@ -1327,7 +1298,7 @@ func _add_fence_vertical(id: String, x: float, y0: float, y1: float, gaps: Array
 				skip = true
 		if not skip:
 			var fence := Sprite2D.new()
-			fence.texture = PixelArt.fence_texture()
+			fence.texture = PixelArt.fence_texture(GameState.house_level())
 			fence.centered = true
 			fence.scale = Vector2(PixelArt.PX, PixelArt.PX)
 			fence.rotation = PI * 0.5
@@ -1377,7 +1348,7 @@ func _add_animal(kind: String, at: Vector2, animal_scale: float = 1.25) -> void:
 	animal.set_meta("ambient_tween", tween)
 
 
-func _add_resident(resident_name: String, role: String, activity: String, start: Vector2, points: Array, shelter: Vector2, combat: bool = false, damage: int = 8, distance: float = 4.2) -> void:
+func _add_resident(resident_name: String, role: String, activity: String, start: Vector2, points: Array, shelter: Vector2, _combat: bool = false, damage: int = 8, distance: float = 4.2) -> void:
 	var resident := Resident.new()
 	resident.resident_name = resident_name
 	resident.role = role
@@ -1385,7 +1356,8 @@ func _add_resident(resident_name: String, role: String, activity: String, start:
 	resident.position = start
 	resident.shelter = shelter
 	resident.set_meta("home_shelter_offset", shelter - _house_position)
-	resident.combat_enabled = combat
+	resident.combat_enabled = false
+	# Specialist blue/black workers own combat; other residents seek shelter.
 	resident.combat_damage = damage
 	resident.combat_range = distance
 	var typed_points: Array[Vector2] = []
@@ -1397,27 +1369,31 @@ func _add_resident(resident_name: String, role: String, activity: String, start:
 
 
 func _build_water_keepers() -> void:
-	# No world RNG calls here: existing tree IDs and generation order stay stable.
-	var starts: Array[Vector2] = []
-	for index in 5: starts.append(_layout.activity_points(_layout.activity("keeper_%d" % index))[0])
-	for i in GameState.water_keeper_count():
-		var already_exists := false
-		for resident in _residents:
-			if is_instance_valid(resident) and resident.resident_name == "Water Keeper %d" % (i + 1):
-				already_exists = true
-		if already_exists:
-			continue
-		var keeper := Resident.new()
-		keeper.resident_name = "Water Keeper %d" % (i + 1)
-		keeper.role = "water_keeper"
-		keeper.water_power = true
-		keeper.position = starts[i]
-		keeper.waypoints = _layout.activity_points(_layout.activity("keeper_%d" % i))
-		keeper.set_meta("activity_id", "keeper_%d" % i)
-		keeper.activity = "Protecting and replanting the forest"
-		add_child(keeper)
-		_residents.append(keeper)
+	_build_workers()
 
+func _build_workers() -> void:
+	var origins := {"water": _layout.activity_points(_layout.activity("keeper_0"))[0], "builder": _layout.approach("shop_house") + Vector2(2, 1), "planter": _layout.position_of("garden_walk"), "fighter": _layout.position_of("market") + Vector2(0, 2.3)}
+	var appearances := {"water": "water_keeper", "builder": "construction_worker", "planter": "tree_planter", "fighter": "swordsman"}
+	for worker_role in ["water", "builder", "planter", "fighter"]:
+		for i in GameState.worker_count(worker_role):
+			var worker_name := GameState.worker_name(worker_role, i)
+			var exists := false
+			for resident in _residents:
+				if is_instance_valid(resident) and resident.resident_name == worker_name:
+					exists = true
+			if exists:
+				continue
+			var worker := Resident.new()
+			worker.resident_name = worker_name
+			worker.worker_role = worker_role
+			worker.role = str(appearances[worker_role])
+			worker.water_power = worker_role == "water"
+			worker.combat_enabled = worker_role in ["water", "fighter"]
+			var origin: Vector2 = origins[worker_role]
+			worker.position = origin + Vector2((i % 3) * 1.4, int(i / 3) * 1.3)
+			worker.waypoints = [worker.position, worker.position + Vector2(1, 0.5)]
+			add_child(worker)
+			_residents.append(worker)
 
 func begin_devastation() -> void:
 	if _devastation_started:
@@ -1525,9 +1501,10 @@ var _ward_mote_timer := 0.0
 
 func _process(delta: float) -> void:
 	_update_daylight()
-	if is_instance_valid(player) and GameState.mission_step() == 0 and player.position.distance_to(_mission_walk_origin) >= 3.0:
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if (not is_instance_valid(game) or not is_instance_valid(game.home_interior)) and is_instance_valid(player) and GameState.mission_step() == 0 and player.position.distance_to(_mission_walk_origin) >= 3.0:
 		GameState.record_mission_event("move")
-	if GameState.recovery_active() and is_instance_valid(player):
+	if GameState.recovery_active() and is_instance_valid(player) and (not is_instance_valid(game) or not is_instance_valid(game.home_interior)):
 		_tick_recovery(delta)
 	if _emergency_fire and _emergency_fire.visible:
 		_emergency_fire.modulate.a = 0.65 + sin(Time.get_ticks_msec() * 0.009) * 0.25

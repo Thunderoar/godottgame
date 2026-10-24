@@ -9,7 +9,7 @@ func _ready() -> void:
 	var game := load("res://scenes/game.tscn").instantiate() as Game
 	add_child(game)
 	await get_tree().process_frame
-	game._on_character_selected("qayyim")
+	await game._on_character_selected("qayyim")
 	await get_tree().create_timer(0.3).timeout
 	game.hud.tutorial_guide._skip()
 	GameState.add_gold(100000)
