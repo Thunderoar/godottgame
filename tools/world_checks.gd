@@ -5,6 +5,7 @@ static func run(game: Game, check: Callable) -> bool:
 	var lobby := game.world as Lobby
 	var layout := lobby._layout
 	check.call(layout.warnings().is_empty(), "canonical village IDs, bounds, route widths and graph connectivity validate: " + str(layout.warnings()))
+	_check_authoring_blends(check)
 	var expected := ["arrival", "house", "recovery", "market", "shop_potion", "shop_equipment", "shop_pet", "shop_house", "shop_services", "monster_portal", "pet_portal", "waterfront", "jetty_landing", "beach_turtle", "cleaning", "besut", "garden_walk", "forest_defence", "forest_clearing", "stable"]
 	for id in expected:
 		check.call(not layout.anchor(id).is_empty(), "required spatial landmark exists: " + id)
@@ -180,3 +181,34 @@ static func _runtime_overrides(game: Game, check: Callable) -> void:
 	GameState.new_game("qayyim")
 	game.call("_load_lobby", false)
 	for frame in 4: await game.get_tree().physics_frame
+
+
+static func _check_authoring_blends(check: Callable) -> void:
+	var source := WorldLayout.new()
+	source.zones.assign([{"id": "test_blend", "material": "stone", "polygon": PackedVector2Array([Vector2(1, 1), Vector2(7, 1), Vector2(7, 7), Vector2(1, 7)]), "feather": 0.5, "strength": 0.8}])
+	var broad := source.copy_layout()
+	broad.zones[0].feather = 3.0
+	check.call(source.signature() != broad.signature(), "authoring: district blend width invalidates terrain caches")
+	var a := Image.create_empty(256, 256, false, Image.FORMAT_RGBA8)
+	var b := Image.create_empty(256, 256, false, Image.FORMAT_RGBA8)
+	var grass := WorldPalette.color("grass")
+	a.fill(grass)
+	b.fill(grass)
+	WorldTerrain._paint_zones(a, source)
+	WorldTerrain._paint_zones(b, broad)
+	var baseline := Vector3(grass.r, grass.g, grass.b)
+	var near_a := a.get_pixel(64, 128)
+	var near_b := b.get_pixel(64, 128)
+	check.call(Vector3(near_b.r, near_b.g, near_b.b).distance_to(baseline) < Vector3(near_a.r, near_a.g, near_a.b).distance_to(baseline), "authoring: broader district blend visibly softens the ground transition")
+	var fainter := broad.copy_layout()
+	fainter.zones[0].strength = 0.2
+	check.call(fainter.signature() != broad.signature(), "authoring: district ground tint invalidates terrain caches")
+	var road := WorldLayout.village().copy_layout()
+	var before := road.signature()
+	road.routes[0].feather = 0.8
+	check.call(road.signature() != before, "authoring: custom road softness invalidates terrain caches")
+	var hard_path := Image.create_empty(256, 256, false, Image.FORMAT_RGBA8)
+	var soft_path := Image.create_empty(256, 256, false, Image.FORMAT_RGBA8)
+	WorldTerrain._paint_path(hard_path, [Vector2(1, 4), Vector2(7, 4)], 2, "path", "secondary", 0.1)
+	WorldTerrain._paint_path(soft_path, [Vector2(1, 4), Vector2(7, 4)], 2, "path", "secondary", 0.8)
+	check.call(soft_path.get_pixel(128, 104).a < hard_path.get_pixel(128, 104).a, "authoring: road softness changes edge coverage without widening navigation ribbons")

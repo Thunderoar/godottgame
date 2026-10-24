@@ -30,9 +30,13 @@ func paint(layer: String, at: Vector2i, material: String) -> void:
 	emit_changed()
 
 func snapshot() -> Dictionary:
-	return {"layers": layers.duplicate(true), "objects": objects.duplicate(true), "seed": seed_value, "layout": {"anchors": layout.anchors.duplicate(true), "routes": layout.routes.duplicate(true), "zones": layout.zones.duplicate(true), "scenery": layout.scenery.duplicate(true), "activities": layout.activities.duplicate(true), "version": layout.version, "terrain_bake_path": layout.terrain_bake_path, "terrain_bake": layout.terrain_bake, "terrain_bake_hash": layout.terrain_bake_hash, "terrain_palette_hash": layout.terrain_palette_hash} if layout else {}}
+	return {"title": title, "size": size, "editor_hidden": editor_hidden.duplicate(true), "editor_locked": editor_locked.duplicate(true), "layers": layers.duplicate(true), "objects": objects.duplicate(true), "seed": seed_value, "layout": {"anchors": layout.anchors.duplicate(true), "routes": layout.routes.duplicate(true), "zones": layout.zones.duplicate(true), "scenery": layout.scenery.duplicate(true), "activities": layout.activities.duplicate(true), "version": layout.version, "terrain_bake_path": layout.terrain_bake_path, "terrain_bake_hash": layout.terrain_bake_hash, "terrain_palette_hash": layout.terrain_palette_hash} if layout else {}}
 
 func restore(state: Dictionary) -> void:
+	title = str(state.get("title", title))
+	size = state.get("size", size)
+	editor_hidden = state.get("editor_hidden", {}).duplicate(true)
+	editor_locked = state.get("editor_locked", {}).duplicate(true)
 	seed_value = int(state.get("seed", seed_value))
 	var spatial: Dictionary = state.get("layout", {})
 	layout = null

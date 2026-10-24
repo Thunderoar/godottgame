@@ -321,5 +321,7 @@ Studio controls, paired runtime evidence and measured limits are documented in
 around a western lane, all five merchants in one market, and six crop beds beside
 the southeast animal yard. Active building plots now keep at least 1.8 units of
 clearance (ruin pairs use 1.0), with curated accessories instead of scattered flowers. The verified
-combined gate passes 893 checks, with 63 native graphical checks and 37 editor
-checks plus restart verification.
+combined gate passes 898 checks. The upgraded Map Studio passes 84 native editor
+checks and two independent runtime restart checks. See the
+[map editing guide](docs/MAP_STUDIO_GUIDE.md) for direct building/road/district
+editing, district moves, workpoints, asset placement and soft terrain edges.

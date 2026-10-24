@@ -29,3 +29,9 @@ timeout 60 xvfb-run -a -s '-screen 0 1280x720x24' godot --path "$run_dir/project
 cat "$run_dir/restart.log"
 if rg -q 'SCRIPT ERROR|ERROR:|--- creative restart: FAIL' "$run_dir/restart.log"; then exit 1; fi
 rg -q '^--- creative restart: PASS ---$' "$run_dir/restart.log"
+# The richer editor creates roads, districts, workpoint edits and asset placements.
+# Load that independently saved document in another real gameplay process.
+timeout 60 xvfb-run -a -s '-screen 0 1280x720x24' godot --path "$run_dir/project" res://tools/creative_workbench_restart.tscn -- --map=res://data/maps/editor_workbench.tres > "$run_dir/workbench-restart.log" 2>&1
+cat "$run_dir/workbench-restart.log"
+if rg -q 'SCRIPT ERROR|ERROR:|--- workbench restart: FAIL' "$run_dir/workbench-restart.log"; then exit 1; fi
+rg -q '^--- workbench restart: PASS ---$' "$run_dir/workbench-restart.log"

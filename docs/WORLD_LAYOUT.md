@@ -11,8 +11,8 @@ village defaults. Existing layers, objects, stable IDs and save data remain vali
 | Collection | Fields and purpose |
 |---|---|
 | `anchors` | Stable `id`, `kind`, `position`, `zone`, local `footprint`, optional local `yard`, local `approach`, `clearance`, `owner`, `priority`, `movable`, `destination`; shop merchant/lamp, residence tier, ruin state and fence span/gaps |
-| `routes` | Stable `id`, `from`/`to` anchor IDs, optional `via` points, full `width`, primary/secondary/informal `role`, ground `material` |
-| `zones` | Stable `id`, authored concave `polygon`, material, decoration `density` and allowed categories |
+| `routes` | Stable `id`, `from`/`to` anchor IDs, optional `via` points, full `width`, primary/secondary/informal `role`, ground `material`, optional edge `feather` |
+| `zones` | Stable `id`, authored concave `polygon`, material, decoration `density`, allowed categories, optional edge `feather` and tint `strength` |
 | `scenery` | Stable `id`, asset, district, position, scale, optional ground `footprint` and owning building ID; building-local positions travel with that parent |
 
 Positions are world units (32 art pixels each). Building approach offsets are
@@ -75,6 +75,11 @@ there is no global random flower scatter.
 
 ## Edit in Map Studio
 
+The expanded [Map Studio guide](MAP_STUDIO_GUIDE.md) covers the direct canvas
+workflow, searchable scene/asset/layer sidebars, contextual inspector, new spatial
+features, district moves, blend controls and keyboard shortcuts. The following
+point-selector workflow remains available under **Advanced point tools**.
+
 1. Open Tidesworn → Map Studio and enable **Spatial overlays**. Choose the spatial category to see
    blue district polygons, amber roads, or green plots with red approaches. Only
    the selected feature is labeled, keeping the overlay readable.
@@ -87,16 +92,21 @@ there is no global random flower scatter.
 5. Validate, Save, and **Play this map**. Play runs the actual village in isolated
    user data; editor Save writes only the selected source map.
 
-Adding/removing graph edges, inserting vertices, changing kinds/footprints or
-adding new semantic rules is done in the focused `village_layout.tres` resource
-(or its ordinary Godot Resource inspector). The studio supports moving the
-existing curated graph; it is not a second world-generation framework.
+Roads and districts can now be created, duplicated and removed in the canvas;
+road bends, district vertices and activity points can be inserted/removed. The
+inspector edits route endpoints/hierarchy/material, district ground/density/blend,
+building footprints/approaches/yards, scenery owners and world positions. Existing
+gameplay anchor and actor IDs are retained. New commons landmarks are routing
+anchors; they do not create another gameplay service or quest. Specialized content
+tables and zone category rules remain resource/code authoring.
 
 Terrain and spatial geometry share the runtime renderer in the editor. Preview
-includes service-specific stalls, residences, tree families, workspaces, jetty
-and boat. Base-object tree scale, fence segment art, live NPCs, lighting and
-player customization remain representative in the 2D authoring canvas; **Play**
-is the exact full gameplay preview. Existing asset importer, pixel editor,
+includes service-specific stalls, residences, tree families, workspaces, portal
+frames, actual fence segments/gaps, animals, jetty and boat. Ruin damage, live NPCs,
+lighting and player customization remain representative in the 2D authoring
+canvas; **Save & Play** launches the full gameplay preview in isolated progress.
+Validation issues remain visible and can be inspected in Play while authoring.
+Existing asset importer, pixel editor,
 palette editor and source recovery drafts keep their original workflows.
 
 ## Geography, cache and physics
@@ -169,10 +179,18 @@ Map Studio's spatial category list now includes **scenery** and **activities**.
 Move layout point edits a scenery offset relative to its parent, or the selected
 activity point relative to its referenced anchor. Bend / vertex selects that
 activity's point index. The overlay shows work routes; native undo/redo and map
-snapshots include the complete activity collection. Owners/species/roles and new
-point insertion are edited in the resource, alongside the existing graph schema.
+snapshots include the complete activity collection. Owner anchors and new
+point insertion can be managed with the inspector and canvas handles; species,
+actor roles and specialized semantic rules remain in the resource.
 Settlement drag completion refreshes semantic waypoints and route caches without
 repositioning residents. Cosmetic plot-edge bushes consume only decoration RNG.
 Road `role` participates in the bake signature because informal tracks now use
 a different ground treatment. Changing hierarchy alone therefore rejects stale
 terrain art. Source edits still require the explicit bake/import workflow above.
+
+District `feather` is an inward blend width (default 1 world unit); `strength`
+controls tint opacity (default 0.22, or 0.38 for market/forest interior/portals).
+Road `feather` controls inward edge softness (default 0.140625 units / 4.5 art
+pixels). These affect terrain presentation, not navigation clearance or coastline
+collision. Explicit values participate in terrain signatures. Maps without these
+keys retain their original pixels and bake hashes.

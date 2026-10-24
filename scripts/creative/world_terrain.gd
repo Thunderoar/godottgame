@@ -58,7 +58,7 @@ static func _make_terrain_image(layout: WorldLayout) -> Image:
 		var material := str(route.get("material", "path"))
 		if material == "deck": continue
 		if not materials.has(material): materials[material] = PixelArt.image(w, h)
-		_paint_path(materials[material], Array(layout.route_points(route)), float(route.get("width", 1.6)), material, str(route.get("role", "secondary")))
+		_paint_path(materials[material], Array(layout.route_points(route)), float(route.get("width", 1.6)), material, str(route.get("role", "secondary")), float(route.get("feather", 0.140625)))
 	for surface in materials.values(): img.blend_rect(surface, Rect2i(0, 0, w, h), Vector2i.ZERO)
 	_paint_sanctuary(img, layout)
 	for entry in layout.anchors:
@@ -152,11 +152,12 @@ static func _paint_coast(img: Image, rng: RandomNumberGenerator) -> void:
 		img.set_pixel(x - 1, shore - 10, col.darkened(0.15))
 
 
-static func _paint_path(img: Image, points: Array, width_units: float, material: String = "path", role: String = "secondary") -> void:
+static func _paint_path(img: Image, points: Array, width_units: float, material: String = "path", role: String = "secondary", feather: float = 0.140625) -> void:
 	var px_points: Array[Vector2] = []
 	for p in points:
 		px_points.append(Vector2(p.x * 32.0, p.y * 32.0))
 	var width_px := width_units * 32.0
+	var feather_px := clampf(feather * 32.0, 1.0, 48.0)
 	var base := WorldPalette.color(material).lerp(WorldPalette.color("grass"), 0.38)
 	if role == "informal": base = WorldPalette.color("grass_shadow").lerp(WorldPalette.color("path"), 0.30)
 	if material == "stone": base = WorldPalette.color("stone").lerp(WorldPalette.color("grass_shadow"), 0.18)
@@ -174,7 +175,7 @@ static func _paint_path(img: Image, points: Array, width_units: float, material:
 				var p := Vector2(x, y)
 				var d := p.distance_to(Geometry2D.get_closest_point_to_segment(p, a, b))
 				var edge_noise := sin(float(x) * 0.07 + float(y) * 0.045) * 1.1
-				var coverage := clampf((width_px * 0.5 + edge_noise - d) / 4.5, 0.0, 1.0)
+				var coverage := clampf((width_px * 0.5 + edge_noise - d) / feather_px, 0.0, 1.0)
 				if coverage <= 0.0: continue
 				if coverage <= img.get_pixel(x, y).a or is_sea(Vector2(x, y) * PixelArt.PX): continue
 				var ink := base
@@ -209,9 +210,11 @@ static func _paint_zones(img: Image, layout: WorldLayout) -> void:
 		if polygon.size() < 3: continue
 		var bounds := Rect2(polygon[0], Vector2.ZERO)
 		for point in polygon: bounds = bounds.expand(point)
-		var inner := Geometry2D.offset_polygon(polygon, -1.0)
+		var feather := clampf(float(zone.get("feather", 1.0)), 0.1, 8.0)
+		var inner := Geometry2D.offset_polygon(polygon, -feather)
 		var color := WorldPalette.color(str(zone.get("material", "grass")))
-		var strength := 0.22 if id not in ["forest_interior", "market", "portal_grounds"] else 0.38
+		var default_strength := 0.22 if id not in ["forest_interior", "market", "portal_grounds"] else 0.38
+		var strength := clampf(float(zone.get("strength", default_strength)), 0.0, 1.0)
 		for y in range(maxi(0, int(bounds.position.y / PixelArt.PX)), mini(img.get_height(), int(bounds.end.y / PixelArt.PX)), 8):
 			for x in range(maxi(0, int(bounds.position.x / PixelArt.PX)), mini(img.get_width(), int(bounds.end.x / PixelArt.PX)), 8):
 				var at := Vector2(x, y) * PixelArt.PX
@@ -224,7 +227,7 @@ static func _paint_zones(img: Image, layout: WorldLayout) -> void:
 					var boundary := INF
 					for i in polygon.size():
 						boundary = minf(boundary, at.distance_to(Geometry2D.get_closest_point_to_segment(at, polygon[i], polygon[(i + 1) % polygon.size()])))
-					alpha *= smoothstep(0.0, 1.0, boundary)
+					alpha *= smoothstep(0.0, feather, boundary)
 				var ink := img.get_pixel(x, y).lerp(color, alpha)
 				img.fill_rect(Rect2i(x, y, mini(8, img.get_width() - x), mini(8, img.get_height() - y)), ink)
 

@@ -406,7 +406,7 @@ Flower coverage is now a selective border-presence rule, with an additional
 reservation-clearance assertion. A large minimum flower count was inappropriate
 for keeping roads and entrances quiet; decoration quantity is not the design goal.
 
-`./tools/test_creative_editor.sh` exercises 37 editor checks in a disposable
+`./tools/test_creative_editor.sh` exercises 84 editor checks in a disposable
 source copy, including spatial anchor dragging, native undo/redo, route width,
 zone vertex edits, overlays, saving and a separate runtime restart. The restart
 checks that edited service coordinates and route width actually load in gameplay.
@@ -450,3 +450,29 @@ paired actual gameplay fixtures, a diagnostic overview, a zoom-64 forest view,
 night districts, settings, movement, combat and software-renderer measurements.
 See [DISTRICT_SPACING_REPORT.md](DISTRICT_SPACING_REPORT.md) for current results
 and limits, and [KAMPUNG_REDESIGN.md](KAMPUNG_REDESIGN.md) for the first pass.
+
+## Direct Map Studio editing
+
+The native editor gate additionally checks direct mouse-event building movement,
+an uncommitted outline preview, Escape cancellation, numeric positions, precise
+keyboard nudges, Fit/Frame and canvas-only mode. It tests searchable thumbnail
+placement, object duplication with distinct IDs, deletion/undo, scene filtering,
+stable original-tree overrides, road bend insertion/removal, endpoint editing,
+district vertex movement and a district-with-contents transaction. Workpoint
+movement/add/remove, undoable layer locks/visibility, protected identity deletion,
+actionable validation, save-state dirty tracking and stale document undo guards
+are also covered. Paint cancellation and releasing Space before a pan's mouse
+button are actual input-handler regressions.
+
+The independently saved `editor_workbench.tres` is opened in a second gameplay
+restart after the original `editor_workflow.tres` restart. The added restart checks
+the actual shop owner position, new commons and road, new district vertices and
+blend values, workpoint ownership, and the placed bench in the runtime scene.
+Both restart markers must say PASS. These files are created only in the disposable
+test project. Pixel/asset/palette/plugin recovery checks remain part of the gate.
+
+The gameplay gate has five presentation regressions: district feather and tint
+invalidate terrain caches, broader blending measurably softens generated pixels,
+road feather invalidates the cache, and softened road-edge pixels keep the same
+navigation ribbon. The unchanged default full-RGBA bake comparison still passes.
+Current evidence and limits: [MAP_STUDIO_UPGRADE.md](MAP_STUDIO_UPGRADE.md).

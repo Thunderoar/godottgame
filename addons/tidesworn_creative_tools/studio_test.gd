@@ -202,6 +202,7 @@ static func run(studio: Control) -> void:
 	var house_pixel := preview_image.get_pixel(34 * 8, 20 * 8)
 	check(house_pixel.r > house_pixel.g, "base cottage art is present in the rendered map canvas")
 	await screenshot(studio, output.path_join("map-editor.png"))
+	await preload("res://addons/tidesworn_creative_tools/map_workbench_test.gd").run(map_panel, check, output)
 	studio.tabs.current_tab = 3
 	await screenshot(studio, output.path_join("palette-editor.png"))
 	var flag := {"called": false}

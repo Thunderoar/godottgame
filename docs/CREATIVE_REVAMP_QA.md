@@ -120,13 +120,19 @@ default zoom.
 
 ## Limits
 
+This is historical revamp evidence. The subsequent
+[Map Studio upgrade](MAP_STUDIO_UPGRADE.md) supersedes the original map-control
+limits: the editor now directly moves existing services, edits graph endpoints,
+inserts vertices and creates districts/roads/commons. Current verification is
+898 gameplay checks, 84 editor checks and two separate runtime restarts.
+
 Windows/Android executable installation, physical touch hardware, mobile GPU
 performance and long-duration soak tests were not performed. Linux is currently
 the integrated isolated-Play launcher host. The core map envelope remains the
 existing village, with additive terrain and stable base-object overrides; existing
-cottage/shop movement stays in settlement Build mode. Validation of authored
-geometry is conservative and still requires an actual Play check against all
-original collision. Pixel editing intentionally omits advanced layers/tags and
+cottage/shop movement is now also available through canonical anchors in Map
+Studio. Validation of authored geometry is conservative and still requires an
+actual Play check against all original collision. Pixel editing intentionally omits advanced layers/tags and
 Aseprite JSON. Source-map version 1 adds no player-save migration.
 
 Xvfb reports unsupported V-Sync and an unavailable X input method. A repeat full

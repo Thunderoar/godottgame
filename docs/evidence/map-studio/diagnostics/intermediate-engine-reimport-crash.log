@@ -1,0 +1,42 @@
+Isolated creative editor artifacts: /tmp/tidesworn-studio-GAs0qHK7
+Godot Engine v4.7.2.stable.arch_linux.ed1daf0bf (2026-08-17 01:18:38 UTC) - https://godotengine.org
+WARNING: Failed to create wd.xic as the input method or its xim server may not have started yet.
+     at: _create_xic (platform/linuxbsd/x11/display_server_x11.cpp:6347)
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 4.6 (Core Profile) Mesa 26.2.4-arch3.1 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 23.1.1, 256 bits)
+
+Tidesworn Studio: Editor-time authoring • source maps stay separate from player settlement saves. Wheel zoom / middle mouse pan in canvases.
+[TOOL OK] all four native editor workspaces loaded
+[TOOL OK] explicit terrain bake survives source save, reimport and a fresh editor process
+[TOOL OK] rectangle and bucket work through the editor controls
+[TOOL OK] pencil draws continuous stroke through canvas handlers
+[TOOL OK] eraser preserves PNG transparency
+[TOOL OK] pixel undo restores erased pixel
+[TOOL OK] pixel redo reapplies eraser
+[TOOL OK] palette substitution has non-destructive preview
+[TOOL OK] frame add/duplicate/reorder/remove produce valid timeline
+Tidesworn Studio: PNG + frame durations saved: res://assets/authored/props/editor_workflow.png
+[TOOL OK] PNG Save As clears dirty state only after successful save
+Tidesworn Studio: Registered authored/editor_workflow. Use this asset ID when placing a map object.
+
+================================================================
+handle_crash: Program crashed with signal 11
+Engine version: Godot Engine v4.7.2.stable.arch_linux (ed1daf0bf001b61586d9930840f2f1394092c079)
+Dumping the backtrace. Please include this when reporting the bug on: https://github.com/godotengine/godot/issues
+Load address: 7ff7b4e00000
+
+[TOOL OK] saved artwork registers in persistent asset catalog
+[TOOL OK] newly imported PNG is available as runtime texture
+Tidesworn Studio: Imported characters/new_character_sheet. Set provenance and a semantic override, or place it in a map.
+[1] 7ff7b4e44e70 (main+44e70) - /usr/lib/libc.so.6(+0x44e70) [0x7ff7b4e44e70]
+[2] 55a1a50793dd (godot+2eea3dd) - godot(+0x2eea3dd) [0x55a1a50793dd]
+[3] 55a1a507936c (godot+2eea36c) - godot(+0x2eea36c) [0x55a1a507936c]
+[4] 55a1a507a2f1 (godot+2eeb2f1) - godot(+0x2eeb2f1) [0x55a1a507a2f1]
+[5] 55a1a84e42a5 (godot+63552a5) - godot(+0x63552a5) [0x55a1a84e42a5]
+[6] 55a1a8e5f2b9 (godot+6cd02b9) - godot(+0x6cd02b9) [0x55a1a8e5f2b9]
+[7] 7ff7b4eac93f (main+ac93f) - /usr/lib/libc.so.6(+0xac93f) [0x7ff7b4eac93f]
+[8] 7ff7b4f4eeec (main+14eeec) - /usr/lib/libc.so.6(+0x14eeec) [0x7ff7b4f4eeec]
+-- END OF C++ BACKTRACE --
+================================================================
+/usr/bin/xvfb-run: line 180: 2680038 Aborted                    (core dumped) DISPLAY=:$SERVERNUM XAUTHORITY=$AUTHFILE "$@"

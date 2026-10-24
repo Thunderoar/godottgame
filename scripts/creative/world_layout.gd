@@ -163,10 +163,14 @@ func signature() -> int:
 		var points: Array = []
 		for point in route.get("via", PackedVector2Array()): points.append(_point_key(point))
 		geometry.append([str(route.get("id", "")), str(route.get("from", "")), str(route.get("to", "")), roundi(float(route.get("width", 1.6)) * 10000), str(route.get("material", "path")), str(route.get("role", "secondary")), points])
+		if route.has("feather"): geometry.append(["road_feather", str(route.get("id", "")), roundi(float(route.feather) * 10000)])
 	for zone in zones:
 		var points: Array = []
 		for point in zone.get("polygon", PackedVector2Array()): points.append(_point_key(point))
 		geometry.append([str(zone.get("id", "")), str(zone.get("material", "grass")), points])
+		if zone.has("feather") or zone.has("strength"):
+			var default_strength := 0.22 if zone.get("id", "") not in ["forest_interior", "market", "portal_grounds"] else 0.38
+			geometry.append(["zone_blend", str(zone.get("id", "")), roundi(float(zone.get("feather", 1.0)) * 10000), roundi(float(zone.get("strength", default_strength)) * 10000)])
 	return hash(geometry)
 
 static func _point_key(at: Vector2) -> Array:
@@ -185,6 +189,9 @@ func warnings() -> PackedStringArray:
 		if anchor(str(entry.get("owner", ""))).is_empty(): result.append(str(entry.get("id", "")) + ": unknown activity owner")
 		for point in entry.get("points", []):
 			if anchor(str(point.get("anchor", ""))).is_empty(): result.append(str(entry.get("id", "")) + ": unknown activity anchor")
+	for zone in zones:
+		var polygon: PackedVector2Array = zone.get("polygon", PackedVector2Array())
+		if polygon.size() < 3 or Geometry2D.triangulate_polygon(polygon).is_empty(): result.append(str(zone.get("id", "district")) + ": district needs a simple polygon with at least three vertices")
 	for entry in scenery:
 		var parent := str(entry.get("parent", ""))
 		if not parent.is_empty() and anchor(parent).is_empty(): result.append(str(entry.get("id", "")) + ": unknown scenery owner")
@@ -205,6 +212,7 @@ func warnings() -> PackedStringArray:
 			result.append(id + ": outside village")
 		if entry.get("destination", false) and not reached.has(id): result.append(id + ": disconnected from arrival")
 	for route in routes:
+		if route.get("from", "") == route.get("to", ""): result.append(str(route.get("id", "road")) + ": choose two different road endpoints")
 		if float(route.get("width", 0.0)) < ACTOR_CLEARANCE * 2.0:
 			result.append(str(route.get("id", "route")) + ": narrower than actor clearance")
 	result.append_array(crowded_buildings())
