@@ -1,7 +1,7 @@
 class_name RubbishPiece
 extends Node2D
 ## One piece of coastal rubbish. It either gets caught by the guard or reaches
-## the beach and becomes a monster — never both.
+## the beach and remains collectible — never both.
 
 var manager: RubbishSystem
 var guard: CoastalGuard
@@ -22,6 +22,7 @@ func setup(p_manager: RubbishSystem, p_guard: CoastalGuard, start: Vector2, p_ta
 
 
 func _ready() -> void:
+	add_to_group("floating_rubbish")
 	_sprite = Sprite2D.new()
 	_sprite.texture = PixelArt.rubbish_texture(0)
 	_sprite.scale = Vector2(0.055, 0.055)
@@ -60,7 +61,7 @@ func _reach_beach() -> void:
 	if resolved:
 		return
 	resolved = true
-	outcome = "monster"
+	outcome = "beached"
 	if manager != null:
 		manager.on_rubbish_beached(self)
 	queue_free()

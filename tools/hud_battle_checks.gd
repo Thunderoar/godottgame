@@ -5,9 +5,9 @@ static func run(game: Game, check: Callable) -> void:
 	var lobby := game.world as Lobby
 	check.call(hud._xp_bar == null and hud._pet_xp_bar == null, "XP bars removed from screen HUD")
 	check.call(hud._gold_label == null and hud._diamond_label == null and hud._identity_label == null, "balances and player identity removed from top HUD")
-	check.call(hud._health_potion_button == null and hud._mana_potion_button == null and hud._build_button == null, "potion shortcuts and screen Build button removed")
+	check.call(hud._health_potion_button == null and hud._build_button == null, "potion shortcuts and screen Build button removed")
 	check.call(hud._control_nodes.size() == 4 and hud._clock_label.is_visible_in_tree(), "only four world touch controls remain and clock is visible")
-	check.call(lobby.get_node("MonsterBattlePortal").position == lobby._layout.position_of("monster_portal") and lobby.get_node("PetBattlePortal").position == lobby._layout.position_of("pet_portal") and lobby.get_node("TwinCaveHill").position.is_equal_approx((lobby._layout.position_of("monster_portal") + lobby._layout.position_of("pet_portal")) * 0.5 + Vector2(0, 0.7)), "cave presentation follows the authored sanctuary portals")
+	check.call(lobby.get_node("MonsterBattlePortal").position == lobby._layout.position_of("monster_portal") and lobby.get_node("PetBattlePortal").position == lobby._layout.position_of("pet_portal") and lobby.get_node_or_null("TwinCaveHill") == null, "standalone portals follow the authored sanctuary positions")
 	game.open_menu()
 	await game.get_tree().process_frame
 	await game.get_tree().process_frame
@@ -18,7 +18,7 @@ static func run(game: Game, check: Callable) -> void:
 	await game.get_tree().process_frame
 	check.call(hud.shop_panel._gold_label != null, "shop still displays the player's money")
 	hud.shop_panel.close_panel()
-	check.call(GameState.item_count("health_potion") > 0 and GameState.item_count("mana_potion") > 0, "potions remain available in Pack")
+	check.call(GameState.item_count("health_potion") > 0 and not ItemDB.exists("mana_potion"), "health potions remain available in Pack; mana potions are retired")
 	var count := GameState.completed_mission_count()
 	GameState.record_mission_event("fire_kill")
 	check.call(GameState.mission_step() == 0 and GameState.completed_mission_count() == count, "day training ignores night combat events")
@@ -29,7 +29,7 @@ static func run(game: Game, check: Callable) -> void:
 	_quiet(lobby)
 	check.call(GameState.is_night() and GameState.mission_step() == 4, "night immediately selects the combat tutorial")
 	GameState.record_mission_event("fire_kill")
-	check.call(GameState.mission_step() == 8, "night tutorial advances to the cave portal")
+	check.call(GameState.mission_step() == 8, "night tutorial advances to the monster portal")
 	GameState.advance_world_clock(180)
 	check.call(GameState.mission_step() == 2, "unfinished day tutorial resumes next day")
 	while GameState.mission_step() < MissionDB.STEPS.size():

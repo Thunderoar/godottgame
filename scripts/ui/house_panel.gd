@@ -7,6 +7,7 @@ var _band: ShopScene
 var _preview_level := 1
 var _structure_id := "cottage"
 var _message := ""
+var _gun_house := "cottage"
 
 
 func _ready() -> void:
@@ -37,6 +38,7 @@ func _rebuild() -> void:
 	add_body_text("Orange builders repair damaged buildings by day. Work takes 10 seconds after arrival. Hire extra builders at the Worker Shop.", GameUI.TEAL, 15)
 	if not _message.is_empty():
 		add_body_text(_message, GameUI.GOLD, 14)
+	_add_roof_gun_shop()
 	_structure_id = "cottage"
 	content.add_child(GameUI.spacer(2))
 	var level := GameState.structure_level(_structure_id)
@@ -63,17 +65,17 @@ func _rebuild() -> void:
 	var selected := HouseDB.get_level(_preview_level)
 	previews.add_child(_preview_card(selected, "PREVIEW - LEVEL %d" % _preview_level, _preview_level, false))
 	add_body_text("%s: %s" % [selected.get("name", "Cottage"), selected.get("description", "")], GameUI.TEXT, 14)
-	add_body_text("One upgrade improves the whole village: houses, archer huts, fences and worker baseline. Extra workers can still be hired.", GameUI.MUTED, 13)
+	add_body_text("One upgrade improves the whole village: houses, purchased rooftop machine guns, fences and worker baseline. Extra workers can still be hired.", GameUI.MUTED, 13)
 	if next.is_empty():
 		add_section("THE LANTERN HOUSE IS COMPLETE", GameUI.GOLD)
-		add_body_text(("Your main house restores full health in %.0f seconds." % float(current.recovery)) if _structure_id == "cottage" else "All archer huts and stone fences are at maximum level.", GameUI.TEXT, 16)
+		add_body_text(("Your main house restores full health in %.0f seconds." % float(current.recovery)) if _structure_id == "cottage" else "All purchased rooftop machine guns and stone fences are at maximum level.", GameUI.TEXT, 16)
 		return
 	add_section("UPGRADE BENEFITS", GameUI.GOLD)
 	add_body_text(str(next.benefit), GameUI.TEXT, 15)
 	add_body_text(str(next.description), GameUI.MUTED, 13)
 	var recovery_row := HBoxContainer.new()
 	recovery_row.add_theme_constant_override("separation", 28)
-	recovery_row.add_child(GameUI.label("Home recovery" if _structure_id == "cottage" else "Archer hut", 14, GameUI.MUTED))
+	recovery_row.add_child(GameUI.label("Home recovery" if _structure_id == "cottage" else "Rooftop gun", 14, GameUI.MUTED))
 	recovery_row.add_child(GameUI.label(("%.0fs  →  %.0fs" % [float(current.recovery), float(next.recovery)]) if _structure_id == "cottage" else ("%.2fs / shot" % float(HouseDefense.INTERVALS[level])), 17, GameUI.TEAL))
 	content.add_child(recovery_row)
 	content.add_child(GameUI.divider(Color("#30474c")))
@@ -122,12 +124,12 @@ func _preview_card(data: Dictionary, tag: String, level: int, is_current: bool) 
 	var name_label := GameUI.label(str(data.get("name", "Cottage")), 17, GameUI.TEXT)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(name_label)
-	var rec := GameUI.label("Archer: %.2fs / arrow" % float(HouseDefense.INTERVALS[level - 1]), 13, GameUI.TEAL)
+	var rec := GameUI.label("Machine gun: %.2fs / shot" % float(HouseDefense.INTERVALS[level - 1]), 13, GameUI.TEAL)
 	rec.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(rec)
 	var linked := HBoxContainer.new()
 	linked.alignment = BoxContainer.ALIGNMENT_CENTER
-	for texture in [PixelArt.archer_hut_texture(level), PixelArt.fence_texture(level)]:
+	for texture in [PixelArt.roof_gun_texture(level), PixelArt.fence_texture(level)]:
 		var picture := TextureRect.new()
 		picture.texture = texture
 		picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -163,3 +165,35 @@ func _add_house_picker() -> void:
 		_message = ""
 		_rebuild())
 	content.add_child(houses)
+
+
+func _add_roof_gun_shop() -> void:
+	add_section("ROOFTOP MACHINE GUNS", GameUI.GOLD)
+	add_body_text("Buy one for each house. Guns target fire monsters and sea urchins; house upgrades improve their fire rate.", GameUI.MUTED, 13)
+	var picker := OptionButton.new()
+	picker.custom_minimum_size = Vector2(0, 42)
+	var structures: Dictionary = GameState.data.get("structures", {})
+	for id in structures:
+		var entry := GameState.structure_state(str(id))
+		if str(entry.get("kind", "")) != "house":
+			continue
+		var index := picker.item_count
+		picker.add_item("%s%s" % [entry.get("name", "House"), " - Installed" if GameState.has_roof_gun(str(id)) else ""])
+		picker.set_item_metadata(index, str(id))
+		if str(id) == _gun_house:
+			picker.select(index)
+	picker.item_selected.connect(func(index: int) -> void:
+		_gun_house = str(picker.get_item_metadata(index))
+		_rebuild())
+	content.add_child(picker)
+	var installed := GameState.has_roof_gun(_gun_house)
+	var button := GameUI.button("Machine gun installed" if installed else ("Buy rooftop machine gun - %d gold" % GameState.roof_gun_cost()), Vector2(0, 44))
+	button.disabled = installed or GameState.gold() < GameState.roof_gun_cost() or int(GameState.structure_state(_gun_house).get("health", 0)) <= 0
+	button.pressed.connect(_buy_roof_gun.bind(_gun_house))
+	content.add_child(button)
+
+func _buy_roof_gun(id: String) -> void:
+	var result := GameState.buy_roof_gun(id)
+	_message = str(result.get("message", ""))
+	Sfx.play("equip" if bool(result.get("ok", false)) else "deny", -10.0)
+	_rebuild()

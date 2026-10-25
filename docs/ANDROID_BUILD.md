@@ -53,7 +53,7 @@ Release builds need a release keystore. No keystore is committed.
 - `Game._notification` saves on pause/focus loss.
 - Ten-segment player and five-segment pet bars remain legible.
 - Player and pet XP bars remain legible beneath the currency row.
-- Floating player HP/MP bars remain legible above the player without lighting wash.
+- Floating player HP/XP bars remain legible above the player without lighting wash.
 - Mission arrows update direction and distance without obscuring touch controls.
 - Menu opens by touch; Settings GUI-scale slider and X/Y/size spin boxes are usable.
 - Custom control positions/sizes apply immediately; Reset restores defaults.

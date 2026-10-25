@@ -37,7 +37,7 @@ and writes it; visual systems call `GameSettings.effects_at_least()` /
 `GameState` owns:
 
 - selected hero, level and XP,
-- current/max health, mana and shield,
+- current/max health and shield,
 - gold and diamonds,
 - inventory and equipped slots,
 - owned/active pets, levels/XP/health and support state,
@@ -80,7 +80,7 @@ the purple mission guide and modal screens.
 
 | File | Contents |
 | --- | --- |
-| `scripts/data/character_db.gd` | Qayyim/Farhan/Ayiz stats, starter weapon, cooldown/range/style |
+| `scripts/data/character_db.gd` | Adam/Arjun/Mei Ling stats, starter weapon, cooldown/range/style |
 | `scripts/data/item_db.gd` | items, prices, stacks, effects, weapon style, shop stock |
 | `scripts/data/pet_db.gd` | healing/attack/shield values and level curves |
 | `scripts/data/pet_battle_db.gd` | five 1v1 duels, opponents, stats, pet-level gates and rewards |
@@ -91,7 +91,7 @@ the purple mission guide and modal screens.
 
 - `Player.try_attack()` reads `CharacterDB` and branches:
   - `sword` — short forward cone,
-  - `hammer` — wider, slower, higher multiplier, camera shake,
+  - `scythe` — wide reaping arcs with a higher damage multiplier,
   - `bow` — spawns `Arrow` toward the nearest target in a forward cone.
 - `GameState.equip_item()` rejects a weapon from another hero's discipline.
 - Equipment shops filter to the active hero's weapon line plus shared armour and
@@ -109,7 +109,7 @@ the purple mission guide and modal screens.
 
 - `buy_item()` validates stock, price, style, balance and stack, then debits once.
 - `sell_item()` validates saleability and quantity.
-- `consume_item()` validates full health/mana and available items.
+- `consume_item()` validates full health and available items.
 - `equip_item()` validates ownership, slot and weapon discipline.
 - `upgrade_house()` accepts diamonds only. Bram's dedicated Construction Shop
   (`shop_house`) is a normal settlement placeable and opens the five-level panel.
@@ -177,13 +177,13 @@ over their respective heads and use `GameState.data.xp_next` and
 - `RubbishSystem` spawns `RubbishPiece` nodes in four water lanes.
 - Each piece tracks `resolved` and has exactly two terminal paths:
   - `_caught()` → `register_rubbish_cleaned()` → +1 Gold and +1 sea-cleaned;
-  - `_reach_beach()` → spawn one `Enemy(kind="rubbish")`.
-- `Enemy` grants rubbish-monster gold directly on death and does not spawn a
-  second pickup.
+  - `_reach_beach()` → create a manual `BeachRubbish` pickup, with no arrival reward.
+- `BeachRubbish` validates distance, the active player and input state; its resolved
+  guard awards exactly one cleanup Gold through GameState and plays a net animation.
 - The guard is a `CoastalGuard` interaction point at the jetty. No catch toast is
   created; the persistent counter and Gold total carry the result. Talking to the
   guard opens `SeaCleaningPanel` with total catches, current gold and the safe
-  catch/dangerous beaching rules.
+  catch/manual beach-collection rules.
 
 ## Residential life, editing and emergencies
 
@@ -213,11 +213,11 @@ over their respective heads and use `GameState.data.xp_next` and
   When no mature trees or planted saplings remain, `Lobby` triggers game over.
   A four-second devastation sequence grades the terrain orange, fades in a
   dark green sea and stranded dead fish/crabs, then shows the locked panel.
-- `Lobby` spawns 24 fire monsters, with a raid cap of 30. They only attack mature
-  trees and never target or damage players. They remain active after sunrise;
+- `Lobby` spawns 24 fire monsters, with a raid cap of 30. They attack mature
+  trees, nearby players and exposed residents. They remain active after sunrise;
   each night replenishes living fire monsters to 24 and sea urchins to 6. Dawn only changes lighting and never removes or disables surviving enemies.
-- Sea rubbish and emergency waves spawn `urchin` enemies. They choose trees,
-  fences, houses or exposed residents, and follow obstacle-aware village routes.
+- Night populations and emergency waves spawn `urchin` enemies. They choose players,
+  trees, fences, houses or exposed residents, and follow obstacle-aware village routes.
   Their tree damage does not ignite fires. Kill rewards never duplicate catches.
 - Houses and fences register stable structure IDs in GameState. `SettlementTarget`
   applies per-structure HP, collapse, collision release and restoration. Residents
@@ -258,7 +258,7 @@ over their respective heads and use `GameState.data.xp_next` and
 - `MissionPath` draws dashed arrows along routes around world collision. Lobby
   shares its resident route planner; Dungeon has a separate planner. The old HUD
   arrow strip is no longer constructed; compatibility methods remain inert.
-- `PlayerVitalHud` is a child of `Player` with `light_mask = 0`; it draws HP, MP, XP and level above the player’s head. `WorldHealthBar` draws pet HP/XP and boss HP. The top HUD contains the clock and Menu; shops own currency readouts. Pack contains potion controls.
+- `PlayerVitalHud` is a child of `Player` with `light_mask = 0`; it draws HP, XP and level above the player’s head. `WorldHealthBar` draws pet HP/XP and boss HP. The top HUD contains the clock and Menu; shops own currency readouts. Pack contains potion controls.
 - `GameHUD.MenuButton` emits `menu_requested`. `MenuPanel` opens Settings, toggles Build settlement / Finish building, or returns to title. No separate Build or potion touch buttons are constructed.
 - `SettingsPanel` controls device-level `GameSettings.ui_scale` and `camera_zoom`,
   and per-save `GameState.settings.control_layout`. GameState's GUI methods are
@@ -402,7 +402,7 @@ PetBattleDB assigns a separate installed background resource to each duel. All f
 
 GameState owns worker_counts, resident health, the central house level and repair_remaining. Resident.worker_role selects builder, water, planter or fighter AI. Builders claim a SettlementTarget.builder, navigate to the structure and spend ten seconds repairing during daylight. Blue workers water burning trees or launch VillageBolt water projectiles at fire monsters; green workers alone plant trees; black workers engage sea urchins with a sword. Ordinary residents retain their shelter/routine behavior. New journeys start with one specialist per role. worker_count() is the greater of purchased ownership and main-house level, within role limits; upgrading raises the baseline while hiring can add further workers.
 
-Every house has a HouseDefense archer hut with an NPC/bow sprite. Its central-house tier selects range, arrow damage and intervals (2.1/1.7/1.3/1.0/0.7 seconds). VillageBolt.arrow draws a directional arrow. structure_level() returns the central house tier for all structures; upgrades synchronize stored tiers and raise the worker baseline. Existing worker purchases and deaths remain saved. HousePanel previews the house, hut, fence and worker baseline before charging once for the next main-house level. SettlementTarget refreshes fence sprites from the cached five-tier PixelArt.fence_texture(level). Ruins retain independent health/repairs.
+Every house owns a dormant HouseDefense mount. GameState.buy_roof_gun() purchases one rooftop machine gun per intact house, recording its stable structure ID in roof_guns. House level selects range, damage and intervals (0.6/0.5/0.4/0.3/0.2 seconds). VillageBolt draws yellow bullets. Ruined houses disable firing until repaired. The Construction Shop provides a house selector and a Gold purchase action; diamond upgrades still synchronize the village tier and specialist worker baseline.
 
 HomeEntrance handles direct input on the central house. Game.enter_home keeps Lobby alive while adding HomeInterior outside the outdoor map, moves player and pet inside and fits the camera to the room. HomeInterior applies HouseDB recovery and offers an exit; no HouseBed is constructed. Cached PixelArt sprites furnish a chest, wardrobe, weapon rack and pet bed. Leaving restores outdoor positions and camera preferences.
 
@@ -417,3 +417,13 @@ Dungeon.alert_intruders sets persistent enemy chase flags. Regular monsters star
 LoadingScreen is a CanvasLayer above title and HUD. Game awaits its opaque cover before world/home rebuilds, locks both current and newly created players, then fades it away before releasing input. Continue activates unfinished tutorials across both phases. ModalBase owns a short cancellable entry fade; PetBattlePanel reuses it when entering its arena.
 
 FieldGuideDB supplies NPC, monster and ten boss entries. FieldGuidePanel, reached through Menu, pages through GuideIllustration drawings. The storyboard uses sprites and pictograms rather than prose: actor on the left, two action/result rows on paper on the right. It uses the normal modal input-lock and close paths and fits small landscape viewports.
+
+## Turtle ocean journey and visibility
+
+ShipDeparture is an Interactable at the walkable jetty deck, referencing the existing MooredShip sprite. Game.board_ship guards distance, current world, recovery, modals, emergencies and duplicate departures. Sailing owns the ship/passenger motion, pauses the optional boat bob, locks/releases normal input and triggers Game.enter_ocean at the map boundary. Game creates OceanJourney under WorldHolder through the same covered transition flow; no scene switching or autoload was added. World clearing resets the portal/emergency timers.
+
+OceanJourney is a temporary world with a real Player, a dedicated active Camera2D, original cached CoastalArt turtle/food pixels and a separate anchored HUD. Its phases are DIVE, RESCUE, RUNNING and FINISHED. It owns transient turtle health, elapsed time, item dictionaries and score; only earned cleanup Gold crosses into GameState via register_rubbish_cleaned. It shares ocean_pickup/ocean_eat InputMap actions between touch and keyboard. Player movement stays automatic and the normal combat HUD stays hidden. Returning uses Game._load_lobby and ShipDeparture.begin_return. The yellow UNISZA ship approaches its harbour-relative mooring carrying the locked player, then disembarks onto the resolved jetty deck. ShipDeparture restores passenger collision after landing; finish_ship_return then restores HUD and controls. Occupied ships stay opaque in WorldOcclusion. The passenger stands inside the deck to the right of the mast; ShipDeparture redraws the near hull above the rider so the legs remain behind the ship side, then removes that foreground layer after disembarking. Ordinary scenery fading resumes after disembarking. The owned ambient tween resumes according to current presentation settings. Existing saved progression remains unchanged.
+
+WorldOcclusion caches eligible tall sprites after world construction, tests player head/body overlap against opaque sprite pixels, and changes self_modulate alpha only. Parent damage tints, light modulation, selection and physics remain owned by their original systems. NorthernBoundary owns only the full-width north cliff. The cave art and collider are removed; PortalEntrance uses its normal standalone frame and swirl. Forest identities and creation RNG are untouched.
+
+Fire-combat audio: Enemy.combat_sounds_enabled() disables fire-monster cues and is shared by player melee impacts and rooftop gun shots. Enemy-owned SFX pass through _play_combat_sound. ForestTree permits physical impact audio only when not burning; fire hits and burn ticks are silent. These gates do not change combat state, damage, timing or presentation effects.

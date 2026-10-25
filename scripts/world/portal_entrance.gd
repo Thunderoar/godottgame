@@ -67,7 +67,7 @@ func _build_visuals(palette: Dictionary, shown_title: String, is_pet: bool) -> v
 	_swirl.texture = PixelArt.portal_swirl_texture(_theme, 0)
 	_swirl.centered = false
 	_swirl.offset = Vector2(-24, -92)
-	_swirl.scale = Vector2(PixelArt.PX, PixelArt.PX)
+	_swirl.scale = Vector2.ONE * PixelArt.PX
 	_swirl.position = Vector2(0, 0.02)
 	_swirl.z_index = 6
 	add_child(_swirl)
@@ -78,7 +78,7 @@ func _build_visuals(palette: Dictionary, shown_title: String, is_pet: bool) -> v
 	_frame.texture = PixelArt.portal_frame_texture(_theme, false)
 	_frame.centered = false
 	_frame.offset = Vector2(-40, -112)
-	_frame.scale = Vector2(PixelArt.PX, PixelArt.PX)
+	_frame.scale = Vector2.ONE * PixelArt.PX
 	_frame.z_index = 7
 	add_child(_frame)
 

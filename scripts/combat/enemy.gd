@@ -16,6 +16,8 @@ extends CharacterBody2D
 signal boss_started(enemy: Enemy)
 signal boss_finished(enemy: Enemy)
 
+const VILLAGE_ACTOR_RANGE := 6.0
+
 enum State { SPAWN, WANDER, ALERT, CHASE, WINDUP, ATTACK, RECOVER, STAGGER, DEAD }
 
 @export var kind := "bogling"
@@ -97,7 +99,8 @@ func _ready() -> void:
 	collision_layer = 4
 	collision_mask = 1
 	hp = max_hp
-	_player = get_tree().get_first_node_in_group("player")
+	var game := get_tree().get_first_node_in_group("game") as Game
+	_player = game.player() if is_instance_valid(game) else null
 	_personality = _personality_for(kind)
 	_build()
 	# A short spawn-in shimmer so monsters do not pop into the dark.
@@ -208,10 +211,11 @@ func _physics_process(delta: float) -> void:
 		move_and_slide()
 		return
 
-	if not is_instance_valid(_player):
-		_player = get_tree().get_first_node_in_group("player")
+	if not is_instance_valid(_player) or _player.get_parent() != get_parent():
+		var game := get_tree().get_first_node_in_group("game") as Game
+		_player = game.player() if is_instance_valid(game) else null
 	if kind == "fire":
-		_target = _nearest_forest_tree()
+		_target = _choose_village_actor(_nearest_forest_tree())
 		if is_instance_valid(_target) and _state == State.WANDER:
 			_enter(State.CHASE)
 	elif kind == "urchin":
@@ -257,6 +261,15 @@ func _physics_process(delta: float) -> void:
 	queue_redraw()
 
 
+func combat_sounds_enabled() -> bool:
+	return kind != "fire"
+
+
+func _play_combat_sound(sound: String, volume_db: float) -> void:
+	if combat_sounds_enabled():
+		Sfx.play(sound, volume_db)
+
+
 # ------------------------------------------------------------------ states
 
 func _enter(next: State) -> void:
@@ -279,7 +292,7 @@ func _enter(next: State) -> void:
 				var tween := create_tween()
 				tween.tween_property(sprite, "position", Vector2(back.x, -float(64 if is_boss else 32) * 0.5 * PixelArt.PX + back.y), 0.18)
 				tween.parallel().tween_property(sprite, "scale", Vector2(PixelArt.PX * 1.12, PixelArt.PX * 0.94), 0.2)
-			Sfx.play("aggro", -14.0)
+			_play_combat_sound("aggro", -14.0)
 		State.ATTACK:
 			_state_time = 0.14
 		State.RECOVER:
@@ -329,6 +342,9 @@ func _chase(delta: float) -> void:
 		active = false
 		_enter(State.WANDER)
 		return
+	if is_boss and _boss_notified and _special_timer <= 0.0:
+		_special_timer = special_cooldown
+		_cast_special()
 	var stop := body_radius + 0.55
 	if distance <= stop:
 		velocity = Vector2.ZERO
@@ -354,9 +370,7 @@ func _chase(delta: float) -> void:
 			_enter(State.WINDUP)
 	if is_boss and _boss_notified:
 		GameState.boss_health_changed.emit(true, _boss_name(), hp, max_hp)
-		if _special_timer <= 0.0:
-			_special_timer = special_cooldown
-			_cast_special()
+
 
 
 func _aggro_range() -> float:
@@ -380,9 +394,6 @@ func _windup(delta: float) -> void:
 
 
 func _attack_active(_delta: float) -> void:
-	if kind == "fire" and not (_target is ForestTree):
-		_hit_dealt = true
-		return
 	# Damage lands once, on the first active frame.
 	if not _hit_dealt:
 		_hit_dealt = true
@@ -463,7 +474,7 @@ func _show_alert() -> void:
 	_alert_icon.z_index = 702
 	add_child(_alert_icon)
 	_alert_time = 0.6
-	Sfx.play("aggro", -12.0)
+	_play_combat_sound("aggro", -12.0)
 
 
 # ------------------------------------------------------------------ boss specials
@@ -489,6 +500,10 @@ func _cast_special() -> void:
 
 
 func _punch() -> void:
+	Vfx.ring(global_position, 3.8, Color("#ff8b5f"), 0.45)
+	await get_tree().create_timer(0.45).timeout
+	if dead or not is_inside_tree():
+		return
 	if _target == null or not is_instance_valid(_target):
 		return
 	var distance := global_position.distance_to(_target.global_position)
@@ -513,7 +528,7 @@ func _area_slam() -> void:
 			_target.call("take_damage", special_damage, origin)
 	Vfx.ring(origin, 4.2, Color("#ff9f78"), 0.45)
 	Vfx.dust(origin, 4)
-	Sfx.play("hit", -10.0)
+	_play_combat_sound("hit", -10.0)
 
 
 func _fire_projectile() -> void:
@@ -522,7 +537,7 @@ func _fire_projectile() -> void:
 	var orb := BossProjectile.new()
 	orb.direction = (_player.global_position - global_position).normalized()
 	orb.damage = projectile_damage
-	orb.tint = Color("#b57ce8") if boss_ability != "storm" else Color("#8fe8ff")
+	orb.tint = Color("#8fe8ff") if kind == "storm_hermit" else Color("#b57ce8")
 	orb.global_position = global_position + Vector2(0, -1.2)
 	get_parent().add_child(orb)
 	orb.global_position = global_position + Vector2(0, -1.2)
@@ -537,7 +552,7 @@ func _begin_charge() -> void:
 	_charge_hit = false
 	_charge_dir = (_target.global_position - global_position).normalized()
 	Vfx.ring(global_position + Vector2(0, -0.4), 1.6, Color("#f5c96b"), 0.4)
-	Sfx.play("charge", -6.0)
+	_play_combat_sound("charge", -6.0)
 
 
 func _process_charge(delta: float) -> void:
@@ -572,7 +587,7 @@ func _notify_boss_start() -> void:
 func _update_forest_target() -> void:
 	if kind == "fire":
 		_saw_player = false
-		_target = _nearest_forest_tree()
+		_target = _choose_village_actor(_nearest_forest_tree())
 		return
 	if not is_instance_valid(_player):
 		_target = _nearest_forest_tree()
@@ -582,7 +597,7 @@ func _update_forest_target() -> void:
 		if not _saw_player:
 			_saw_player = true
 			_target = _player
-			Sfx.play("aggro", -5.0)
+			_play_combat_sound("aggro", -5.0)
 			_begin_charge()
 		else:
 			_target = _player
@@ -595,7 +610,9 @@ func _update_forest_target() -> void:
 
 
 func _can_see_player() -> bool:
-	if kind in ["fire", "urchin"]:
+	var game := get_tree().get_first_node_in_group("game") as Game
+	_player = game.player() if is_instance_valid(game) else null
+	if is_instance_valid(_player) and _player.get_parent() != get_parent():
 		return false
 	if not is_instance_valid(_player) or not is_inside_tree():
 		return false
@@ -669,7 +686,31 @@ func _choose_urchin_target() -> Node2D:
 		if distance < best_distance:
 			best = node
 			best_distance = distance
+	return _choose_village_actor(best)
+
+
+func _choose_village_actor(fallback: Node2D) -> Node2D:
+	var best := fallback
+	var distance := minf(VILLAGE_ACTOR_RANGE, global_position.distance_to(_attack_point(fallback))) if is_instance_valid(fallback) else VILLAGE_ACTOR_RANGE
+	var game := get_tree().get_first_node_in_group("game") as Game
+	var current := game.player() if is_instance_valid(game) else null
+	if is_instance_valid(current) and current.get_parent() == get_parent() and not current.dead and not current.sleeping:
+		var d := global_position.distance_to(current.global_position)
+		if d < distance:
+			best = current
+			distance = d
+	for resident in get_tree().get_nodes_in_group("residents"):
+		if not is_instance_valid(resident) or resident.is_queued_for_deletion() or resident.get_parent() != get_parent() or resident.dead or resident.sheltered:
+			continue
+		var d := global_position.distance_to(resident.global_position)
+		if d < distance:
+			best = resident
+			distance = d
 	return best
+
+
+func _attack_point(target: Node2D) -> Vector2:
+	return target.attack_position(global_position) if target is SettlementTarget else target.global_position
 
 
 func _choose_settlement_target() -> Node2D:
@@ -765,7 +806,7 @@ func _die() -> void:
 			death_color = Color("#b0c48a")
 	Vfx.burst(global_position + Vector2(0, -0.5), death_color, 9)
 	Vfx.ring(global_position + Vector2(0, -0.4), 1.1, death_color, 0.35)
-	Sfx.play("hit", -8.0)
+	_play_combat_sound("hit", -8.0)
 	if is_boss:
 		GameState.boss_health_changed.emit(false, _boss_name(), 0, max_hp)
 		boss_finished.emit(self)

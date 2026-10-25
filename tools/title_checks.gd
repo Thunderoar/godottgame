@@ -21,14 +21,14 @@ static func run(game: Game, check: Callable) -> void:
 	title._back_button.pressed.emit()
 	check.call(title.current_page == TitleScreen.Page.HOME, "Back returns from selection to the main menu")
 	title._start_button.pressed.emit()
-	check.call(title.selected_character_id == "ayiz", "Back preserves the pending hero choice")
+	check.call(title.selected_character_id == "mei_ling", "Back preserves the pending hero choice")
 	title._open_credits()
 	check.call(title._overlay.visible and title._start_button.focus_mode == Control.FOCUS_NONE, "title overlays isolate keyboard focus from the page")
 	title._close_overlay()
 	check.call(not title._overlay.visible and title._start_button.focus_mode == Control.FOCUS_ALL, "closing an overlay restores page keyboard focus")
 	# Use a second title instance to exercise saved-journey confirmation and
 	# signal guards without starting another world in the acceptance game.
-	GameState.new_game("farhan")
+	GameState.new_game("arjun")
 	var saved_text := FileAccess.get_file_as_string(GameState.SAVE_PATH)
 	var saved_serial := GameState.journey_serial
 	var saved := TitleScreen.new()
@@ -40,7 +40,7 @@ static func run(game: Game, check: Callable) -> void:
 	var selected: Array[String] = []
 	saved.continue_requested.connect(func() -> void: continued.append(true))
 	saved.character_selected.connect(func(id: String) -> void: selected.append(id))
-	check.call(not saved._continue_button.disabled and saved._save_summary.text.contains("Farhan"), "saved journey summary identifies the existing hero")
+	check.call(not saved._continue_button.disabled and saved._save_summary.text.contains("Arjun"), "saved journey summary identifies the existing hero")
 	saved._start_button.pressed.emit()
 	saved._card_buttons[2].pressed.emit()
 	saved._begin_button.pressed.emit()
@@ -69,10 +69,10 @@ static func run(game: Game, check: Callable) -> void:
 	var replace := saved._overlay_actions.get_child(1) as Button
 	replace.pressed.emit()
 	replace.pressed.emit()
-	check.call(selected == ["ayiz"], "replacement confirms exactly one selected-hero handoff")
+	check.call(selected == ["mei_ling"], "replacement confirms exactly one selected-hero handoff")
 	saved.queue_free()
 	await game.get_tree().process_frame
 	GameState.delete_save()
 	title.show()
-	title._select_character("qayyim")
+	title._select_character("adam")
 	title._show_page(TitleScreen.Page.HEROES, false)

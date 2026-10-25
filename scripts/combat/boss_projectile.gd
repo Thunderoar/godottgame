@@ -34,10 +34,16 @@ func _physics_process(delta: float) -> void:
 	if life <= 0.0:
 		queue_free()
 		return
+	var previous := global_position
 	global_position += direction * speed * delta
+	var ray := PhysicsRayQueryParameters2D.create(previous, global_position, 1)
+	if not get_world_2d().direct_space_state.intersect_ray(ray).is_empty():
+		_burst()
+		return
 	if _sprite:
 		_sprite.rotation += delta * 3.0
-	var player := get_tree().get_first_node_in_group("player")
+	var game := get_tree().get_first_node_in_group("game") as Game
+	var player: Player = game.player() if is_instance_valid(game) else null
 	if player != null and is_instance_valid(player):
 		if global_position.distance_to(player.global_position + Vector2(0, -0.6)) <= 0.7:
 			if player.has_method("take_damage"):

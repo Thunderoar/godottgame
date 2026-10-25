@@ -10,9 +10,16 @@ const PLAYER_POOL := 8
 var _cache: Dictionary = {}
 var _players: Array[AudioStreamPlayer] = []
 var _next_player := 0
+var _music: AudioStreamPlayer
+var _music_cache: Dictionary = {}
+var battle_track := ""
 
 
 func _ready() -> void:
+	_music = AudioStreamPlayer.new()
+	_music.name = "BattleMusic"
+	_music.volume_db = -18.0
+	add_child(_music)
 	for i in PLAYER_POOL:
 		var player := AudioStreamPlayer.new()
 		player.bus = "Master"
@@ -27,6 +34,8 @@ func _exit_tree() -> void:
 			player.stop()
 			player.stream = null
 	_players.clear()
+	stop_battle_music()
+	_music_cache.clear()
 	_cache.clear()
 
 
@@ -168,4 +177,51 @@ func _build_stream(kind: String) -> AudioStreamWAV:
 	stream.mix_rate = MIX_RATE
 	stream.stereo = false
 	stream.data = bytes
+	return stream
+
+
+func start_battle_music(track: String) -> void:
+	if battle_track == track and _music.playing:
+		return
+	battle_track = track
+	var variant := posmod(track.hash(), 4)
+	if not _music_cache.has(variant):
+		_music_cache[variant] = _build_battle_track(variant)
+	_music.stream = _music_cache[variant]
+	_music.play()
+
+
+func stop_battle_music() -> void:
+	battle_track = ""
+	if is_instance_valid(_music):
+		_music.stop()
+
+
+func _build_battle_track(variant: int) -> AudioStreamWAV:
+	# Original eight-second chiptune: minor arpeggio, bass and percussion.
+	const DURATION := 8.0
+	var count := int(MIX_RATE * DURATION)
+	var bytes := PackedByteArray()
+	bytes.resize(count * 2)
+	var notes := [0, 3, 7, 10, 7, 3, 5, 2, 0, 7, 12, 10, 7, 5, 3, 2]
+	var root := 110.0 * pow(2.0, variant / 12.0)
+	for index in count:
+		var time := float(index) / MIX_RATE
+		var step := int(time * 4) % notes.size()
+		var beat := fmod(time, 0.25)
+		var frequency := root * pow(2.0, float(notes[step]) / 12.0)
+		var lead := sin(TAU * frequency * 2 * time) * exp(-beat * 13) * 0.22
+		var bass := sin(TAU * root * 0.5 * time) * (0.7 + 0.3 * cos(TAU * time * 2)) * 0.19
+		var kick_time := fmod(time, 0.5)
+		var kick := sin(TAU * (58 * kick_time + 5 * (1 - exp(-kick_time * 28)))) * exp(-kick_time * 23) * 0.28
+		var hat := sin(TAU * 5300 * time) * sin(TAU * 7210 * time) * exp(-beat * 65) * 0.07
+		var value := int(clampf(lead + bass + kick + hat, -1, 1) * 32767)
+		bytes.encode_s16(index * 2, value)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = MIX_RATE
+	stream.data = bytes
+	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	stream.loop_begin = 0
+	stream.loop_end = count
 	return stream

@@ -12,16 +12,16 @@ const CREAM := Color("#f4ebd8")
 const GOLD := Color("#e4bc78")
 const MUTED := Color("#a5b8b6")
 const BORDER := Color("#49616a")
-const HERO_ROLES := {"qayyim": "BALANCED", "farhan": "HEAVY HITTER", "ayiz": "RANGED"}
+const HERO_ROLES := {"adam": "BALANCED", "arjun": "HEAVY HITTER", "mei_ling": "RANGED"}
 const HERO_TACTICS := {
-	"qayyim": "Quick sword strikes. Stay close and keep moving.",
-	"farhan": "Crushing hammer swings. Trade speed for staying power.",
-	"ayiz": "Long-range arrows. Keep your distance and pick your shot.",
+	"adam": "Quick sword strikes. Stay close and keep moving.",
+	"arjun": "Wide scythe sweeps. Strike nearby enemies with heavy, sweeping attacks.",
+	"mei_ling": "Long-range arrows. Keep your distance and pick your shot.",
 }
 
 var save_available := false
 var current_page: Page = Page.HOME
-var selected_character_id := "qayyim"
+var selected_character_id := "adam"
 var _departing := false
 var _margin: MarginContainer
 var _home: HBoxContainer
@@ -205,7 +205,7 @@ func _build_heroes(parent: Control) -> void:
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_hero_summary = _paragraph("", 18, CREAM)
 	info.add_child(_hero_summary)
-	info.add_child(_paragraph("A new beginning in Kampung Besut, with Ember by your side.", 13, MUTED))
+	info.add_child(_paragraph("A new beginning in Besut Village, with Ember by your side.", 13, MUTED))
 	row.add_child(info)
 	_begin_button = _button("Begin Journey   →", _request_begin, true)
 	_begin_button.name = "BeginJourney"
@@ -243,7 +243,7 @@ func _character_card(character: Dictionary, index: int) -> Button:
 	var hero_name := _label(str(character.get("name", "Hero")), 28, CREAM)
 	box.add_child(hero_name)
 	_card_names.append(hero_name)
-	box.add_child(_label("%s  ·  %s" % [str(character.get("title", "")), str(character.get("weapon", ""))], 14, GOLD))
+	box.add_child(_label("%s  ·  %s" % [str(character.get("heritage", "")), str(character.get("weapon", ""))], 14, GOLD))
 	var desc := _paragraph(str(HERO_TACTICS.get(id, "")), 15, MUTED)
 	desc.custom_minimum_size.y = 48
 	box.add_child(desc)
@@ -251,7 +251,7 @@ func _character_card(character: Dictionary, index: int) -> Button:
 	var divider := GameUI.divider(Color(0.65, 0.74, 0.70, 0.20))
 	box.add_child(divider)
 	_card_details.append(divider)
-	box.add_child(_label("%d HP    %d MP    %.1f SPD" % [int(character.get("hp", 0)), int(character.get("mana", 0)), float(character.get("speed", 0))], 13, CREAM))
+	box.add_child(_label("%d HP    %.1f SPD" % [int(character.get("hp", 0)), float(character.get("speed", 0))], 13, CREAM))
 	var status := _label("SELECT HERO", 12, MUTED)
 	status.custom_minimum_size.y = 16
 	status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -347,8 +347,8 @@ func show_continue_error() -> void:
 func _saved_journey_text() -> String:
 	if GameState.data.is_empty():
 		return "Saved journey  ·  Details unavailable"
-	var character := CharacterDB.get_character(str(GameState.data.get("character_id", "qayyim")))
-	var place := "Kampung Besut"
+	var character := CharacterDB.get_character(str(GameState.data.get("character_id", "adam")))
+	var place := "Besut Village"
 	if GameState.expedition_active():
 		place = str(PortalDB.get_portal(GameState.expedition_portal()).get("name", "Expedition"))
 	return "%s  ·  Level %d  ·  %s" % [str(character.get("name", "Hero")), int(GameState.data.get("level", 1)), place]
@@ -463,7 +463,7 @@ func _open_guide() -> void:
 	for entry in [
 		["01  /  MAKE YOURSELF AT HOME", "Follow the purple question mark for your first village tasks. Meet the residents, gather supplies and build your home."],
 		["02  /  PREPARE FOR THE NIGHT", "Protect the forest and the people who live here. Visit the shops, train your companion and venture through the portals when you're ready."],
-		["03  /  FIND YOUR FOOTING", "WASD / Arrows  ·  Move\nF  ·  Attack     E  ·  Interact     B  ·  Build\nTouch  ·  Left joystick to move; right-side actions to fight and interact."],
+		["03  /  FIND YOUR FOOTING", "WASD / Arrows  ·  Move\nF  ·  Attack     1 / 2 / 3  ·  Skills (3s / 6s / 9s)\nE  ·  Interact     Menu  ·  Build\nTouch  ·  Left joystick to move; right-side actions to fight and interact."],
 	]:
 		_overlay_body.add_child(_paragraph(str(entry[0]), 13, GOLD))
 		_overlay_body.add_child(_paragraph(str(entry[1]), 17, CREAM))

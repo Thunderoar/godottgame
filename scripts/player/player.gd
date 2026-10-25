@@ -91,7 +91,7 @@ func _build_visual() -> void:
 
 	_visual = PlayerSprite.new()
 	_visual.name = "Sprite"
-	_visual.character_id = str(GameState.data.get("character_id", "qayyim"))
+	_visual.character_id = str(GameState.data.get("character_id", "adam"))
 	_visual.base_scale = Vector2(PixelArt.PX, PixelArt.PX)
 	_visual.scale = Vector2(PixelArt.PX, PixelArt.PX)
 	_visual.offset = Vector2(0, -24)
@@ -276,6 +276,7 @@ func _apply_melee_hit(character: Dictionary, step: Dictionary) -> void:
 	var attack_range := float(character.get("attack_range", 2.05))
 	var multiplier := float(character.get("attack_mult", 1.0))
 	var hit_any := false
+	var audible_hit := false
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
 			continue
@@ -289,9 +290,12 @@ func _apply_melee_hit(character: Dictionary, step: Dictionary) -> void:
 		var damage := int(round(float(GameState.attack_power()) * multiplier))
 		enemy.call("take_damage", damage, to_enemy.normalized(), self)
 		hit_any = true
+		if not enemy.has_method("combat_sounds_enabled") or bool(enemy.call("combat_sounds_enabled")):
+			audible_hit = true
 	var shake := float(_chain.get("shake", 0.07))
 	if hit_any:
-		Sfx.play("hit", -9.0)
+		if audible_hit:
+			Sfx.play("hit", -9.0)
 		get_tree().call_group("camera", "shake", shake, float(_chain.get("shake_time", 0.12)))
 		if bool(step.get("shockwave", false)):
 			# Hammer ground impact: expanding ring + dust + rubble.
@@ -481,3 +485,18 @@ func cooldown_fraction() -> float:
 	if _attack_timer <= 0.0:
 		return 0.0
 	return clampf(_attack_timer / _attack_total, 0.0, 1.0)
+
+
+func play_pickup(reach: float = 1.3) -> void:
+	var net := Sprite2D.new()
+	net.texture = PixelArt.net_texture()
+	net.scale = Vector2.ONE * PixelArt.PX * 2.1
+	net.position = Vector2(0.5, -0.7)
+	net.z_index = 12
+	add_child(net)
+	var tween := net.create_tween()
+	tween.tween_property(net, "rotation", -0.9, 0.16)
+	tween.parallel().tween_property(net, "position", Vector2(reach, -0.2), 0.16)
+	tween.tween_property(net, "position", Vector2(0.2, -1), 0.18)
+	tween.parallel().tween_property(net, "modulate:a", 0.0, 0.18)
+	tween.tween_callback(net.queue_free)

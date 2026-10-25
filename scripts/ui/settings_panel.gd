@@ -5,7 +5,7 @@ extends ModalBase
 
 const CONTROL_ROWS := [
 	["joystick", "Joystick"],
-	["attack", "Strike"],
+	["attack", "Basic Attack"],
 	["interact", "Use"],
 	["inventory", "Pack"],
 ]

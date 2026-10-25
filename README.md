@@ -25,7 +25,7 @@ static artwork. [Art direction](docs/ART_DIRECTION.md),
 
 1. Open `project.godot` in **Godot 4.7.2**.
 2. Press **F5**. The main scene is `res://scenes/game.tscn`.
-3. Click **Start Game**, select Qayyim, Farhan or Ayiz in **Choose Your Road**,
+3. Click **Start Game**, select Adam, Arjun or Mei Ling in **Choose Your Road**,
    then click **Begin Journey**. **Continue Journey** resumes your saved hero
    directly. Starting over asks before replacing existing progress.
 
@@ -37,13 +37,13 @@ notes are in [`docs/LEGACY_CONVERSION.md`](docs/LEGACY_CONVERSION.md).
 | Action | Keyboard | Touch |
 | --- | --- | --- |
 | Move | WASD / Arrow keys | Bottom-left joystick |
-| Attack | F | Bottom-right **Strike** |
+| Basic attack | F | Large **Attack** button |
 | Interact / enter home / gather | E | Bottom-right **Use** |
 | Backpack / potions | I | **Pack** beside joystick |
 | Settlement editor | B | Menu → **Build settlement** / **Finish building** |
 | Close modal | Esc | **Close** |
 
-Pack sits beside the movement joystick; Build is inside Menu. HP and mana potions are used from Pack. There is no minimap and no collect button: loot is collected
+Pack sits beside the movement joystick; Build is inside Menu. Health potions are used from Pack. There is no minimap and no collect button: loot is collected
 automatically by touch. Floating NPC name labels and timed pop-up notifications
 have been removed; persistent HUD panels and the purple mission guide carry that information.
 
@@ -55,12 +55,11 @@ New games teach seven daytime lessons (movement, gathering, shopping, Pack, work
 
 ## Characters and combat
 
-- **Qayyim** — sword; quick forward arc.
-- **Farhan** — blacksmith's hammer; slower wide hits, higher damage and camera
-  shake.
-- **Ayiz** — bow; fires arrows at the nearest enemy in front of him.
+- **Adam** — Malay swordsman with swift sword strikes.
+- **Arjun** — Indian scythe wielder with wide melee sweeps.
+- **Mei Ling** — Chinese female archer with precise ranged shots.
 
-Each starts with their own weapon. The equipment shop filters to the active
+Each starts with their own weapon and uses basic attacks only. Player skills and mana have been removed. The equipment shop filters to the active
 hero's weapon discipline while sharing armour and shields.
 
 ## Settlement systems
@@ -92,14 +91,14 @@ the Shore Gate spawns sea urchins, residents seek intact houses for shelter,
 and buildings and resident cottages take
 visible damage. The **73 forest trees have persistent HP**: forest monsters
 ignite mature trees with visible flames and ongoing fire damage. Damaged trees
-show an HP bar and disappear at zero health. One blue-clothed water keeper starts in the village. They attack fire monsters with water and heal burning trees by 5 HP every 1.25 seconds. Green planters handle replanting. The Worker Shop hires extra specialists or replaces fallen workers. Fire monsters only attack mature trees, never players.
+show an HP bar and disappear at zero health. One blue-clothed water keeper starts in the village. They attack fire monsters with water and heal burning trees by 5 HP every 1.25 seconds. Green planters handle replanting. The Worker Shop hires extra specialists or replaces fallen workers. Fire monsters attack mature trees, nearby players and exposed residents.
 Saplings grow for 30 seconds and cannot be attacked until mature. Losing all
 mature trees with no planted saplings triggers a dry-orange terrain animation,
 dark green sea and stranded dead sea life before the locked game-over screen.
 Night replenishes the woodland to twenty-four fire monsters and the beach to six sea urchins. Raids can raise the fire population to thirty. Existing survivors remain active throughout the day.
 
-Beached sea rubbish becomes sea urchins, which attack trees, fences, houses and
-exposed residents. Houses and fence runs have persistent individual HP. During
+Sea urchins attack players, mature trees, fences, houses and exposed residents.
+Beached rubbish stays on the sand for manual collection. Houses and fence runs have persistent individual HP. During
 danger, residents walk into an intact house and become protected; loss of all
 shelters leaves them vulnerable to permanent death for that journey. One orange builder initially repairs damaged houses and fences in daylight. Each job takes ten seconds of work after arrival; nighttime pauses unfinished work. Extra builders can be hired from the Worker Shop. Damage, recruitment and resident deaths survive saves.
 
@@ -108,7 +107,7 @@ players receive one of ten action-based missions at a time. Dotted arrows on
 the ground follow paths around obstacles; the old bottom arrow notification bar
 is removed. A tutorial spotlight dims the rest of the screen and points at the exact action to take. Mission progress resumes after Continue; tips can be reopened in Menu.
 
-Fire monsters only attack mature trees. Black swordsmen fight sea urchins. In a dungeon, regular monsters pursue the player immediately; approaching or damaging the boss calls all living monsters to defend it. Every defeated raider grants gold; clearing all raiders
+Fire monsters can attack the player and exposed residents as well as mature trees. Black swordsmen fight sea urchins. In a dungeon, regular monsters pursue the player immediately; approaching or damaging the boss calls all living monsters to defend it. Every defeated raider grants gold; clearing all raiders
 restores the safe state.
 
 ![Protected forest](docs/screenshots/tide_forest.png)
@@ -116,9 +115,28 @@ restores the safe state.
 ### Sea cleaning
 The Coastal Guard automatically nets drifting rubbish in the shallows. Every
 catch awards exactly **+1 Gold** and increases the persistent sea-cleaning
-counter. Dangerous rubbish that slips past the net transforms into a monster on
-the sand, which the player can defeat for a separate gold reward. Talk to the
+counter. Rubbish that reaches the sand remains there until the player walks close
+and presses **Pick Up**, awarding **+1 Gold** exactly once. Talk to the
 guard to open a persistent sea-cleaning report instead of a timed notification.
+
+### Turtle ocean journey
+Walk to the jetty and use **Board Ship** beside the yellow **UNISZA** ship.
+The ship sails automatically to the map
+boundary, fades out and loads the underwater journey. The player dives, a turtle
+arrives and the player mounts it automatically. Use **Pick Up (E)** for rubbish
+and **Eat (F)** for food in the action ring. Correct rubbish pays 1 Gold; food
+restores 1 turtle health. Wrong actions or missed rubbish cost 1 of 5 turtle
+health. Items speed up over time. At zero health, choose Ride Again or Return to
+Shore. The player returns aboard the ship, docks beside the jetty and only then
+steps onto the deck. Controls return after disembarking. Cleanup gold is saved;
+the run itself is temporary.
+
+Tall scenery fades while it hides the player. A full northern rock wall blocks
+the map boundary. The two portals stand independently on the northern court. Inside the main house, walking onto the doorway exits
+automatically once recovery permits it. Fire-monster tree impacts and burning
+are silent. Fire-monster alerts, windups, melee impacts, defeat and rooftop-gun
+shots at fire monsters are also silent. Physical impacts on unburned trees retain
+their normal sound; burning trees stay silent throughout.
 
 ## Economy and shops
 
@@ -129,7 +147,7 @@ guard to open a persistent sea-cleaning report instead of a timed notification.
   Shop**, with a visible five-step Level 1-5 progression.
 - Five main-house levels and indoor recovery at **10 / 8 / 6 / 4 / 2 seconds**.
 - Coastal Guard rubbish catches award exactly **+1 Gold** without a pop-up.
-- Beached rubbish transforms into a gold-rewarding monster instead.
+- Beach rubbish pays **+1 Gold** on manual Pick Up.
 - Driftwood gathering and selling provides a safe gold source.
 - **Pet Food** costs 15 Gold at Nia's Pet Shop and grants 25 pet XP when fed.
 - Persistent player and pet XP bars show the exact next-level requirement.
@@ -154,7 +172,7 @@ The central home contains a chest, wardrobe, weapon rack and pet bed. New journe
 
 ## Two battle portals
 
-Two gates sit inside twin cave mouths at the far northern edge of the map:
+Two standalone gates sit at the far northern edge of the map:
 
 - **Monster Battle Portal** — opens the ten-level campaign, each with at least
   ten regular monsters and one boss. Boss ability sets include punches,
@@ -163,7 +181,7 @@ Two gates sit inside twin cave mouths at the far northern edge of the map:
   have **Serang**, **Perisai** and **Kuasa Khas**, with separate 2/5/8-second cooldowns for each pet. The player acts first, followed by one enemy reply, then the next player turn waits for input. Each arena uses one full background without combatant cards. A victory grants Gold,
   pet XP, unlocks the next duel and always raises the companion's level.
 
-![Paired battle portals](docs/screenshots/tide_lobby_portal.png)
+![Earlier portal presentation (cave removed in the current build)](docs/screenshots/tide_lobby_portal.png)
 ![Pet Battle Portal](docs/screenshots/tide_pet_battles.png)
 ![Pet duel](docs/screenshots/tide_pet_duel.png)
 
@@ -207,10 +225,10 @@ rules (see `docs/VISUAL_OVERHAUL.md` for the design decisions):
   and camera zoom sliders. Zoom spans 28–64 (38 default), with smooth changes
   and device-level persistence. The anchored HUD scales without moving controls
   off-screen; touch targets retain at least 44 physical pixels. The top-right
-  VITALS panel is removed. Player HP/MP/XP and level appear overhead; the pet has overhead HP/XP. Only the phase clock and Menu remain at the top. Gold and diamonds appear in shops.
+  VITALS panel is removed. Player HP/XP and level appear overhead; the pet has overhead HP/XP. Only the phase clock and Menu remain at the top. Gold and diamonds appear in shops.
 - **Comfort settings.** Settings gains Effects quality (low/med/high) and
   Reduce motion. Touch buttons show keycap hints on keyboard layouts, a
-  cooldown sweep on Strike and a context-sensitive
+  cooldown sweep on Attack and a context-sensitive
   Use icon.
 
 ## Project structure
@@ -319,13 +337,13 @@ checks and two independent runtime restart checks. See the
 [map editing guide](docs/MAP_STUDIO_GUIDE.md) for direct building/road/district
 editing, district moves, workpoints, asset placement and soft terrain edges.
 
-The Construction Shop upgrades the main house through five levels. Its level controls every village house, archer hut and fence, and guarantees at least that many workers of each specialist role. Additional workers can still be purchased. Wooden fences gain a stone base at Level 2, become stone at Level 3 and gain fortified towers and battlements at Levels 4-5. Sheltered NPC archers replace roof machine guns, firing every 2.1 / 1.7 / 1.3 / 1.0 / 0.7 seconds. All five supplied pet battle backgrounds are installed, including a PNG first frame of the supplied GIF. Each duel waits for one of three powers each round.
+The Construction Shop upgrades the main house through five levels. Its level controls every village house, purchased rooftop machine gun and fence, and guarantees at least that many workers of each specialist role. Additional workers can still be purchased. Wooden fences gain a stone base at Level 2, become stone at Level 3 and gain fortified towers and battlements at Levels 4-5. Rooftop machine guns must be bought per intact house for Gold (180 + 60 per level above Level 1). They fire every 0.6 / 0.5 / 0.4 / 0.3 / 0.2 seconds and stop while their house is destroyed. All five supplied pet battle backgrounds are installed, including a PNG first frame of the supplied GIF. Each duel waits for one of three powers each round. Winning recruits that rival into your pet roster and the village guard; replaying never duplicates it.
 
 ## Loading and picture guide
 
 New Journey, Continue, entering/leaving home, portal travel and returning to title use a loading cover with a fade. Opening shops, menus, the book and pet arenas uses a short entry fade. Inputs remain locked during world transitions.
 
-Menu → **Buku BESUT** opens a picture guide for NPCs, monsters and all ten named bosses. Each page identifies the character by name and explains its actions using game sprites, arrows, health symbols, daylight/night symbols and timers rather than explanatory sentences. Page controls and Close work with touch. Build remains inside Menu.
+Menu → **BESUT Field Guide** opens a picture guide for NPCs, monsters and all ten named bosses. Each page identifies the character by name and explains its actions using game sprites, arrows, health symbols, daylight/night symbols and timers rather than explanatory sentences. Page controls and Close work with touch. Build remains inside Menu.
 
 The [GDT2 integration report](docs/GDT2_INTEGRATION.md) records the combined
 gameplay import, preserved source snapshot, compatibility resolutions and current

@@ -26,7 +26,7 @@ func _ready() -> void:
 	var book_button: Button
 	game.open_menu()
 	await get_tree().create_timer(0.2).timeout
-	book_button = _button(game.hud.menu_panel, "Buku BESUT")
+	book_button = _button(game.hud.menu_panel, "BESUT Field Guide")
 	_check(book_button != null and _button(game.hud.menu_panel, "Build settlement") != null, "Menu provides the book and Build")
 	await _activate(book_button)
 	_check(game.hud.field_guide_panel.visible and game._input_locked, "touching Book opens an input-locked illustrated guide")
@@ -60,9 +60,9 @@ func _ready() -> void:
 					if art is Sprite2D:
 						linked = linked and art.texture == PixelArt.fence_texture(level)
 		_check(linked, "all house and fence tiers follow main house level %d" % level)
-		for hut in get_tree().get_nodes_in_group("archer_huts"):
+		for hut in get_tree().get_nodes_in_group("roof_guns"):
 			hut._process(0)
-		_check(get_tree().get_nodes_in_group("archer_huts").all(func(n: HouseDefense) -> bool: return n._level == level and n._art.texture == PixelArt.archer_hut_texture(level)), "all archer huts follow level %d" % level)
+		_check(get_tree().get_nodes_in_group("roof_guns").all(func(n: HouseDefense) -> bool: return n._level == level and n._art.texture == PixelArt.roof_gun_texture(level)), "all rooftop guns follow level %d" % level)
 		lobby.camera.set_physics_process(false)
 		lobby.camera.global_position = lobby._house_position + Vector2(2, 3)
 		await _shot("03_village_level_%d" % level)

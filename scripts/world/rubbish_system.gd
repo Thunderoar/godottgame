@@ -1,7 +1,7 @@
 class_name RubbishSystem
 extends Node2D
 ## Spawns flotsam in the shallows. The coastal guard nets some pieces for +1 Gold;
-## pieces that slip past can become sea urchins on the sand at night only.
+## pieces that slip past remain on the sand for manual player collection.
 
 @export var spawn_interval := 8.5
 @export var initial_delay := 3.0
@@ -13,6 +13,9 @@ var beached_count := 0
 var _timer := 0.0
 var _lane_index := 0
 var _rng := RandomNumberGenerator.new()
+
+const MAX_FLOATING := 8
+const MAX_BEACHED := 24
 
 const LANES := [
 	{
@@ -53,6 +56,8 @@ func _process(delta: float) -> void:
 		return
 	_timer += delta
 	if _timer >= spawn_interval:
+		if get_tree().get_nodes_in_group("floating_rubbish").size() >= MAX_FLOATING:
+			return
 		_timer = 0.0
 		spawn_piece(_lane_index % LANES.size())
 		_lane_index += 1
@@ -77,7 +82,11 @@ func on_rubbish_caught(piece: RubbishPiece) -> void:
 
 func on_rubbish_beached(piece: RubbishPiece) -> void:
 	beached_count += 1
-	var spawn_at: Vector2 = piece.target if piece else Vector2(17, 29)
+	if not is_instance_valid(piece) or get_tree().get_nodes_in_group("beach_rubbish").size() >= MAX_BEACHED:
+		return
 	var lobby := get_parent() as Lobby
-	if lobby:
-		lobby.spawn_sea_urchin(lobby.to_local(spawn_at))
+	if lobby == null:
+		return
+	var rubbish := BeachRubbish.new()
+	rubbish.position = lobby.to_local(lobby.safe_spawn(piece.target, 0.35))
+	lobby.add_child(rubbish)

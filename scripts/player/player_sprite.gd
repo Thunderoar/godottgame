@@ -10,7 +10,7 @@ extends Sprite2D
 
 enum Pose { IDLE, WALK, HURT, SLEEP }
 
-@export var character_id := "mira"
+@export var character_id := "adam"
 @export var frame_duration := 0.13
 @export var base_scale := Vector2(PixelArt.PX, PixelArt.PX)
 

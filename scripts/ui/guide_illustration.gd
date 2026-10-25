@@ -66,7 +66,7 @@ func _picture(id: String, at: Vector2, extent: float) -> void:
 			if id == "house_broken":
 				_cross(at, extent * 0.3)
 		"hut":
-			_texture(PixelArt.archer_hut_texture(3), at, extent)
+			_texture(PixelArt.roof_gun_texture(3), at, extent)
 		"fence":
 			_texture(PixelArt.fence_texture(3), at, extent)
 		"tree", "tree_fire", "tree_heal", "sapling", "stump":
@@ -135,7 +135,7 @@ func _picture(id: String, at: Vector2, extent: float) -> void:
 		"pet":
 			_texture(PixelArt.pet_texture("ember"), at, extent)
 		"player":
-			_texture(PixelArt.character_texture("qayyim", 0), at, extent)
+			_texture(PixelArt.character_texture("adam", 0), at, extent)
 		"trash":
 			_texture(PixelArt.rubbish_texture(), at, extent * 0.7)
 		"net":

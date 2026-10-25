@@ -28,7 +28,7 @@ scene and stop its animation immediately.
 ![Hero selection](screenshots/tide_heroes.png)
 
 Hero cards show their existing portraits, names, weapon disciplines and starter
-HP/MP/speed from CharacterDB. A separate Begin Journey action makes selection
+HP/speed from CharacterDB. A separate Begin Journey action makes selection
 deliberate. Existing combat, movement, economy, forest associations, tutorials
 and save format are unchanged. The existing loading cover still owns world
 transitions.

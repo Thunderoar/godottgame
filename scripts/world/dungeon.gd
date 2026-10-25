@@ -6,6 +6,9 @@ extends Node2D
 ## naturally reset after defeat.
 
 const SPAWN := Vector2(24.0, 28.0)
+const BOSS_ARRIVAL_SECONDS := 2.2
+var _arrival_elapsed := 0.0
+var _boss_arrived := false
 
 var portal_id := "tidebound_grotto"
 var zone_name := "Tidebound Grotto"
@@ -45,6 +48,9 @@ func _ready() -> void:
 	_build_decor()
 	_build_player_and_pet()
 	_build_monsters()
+	_build_hazards()
+	_build_boss_arrival()
+	Sfx.start_battle_music(portal_id)
 	_build_exit()
 	_build_camera()
 	call_deferred("alert_intruders")
@@ -197,7 +203,7 @@ func _build_bounds() -> void:
 	_add_box(walls, Vector2(0.8, 16), Vector2(1.6, 32))
 	_add_box(walls, Vector2(47.2, 16), Vector2(1.6, 32))
 	# Pillars break up line of sight and give the arena a shape.
-	for p in [Vector2(10, 20), Vector2(38, 20), Vector2(10, 10), Vector2(38, 10), Vector2(16, 15), Vector2(32, 15)]:
+	for p in [Vector2(10, 20), Vector2(38, 20), Vector2(10, 10), Vector2(38, 10), Vector2(16, 15), Vector2(32, 15), Vector2(20, 19), Vector2(28, 19)]:
 		_add_pillar(p)
 
 
@@ -527,9 +533,15 @@ func alert_intruders(include_boss: bool = false) -> void:
 		enemy._player = player
 		enemy._target = player
 		enemy.active = true
+		enemy._notify_boss_start()
 		enemy._enter(Enemy.State.CHASE)
 
 func _physics_process(_delta: float) -> void:
+	_arrival_elapsed += _delta
+	if not _boss_arrived and _arrival_elapsed >= BOSS_ARRIVAL_SECONDS:
+		_boss_arrived = true
+		alert_intruders(true)
+		Sfx.play("charge", -9.0)
 	if is_instance_valid(boss) and not boss.dead and is_instance_valid(player) and boss.global_position.distance_to(player.global_position) <= boss.body_radius + 0.7:
 		alert_intruders(true)
 
@@ -540,3 +552,47 @@ func monster_path(from: Vector2, destination: Vector2) -> PackedVector2Array:
 	if _monster_routes == null:
 		_monster_routes = ResidentRoutes.new(self, map_rect)
 	return _monster_routes.path(from, destination)
+
+
+func _build_hazards() -> void:
+	var variant := int(_definition.get("hazard_layout", 0))
+	for index in 6:
+		var hazard := DungeonHazard.new()
+		hazard.name = "RuneTrap%d" % index
+		hazard.position = Vector2(17.5 + (index % 2) * 13.0 + (variant - 1) * 1.5, 10.5 + floorf(index / 2.0) * 6.0)
+		hazard.player = player
+		hazard.damage = int(_definition.get("hazard_damage", 6))
+		hazard.cycle = float(_definition.get("hazard_cycle", 4.5))
+		hazard.clock = index * 0.45
+		hazard.tint = PixelArt.portal_theme_palette(_theme()).get("glow", Color("#de745a"))
+		add_child(hazard)
+
+
+func _build_boss_arrival() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 9
+	add_child(layer)
+	var root := Control.new()
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(root)
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var warning := Label.new()
+	warning.name = "BossArrival"
+	warning.text = "%s\n%s" % [_definition.get("boss_name", "An ancient horror"), _definition.get("boss_ability_name", "Awakens")]
+	root.add_child(warning)
+	warning.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	warning.offset_left = 16
+	warning.offset_right = -16
+	warning.offset_top = 90
+	warning.offset_bottom = 180
+	warning.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	warning.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	warning.add_theme_font_size_override("font_size", 26)
+	warning.add_theme_color_override("font_color", Color("#ffbc98"))
+	warning.add_theme_color_override("font_outline_color", Color("#1c1322"))
+	warning.add_theme_constant_override("outline_size", 6)
+	warning.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var tween := create_tween()
+	tween.tween_interval(BOSS_ARRIVAL_SECONDS + 0.6)
+	tween.tween_property(warning, "modulate:a", 0.0, 0.4)
+	tween.tween_callback(layer.queue_free)

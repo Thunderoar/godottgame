@@ -56,6 +56,46 @@ const PETS := {
 		"accent": Color("#fff3ad"),
 		"tiers": {"aura": 3, "glow": 5},
 	},
+	"sparring_ember": {
+		"name": "Sparring Ember", "species": "Village Guardian", "base_pet": "ember",
+		"cost": 0, "hp": 65, "focus": "Village Defense",
+		"description": "A tournament rival won in battle. Protects residents from fire monsters and sea urchins.",
+		"heal": 2, "heal_interval": 2.8, "attack": 8, "attack_interval": 2.4,
+		"shield": 6, "shield_interval": 12.0,
+		"body": Color("#f3b16d"), "accent": Color("#fff3ad"),
+	},
+	"bramble_cat": {
+		"name": "Bramble Cat", "species": "Village Guardian", "base_pet": "moss",
+		"cost": 0, "hp": 65, "focus": "Village Defense",
+		"description": "A tournament rival won in battle. Protects residents from fire monsters and sea urchins.",
+		"heal": 2, "heal_interval": 2.8, "attack": 8, "attack_interval": 2.4,
+		"shield": 6, "shield_interval": 12.0,
+		"body": Color("#a8c275"), "accent": Color("#fff3ad"),
+	},
+	"dusk_moth": {
+		"name": "Dusk Moth", "species": "Village Guardian", "base_pet": "luma",
+		"cost": 0, "hp": 65, "focus": "Village Defense",
+		"description": "A tournament rival won in battle. Protects residents from fire monsters and sea urchins.",
+		"heal": 2, "heal_interval": 2.8, "attack": 8, "attack_interval": 2.4,
+		"shield": 6, "shield_interval": 12.0,
+		"body": Color("#c3b4ff"), "accent": Color("#fff3ad"),
+	},
+	"storm_fox": {
+		"name": "Storm Fox", "species": "Village Guardian", "base_pet": "ember",
+		"cost": 0, "hp": 65, "focus": "Village Defense",
+		"description": "A tournament rival won in battle. Protects residents from fire monsters and sea urchins.",
+		"heal": 2, "heal_interval": 2.8, "attack": 8, "attack_interval": 2.4,
+		"shield": 6, "shield_interval": 12.0,
+		"body": Color("#9fd7ff"), "accent": Color("#fff3ad"),
+	},
+	"tidecat_sovereign": {
+		"name": "Tidecat Sovereign", "species": "Village Guardian", "base_pet": "moss",
+		"cost": 0, "hp": 65, "focus": "Village Defense",
+		"description": "A tournament rival won in battle. Protects residents from fire monsters and sea urchins.",
+		"heal": 2, "heal_interval": 2.8, "attack": 8, "attack_interval": 2.4,
+		"shield": 6, "shield_interval": 12.0,
+		"body": Color("#74e0d7"), "accent": Color("#fff3ad"),
+	},
 }
 
 const MAX_LEVEL := 5

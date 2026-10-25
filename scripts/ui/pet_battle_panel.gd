@@ -5,9 +5,9 @@ extends ModalBase
 ## A victory always grants a pet level.
 
 const SKILLS := {
-	"attack": {"name": "1. Serang", "description": "Serangan biasa. Cooldown 2 saat.", "cooldown": 2.0, "power": 1.0},
-	"defend": {"name": "2. Perisai", "description": "Kurangkan serangan seterusnya sebanyak 65%. Cooldown 5 saat.", "cooldown": 5.0, "power": 0.0},
-	"burst": {"name": "3. Kuasa Khas", "description": "Serangan berganda. Cooldown 8 saat.", "cooldown": 8.0, "power": 2.0},
+	"attack": {"name": "1. Attack", "description": "Basic attack. 2-second cooldown.", "cooldown": 2.0, "power": 1.0},
+	"defend": {"name": "2. Shield", "description": "Reduce the next attack by 65%. 5-second cooldown.", "cooldown": 5.0, "power": 0.0},
+	"burst": {"name": "3. Special", "description": "Double damage. 8-second cooldown.", "cooldown": 8.0, "power": 2.0},
 }
 
 var selected := ""
@@ -88,7 +88,7 @@ func _rebuild() -> void:
 	add_body_text("Active companion: %s  •  Lv %d  •  HP %d/%d" % [PetDB.name_of(pet_id), pet_level, int(pet.get("hp", 0)), int(pet.get("hp_max", 0))], GameUI.TEXT, 17)
 	var xp_text := "PET XP MAX" if bool(xp.get("max", false)) else "Pet XP %d/%d" % [int(xp.get("xp", 0)), int(xp.get("next", 1))]
 	add_body_text(xp_text, GameUI.PURPLE, 14)
-	add_body_text("Pilih duel 1 lawan 1. Anda mempunyai tiga kuasa dengan cooldown masing-masing. Pemain bergerak dahulu, kemudian musuh membalas.", GameUI.MUTED, 13)
+	add_body_text("Choose a 1v1 duel. Use three powers with separate cooldowns. You act first, then the rival replies. Win to recruit the rival as a village guardian.", GameUI.MUTED, 13)
 	content.add_child(GameUI.spacer(2))
 	for level_id in PetBattleDB.ordered_ids():
 		_add_level_card(level_id)
@@ -126,7 +126,7 @@ func _add_level_card(level_id: String) -> void:
 	lore.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lore.custom_minimum_size = Vector2(500, 0)
 	info.add_child(lore)
-	info.add_child(GameUI.label("Reward: %d gold  •  %d pet XP  •  +1 level on victory" % [int(def.get("gold", 0)), int(def.get("xp", 0))], 13, GameUI.TEAL))
+	info.add_child(GameUI.label("Reward: %d gold  •  %d pet XP  •  +1 level and rival pet" % [int(def.get("gold", 0)), int(def.get("xp", 0))], 13, GameUI.TEAL))
 	var right := VBoxContainer.new()
 	right.custom_minimum_size = Vector2(150, 0)
 	right.add_theme_constant_override("separation", 5)
@@ -175,6 +175,7 @@ func start_battle(level_id: String) -> bool:
 	_awaiting_next = false
 	_rng.seed = 4471 + level_id.hash()
 	_render_battle()
+	Sfx.start_battle_music(level_id)
 	_begin_turn()
 	return true
 
@@ -217,7 +218,7 @@ func _begin_turn() -> void:
 	_enemy_choice = ""
 	_turn_active = true
 	if is_instance_valid(_status):
-		_status.text = "Giliran anda - pilih satu kuasa."
+		_status.text = "Your turn - choose a power."
 	_update_timer_ui()
 	_refresh_skill_buttons()
 
@@ -249,7 +250,7 @@ func _resolve_turn() -> void:
 	_play_skill_sound(_player_choice)
 	_play_resolve_animation(_player_choice, "", damage > 0, false)
 	_update_bars()
-	_status.text = "%s%s. Musuh membalas selepas ini." % [skill.get("name", "Kuasa"), " - %d damage" % damage if damage > 0 else " diaktifkan"]
+	_status.text = "%s%s. The rival replies next." % [skill.get("name", "Power"), " - %d damage" % damage if damage > 0 else " activated"]
 	if _opponent_hp <= 0:
 		_finish_battle(true)
 		return
@@ -264,7 +265,7 @@ func _resolve_enemy_turn() -> void:
 		_enemy_choice = _choose_enemy_skill()
 	if _enemy_choice.is_empty():
 		_enemy_wait = 0.1
-		_status.text = "Kuasa musuh sedang cooldown..."
+		_status.text = "The rival's powers are cooling down..."
 		return
 	_enemy_pending = false
 	var skill: Dictionary = SKILLS[_enemy_choice]
@@ -282,7 +283,7 @@ func _resolve_enemy_turn() -> void:
 	_play_skill_sound(_enemy_choice)
 	_play_resolve_animation("", _enemy_choice, false, damage > 0)
 	_update_bars()
-	_status.text = "Musuh: %s%s." % [skill.get("name", "Kuasa"), " - %d damage" % damage if damage > 0 else " diaktifkan"]
+	_status.text = "Rival: %s%s." % [skill.get("name", "Power"), " - %d damage" % damage if damage > 0 else " activated"]
 	if _player_hp <= 0:
 		_finish_battle(false)
 		return
@@ -337,7 +338,7 @@ func _spawn_hit_fx(kind: String, on_player: bool) -> void:
 
 func _update_timer_ui() -> void:
 	if is_instance_valid(_timer_label):
-		_timer_label.text = "Tiga kuasa berasingan. Musuh hanya membalas selepas anda bertindak."
+		_timer_label.text = "Three separate powers. The rival replies after you act."
 
 func _refresh_skill_buttons() -> void:
 	for button in _skill_buttons:
@@ -346,12 +347,12 @@ func _refresh_skill_buttons() -> void:
 		var id := str(button.get_meta("skill_id", "attack"))
 		var remaining := float(_player_cooldowns.get(id, 0))
 		button.disabled = not _turn_active or remaining > 0 or not _battle_active
-		button.text = "%s\n%s" % [SKILLS[id].get("name", id), "%.1fs" % remaining if remaining > 0 else "Sedia"]
+		button.text = "%s\n%s" % [SKILLS[id].get("name", id), "%.1fs" % remaining if remaining > 0 else "Ready"]
 	if is_instance_valid(_enemy_cd_label):
 		var parts: Array[String] = []
 		for id in SKILLS:
 			var remaining := float(_enemy_cooldowns.get(id, 0))
-			parts.append("%s: %s" % [str(SKILLS[id].get("name", id)), "%.1fs" % remaining if remaining > 0 else "Sedia"])
+			parts.append("%s: %s" % [str(SKILLS[id].get("name", id)), "%.1fs" % remaining if remaining > 0 else "Ready"])
 		_enemy_cd_label.text = " | ".join(parts)
 
 func _render_battle() -> void:
@@ -414,7 +415,7 @@ func _render_battle() -> void:
 	_enemy_cd_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_enemy_cd_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	content.add_child(_enemy_cd_label)
-	_status = _arena_label("Giliran anda.", 18)
+	_status = _arena_label("Your turn.", 18)
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_status.custom_minimum_size = Vector2(0, 28)
@@ -529,6 +530,7 @@ func _forfeit() -> void:
 		return
 	_battle_active = false
 	_battle_resolved = true
+	Sfx.stop_battle_music()
 	_turn_active = false
 	_result_visible = true
 	_last_result = {"ok": false, "message": "You forfeit the duel."}
@@ -574,6 +576,9 @@ func _render_result() -> void:
 	if won:
 		var leveled := int(_last_result.get("pet_levels", 0)) > 0
 		add_body_text("Your companion wins the duel and gains a level." if leveled else "Your companion wins the duel at maximum level.", GameUI.GREEN, 18)
+		var recruited := str(_last_result.get("recruited_pet", ""))
+		if not recruited.is_empty():
+			add_body_text("%s joins your pets and guards the village against fire monsters and sea urchins." % PetDB.name_of(recruited), GameUI.TEAL, 16)
 		var rewards := HBoxContainer.new()
 		rewards.add_theme_constant_override("separation", 22)
 		rewards.add_child(_reward_chip("gold", "%d gold" % int(_last_result.get("gold", 0)), GameUI.GOLD))
@@ -603,6 +608,8 @@ func _reward_chip(kind: String, text: String, color: Color) -> Control:
 
 
 func close_panel() -> void:
+	if _battle_active:
+		Sfx.stop_battle_music()
 	_battle_active = false
 	_battle_resolved = false
 	_turn_active = false

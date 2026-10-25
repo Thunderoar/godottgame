@@ -16,7 +16,7 @@ const ITEMS := {
 		"currency": "gold",
 		"stack": 1,
 		"attack": 6,
-		"description": "A chipped blade from the old house. Qayyim's first steel.",
+		"description": "A chipped blade from the old house. Adam's first steel.",
 		"shop": "equipment",
 		"sellable": false,
 	},
@@ -45,40 +45,40 @@ const ITEMS := {
 		"shop": "equipment",
 	},
 	"smith_hammer": {
-		"name": "Smith's Hammer",
+		"name": "Harvest Scythe",
 		"kind": "weapon",
 		"slot": "weapon",
-		"style": "hammer",
+		"style": "scythe",
 		"price": 0,
 		"currency": "gold",
 		"stack": 1,
 		"attack": 9,
-		"description": "Farhan's working hammer. Heavy enough to break stone.",
+		"description": "Arjun's curved scythe. Sweeps through enemies in a wide arc.",
 		"shop": "equipment",
 		"sellable": false,
 	},
 	"iron_hammer": {
-		"name": "Iron Forgehammer",
+		"name": "Iron Scythe",
 		"kind": "weapon",
 		"slot": "weapon",
-		"style": "hammer",
+		"style": "scythe",
 		"price": 100,
 		"currency": "gold",
 		"stack": 1,
 		"attack": 18,
-		"description": "A broad forgehammer with a banded head.",
+		"description": "A tempered crescent blade on a sturdy ash haft.",
 		"shop": "equipment",
 	},
 	"tide_hammer": {
-		"name": "Tidebreaker",
+		"name": "Nightreaper",
 		"kind": "weapon",
 		"slot": "weapon",
-		"style": "hammer",
+		"style": "scythe",
 		"price": 260,
 		"currency": "gold",
 		"stack": 1,
 		"attack": 32,
-		"description": "A reef-iron maul that leaves craters in the sand.",
+		"description": "A dark reef-iron scythe that reaps through the drowned.",
 		"shop": "equipment",
 	},
 	"reed_bow": {
@@ -90,7 +90,7 @@ const ITEMS := {
 		"currency": "gold",
 		"stack": 1,
 		"attack": 7,
-		"description": "A light bow cut from coastal reed. Ayiz's hunting companion.",
+		"description": "A light bow cut from coastal reed. Mei Ling's hunting companion.",
 		"shop": "equipment",
 		"sellable": false,
 	},
@@ -185,17 +185,6 @@ const ITEMS := {
 		"shop": "potion",
 		"lost_on_defeat": false,
 	},
-	"mana_potion": {
-		"name": "Mana Potion",
-		"kind": "consumable",
-		"price": 20,
-		"currency": "gold",
-		"stack": 9,
-		"effect": {"mana": 35},
-		"description": "Restores 35 mana. Tastes of rain.",
-		"shop": "potion",
-		"lost_on_defeat": false,
-	},
 
 	"pet_food": {
 		"name": "Pet Food",
@@ -274,8 +263,6 @@ static func stat_line(item_id: String) -> String:
 		match str(effect_key):
 			"heal":
 				bits.append("Heal %d" % int(item.effect[effect_key]))
-			"mana":
-				bits.append("Mana %d" % int(item.effect[effect_key]))
 			"pet_xp":
 				bits.append("Pet XP +%d" % int(item.effect[effect_key]))
 	return "  ".join(bits)

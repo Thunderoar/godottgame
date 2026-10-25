@@ -25,13 +25,13 @@ func _ready() -> void:
 	await _shot("02_colored_specialists")
 	lobby.camera.global_position = Vector2(34, 7.2)
 	lobby.camera.zoom = Vector2.ONE * 50
-	await _shot("03_twin_cave_portals")
+	await _shot("03_northern_portals")
 	var portal: PortalEntrance
 	for node in get_tree().get_nodes_in_group("battle_portal"):
 		if node.gate_kind == "monster":
 			portal = node
 	await _click(lobby.get_global_transform_with_canvas() * (portal.global_position + Vector2(0, -1.0)), true)
-	_check(game.hud.portal_panel.visible, "touching cave portal directly opens monster levels")
+	_check(game.hud.portal_panel.visible, "touching northern portal directly opens monster levels")
 	await _shot("04_portal_touch")
 	game.hud.portal_panel.close_panel()
 	lobby.camera.global_position = lobby._house_position

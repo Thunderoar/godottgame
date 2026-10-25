@@ -29,6 +29,13 @@ const CHAINS := {
 			{"anticipation": 0.20, "active": 0.10, "recovery": 0.30, "lunge": 0.18, "arc": "slam", "shockwave": true},
 		],
 	},
+	"scythe": {
+		"hitstop": 0.05, "shake": 0.12, "shake_time": 0.14,
+		"steps": [
+			{"anticipation": 0.14, "active": 0.12, "recovery": 0.22, "lunge": 0.3, "arc": "lr"},
+			{"anticipation": 0.12, "active": 0.14, "recovery": 0.22, "lunge": 0.3, "arc": "rl"},
+		],
+	},
 	"bow": {
 		"hitstop": 0.0,
 		"shake": 0.03,

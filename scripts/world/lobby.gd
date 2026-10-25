@@ -10,6 +10,7 @@ const FOREST_HOUSE_EXCLUSIONS := [Vector2(48.1, 18.4), Vector2(14, 18.1), Vector
 const FOREST_RUIN_EXCLUSIONS := [Vector2(17.8, 13.6), Vector2(52, 33.2), Vector2(22.5, 32.4), Vector2(55.5, 7.8)]
 const SPAWN := Vector2(34.0, 24.3)
 const HOUSE_BASE := Vector2(34.0, 21.4)
+# Legacy gate coordinates preserve forest exclusions; authored anchors place portals.
 const MONSTER_GATE := Vector2(30.8, 11.3)
 const PET_GATE := Vector2(37.2, 11.3)
 const OCEAN_WIDTH_PIXELS := 806
@@ -33,6 +34,7 @@ var zone_name := "Seaside Home"
 var player: Player
 var pet: Pet
 var camera: FollowCamera
+var ship_boarding: ShipDeparture
 var background: Sprite2D
 var house_sprite: Sprite2D
 var house_glow: PointLight2D
@@ -114,11 +116,16 @@ func _ready() -> void:
 			if marker.get("kind", "") == "spawn" and marker.get("metadata", {}).get("primary", false) and not GameState.recovery_active():
 				_player_spawn = marker.get("position", SPAWN)
 	_build_player_and_pet()
+	_sync_village_pets()
+	GameState.pet_changed.connect(_sync_village_pets)
 	var authored_layer := AuthoredMapRenderer.new()
 	authored_layer.name = "AuthoredMap"
 	authored_layer.definition = authored
 	add_child(authored_layer)
 	_build_camera()
+	var occlusion := WorldOcclusion.new()
+	occlusion.name = "WorldOcclusion"
+	add_child(occlusion)
 	if not GameState.data.get("settlement_layout", {}).is_empty(): call_deferred("_resolve_custom_routes")
 	var guide := MissionPath.new()
 	add_child(guide)
@@ -509,15 +516,7 @@ func _build_special_npc() -> void:
 # ------------------------------------------------------------------ portals
 
 func _build_portals() -> void:
-	var ridge := Sprite2D.new()
-	ridge.name = "TwinCaveHill"
-	ridge.texture = PixelArt.cave_ridge_texture()
-	ridge.centered = false
-	ridge.offset = Vector2(-256, -192)
-	ridge.scale = Vector2.ONE * PixelArt.PX
-	ridge.position = (_layout.position_of("monster_portal", MONSTER_GATE) + _layout.position_of("pet_portal", PET_GATE)) * 0.5 + Vector2(0, 0.7)
-	ridge.z_index = 3
-	add_child(ridge)
+	NorthernBoundary.build_north_wall(self)
 	# The two gates stand side by side on the north path: campaign monsters on
 	# the left, companion duels on the right.
 	var first := PortalEntrance.new()
@@ -733,6 +732,12 @@ func _build_dock_and_ship() -> void:
 	bob.chain().tween_property(ship, "position:y", ship.position.y - 0.05, 2.1).set_trans(Tween.TRANS_SINE)
 	bob.parallel().tween_property(ship, "rotation", -0.008, 2.1).set_trans(Tween.TRANS_SINE)
 	ship.set_meta("ambient_tween", bob)
+	var boarding := ShipDeparture.new()
+	boarding.name = "ShipBoarding"
+	boarding.ship = ship
+	boarding.position = _layout.approach("jetty_deck")
+	ship_boarding = boarding
+	add_child(boarding)
 	# Lamps on the jetty.
 	for x in [-5.6, 4.5]:
 		var lamp := PointLight2D.new()
@@ -1828,3 +1833,19 @@ func safe_spawn(at: Vector2, radius: float = 0.45) -> Vector2:
 			query.transform = Transform2D(0.0, candidate)
 			if get_world_2d().direct_space_state.intersect_shape(query, 1).is_empty(): return candidate
 	return at
+
+
+func _sync_village_pets() -> void:
+	for id in GameState.data.get("village_pets", []):
+		var exists := false
+		for child in get_children():
+			if child is VillagePet and child.pet_id == str(id):
+				exists = true
+		if exists:
+			continue
+		var guardian := VillagePet.new()
+		guardian.pet_id = str(id)
+		var slot: int = GameState.data.get("village_pets", []).find(id)
+		guardian.home = _player_spawn + Vector2((slot % 3 - 1) * 1.8, 2.0 + floorf(slot / 3.0))
+		guardian.position = guardian.home
+		add_child(guardian)

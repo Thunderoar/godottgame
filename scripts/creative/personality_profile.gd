@@ -3,9 +3,9 @@ class_name PersonalityProfile
 extends Resource
 ## Character/occupation configuration used by one shared presentation state machine.
 @export var heroes: Dictionary = {
-	"qayyim": {"stride": 1.0, "breath": 0.008, "rest": 0.015},
-	"farhan": {"stride": 0.86, "breath": 0.006, "rest": -0.018},
-	"ayiz": {"stride": 1.15, "breath": 0.009, "rest": 0.025}
+	"adam": {"stride": 1.0, "breath": 0.008, "rest": 0.015},
+	"arjun": {"stride": 0.86, "breath": 0.006, "rest": -0.018},
+	"mei_ling": {"stride": 1.15, "breath": 0.009, "rest": 0.025}
 }
 @export var occupations: Dictionary = {
 	"fisher": {"action": "work", "tool": "fishing_rod", "line": "The tide is gentle today. The turtles know the best fishing spots."},

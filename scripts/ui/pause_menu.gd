@@ -46,7 +46,6 @@ const CONTROL_ROWS := [
 	{"label": "Backpack", "actions": ["open_inventory"], "touch": "Pack button"},
 	{"label": "Build", "actions": ["toggle_build"], "touch": "Build button"},
 	{"label": "Health potion", "actions": ["use_health_potion"], "touch": "HP button"},
-	{"label": "Mana potion", "actions": ["use_mana_potion"], "touch": "MP button"},
 	{"label": "Pause", "actions": ["pause_menu"], "touch": "Menu button / Esc"},
 ]
 

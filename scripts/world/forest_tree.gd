@@ -55,10 +55,11 @@ func register_visual(node: CanvasItem) -> void:
 	_visuals.append(node)
 
 
-func take_attack_damage(amount: int) -> void:
+func take_attack_damage(amount: int, ignite: bool = true) -> void:
 	if not is_attackable() or GameState.game_over_active:
 		return
-	burning = true
+	if ignite:
+		burning = true
 	hit_count += 1
 	health = maxi(0, health - maxi(1, amount))
 	if tree_id != "":
@@ -67,18 +68,14 @@ func take_attack_damage(amount: int) -> void:
 	for visual in _visuals:
 		if is_instance_valid(visual):
 			visual.modulate = Color(1.45, 1.1, 0.8)
-	_spawn_impact_feedback()
+	_spawn_impact_feedback(not ignite)
 	queue_redraw()
 	if health <= 0:
 		_fell()
 
 
 func take_physical_damage(amount: int) -> void:
-	var was_burning := burning
-	take_attack_damage(amount)
-	if not fallen:
-		burning = was_burning
-	queue_redraw()
+	take_attack_damage(amount, false)
 
 
 func take_damage(amount: int, _from_dir: Vector2 = Vector2.ZERO, _source: Node = null) -> void:
@@ -118,8 +115,9 @@ func _process(delta: float) -> void:
 				visual.modulate = visual.get_meta("rest_modulate", Color.WHITE)
 
 
-func _spawn_impact_feedback() -> void:
-	Sfx.play("tree_hit", -5.0)
+func _spawn_impact_feedback(play_sound: bool = false) -> void:
+	if play_sound and not burning:
+		Sfx.play("tree_hit", -5.0)
 	if _visuals.is_empty() or not is_inside_tree():
 		return
 	if not GameSettings.reduce_motion():

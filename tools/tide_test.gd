@@ -23,11 +23,13 @@ func _ready() -> void:
 	_check(_has_label(game.title_screen, "PB (Protect BESUT)"), "title reads PB (Protect BESUT)")
 	_check(_has_label(game.title_screen, "Created by Qayyim, Farhan & Ayiz"), "creator credit is present")
 	_check(not game.title_screen._heroes.is_visible_in_tree(), "Choose Your Road stays hidden until Start Game")
-	_check(CharacterDB.ids() == ["qayyim", "farhan", "ayiz"], "three male heroes are defined")
-	_check(CharacterDB.weapon_style("qayyim") == "sword", "Qayyim uses a sword")
-	_check(CharacterDB.weapon_style("farhan") == "hammer", "Farhan uses a hammer")
-	_check(CharacterDB.weapon_style("ayiz") == "bow", "Ayiz uses a bow")
+	_check(CharacterDB.ids() == ["adam", "arjun", "mei_ling"], "Adam, Arjun and Mei Ling are defined")
+	_check(CharacterDB.weapon_style("adam") == "sword", "Adam uses a sword")
+	_check(CharacterDB.weapon_style("arjun") == "scythe", "Arjun uses a scythe")
+	_check(CharacterDB.weapon_style("mei_ling") == "bow", "Mei Ling uses a bow")
 	_check(not ItemDB.exists("pet_revival"), "Pet Revival Potion is removed")
+	_check(not ItemDB.exists("mana_potion") and not ItemDB.stock_for("potion").has("mana_potion"), "mana potion is removed from the item catalogue and shop")
+	_check(not GameState.data.has("mana") and not GameState.data.has("mana_max"), "new journeys have no mana resource")
 
 	await TitleChecks.run(game, _check)
 	game.title_screen._begin_button.pressed.emit()
@@ -41,12 +43,17 @@ func _ready() -> void:
 	_check(game.world is Lobby, "lobby loads after character select")
 	_check(game.call("player") != null, "player exists")
 	_check(get_tree().get_first_node_in_group("pet") != null, "starter pet exists")
+	var village_layout: WorldLayout = game.world._layout
+	var monster_gate := village_layout.position_of("monster_portal")
+	var pet_gate := village_layout.position_of("pet_portal")
+	_check(monster_gate.is_equal_approx(Vector2(34.8, 6.3)) and pet_gate.is_equal_approx(Vector2(41.2, 6.3)), "both portals stand side by side at the northern map edge")
+	_check(game.world.get_node_or_null("TwinCaveHill") == null and game.world.get_node_or_null("CaveRockCollision") == null, "cave artwork and cave collision are removed")
 	_check(GameState.item_count("rusty_sword") == 1, "Qayyim owns a starter sword")
 	_check(GameState.equipped_item("weapon") == "rusty_sword", "starter sword equipped")
 	_check(GameState.active_pet_id() == "ember", "starter pet active")
 	_check(GameState.has_living_pet(), "starter pet alive")
 	_check(GameState.water_keeper_count() == 1, "new journeys start with one water keeper")
-	_check(game.call("player").get_node_or_null("VitalHud") is PlayerVitalHud, "player keeps its world HP/MP indicator")
+	_check(game.call("player").get_node_or_null("VitalHud") is PlayerVitalHud, "player keeps its world HP/XP indicator")
 	_check(not _has_label(hud, "VITALS") and hud.get("_health_bar") == null and hud.get("_pet_bar") == null, "obsolete top-right VITALS construction is removed")
 	_check(hud.get("_minimap") == null, "no minimap exists")
 	_check(hud.get("_emergency_panel") != null, "emergency HUD exists")
@@ -127,6 +134,8 @@ func _ready() -> void:
 	await _test_village_systems()
 	await _test_forest_restoration()
 	await _test_pet_shop_close()
+	await preload("res://tools/combat_revamp_checks.gd").run(game, _check)
+	await preload("res://tools/coastal_checks.gd").run(game, _check)
 	await _test_forest_game_over()
 
 	GameState.delete_save()
@@ -233,22 +242,25 @@ func _test_settlement_expansion() -> void:
 		_check(tree.health < tree_hp, "forest trees lose HP when monsters attack")
 		_check(tree.hit_count == hits_before + 1, "tree attacks still play visual feedback")
 		_check(not tree.fallen, "a damaged tree remains standing until its HP reaches zero")
-	var forest_monsters := get_tree().get_nodes_in_group("forest_monsters")
+	var forest_monsters := get_tree().get_nodes_in_group("forest_monsters").filter(func(node: Node) -> bool: return is_instance_valid(node) and node is Enemy and not node.dead and not node.is_queued_for_deletion() and node.get_parent() == game.world)
 	_check(forest_monsters.size() >= 12, "many forest monsters patrol the woodland (%d)" % forest_monsters.size())
-	_check(Sfx.has_sound("tree_hit") and Sfx.has_sound("aggro"), "tree-hit and aggro sounds are generated")
+	_check(Sfx.has_sound("tree_hit") and Sfx.has_sound("aggro"), "physical-tree-hit and aggro sounds are generated")
 	if not forest_monsters.is_empty() and game.call("player") != null:
 		var forest_monster := forest_monsters[0] as Enemy
 		var test_player: Player = game.call("player")
 		var old_player_pos := test_player.global_position
 		var old_monster_pos := forest_monster.global_position
-		test_player.global_position = Vector2(34.0, 26.0)
-		forest_monster.global_position = Vector2(38.0, 26.0)
-		await get_tree().process_frame
+		test_player.global_position = (game.world as Lobby)._layout.position_of("arrival")
+		test_player.velocity = Vector2.ZERO
+		forest_monster.global_position = test_player.global_position + Vector2(0.8, 0)
+		forest_monster.velocity = Vector2.ZERO
+		await get_tree().physics_frame
+		await get_tree().physics_frame
 		var sees_player := bool(forest_monster.call("_can_see_player"))
 		forest_monster.set("_saw_player", false)
 		forest_monster.call("_update_forest_target")
-		_check(not sees_player, "fire monsters ignore players in line of sight")
-		_check(forest_monster.get("_target") is ForestTree and not bool(forest_monster.get("_charging")), "fire monsters target trees without charging the player")
+		_check(sees_player, "fire monsters can see nearby players")
+		_check(forest_monster.get("_target") != null and not bool(forest_monster.get("_charging")), "fire monsters choose a nearby actor or tree without a player charge")
 		test_player.global_position = old_player_pos
 		forest_monster.global_position = old_monster_pos
 	_check(get_tree().get_nodes_in_group("resident_house").size() >= 7, "more residents' houses stand around the village (%d)" % get_tree().get_nodes_in_group("resident_house").size())
@@ -284,7 +296,7 @@ func _test_settlement_expansion() -> void:
 	_check(hud.get("_mission_panel") == null and hud.get("_mission_arrows").is_empty(), "bottom mission notifications are removed")
 	_check(game.world.get_children().any(func(node: Node) -> bool: return node is MissionPath), "dashed mission path lives in the world")
 	var player := game.call("player") as Player
-	_check(player != null and player.get_node_or_null("VitalHud") is PlayerVitalHud, "player has a floating Health/Mana dashboard")
+	_check(player != null and player.get_node_or_null("VitalHud") is PlayerVitalHud, "player has a floating Health/XP dashboard")
 	var special_npc: UniszaStudent = null
 	for node in get_tree().get_nodes_in_group("special_npc"):
 		if node is UniszaStudent:
@@ -330,8 +342,8 @@ func _test_shops() -> void:
 	_check(GameState.item_count("health_potion") == count_before + 1, "potion added to inventory")
 
 	GameState.data.gold = 0
-	var poor := GameState.buy_item("mana_potion")
-	_check(not bool(poor.ok) and GameState.gold() == 0, "purchase rejected with insufficient gold")
+	var poor := GameState.buy_item("leather_vest")
+	_check(not bool(poor.ok) and str(poor.get("message", "")) == "Not enough gold." and GameState.gold() == 0, "purchase rejected with insufficient gold")
 	GameState.data.gold = 500
 
 	var treat_before := GameState.item_count("pet_food")
@@ -366,7 +378,7 @@ func _test_visual_overhaul_contracts() -> void:
 	# 3C: Strike icon follows the active hero's weapon discipline.
 	_check(str(hud.get("_attack_button").icon_kind) == GameState.character_weapon_style(), "strike icon follows the hero's weapon")
 	# 3C: the detailed 32px icon set generates for the key kinds.
-	for kind in ["sword", "hammer", "bow", "talk", "door", "bed", "gather", "chest", "gold", "diamond", "close", "pet"]:
+	for kind in ["sword", "scythe", "bow", "talk", "door", "bed", "gather", "chest", "gold", "diamond", "close", "pet"]:
 		_check(PixelArt.icon(kind, 32) != null, "32px icon generates for %s" % kind)
 	# 3E: portal art is driven by PortalDB themes, never portal ids.
 	var themes := {}
@@ -574,17 +586,17 @@ func _test_rubbish_system() -> void:
 	await get_tree().create_timer(0.15).timeout
 	_check(system.beached_count == beached_before + 1, "uncaught rubbish reaches the beach")
 	_check(GameState.gold() == gold_after_catch, "beached rubbish does not grant the +1 catch reward")
-	var rubbish_monster: Enemy = null
-	for enemy in get_tree().get_nodes_in_group("enemies"):
-		if str(enemy.kind) == "urchin":
-			rubbish_monster = enemy
-			break
-	_check(rubbish_monster != null, "beached rubbish transforms into a monster")
-	if rubbish_monster != null:
-		var reward := int(rubbish_monster.gold_reward)
-		rubbish_monster.call("take_damage", 99999, Vector2.ZERO, game.call("player"))
-		await get_tree().process_frame
-		_check(GameState.gold() == gold_after_catch + reward, "rubbish monster grants its own separate gold reward")
+	var beach_piece: BeachRubbish = get_tree().get_first_node_in_group("beach_rubbish") as BeachRubbish
+	_check(is_instance_valid(beach_piece), "beached rubbish remains on the sand for manual collection")
+	if is_instance_valid(beach_piece):
+		var player := game.player() as Player
+		var old_position := player.global_position
+		player.global_position = beach_piece.global_position
+		beach_piece.interact(player)
+		beach_piece.interact(player)
+		_check(GameState.gold() == gold_after_catch + 1, "manual beach pickup grants exactly one gold even on repeated interaction")
+		player.global_position = old_position
+
 
 
 func _test_portal_combat_and_auto_loot() -> void:
@@ -881,8 +893,8 @@ func _test_build_editor() -> void:
 
 
 func _test_character_styles() -> void:
-	await _test_single_style("farhan", "smith_hammer", "hammer")
-	await _test_single_style("ayiz", "reed_bow", "bow")
+	await _test_single_style("arjun", "smith_hammer", "scythe")
+	await _test_single_style("mei_ling", "reed_bow", "bow")
 
 
 func _test_single_style(character_id: String, starter_weapon: String, style: String) -> void:
@@ -898,7 +910,7 @@ func _test_single_style(character_id: String, starter_weapon: String, style: Str
 	dummy.max_hp = 300
 	dummy.damage = 0
 	dummy.speed = 0.0
-	dummy.position = p.global_position + Vector2(2.0 if style == "hammer" else 3.0, -0.65)
+	dummy.position = p.global_position + Vector2(2.0 if style == "scythe" else 3.0, -0.65)
 	game.world.add_child(dummy)
 	p.facing = Vector2.RIGHT
 	await get_tree().process_frame
@@ -964,6 +976,7 @@ func _test_forest_game_over() -> void:
 			enemy.set_physics_process(false)
 	_check(not trees.is_empty(), "living forest trees remain before the game-over test")
 	var sapling := trees[0] as ForestTree
+	sapling._process(ForestTree.GROW_SECONDS)
 	sapling.take_attack_damage(9999)
 	_check(sapling.replant(), "last-stand sapling can be planted while other trees survive")
 	for node in trees:
@@ -1032,13 +1045,17 @@ func _test_village_systems() -> void:
 	for npc in lobby._residents:
 		npc.set_physics_process(false)
 	var fire := lobby._forest_monsters[0]
+	GameState.set_health(GameState.health_max())
+	GameState.data.shield = 0
+	lobby.player.invulnerable = 0
+	fire.global_position = lobby.player.global_position + Vector2(0.8, 0)
 	var player_hp := GameState.health()
 	fire._target = lobby.player
 	fire._hit_dealt = false
 	fire._attack_active(0.0)
-	_check(GameState.health() == player_hp, "fire attack cannot damage the player even with a stale target")
+	_check(GameState.health() < player_hp, "fire attack damages a nearby living player")
 	fire._update_forest_target()
-	_check(fire._target is ForestTree, "fire retargets mature trees rather than the nearby player")
+	_check(fire._target == lobby.player, "fire can target a nearby player as well as trees")
 	var fence: SettlementTarget
 	var house: SettlementTarget
 	for node in get_tree().get_nodes_in_group("structures"):
@@ -1154,8 +1171,12 @@ func _test_forest_restoration() -> void:
 	var attacker_position := attacker.position
 	attacker.global_position = tree.global_position + Vector2(0.8, 0)
 	attacker._target = tree
+	var fire_sound_cursor := Sfx._next_player
+	attacker._enter(Enemy.State.ALERT)
+	attacker._enter(Enemy.State.WINDUP)
 	attacker._hit_dealt = false
 	attacker._attack_active(0.0)
+	_check(Sfx._next_player == fire_sound_cursor, "fire alert, windup and tree attack are silent")
 	_check(tree.burning and tree.health < tree.max_health, "fire monster's active attack frame damages and ignites a mature tree")
 	tree.water(tree.max_health)
 	attacker.position = attacker_position
@@ -1314,7 +1335,7 @@ func _test_visual_repairs() -> void:
 	var sign := get_tree().get_first_node_in_group("besut_sign")
 	_check(sign != null and sign.get_meta("text", "") == "BESUT", "village sign has exact readable BESUT lettering")
 	_check(not _has_label(hud, "VITALS"), "removed VITALS panel is absent")
-	_check(p.get_node_or_null("VitalHud") is PlayerVitalHud, "world-space player HP/MP HUD remains")
+	_check(p.get_node_or_null("VitalHud") is PlayerVitalHud, "world-space player HP/XP HUD remains")
 	var old_quality := GameSettings.effects_quality()
 	var old_motion := GameSettings.reduce_motion()
 	for quality in ["low", "med", "high"]:

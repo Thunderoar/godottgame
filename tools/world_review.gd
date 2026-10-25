@@ -24,7 +24,7 @@ func _ready() -> void:
 	GameState.advance_world_clock(45 - float(GameState.data.get("world_time", 0)))
 	_freeze()
 	# Identical camera/time/settings for every paired composition fixture.
-	for fixture in [["spawn", Vector2(34, 24.3)], ["market", Vector2(24, 22)], ["market-home", Vector2(29, 23)], ["portals", Vector2(34, 13)], ["forest-edge", Vector2(46, 22)], ["forest-interior", Vector2(55, 22)], ["beach-turtle", Vector2(14, 28)], ["jetty-ship", Vector2(9, 28.5)], ["farms-residential", Vector2(40, 28)], ["besut", Vector2(29.5, 28.3)], ["west-cottages", Vector2(15, 17)], ["residential-lane", Vector2(17, 13)], ["market-lower", Vector2(26, 29)], ["farm-yard", Vector2(39, 34)]]:
+	for fixture in [["spawn", Vector2(34, 24.3)], ["market", Vector2(24, 22)], ["market-home", Vector2(29, 23)], ["portals", game.world._layout.position_of("portal_court")], ["forest-edge", Vector2(46, 22)], ["forest-interior", Vector2(55, 22)], ["beach-turtle", Vector2(14, 28)], ["jetty-ship", Vector2(9, 28.5)], ["farms-residential", Vector2(40, 28)], ["besut", Vector2(29.5, 28.3)], ["west-cottages", Vector2(15, 17)], ["residential-lane", Vector2(17, 13)], ["market-lower", Vector2(26, 29)], ["farm-yard", Vector2(39, 34)]]:
 		await _look(fixture[1])
 		await _shot(fixture[0])
 	GameSettings.set_camera_zoom(64, false)
@@ -92,7 +92,7 @@ func _ready() -> void:
 	GameState.advance_world_clock(205 - float(GameState.data.get("world_time", 0)))
 	_freeze()
 	await get_tree().create_timer(0.4).timeout
-	for fixture in [["night-village", Lobby.SPAWN], ["night-forest", Vector2(53, 22)], ["night-coast", Vector2(12, 27)], ["night-portals", Vector2(34, 13)], ["night-residential", Vector2(15, 17)], ["night-farm", Vector2(40, 28)]]:
+	for fixture in [["night-village", Lobby.SPAWN], ["night-forest", Vector2(53, 22)], ["night-coast", Vector2(12, 27)], ["night-portals", game.world._layout.position_of("portal_court")], ["night-residential", Vector2(15, 17)], ["night-farm", Vector2(40, 28)]]:
 		await _look(fixture[1])
 		await _shot(fixture[0])
 	GameSettings.set_effects_quality("low", false)

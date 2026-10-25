@@ -40,8 +40,11 @@ unrelated polylines happening to overlap visually.
   wakaf court, with open fronts and selective household planting.
 - Market: all five merchants along one crescent; the carpenter anchors its
   northern end, with tools/timber at the side and open customer approaches.
-- Portal grounds: cooler stone approaches and a shared northern gateway, framed
-  by the existing warning stones and lanterns.
+- Portal grounds: two standalone portals sit at the northern map edge, with gates
+  at (34.8, 6.3) and (41.2, 6.3). The cave artwork and collider are removed.
+  Cooler stone approaches lead through the portal
+  court at (38, 8.2) to the existing north gateway; warning stones and lanterns
+  follow their portal owners.
 - Farmland: six beds in two columns, a shared garden aisle, animal yard, stable
   and a working homestead to the southeast. A separate forest watch lodge serves
   the eastern woodland edge. Ruins retain older outlying parcels.
@@ -194,3 +197,20 @@ Road `feather` controls inward edge softness (default 0.140625 units / 4.5 art
 pixels). These affect terrain presentation, not navigation clearance or coastline
 collision. Explicit values participate in terrain signatures. Maps without these
 keys retain their original pixels and bake hashes.
+
+## Northern portal relocation verification (2026-10-25)
+
+The terrain source was rebaked with `--write-village-bake` (geometry hash
+`2763877382`) and reimported using Godot 4.7.2. The isolated native world review
+completed with `WORLD_REVIEW PASS`, exit 0, and clean error logs. Day, night and
+full-map captures established the northern portal location; the ridge was later removed.
+Both portals remain reachable from arrival in the physics planner. The gameplay
+gate additionally checks the exact gate positions and absence of cave artwork/collision while retaining
+the existing forest fixture and all destination/route-clearance checks.
+
+The northern boundary has a full-width stone cliff with World collision, owned by NorthernBoundary. The cave visual and its rock collider are removed. Both portals use their normal standalone frames; their anchors, the boundary wall, saved settlement hierarchy, forest RNG and baked ground layout remain intact.
+
+The yellow UNISZA ship uses the harbour-relative boat activity offset (-1.5, 0.4),
+placing its hull beside the visible jetty. Returning passengers remain aboard until
+the ship docks, then step onto jetty_deck. This changes no coastline, sea collision,
+jetty footprint, terrain bake or forest placement.

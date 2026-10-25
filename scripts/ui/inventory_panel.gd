@@ -119,8 +119,6 @@ func _rebuild() -> void:
 func _icon_kind(item_id: String) -> String:
 	if item_id == "health_potion":
 		return "health_potion"
-	if item_id == "mana_potion":
-		return "mana_potion"
 	if item_id == "pet_food":
 		return "food"
 	var item := ItemDB.get_item(item_id)

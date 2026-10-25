@@ -5,7 +5,7 @@ extends Control
 ##
 ## Visual language (see docs/VISUAL_OVERHAUL.md): a crisp 32px icon drawn at an
 ## integer scale, a ring frame that matches GameUI, press squash + ring flash,
-## an optional cooldown sweep (Strike), a count badge (HP/MP potions) and an
+## an optional cooldown sweep (Strike), a count badge (item counts) and an
 ## optional keycap hint for desktop players.
 
 @export var action := "attack"
@@ -78,6 +78,8 @@ func _input(event: InputEvent) -> void:
 
 
 func _press() -> void:
+	if not _enabled or not is_visible_in_tree():
+		return
 	_active = true
 	_pulse = 1.0
 	Input.action_press(action)
@@ -175,9 +177,9 @@ func _draw() -> void:
 	var tex := PixelArt.icon(icon_kind, 32)
 	var icon_rect := Rect2(centre - Vector2.ONE * icon_px * 0.5 * _press_scale - Vector2(0, d * 0.12), Vector2(icon_px, icon_px) * _press_scale)
 	if not _enabled:
-		draw_texture_rect(tex, icon_rect, true, Color(0.55, 0.6, 0.62, 0.8))
+		draw_texture_rect(tex, icon_rect, false, Color(0.55, 0.6, 0.62, 0.8))
 	else:
-		draw_texture_rect(tex, icon_rect, true, Color.WHITE)
+		draw_texture_rect(tex, icon_rect, false, Color.WHITE)
 	# Caption.
 	var font := ThemeDB.fallback_font
 	var font_size := 12
@@ -190,7 +192,7 @@ func _draw() -> void:
 		var end := start + TAU * _cooldown
 		draw_arc(centre, draw_r - 3.0, start, end, 48, Color(0.95, 0.95, 0.9, 0.55), 4.0, true)
 		draw_circle(centre, draw_r - 7.0, Color(0.01, 0.03, 0.04, 0.35 * _cooldown))
-	# Count badge (HP/MP potions) at the top-right edge.
+	# Count badge (item counts) at the top-right edge.
 	if _badge != "":
 		var badge_pos := centre + Vector2(draw_r * 0.52, -draw_r * 0.62)
 		draw_circle(badge_pos + Vector2(1, 2), 11.0, Color(0, 0, 0, 0.4))

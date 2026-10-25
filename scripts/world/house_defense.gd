@@ -1,8 +1,7 @@
 class_name HouseDefense
 extends Node2D
-## A sheltered archer. Its tier is owned by the central home.
-
-const INTERVALS := [2.1, 1.7, 1.3, 1.0, 0.7]
+## Purchased rooftop machine gun; home level controls its fire rate.
+const INTERVALS := [0.6, 0.5, 0.4, 0.3, 0.2]
 var structure: SettlementTarget
 var _cooldown := 0.0
 var _aim := Vector2.RIGHT
@@ -13,35 +12,38 @@ var _level := 0
 
 func _ready() -> void:
 	add_to_group("house_defenses")
-	add_to_group("archer_huts")
+	add_to_group("roof_guns")
 	z_index = 20
 	_art = Sprite2D.new()
 	_art.scale = Vector2.ONE * PixelArt.PX
-	_art.position.y = -1.2
 	add_child(_art)
 	_tier = Label.new()
 	_tier.scale = Vector2.ONE * PixelArt.PX
-	_tier.position = Vector2(-0.65, -2.8)
+	_tier.position = Vector2(-0.65, -0.8)
 	_tier.add_theme_font_size_override("font_size", 11)
 	_tier.add_theme_color_override("font_outline_color", Color.BLACK)
 	_tier.add_theme_constant_override("outline_size", 3)
 	add_child(_tier)
+	visible = false
 
 func _process(delta: float) -> void:
 	if not is_instance_valid(structure):
 		return
-	visible = structure.is_intact()
-	_flash = maxf(0, _flash - delta)
-	_cooldown = maxf(0, _cooldown - delta)
+	visible = structure.is_intact() and GameState.has_roof_gun(structure.structure_id)
+	_flash = maxf(0.0, _flash - delta)
+	_cooldown = maxf(0.0, _cooldown - delta)
 	var level := GameState.house_level()
 	if _level != level:
 		_level = level
-		_art.texture = PixelArt.archer_hut_texture(level)
+		# Align the mount to the current roof ridge in the existing 224x176 art.
+		var house_scale := 1.3 if structure.structure_id == "cottage" else 0.78
+		position.y = (-118.0 - (level - 1) * 10.0) * PixelArt.PX * house_scale
+		_art.texture = PixelArt.roof_gun_texture(level)
 		_tier.text = "Lv %d" % level
 	if not visible or GameState.game_over_active:
 		return
 	var target: Enemy
-	var nearest := 7.0 + level
+	var nearest := 11.0 + level
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(enemy) or enemy.dead or enemy.is_queued_for_deletion() or enemy.get_parent() != structure.get_parent().get_parent() or enemy.kind not in ["fire", "urchin"]:
 			continue
@@ -51,15 +53,17 @@ func _process(delta: float) -> void:
 			target = enemy
 	if is_instance_valid(target):
 		_aim = (target.global_position - global_position).normalized()
-		_art.flip_h = _aim.x < 0
-		if _cooldown <= 0:
+		_art.rotation = _aim.angle()
+		if _cooldown <= 0.0:
 			_cooldown = INTERVALS[level - 1]
-			_flash = 0.15
-			var arrow := VillageBolt.new()
-			arrow.target = target
-			arrow.source = self
-			arrow.arrow = true
-			arrow.damage = 4 + level * 2
-			arrow.speed = 18.0
-			structure.get_parent().get_parent().add_child(arrow)
-			arrow.global_position = global_position + Vector2(0, -1.2)
+			var bullet := VillageBolt.new()
+			bullet.target = target
+			bullet.source = self
+			bullet.arrow = false
+			bullet.damage = 3 + level
+			bullet.speed = 30.0
+			structure.get_parent().get_parent().add_child(bullet)
+			bullet.global_position = global_position + _aim * 0.7
+			Vfx.sparks(bullet.global_position, _aim, Color("#ffe08c"), 2)
+			if target.combat_sounds_enabled():
+				Sfx.play("hit", -25.0)

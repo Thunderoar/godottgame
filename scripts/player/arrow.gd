@@ -1,6 +1,6 @@
 class_name Arrow
 extends Node2D
-## Simple ranged projectile for Ayiz. It travels in a straight line, checks
+## Simple ranged projectile for Mei Ling. It travels in a straight line, checks
 ## living monsters each step, and leaves a short impact flash.
 
 var direction := Vector2.RIGHT
@@ -8,6 +8,8 @@ var damage := 10
 var speed := 16.0
 var life := 1.4
 var source: Node = null
+var pierce := 1
+var _hit_ids: Array[int] = []
 
 var _sprite: Sprite2D
 var _dead := false
@@ -34,7 +36,12 @@ func _physics_process(delta: float) -> void:
 	if life <= 0.0:
 		queue_free()
 		return
+	var previous := global_position
 	global_position += direction * speed * delta
+	var ray := PhysicsRayQueryParameters2D.create(previous, global_position, 1)
+	if not get_world_2d().direct_space_state.intersect_ray(ray).is_empty():
+		queue_free()
+		return
 	# Faint trail behind the arrow.
 	_trail_timer -= delta
 	if _trail_timer <= 0.0 and not GameSettings.reduce_motion():
@@ -43,13 +50,18 @@ func _physics_process(delta: float) -> void:
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
 			continue
+		if enemy.get_parent() != get_parent() or bool(enemy.get("dead")) or enemy.get_instance_id() in _hit_ids:
+			continue
 		if not enemy.has_method("take_damage"):
 			continue
 		var radius := float(enemy.get("body_radius")) if enemy.get("body_radius") != null else 0.4
-		if global_position.distance_to(enemy.global_position) <= radius + 0.28:
+		if Geometry2D.get_closest_point_to_segment(enemy.global_position, previous, global_position).distance_to(enemy.global_position) <= radius + 0.28:
 			enemy.call("take_damage", damage, direction, source)
-			_impact(enemy.global_position)
-			return
+			_hit_ids.append(enemy.get_instance_id())
+			pierce -= 1
+			if pierce <= 0:
+				_impact(enemy.global_position)
+				return
 	if global_position.x < -4 or global_position.y < -4 or global_position.x > 70 or global_position.y > 46:
 		queue_free()
 

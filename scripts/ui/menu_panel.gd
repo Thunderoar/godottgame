@@ -28,7 +28,7 @@ func _rebuild() -> void:
 		if is_instance_valid(controller):
 			controller.toggle_build_mode())
 	content.add_child(build)
-	var book := GameUI.button("Buku BESUT", Vector2(320, 48))
+	var book := GameUI.button("BESUT Field Guide", Vector2(320, 48))
 	book.pressed.connect(func() -> void:
 		close_panel()
 		if is_instance_valid(controller):

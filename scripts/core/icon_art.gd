@@ -28,6 +28,10 @@ static func draw_icon(img: Image, kind: String, size: int) -> void:
 	match kind:
 		"sword":
 			_sword(img, s)
+		"scythe":
+			_line(img, 10 * s, 28 * s, 22 * s, 6 * s, Color("#a87c4d"), 3 * s)
+			_line(img, 22 * s, 6 * s, 10 * s, 3 * s, Color("#d9e3dc"), 3 * s)
+			_line(img, 10 * s, 3 * s, 4 * s, 13 * s, Color("#d9e3dc"), 3 * s)
 		"hammer":
 			_hammer(img, s)
 		"bow":

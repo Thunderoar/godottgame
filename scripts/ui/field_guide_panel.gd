@@ -8,7 +8,7 @@ func _ready() -> void:
 	super._ready()
 
 func open_book() -> void:
-	open_panel("Buku BESUT")
+	open_panel("BESUT Field Guide")
 
 func _rebuild() -> void:
 	_clear_content()

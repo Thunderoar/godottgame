@@ -125,7 +125,7 @@ All five supplied pet battle backgrounds are installed under assets/pet_battles,
 - The `forest_tree` group contains at least 60 living trees.
 - Every mature tree is a `ForestTree` and is also a `settlement_target`.
 - Every tree has independent HP and persistent health.
-- `take_attack_damage()` reduces tree HP, increments feedback and plays VFX/SFX.
+- `take_attack_damage()` reduces tree HP, increments feedback and plays VFX silently for fire attacks. Physical impacts retain SFX only while the tree is not burning.
 - Fire monsters ignite mature trees; flames deal ongoing damage and remain
   visible at low effects quality and with reduced motion.
 - Zero HP makes the tree fall, disappear and release trunk collision.
@@ -145,11 +145,11 @@ All five supplied pet battle backgrounds are installed under assets/pet_battles,
   motion keeps the same end state with a short fade and no camera movement.
 - Game Over shows a locked panel and returns to title without a Continue save.
 - At least 24 `forest_monsters` populate the woodland; raids can raise the cap to 30.
-- Fire monsters only choose mature trees. They cannot damage the player even if
-  handed a stale player target, and never charge a player in line of sight.
+- Fire monsters choose mature trees, nearby players or exposed residents. They
+  deal real damage to players and residents and do not use the forest charge.
 - Each journey begins with a peaceful day. Day and night each last exactly 180 seconds; the HUD counts down. Only night creates new fire monsters or sea urchins, including beach and raid paths. Existing monsters continue attacking after sunrise. Each night replenishes the baseline population once, without duplicating surviving monsters.
 - Clock phase and living home monster position/HP survive save/load and returning from a dungeon; no wave is created merely by reopening the village.
-- Generated `tree_hit` and `aggro` sounds must exist in `Sfx`.
+- Generated physical `tree_hit` and `aggro` sounds must exist in `Sfx`; fire attacks and burning create no tree audio.
 
 ### 6. Lively village and ruins
 - At least seven `resident_house` nodes exist.
@@ -165,10 +165,10 @@ All five supplied pet battle backgrounds are installed under assets/pet_battles,
 ### 7. Sea cleaning
 - The coastal guard catches drifting rubbish.
 - Each catch awards exactly +1 Gold and increments `GameState.data.sea_cleaned`.
-- At night, beached dangerous rubbish becomes a spiked sea urchin (`kind == "urchin"`)
-  and grants no catch reward. Its kill grants separate Gold exactly once.
+- Beached rubbish remains on sand as a distance-checked Pick Up interaction;
+  reaching sand grants nothing, and manual collection pays +1 Gold exactly once.
 - Sea urchins damage mature trees without igniting them, fences, intact houses
-  and exposed residents. Saplings remain immune.
+  and exposed residents, as well as nearby players. Saplings remain immune.
 - Sea-cleaning progress survives save/load.
 
 ### 8. Construction Shop and existing contracts
@@ -197,9 +197,9 @@ All five supplied pet battle backgrounds are installed under assets/pet_battles,
   `MissionPath` draws dashed ground arrows along obstacle-aware routes in the
   lobby and dungeon, pointing to one current objective.
 - Seven daytime lessons teach movement, gathering, shopping, Pack, workers, housing and pet feeding; three nighttime lessons teach fire combat, portals and a boss. Switching phase selects that phase’s next unfinished lesson. Only the current lesson’s action advances progress. Saved completed event IDs resume lessons after Continue, including migration from old numeric progress. Menu can show hidden mission tips again.
-- A non-blocking spotlight dims everything except the current action, draws a gold arrow and follows changing UI layout. It highlights the joystick, a shop, the exact potion Buy button, Pack, or Strike. The tips panel moves aside from the highlighted target.
-- The player owns a `PlayerVitalHud` that draws only Health and Mana above the
-  player's head.
+- A non-blocking spotlight dims everything except the current action, draws a gold arrow and follows changing UI layout. It highlights the joystick, a shop, the exact potion Buy button, Pack, or Attack. The tips panel moves aside from the highlighted target.
+- The player owns a `PlayerVitalHud` that draws Health, XP and level above the
+  player's head. Mana is removed.
 - The top-right `MenuButton` opens the in-game menu.
 - Settings opens from the menu.
 - GUI scale persists in GameSettings, applies to independently anchored HUD elements
@@ -224,7 +224,7 @@ suite (`_test_visual_overhaul_contracts` and updated attack waits):
   suite waits for the hit frame instead of checking on the same frame.
   `attack_cooldown` restarts at each hit frame, so per-second damage is
   unchanged.
-- The Strike touch icon matches the active hero's weapon style for all three
+- The Attack touch icon matches the active hero's weapon style for all three
   heroes, and the Use icon is context-sensitive (talk / door / bed / gather).
 - The 32 px icon set generates for weapons, interact variants and currencies.
 - Portal art (frame, sealed variant, 8 swirl frames) is generated from the
@@ -257,7 +257,7 @@ counter exclusion, reservation cleanup and isolated player gold/inventory.
 
 The VITALS removal intentionally replaces its obsolete segmented-panel checks
 with checks for its absence and the preserved PlayerVitalHud. Gameplay assertions
-for health/mana, potions, pet support, combat, tree falling and game-over remain.
+for health, health potions, pet support, combat, tree falling and game-over remain.
 
 Fresh review captures add coast west/turtle/east, BESUT, eastern forest, all six
 quality/motion combinations, GUI 75/100/130% at 1280×720 and 832×480, Settings at
@@ -277,7 +277,7 @@ inventory/currency/progression loss or duplicate transitions.
 `tools/deep_audit_test.tscn` additionally checks native GUI input dispatch and
 44-physical-pixel control sizes at 1280×720, 832×468 and 832×480 with GUI
 75/100/130%. Resizing alone must refresh these sizes. Home defeat uses critical
-HP/half mana and the existing recovery ward; it does not discard expedition loot
+HP and the existing recovery ward; it does not discard expedition loot
 or replace the forest-loss game-over rule. The loot test must touch all drops,
 including the randomly generated extra gem, before requiring an empty floor.
 
@@ -518,7 +518,7 @@ settings/guide/credits, replacement confirmation, compact/narrow layouts and
 failed Continue. See [TITLE_SCREEN_REDESIGN.md](TITLE_SCREEN_REDESIGN.md).
 
 - Orange builders, blue water fighters, green planters and black swordsmen have distinct appearances and jobs. Each starts with one; hiring and worker deaths survive saves. Existing Continue saves keep their workers. Ordinary residents shelter instead of performing specialist combat.
-- Every house, including former ruins, has persistent HP and an archer hut. One main-house upgrade controls the whole village tier (houses, archer huts, fences and specialist worker baseline). The main house must be intact and diamond cost is charged once. Arrow intervals are 2.1/1.7/1.3/1.0/0.7 seconds; destroyed houses disable their archers.
+- Every house, including former ruins, has persistent HP and a dormant rooftop gun mount. Buy one gun per intact house with Gold. The central house tier controls houses, fences, purchased gun speed and worker baseline. One diamond upgrade is charged once. Guns fire every 0.6/0.5/0.4/0.3/0.2 seconds and cannot fire from a destroyed house.
 - Only the central house is enterable. Touching it opens a furnished interior, brings the companion inside and restores health using the current house tier. There is no mattress interaction. The doorway returns player and pet outside; mandatory post-defeat recovery must finish first.
 - Two clickable portals sit inside the two mouths of a rocky hill. The integrated
   village resolves them from its authored sanctuary anchors; source-era fixed
@@ -537,10 +537,10 @@ The earlier HUD/battle update passed **494 checks, exit 0**. The focused PB suit
 powershell -File tools/test_pb_isolated.ps1 -Godot <console-exe> -Native -Scene res://tools/hud_battle_review.tscn
 ```
 
-- Cave entrances occupy the far northern edge, with both clickable portals accessible.
+- Two standalone portals occupy the far northern edge, with both clickable gates accessible.
 - Battles fill the arena with one image; both pets have three separate cooldowns. Player action precedes the enemy reply, and idle player turns never auto-resolve.
-- Only the day/night clock and Menu occupy the upper HUD. Player HP/MP/XP and level appear overhead; pet HP/XP appear overhead. Gold and diamond balances appear in shops.
-- HP/mana potion shortcuts are absent; Pack provides the potion actions beside the joystick. Menu provides Build settlement and Finish building.
+- Only the day/night clock and Menu occupy the upper HUD. Player HP/XP and level appear overhead; pet HP/XP appear overhead. Gold and diamond balances appear in shops.
+- Health-potion shortcuts are absent; Pack provides health-potion actions beside the joystick. Menu provides Build settlement and Finish building.
 - The home has four visible accessories: chest, wardrobe, weapon rack and pet bed.
 - New journeys grant exactly one builder, water keeper, planter and swordsman; additional workers are bought. Existing worker ownership survives Continue.
 - Daytime and nighttime tutorials switch automatically and preserve each phase’s unfinished lessons.
@@ -558,10 +558,81 @@ powershell -File tools/test_pb_isolated.ps1 -Godot <console-exe> -Native -Scene 
 ```
 
 - New Journey, Continue, portal travel, home entry/exit and return to title show a loading cover and fade. Current and newly built players stay locked until the cover leaves. Modals and pet arenas fade in.
-- Buku BESUT opens from Menu. Its 23 NPC pages, five monster pages and ten boss pages explain actions using sprites and visual symbols, with character names as headings. It has no explanatory paragraphs. Page turn and Close work at both landscape sizes.
+- BESUT Field Guide opens from Menu. Its NPC pages, five monster pages and ten boss pages explain actions using sprites and visual symbols, with character names as headings. It has no explanatory paragraphs. Page turn and Close work at both landscape sizes.
 - A new journey has one worker per specialist role. Main-house Levels 2-5 provide a baseline of 2-5 of each role. Hiring can add workers beyond that baseline within role limits, and ownership/deaths persist.
 - One main-house upgrade charges once and synchronizes the village house, archer-hut and fence tiers. Previews show the house, hut, fence and baseline worker count for each level. A ruined main house must be repaired before upgrading.
-- NPC archer huts replace roof machine guns; arrows visibly damage fire monsters and sea urchins. The shared home tier controls their fire interval, damage and range. Destroyed houses disable their archers.
+- Purchased rooftop machine guns replace archer huts. Yellow bullets damage fire monsters and sea urchins. Missing, ruined, unaffordable and duplicate purchases fail without charging. Ownership survives save/load.
 - Fences progress from wood to wood with a stone base, stone walls, fortified posts and battlements. Changing level refreshes existing fence sprites and survives save/load.
-- Night lessons retain the pointer without an extra dark overlay. The level-one portal is the only portal shown during that training. Other bosses cannot complete its final lesson; defeating The Grotto Warden ends that tutorial. All ten bosses show their distinct names above their HP.
+- Night lessons retain the pointer without an extra dark overlay. The level-one portal is the only portal shown during that training. Other bosses cannot complete its final lesson; defeating Vharok, Maw of the Deep ends that tutorial. All ten bosses show their distinct names above their HP.
 - Continue after finishing daytime lessons retains the unfinished nighttime tutorial and activates it at the next night. Build remains in Menu.
+
+
+## Combat and guardian update (2026-10-24)
+
+The isolated gameplay gate also runs tools/combat_revamp_checks.gd:
+
+- Adam (Malay male, sword), Mei Ling (Chinese female, bow) and Arjun (Indian male, scythe) have distinct portraits and weapon silhouettes with basic attacks only. Old qayyim/farhan/ayiz save IDs migrate to adam/arjun/mei_ling; inventory, progression and village unlocks remain. Legacy hammer item IDs are retained as scythes so existing equipment is preserved.
+- The HUD keeps one basic-attack button, Use, Pack and joystick. Skill 1/2/3 buttons, keyboard actions, cooldowns and Settings rows are removed for every hero. Cancelling basic-attack touch releases its InputMap action.
+- Every hero's basic attack still deals damage; arrows stop at world obstacles. Mana stats, overhead bars, character-selection MP values and mana potions are removed. Loading an older save removes retired mana fields, potions and skill control positions while preserving currency, equipment, health potions and active control customization. A second save/load keeps mana removed.
+- Winning each of five pet duels recruits that named rival, unlocks its roster entry and spawns an invincible village guardian. Replays do not duplicate a guardian. Guardians path toward and damage both fire monsters and sea urchins near the settlement. Prior cleared duels recruit their rivals when an older save is loaded.
+- The main-house interior has an interactable HouseBed using the existing house-tier recovery time. The automatic defeat-recovery ward remains governed by its existing rules.
+- All ten portals have intimidating named bosses, a special power, colliding pillars and six repeating rune traps. Rune traps warn for one second, damage for 0.65 seconds and then become safe until the next cycle. Higher portal levels increase trap damage and shorten the cycle. Bosses activate at range after a 2.2-second arrival warning and use their existing pursuit pathfinder.
+- Original procedural looping battle music starts for both monster portals and pet duels. World changes and closed/resolved pet duels stop it. The Master volume/mute controls also control music.
+- Player-facing book, missions, pet duel controls/status and loading destinations are English. Creator credits retain the authors' names.
+
+Verification results belong in docs/COMBAT_GUARDIANS_REPORT.md; a source edit is not a passing gate until stdout is clean and the isolated wrapper exits 0.
+
+## Northern portal placement (2026-10-25)
+
+- Both portal entrances remain side by side at the northern map edge: Monster (34.8, 6.3), Pet (41.2, 6.3). The cave artwork and its collision are removed; both portals retain full-size standalone frames.
+- The portal court, sanctuary approach and stone district move with the gates; portal-owned lanterns and scenery retain their offsets. The north village gate remains connected to both entrances by clear player-sized routes.
+- The default terrain bake is rebuilt and reimported after the source layout change. Existing forest identities, placement order and HP remain covered by the unchanged forest fixture.
+- Player-owned settlement positions and progression remain authoritative; moving these fixed developer portals does not rewrite the player save.
+
+Verified on Godot 4.7.2: isolated gameplay gate **993 checks, PASS, exit 0**; native world review **WORLD_REVIEW PASS, exit 0**. Both runs have no FAIL, SCRIPT ERROR or ERROR entries.
+
+## Coastal and turtle journey update (2026-10-25)
+
+The isolated gate also runs tools/coastal_checks.gd (focused scene: tools/coastal_test.tscn).
+
+- Fire-monster impacts and burning mature trees are silent: no impact SFX or local fire audio player is created. Watering extinguishes fire silently; physical impacts retain their normal tree-hit sound only on unburned trees.
+- Fire monsters and sea urchins can damage both the current living player and exposed residents. Sheltered/dead residents are excluded. Existing tree, sapling, structure and night-spawn rules remain. Player resolution must not retain a retiring world's player.
+- Tall tree, house, shop and authored prop art fades to 25% while its opaque pixels cover the player, then restores. Collision, damage tints, windows and the forest fixture stay independent of this presentation effect.
+- The full-width northern stone wall still blocks the map boundary. There is no cave sprite or hidden cave collider; ground behind the two standalone portals is accessible.
+- Walking onto the indoor doorway automatically leaves the main house once recovery allows it. Duplicate/fading exits are guarded.
+- Rubbish drifts from the water to sand and becomes a BeachRubbish interaction. Only a nearby, unlocked active player can collect it. Pick Up plays a net sweep and pays one cleanup Gold once. Guard catches retain their own one-Gold terminal path. Floating and beached populations are bounded.
+- The yellow UNISZA ship is moored beside the walkable jetty with a distance-checked Board Ship interaction. It locks/releases world inputs, moves the ship and passenger automatically, and starts a loading fade when the ship reaches the western map boundary. Duplicate boarding is rejected.
+- The ocean world owns its camera and two actions: Pick Up (E) for rubbish, Eat (F) for food. The player dives, a turtle approaches, and the player mounts automatically. Both touch buttons share the InputMap path. Food/rubbish drift faster with elapsed time, up to a bounded maximum.
+- Correct rubbish gives +1 Gold once and shows the player's net animation. Correct food opens the turtle mouth and restores one turtle health, capped at five. Either wrong action costs one turtle health and gives no gold. Missed rubbish also costs one health; an empty action does not.
+- Zero turtle health stops the run and offers Ride Again / Return to Shore. Retry clears old items and resets health/time/speed. Returning rebuilds the village with the player aboard the incoming ship. Controls remain locked until the ship docks and the player steps onto the jetty deck; only then are HUD, collision and movement restored. Ocean inputs are released. Cleanup Gold survives save/load; turtle-run state is transient.
+- Native checks inject actual screen touches on Pick Up and Eat, and capture house/tree transparency, standalone portal/wall alignment, beach collection, ship sailing, diving, riding, net/eating animations and results.
+
+Initial coastal verification: the isolated gameplay gate passed **1048 checks, PASS, exit 0**. Native focused runs at **1280×720 and 832×480** each pass **59 checks, exit 0**, including actual Pick Up/Eat screen touches. Final stdout/stderr are clean of FAIL, SCRIPT ERROR, ERROR and WARNING entries.
+
+## Cave removal (2026-10-25)
+
+- The village builds no TwinCaveHill sprite or CaveRockCollision body, and the unused cave-art generator is removed.
+- Both portal anchors stay at the northern edge. Frames and swirls use their normal standalone size/placement; the tutorial refers to the left portal.
+- NorthernBoundary retains the full-width stone wall and World collision. The former cave backs are clear, while the existing forest associations remain unchanged.
+- The native coastal capture now shows standalone portals and the north wall.
+
+Cave-removal verification: isolated gameplay gate **1049 checks, PASS, exit 0**; native 1280×720 feature review **60 checks, PASS, exit 0**. Logs contain no FAIL, SCRIPT ERROR or ERROR entries. The actual-renderer capture confirms both standalone portals with the northern boundary wall and no cave.
+
+## Silent tree fire and UNISZA harbour return (2026-10-25)
+
+- Fire attacks preserve tree damage/flames while requesting no impact or burning audio.
+- The yellow hull carries original pixel UNISZA lettering and moors immediately beside the jetty.
+- The ship stays opaque while carrying its passenger. The rider stands inside the deck beside the mast, with the near hull covering the legs. The passenger hull overlay hides after landing and ordinary scenery fading resumes.
+- Return to Shore brings the player aboard an incoming ship, docks, then disembarks onto jetty_deck. Controls and collision resume only after landing. Duplicate boarding during arrival is rejected.
+- Native screen-touch fixtures separate gestures across frames to avoid overlapping synthetic presses on slow renderers.
+
+Current ship/fire verification: isolated gameplay gate **1055 checks, PASS, exit 0**; native 1280×720 and 832×480 focused runs each **66 checks, PASS, exit 0**, including occupied-ship opacity. The latest 1280×720 captures also verify the rider inside the deck with the near hull in front of the legs. Final logs are clear of FAIL, SCRIPT ERROR, ERROR and WARNING entries.
+
+## Complete fire-combat silence (2026-10-25)
+
+- Fire monsters request no alert, repeated windup, special-attack or defeat SFX. Other enemy kinds retain their cues.
+- Player melee hits and rooftop-gun shots at fire monsters are silent while still dealing damage. Hits involving other enemy kinds retain their audio.
+- Burning trees stay silent through burn ticks, fire hits, physical hits, watering and falling. Physical hits on unburned trees keep their usual cue.
+- Coastal checks exercise real alert/windup states, player/resident damage, melee hits, defeat and ongoing burning. The full gate additionally verifies rooftop shots against both fire monsters and sea urchins.
+
+Complete fire-silence verification: official Windows isolated gate (`tools/test_isolated.ps1`) **1073 checks, PASS, exit 0**; focused coastal audio/flow scene **76 checks, PASS, exit 0**. Both logs are clear of FAIL, SCRIPT ERROR, ERROR and WARNING entries.

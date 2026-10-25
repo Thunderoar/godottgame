@@ -162,7 +162,7 @@ func _rebuild() -> void:
 		"potion":
 			add_section("POTIONS & CARE")
 			_add_stock_grid(ItemDB.stock_for("potion"))
-			add_body_text("Health and mana potions are permanent inventory; your pack stores up to nine of each.", GameUI.MUTED, 13)
+			add_body_text("Health potions are permanent inventory; your pack stores up to nine.", GameUI.MUTED, 13)
 		"equipment":
 			add_section("EQUIPMENT  •  %s discipline" % GameState.character_weapon_style().capitalize(), GameUI.GOLD)
 			_add_stock_grid(_equipment_stock(), true)
@@ -635,8 +635,6 @@ func _coin_arc(from: Vector2, to: Vector2) -> void:
 func _icon_kind(item_id: String) -> String:
 	if item_id == "health_potion":
 		return "health_potion"
-	if item_id == "mana_potion":
-		return "mana_potion"
 	if item_id == "pet_food":
 		return "food"
 	var item := ItemDB.get_item(item_id)

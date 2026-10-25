@@ -162,7 +162,7 @@ func _draw() -> void:
 
 func _build_defense() -> void:
 	var gun := HouseDefense.new()
-	gun.name = "ArcherHut"
+	gun.name = "RoofMachineGun"
 	gun.structure = self
-	gun.position = Vector2(4.2, -0.6) if structure_id == "cottage" else Vector2(3.0, -0.5)
+	gun.position = Vector2(0, -3.1) if structure_id == "cottage" else Vector2(0, -2.7)
 	get_parent().add_child(gun)

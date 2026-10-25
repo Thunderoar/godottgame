@@ -12,8 +12,8 @@ func _rebuild() -> void:
 	_clear_content()
 	var lesson := MissionDB.step(GameState.mission_step())
 	if lesson.is_empty():
-		add_section("Latihan malam selesai" if GameState.is_night() else "Latihan siang selesai", GameUI.PURPLE)
-		add_body_text("Latihan akan bertukar apabila waktu berubah. Gunakan masa ini untuk menjaga kampung dan bersedia.", GameUI.TEXT, 17)
+		add_section("Night training complete" if GameState.is_night() else "Day training complete", GameUI.PURPLE)
+		add_body_text("Training changes with the time of day. Protect the village and prepare for the next lesson.", GameUI.TEXT, 17)
 	else:
 		add_section(str(lesson.get("title", "Current mission")), GameUI.PURPLE)
 		add_body_text(str(lesson.get("text", "")), GameUI.TEXT, 17)

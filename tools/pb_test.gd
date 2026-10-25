@@ -24,7 +24,7 @@ func _ready() -> void:
 	await preload("res://tools/hud_battle_checks.gd").run(game, _check)
 	_check(game.hud._objective_panel == null and game.hud._boss_panel == null, "journal and screen boss bar removed")
 	_check(get_tree().get_nodes_in_group("mission_npc").size() == 1, "one purple question-mark mission NPC")
-	_check(lobby.get_node_or_null("TwinCaveHill") != null and get_tree().get_nodes_in_group("battle_portal").size() == 2, "two portals stand in twin hillside caves")
+	_check(lobby.get_node_or_null("TwinCaveHill") == null and get_tree().get_nodes_in_group("battle_portal").size() == 2, "two standalone northern portals remain without a cave")
 	_check(not get_tree().get_nodes_in_group("interactable").any(func(n: Node) -> bool: return n is HouseBed), "porch mattress removed")
 	_check(get_tree().get_nodes_in_group("interactable").filter(func(n: Node) -> bool: return n is HomeEntrance).size() == 1, "only the main house is enterable")
 	for role in ["builder", "water", "planter", "fighter"]:
@@ -101,16 +101,18 @@ func _ready() -> void:
 	urchin.queue_free()
 	await get_tree().process_frame
 	var home_guns := get_tree().get_nodes_in_group("house_defenses")
-	_check(home_guns.size() == get_tree().get_nodes_in_group("structures").filter(func(n: Node) -> bool: return n.structure_kind == "house").size(), "every house has an archer hut")
+	_check(home_guns.size() == get_tree().get_nodes_in_group("structures").filter(func(n: Node) -> bool: return n.structure_kind == "house").size(), "every house supports a purchased rooftop gun")
 	var gun: HouseDefense
 	for node in home_guns:
 		if node.structure == house:
 			gun = node
+	GameState.add_gold(1000)
+	_check(GameState.buy_roof_gun(house.structure_id).ok, "rooftop gun must be purchased")
 	var dummy := _enemy(lobby, "urchin", gun.global_position + Vector2(3, 0))
 	gun._cooldown = 0
 	gun._process(0.01)
 	await get_tree().create_timer(0.3).timeout
-	_check(dummy.hp < dummy.max_hp, "archer hut fires a damaging arrow")
+	_check(dummy.hp < dummy.max_hp, "purchased rooftop machine gun fires damaging bullets")
 	GameState.add_diamonds(1000)
 	var neighbour := "home_resident_house_east"
 	var own_level := GameState.house_level()
@@ -118,7 +120,7 @@ func _ready() -> void:
 	_check(GameState.upgrade_structure(neighbour).ok and GameState.structure_level(neighbour) == 2 and GameState.house_level() == own_level + 1 and GameState.diamonds() == balance - HouseDB.upgrade_cost(1), "house upgrade raises the whole village for one payment")
 	for i in 3:
 		_check(GameState.upgrade_structure(neighbour).ok, "house advances through weapon tier %d" % (i + 3))
-	_check(not GameState.upgrade_structure(neighbour).ok and HouseDefense.INTERVALS[4] < HouseDefense.INTERVALS[0], "five levels cap upgrades and accelerate archery")
+	_check(not GameState.upgrade_structure(neighbour).ok and HouseDefense.INTERVALS[4] < HouseDefense.INTERVALS[0], "five levels cap upgrades and accelerate machine guns")
 	_check(lobby.pet.get_node_or_null("PetHealth") is WorldHealthBar, "companion health floats overhead")
 	lobby.pet.global_position = dummy.global_position + Vector2(0.8, 0)
 	lobby.pet._attack_timer = 100

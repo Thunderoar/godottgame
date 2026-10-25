@@ -108,6 +108,7 @@ static func mix(a: Color, b: Color, t: float) -> Color:
 # ------------------------------------------------------------------ portraits & icons
 
 static func portrait(character_id: String, size: int = 96) -> Texture2D:
+        character_id = CharacterDB.canonical_id(character_id)
         return cached_texture("portrait_%s_%d" % [character_id, size], func() -> Image:
                 var character := CharacterDB.get_character(character_id)
                 var img := image(size, size)
@@ -125,17 +126,19 @@ static func portrait(character_id: String, size: int = 96) -> Texture2D:
                 rect(img, 42, 66, 12, 9, skin.darkened(0.12))
                 ellipse(img, size / 2, 45, 20, 23, OUTLINE)
                 ellipse(img, size / 2, 45, 18, 21, skin)
-                # Short masculine hair; Farhan has a short beard.
+                # Adam and Arjun have short hair; Mei Ling wears long tied hair.
                 ellipse(img, size / 2, 28, 19, 12, hair)
                 rect(img, 29, 27, 5, 13, hair)
                 rect(img, size - 34, 27, 5, 13, hair)
-                if character_id == "qayyim":
+                if character_id == "adam":
                         rect(img, 43, 24, 12, 4, hair.lightened(0.08))
-                elif character_id == "farhan":
+                elif character_id == "arjun":
                         rect(img, 36, 58, 24, 8, hair)
                         rect(img, 40, 64, 16, 7, hair.darkened(0.1))
                 else:
-                        rect(img, 28, 30, 6, 24, hair.darkened(0.12))
+                        rect(img, 25, 30, 8, 35, hair.darkened(0.12))
+                        rect(img, 65, 30, 7, 35, hair)
+                        rect(img, 23, 39, 10, 4, accent)
                 # Eyes, nose, mouth.
                 rect(img, 37, 43, 6, 3, OUTLINE)
                 rect(img, 53, 43, 6, 3, OUTLINE)
@@ -146,11 +149,12 @@ static func portrait(character_id: String, size: int = 96) -> Texture2D:
                 # Collar and weapon hint.
                 rect(img, 41, 72, 14, 5, Color("#e5d59a"))
                 match character_id:
-                        "farhan":
+                        "arjun":
                                 line(img, 72, 39, 91, 17, Color("#6a4a2d"))
-                                rect(img, 80, 12, 14, 12, Color("#798381"))
-                                rect(img, 83, 15, 8, 6, Color("#b3bdb8"))
-                        "ayiz":
+                                line(img, 91, 17, 74, 10, Color("#c8d5cf"))
+                                line(img, 74, 10, 65, 24, Color("#c8d5cf"))
+                                line(img, 65, 24, 77, 18, Color("#c8d5cf"))
+                        "mei_ling":
                                 line(img, 75, 18, 88, 50, Color("#9a6d3d"))
                                 line(img, 75, 18, 82, 50, Color("#cbb38b"))
                                 line(img, 88, 50, 82, 50, Color("#ece0c4"))
@@ -198,6 +202,10 @@ static func icon(kind: String, size: int = 16) -> Texture2D:
                                 line(img, 4, 14, 13, 5, Color("#777d7d"))
                                 line(img, 10, 12, 14, 8, Color("#c9964c"))
                                 line(img, 2, 12, 5, 15, Color("#7e5230"))
+                        "scythe":
+                                line(img, 5, 14, 11, 3, Color("#a87c4d"))
+                                line(img, 11, 3, 5, 1, Color("#d9e3dc"))
+                                line(img, 5, 1, 2, 6, Color("#d9e3dc"))
                         "hammer":
                                 line(img, 4, 14, 11, 4, Color("#7a5230"))
                                 line(img, 3, 13, 10, 3, Color("#b07c45"))
@@ -311,22 +319,23 @@ static func light_texture() -> Texture2D:
 # ------------------------------------------------------------------ player characters
 
 static func character_texture(character_id: String, facing: int, frame: int = 0) -> Texture2D:
+        character_id = CharacterDB.canonical_id(character_id)
         return cached_texture("character_%s_%d_%d" % [character_id, facing, frame], func() -> Image:
                 var character := CharacterDB.get_character(character_id)
                 var skin: Color = character.get("tint", Color("#f4dfc8"))
                 var accent: Color = character.get("accent", Color("#ecb35f"))
-                var hair := Color("#6f3f2b")
+                var hair: Color = character.get("hair", Color("#6f3f2b"))
                 var tunic := accent.darkened(0.35)
                 var cloak := accent.darkened(0.55)
                 var pants := Color("#3a3438")
                 match character_id:
-                        "farhan":
+                        "arjun":
                                 hair = Color("#252426")
                                 tunic = Color("#7a3f2b")
                                 cloak = Color("#44271e")
                                 pants = Color("#2e2a26")
-                        "ayiz":
-                                hair = Color("#3a2b22")
+                        "mei_ling":
+                                hair = Color("#25212d")
                                 tunic = Color("#4e7667")
                                 cloak = Color("#2c4350")
                                 pants = Color("#34332f")
@@ -422,7 +431,7 @@ static func character_texture(character_id: String, facing: int, frame: int = 0)
                                 rect(img, 17, 19 + bob, 3, 3, Color("#5e2f2f"))
                         else:
                                 hline(img, 18, 20 + bob, 4, Color("#9a5a50"))
-                        if character_id == "farhan":
+                        if character_id == "arjun":
                                 rect(img, 10, 17 + bob, 7, 6, hair.darkened(0.05))
                 else:
                         # Face and short hair from the front.
@@ -431,7 +440,7 @@ static func character_texture(character_id: String, facing: int, frame: int = 0)
                         rect(img, 19, 14 + bob, 4, 6, hair)
                         hline(img, 11, 13 + bob, 10, hair.lightened(0.06))
                         rect(img, 14, 10 + bob, 4, 3, hair.darkened(0.1))
-                        if character_id == "farhan":
+                        if character_id == "arjun":
                                 # Short beard and heavier brow.
                                 rect(img, 11, 20 + bob, 10, 4, hair.darkened(0.08))
                                 rect(img, 13, 22 + bob, 6, 3, hair)
@@ -452,16 +461,20 @@ static func character_texture(character_id: String, facing: int, frame: int = 0)
                                 hline(img, 14, 21 + bob, 5, Color("#8d4e4e"))
                 # Scarf / collar.
                 rect(img, 11, 23 + bob, 10, 2, accent.darkened(0.2))
+                if character_id == "mei_ling":
+                        rect(img, 8, 13 + bob, 3, 13, hair)
+                        rect(img, 21, 13 + bob, 3, 13, hair)
+                        rect(img, 7, 18 + bob, 4, 2, Color("#d7637e"))
                 # Unique weapon silhouette.
                 match character_id:
-                        "farhan":
+                        "arjun":
                                 # Forgehammer over the right shoulder.
                                 line(img, 23, 38 + bob, 29, 22 + bob, Color("#5b3c24"))
                                 line(img, 24, 37 + bob, 30, 21 + bob, Color("#8b6136"))
-                                rect(img, 25, 18 + bob, 9, 7, OUTLINE)
-                                rect(img, 26, 19 + bob, 7, 5, Color("#8b9694"))
-                                rect(img, 27, 20 + bob, 5, 2, Color("#ccd3cc"))
-                        "ayiz":
+                                line(img, 29, 21 + bob, 20, 16 + bob, OUTLINE)
+                                line(img, 29, 20 + bob, 20, 17 + bob, Color("#ccd3cc"))
+                                line(img, 20, 17 + bob, 17, 23 + bob, Color("#ccd3cc"))
+                        "mei_ling":
                                 # Hunting bow across the back.
                                 line(img, 24, 24 + bob, 29, 34 + bob, Color("#8a5e35"))
                                 line(img, 29, 34 + bob, 24, 43 + bob, Color("#8a5e35"))
@@ -489,7 +502,7 @@ static func pet_texture(pet_id: String, frame: int = 0) -> Texture2D:
                 var img := image(32, 32)
                 var bob := 1 if frame % 2 == 0 else 0
                 # Soft outline and body.
-                if pet_id == "luma":
+                if str(def.get("base_pet", pet_id)) == "luma":
                         ellipse(img, 11, 17 + bob, 8, 6, Color("#31546b"))
                         ellipse(img, 21, 17 + bob, 8, 6, Color("#31546b"))
                         ellipse(img, 11, 17 + bob, 6, 4, body)
@@ -501,7 +514,7 @@ static func pet_texture(pet_id: String, frame: int = 0) -> Texture2D:
                         px(img, 17, 12 + bob, OUTLINE)
                         line(img, 16, 8 + bob, 13, 5 + bob, accent)
                         line(img, 16, 8 + bob, 19, 5 + bob, accent)
-                elif pet_id == "moss":
+                elif str(def.get("base_pet", pet_id)) == "moss":
                         ellipse(img, 16, 22 + bob, 9, 6, OUTLINE)
                         ellipse(img, 16, 21 + bob, 8, 5, body)
                         ellipse(img, 16, 14 + bob, 7, 7, OUTLINE)
@@ -1198,9 +1211,9 @@ static func house_texture(level: int) -> Texture2D:
 static func ship_texture() -> Texture2D:
         return cached_texture("ship", func() -> Image:
                 var img := image(208, 128)
-                var hull := Color("#5b3c26")
-                var hull_dark := Color("#352319")
-                var hull_light := Color("#8b5f3a")
+                var hull := Color("#f1c340")
+                var hull_dark := Color("#957323")
+                var hull_light := Color("#ffe47b")
                 ellipse(img, 104, 113, 76, 7, Color(0, 0, 0, 0.24))
                 # Hull.
                 _fill_polygon(img, [Vector2i(28, 82), Vector2i(180, 82), Vector2i(160, 111), Vector2i(48, 111)], hull_dark)
@@ -1223,11 +1236,26 @@ static func ship_texture() -> Texture2D:
                 line(img, 104, 18, 38, 83, Color("#7b6850"))
                 line(img, 104, 18, 174, 83, Color("#7b6850"))
                 # Flag.
-                _fill_polygon(img, [Vector2i(101, 16), Vector2i(101, 5), Vector2i(122, 10)], Color("#b04848"))
+                _fill_polygon(img, [Vector2i(101, 16), Vector2i(101, 5), Vector2i(122, 10)], Color("#1564aa"))
                 # Lanterns.
                 for x in [58, 145]:
                         rect(img, x, 75, 7, 9, Color("#2f241c"))
                         rect(img, x + 2, 77, 3, 5, Color("#ffd981"))
+                # High-contrast pixel lettering painted directly on the yellow hull.
+                var letters := [
+                        ["10001", "10001", "10001", "10001", "10001", "10001", "01110"],
+                        ["10001", "11001", "10101", "10011", "10001", "10001", "10001"],
+                        ["11111", "00100", "00100", "00100", "00100", "00100", "11111"],
+                        ["01111", "10000", "10000", "01110", "00001", "00001", "11110"],
+                        ["11111", "00001", "00010", "00100", "01000", "10000", "11111"],
+                        ["01110", "10001", "10001", "11111", "10001", "10001", "10001"],
+                ]
+                rect(img, 67, 88, 74, 17, Color("#ffe47b"))
+                for letter in letters.size():
+                        for y in 7:
+                                for x in 5:
+                                        if letters[letter][y][x] == "1":
+                                                rect(img, 69 + letter * 12 + x * 2, 90 + y * 2, 2, 2, Color("#163851"))
                 return img)
 
 
@@ -1629,28 +1657,6 @@ static func authored_tree_texture() -> Texture2D:
         return cached_texture("authored_tree", func() -> Image: return MonsoonArt.tree_texture(0).get_image())
 
 
-static func cave_ridge_texture() -> Texture2D:
-        return cached_texture("pb_twin_cave_ridge_v1", func() -> Image:
-                var img := image(512, 192)
-                _fill_polygon(img, [Vector2i(0, 191), Vector2i(8, 100), Vector2i(58, 55), Vector2i(124, 26), Vector2i(192, 42), Vector2i(260, 8), Vector2i(330, 36), Vector2i(410, 24), Vector2i(490, 76), Vector2i(511, 191)], Color("#39443d"))
-                _fill_polygon(img, [Vector2i(9, 179), Vector2i(20, 101), Vector2i(68, 67), Vector2i(129, 43), Vector2i(201, 58), Vector2i(265, 27), Vector2i(336, 53), Vector2i(414, 42), Vector2i(476, 91), Vector2i(502, 179)], Color("#6e7963"))
-                _fill_polygon(img, [Vector2i(8, 100), Vector2i(58, 55), Vector2i(124, 26), Vector2i(192, 42), Vector2i(260, 8), Vector2i(330, 36), Vector2i(410, 24), Vector2i(490, 76), Vector2i(474, 90), Vector2i(412, 43), Vector2i(334, 55), Vector2i(260, 28), Vector2i(192, 60), Vector2i(126, 44), Vector2i(64, 74), Vector2i(20, 112)], Color("#6c8d46"))
-                for y in range(75, 176, 18):
-                        for x in range(22, 490, 29):
-                                var shift := (x * 7 + y * 3) % 13
-                                hline(img, x, y + shift, 17, Color("#8d9680"))
-                                hline(img, x + 4, y + shift + 7, 12, Color("#4d5a4d"))
-                for cx in [154, 358]:
-                        ellipse(img, cx, 138, 52, 65, Color("#3a4038"))
-                        rect(img, cx - 51, 137, 103, 53, Color("#3a4038"))
-                        ellipse(img, cx, 139, 43, 56, Color("#151f25"))
-                        rect(img, cx - 42, 138, 85, 54, Color("#151f25"))
-                        ellipse(img, cx, 154, 31, 42, Color("#0c1119"))
-                        rect(img, cx - 30, 152, 61, 40, Color("#0c1119"))
-                        hline(img, cx - 50, 189, 101, Color("#a3956c"))
-                return img)
-
-
 static func home_accessory_texture(kind: String) -> Texture2D:
         return cached_texture("pb_home_decor_%s_v1" % kind, func() -> Image:
                 var img := image(64, 64)
@@ -1727,4 +1733,22 @@ static func archer_hut_texture(level: int) -> Texture2D:
                 line(img, 50, 50, 64, 50, Color("#d7d9ca"))
                 for i in level:
                         rect(img, 21 + i * 8, 72, 4, 3, Color("#f1d78c"))
+                return img)
+
+
+static func roof_gun_texture(level: int) -> Texture2D:
+        return cached_texture("roof_gun_%d_v1" % level, func() -> Image:
+                var img := image(48, 32)
+                var steel := Color("#758990")
+                ellipse(img, 20, 18, 12, 10, OUTLINE)
+                ellipse(img, 20, 18, 10, 8, steel.darkened(0.2))
+                rect(img, 17, 10, 16, 14, OUTLINE)
+                rect(img, 18, 11, 14, 12, steel)
+                rect(img, 29, 12, 17, 5, OUTLINE)
+                rect(img, 29, 18, 17, 5, OUTLINE)
+                hline(img, 30, 13, 15, steel.lightened(0.3))
+                hline(img, 30, 19, 15, steel.lightened(0.3))
+                rect(img, 12, 12, 5, 12, Color("#bfa062"))
+                for i in level:
+                        rect(img, 18 + i * 2, 25, 1, 3, Color("#f5d67d"))
                 return img)

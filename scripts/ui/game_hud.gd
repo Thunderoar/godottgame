@@ -9,11 +9,10 @@ signal menu_requested
 const DEFAULT_CONTROL_LAYOUT := {
 	"joystick": {"x": 20.0, "y": 514.0, "size": 190.0},
 	"attack": {"x": 1148.0, "y": 586.0, "size": 102.0},
-	"interact": {"x": 1156.0, "y": 486.0, "size": 82.0},
+	"interact": {"x": 1190.0, "y": 486.0, "size": 82.0},
 	"inventory": {"x": 24.0, "y": 160.0, "size": 64.0},
 	"build": {"x": 96.0, "y": 160.0, "size": 64.0},
 	"health_potion": {"x": 1055.0, "y": 510.0, "size": 58.0},
-	"mana_potion": {"x": 1054.0, "y": 608.0, "size": 58.0},
 }
 
 var world: Node = null
@@ -67,9 +66,7 @@ var _interact_button: TouchActionButton
 var _inventory_button: TouchActionButton
 var _build_button: TouchActionButton
 var _health_potion_button: TouchActionButton
-var _mana_potion_button: TouchActionButton
 var _hp_count: Label
-var _mp_count: Label
 var _build_mode_panel: PanelContainer
 var _menu_button: Button
 var _control_nodes: Dictionary = {}
@@ -205,7 +202,7 @@ func _build_controls() -> void:
 
 	_attack_button = TouchActionButton.new()
 	_attack_button.action = "attack"
-	_attack_button.caption = "Strike"
+	_attack_button.caption = "Attack"
 	_attack_button.icon_kind = "sword"
 	_attack_button.accent = Color("#e1a34f")
 	_attack_button.diameter = 102
@@ -218,7 +215,7 @@ func _build_controls() -> void:
 	_interact_button.icon_kind = "talk"
 	_interact_button.accent = Color("#61c9ba")
 	_interact_button.diameter = 82
-	_anchor_bottom_right(_interact_button, Vector2(-124, -234), Vector2(-42, -152))
+	_anchor_bottom_right(_interact_button, Vector2(-88, -234), Vector2(-6, -152))
 	_root.add_child(_interact_button)
 
 	_inventory_button = TouchActionButton.new()
@@ -569,7 +566,8 @@ func _process(delta: float) -> void:
 		_loot_timer = 0.0
 		_refresh_loot()
 	if _attack_button:
-		var combatant := get_tree().get_first_node_in_group("player")
+		var game := get_tree().get_first_node_in_group("game") as Game
+		var combatant: Player = game.player() if is_instance_valid(game) else null
 		if combatant != null and is_instance_valid(combatant) and combatant.has_method("cooldown_fraction"):
 			_attack_button.set_cooldown(float(combatant.call("cooldown_fraction")))
 		else:
@@ -602,7 +600,7 @@ func _update_prompt() -> void:
 		_prompt_label.text = prompt
 		if _interact_button:
 			if prompt.length() > 0:
-				var short := prompt.split(" ")[0]
+				var short := "Pick Up" if prompt.begins_with("Pick Up") else prompt.split(" ")[0]
 				_interact_button.set_contextual(short.trim_suffix("."), _prompt_icon_kind(prompt))
 			else:
 				_interact_button.set_contextual("Use", "talk")
@@ -698,6 +696,10 @@ func _prompt_icon_kind(prompt: String) -> String:
 			return "bed"
 		"Gather":
 			return "gather"
+		"Pick":
+			return "gather"
+		"Board":
+			return "ship"
 	return "spark"
 
 
@@ -728,7 +730,7 @@ func _apply_touch_mode() -> void:
 	if _joystick:
 		_joystick.visible = show_touch
 	var hints := _show_key_hints()
-	for pair in [["attack", _attack_button], ["interact", _interact_button], ["open_inventory", _inventory_button], ["toggle_build", _build_button], ["use_health_potion", _health_potion_button], ["use_mana_potion", _mana_potion_button]]:
+	for pair in [["attack", _attack_button], ["interact", _interact_button], ["open_inventory", _inventory_button], ["toggle_build", _build_button], ["use_health_potion", _health_potion_button]]:
 		var button := pair[1] as TouchActionButton
 		if button == null:
 			continue
@@ -811,3 +813,13 @@ func fade_from_black(duration: float = 0.3) -> void:
 func _schedule_gui_layout() -> void:
 	# Physical window size can change while the stretched logical viewport stays identical.
 	call_deferred("_layout_gui")
+
+
+func release_world_controls() -> void:
+	for control in _control_nodes.values():
+		if control is TouchActionButton:
+			control.cancel()
+		elif control is TouchJoystick:
+			control.cancel()
+	for action in ["attack", "interact", "move_left", "move_right", "move_up", "move_down", "open_inventory"]:
+		Input.action_release(action)

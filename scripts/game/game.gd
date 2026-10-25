@@ -19,6 +19,8 @@ var _game_over := false
 var home_interior: HomeInterior
 var _outdoor_position := Vector2.ZERO
 var loading_screen: LoadingScreen
+var _sailing := false
+var _return_to_harbour := false
 
 const EMERGENCY_DELAY := 14.0
 const SETTLEMENT_DAMAGE_TICK := 5.0
@@ -131,6 +133,11 @@ func _remove_title() -> void:
 # ------------------------------------------------------------------ world switching
 
 func _clear_world() -> void:
+	_portal_elapsed = 0.0
+	_emergency_triggered = false
+	_settlement_damage_accum = 0.0
+	_sailing = false
+	Sfx.stop_battle_music()
 	home_interior = null
 	if is_instance_valid(world) and world is Lobby and world.journey_serial == GameState.journey_serial:
 		GameState.store_home_monsters(world.capture_monsters())
@@ -147,7 +154,7 @@ func _load_lobby(transition: bool = true) -> void:
 	_input_locked = true
 	_apply_input_lock()
 	if transition:
-		await loading_screen.begin("Kampung Besut")
+		await loading_screen.begin("Besut Village")
 	_clear_world()
 	hud.set_build_mode(false)
 	var lobby := Lobby.new()
@@ -155,6 +162,15 @@ func _load_lobby(transition: bool = true) -> void:
 	world = lobby
 	_world_holder.add_child(lobby)
 	hud.set_world(lobby)
+	hud.visible = true
+	if _return_to_harbour:
+		_sailing = true
+		hud.visible = false
+		lobby.pet.visible = false
+		lobby.ship_boarding.begin_return(lobby.player)
+		lobby.camera.global_position = lobby.player.global_position
+		lobby.camera.reset_physics_interpolation()
+		_return_to_harbour = false
 	_restore_player_visual()
 	_apply_input_lock()
 	hud.set_sleep_state(false, 0.0, "")
@@ -163,7 +179,7 @@ func _load_lobby(transition: bool = true) -> void:
 	if transition:
 		await loading_screen.finish()
 	_transitioning = false
-	_input_locked = hud.any_modal_open()
+	_input_locked = hud.any_modal_open() or _sailing
 	_apply_input_lock()
 
 
@@ -316,7 +332,7 @@ func show_victory(summary: Dictionary, portal_id: String) -> void:
 
 
 func _on_modal_closed() -> void:
-	if hud.any_modal_open() or _transitioning:
+	if hud.any_modal_open() or _transitioning or _sailing or world is OceanJourney:
 		return
 	_input_locked = false
 	_apply_input_lock()
@@ -325,7 +341,7 @@ func _on_modal_closed() -> void:
 func _apply_input_lock() -> void:
 	var p := player()
 	if p != null:
-		p.controls_locked = _input_locked or p.dead
+		p.controls_locked = _input_locked or p.dead or _sailing or world is OceanJourney
 
 
 # ------------------------------------------------------------------ HUD API
@@ -512,7 +528,7 @@ func enter_home() -> void:
 	_transitioning = true
 	_input_locked = true
 	_apply_input_lock()
-	await loading_screen.begin("Rumah Utama")
+	await loading_screen.begin("Main House")
 	_outdoor_position = world._house_position + Vector2(0, 2.0)
 	home_interior = HomeInterior.new()
 	home_interior.game = self
@@ -537,7 +553,7 @@ func leave_home() -> void:
 	_transitioning = true
 	_input_locked = true
 	_apply_input_lock()
-	await loading_screen.begin("Kampung Besut")
+	await loading_screen.begin("Besut Village")
 	var p := player()
 	p.global_position = _outdoor_position
 	p.velocity = Vector2.ZERO
@@ -585,3 +601,63 @@ func open_field_guide() -> void:
 	_input_locked = true
 	_apply_input_lock()
 	hud.field_guide_panel.open_book()
+
+
+func board_ship(boarding: ShipDeparture) -> bool:
+	if not world is Lobby or _transitioning or _input_locked or _sailing or _game_over or is_instance_valid(home_interior) or GameState.recovery_active() or GameState.emergency_active():
+		return false
+	var p := player()
+	if not is_instance_valid(boarding) or boarding.get_parent() != world or not is_instance_valid(p) or p.dead or p.sleeping or p.global_position.distance_to(boarding.global_position) > boarding.interact_radius:
+		return false
+	_sailing = true
+	_input_locked = true
+	_apply_input_lock()
+	hud.release_world_controls()
+	hud.visible = false
+	if not boarding.begin(p):
+		_sailing = false
+		_input_locked = false
+		hud.visible = true
+		_apply_input_lock()
+		return false
+	world.pet.visible = false
+	GameState.save_game()
+	return true
+
+func enter_ocean(boarding: ShipDeparture) -> void:
+	if _transitioning or not _sailing or not is_instance_valid(boarding) or boarding.get_parent() != world or not boarding.arrived:
+		return
+	_transitioning = true
+	_input_locked = true
+	await loading_screen.begin("Below the Waves")
+	_clear_world()
+	var ocean := OceanJourney.new()
+	ocean.name = "OceanJourney"
+	world = ocean
+	_world_holder.add_child(ocean)
+	hud.set_world(ocean)
+	hud.visible = false
+	_apply_input_lock()
+	await loading_screen.finish()
+	_transitioning = false
+
+func return_from_ocean() -> void:
+	if not world is OceanJourney or _transitioning:
+		return
+	_return_to_harbour = true
+	GameState.save_game()
+	await _load_lobby(true)
+	var returning_lobby := world as Lobby
+	while is_instance_valid(returning_lobby) and world == returning_lobby and _sailing:
+		await get_tree().physics_frame
+
+
+func finish_ship_return(boarding: ShipDeparture) -> void:
+	if not world is Lobby or not _sailing or boarding != world.ship_boarding or not boarding.landed:
+		return
+	_sailing = false
+	hud.visible = true
+	_place_home_pet(player().global_position)
+	world.pet.visible = true
+	world._on_presentation_changed("")
+	_on_modal_closed()

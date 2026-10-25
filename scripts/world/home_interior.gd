@@ -5,6 +5,8 @@ var game: Game
 var _heal := 0.0
 var _exit: Interactable
 var _status: Label
+var _leaving := false
+const EXIT_FOOTPRINT := Rect2(-1.3, 3.7, 2.6, 1.5)
 
 func _ready() -> void:
 	z_index = 0
@@ -43,6 +45,11 @@ func _ready() -> void:
 		decoration.add_to_group("home_accessories")
 		decoration.set_meta("accessory", kind)
 		add_child(decoration)
+	var bed := HouseBed.new()
+	bed.name = "MainHouseBed"
+	bed.position = Vector2(-3.4, -1.0)
+	bed.add_to_group("home_beds")
+	add_child(bed)
 	var table := Sprite2D.new()
 	table.texture = PixelArt.icon("food")
 	table.scale = Vector2.ONE * 0.055
@@ -53,6 +60,11 @@ func _process(delta: float) -> void:
 	if not is_instance_valid(game) or game.home_interior != self or GameState.game_over_active:
 		return
 	_exit.available = not GameState.recovery_active()
+	var player := game.player()
+	if not _leaving and not game._transitioning and not game._input_locked and _exit.available and is_instance_valid(player) and not player.dead and EXIT_FOOTPRINT.has_point(to_local(player.global_position)):
+		_leaving = true
+		game.leave_home()
+		return
 	if GameState.health() < GameState.health_max():
 		_heal += float(GameState.health_max()) / GameState.sleep_recovery_seconds() * delta
 		var amount := floori(_heal)
@@ -63,7 +75,7 @@ func _process(delta: float) -> void:
 	else:
 		if GameState.recovery_active():
 			GameState.finish_recovery()
-		_status.text = "HOME\nFully healed. Tap doorway."
+		_status.text = "HOME\nFully healed. Walk through the doorway."
 
 func _draw() -> void:
 	draw_rect(Rect2(-7, -5, 14, 10), Color("#302c31"))

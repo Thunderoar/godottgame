@@ -23,7 +23,7 @@ signal game_over_triggered(reason: String)
 const SAVE_PATH := "user://tidesworn_save.json"
 const SAVE_VERSION := 6
 const INVENTORY_STACK_DEFAULT := 9
-const DEFAULT_CHARACTER := "qayyim"
+const DEFAULT_CHARACTER := "adam"
 const AUTO_HEAL_RATIO := 0.10
 const AUTO_HEAL_REARM_RATIO := 0.35
 
@@ -58,7 +58,6 @@ func _process(delta: float) -> void:
 func _make_default(character_id: String) -> Dictionary:
 	var character := CharacterDB.get_character(character_id)
 	var hp_max := int(character.hp)
-	var mana_max := int(character.mana)
 	var pet_max := PetDB.max_health("ember", 1)
 	var portal_state := {}
 	for portal_id in PortalDB.ordered_ids():
@@ -72,7 +71,6 @@ func _make_default(character_id: String) -> Dictionary:
 		starter_weapon: 1,
 		"cloth_tunic": 1,
 		"health_potion": 2,
-		"mana_potion": 1,
 		"pet_food": 1,
 		"wood": 0,
 	}
@@ -86,8 +84,6 @@ func _make_default(character_id: String) -> Dictionary:
 		"xp_next": 60,
 		"hp": hp_max,
 		"hp_max": hp_max,
-		"mana": mana_max,
-		"mana_max": mana_max,
 		"shield": 0,
 		"gold": 120,
 		"diamonds": 12,
@@ -127,6 +123,8 @@ func _make_default(character_id: String) -> Dictionary:
 		"emergency_damage": 0,
 		"settlement_layout": {},
 		"pet_battles": {},
+		"village_pets": [],
+		"roof_guns": {},
 		"sea_cleaned": 0,
 		"forest_health": {},
 		"forest_growth": {},
@@ -328,12 +326,6 @@ func consume_item(item_id: String) -> Dictionary:
 		data.hp = mini(health_max(), health() + int(effect.heal))
 		message = "Health restored."
 		used = true
-	elif effect.has("mana"):
-		if mana() >= mana_max():
-			return {"ok": false, "message": "Your mana is already full."}
-		data.mana = mini(mana_max(), mana() + int(effect.mana))
-		message = "Mana restored."
-		used = true
 	elif effect.has("pet_xp"):
 		var pet := get_active_pet()
 		if pet.is_empty():
@@ -417,14 +409,6 @@ func health_max() -> int:
 	return int(data.get("hp_max", 100))
 
 
-func mana() -> int:
-	return int(data.get("mana", 0))
-
-
-func mana_max() -> int:
-	return int(data.get("mana_max", 50))
-
-
 func shield() -> int:
 	return int(data.get("shield", 0))
 
@@ -482,14 +466,6 @@ func set_health(value: int) -> void:
 	data_changed.emit()
 
 
-func spend_mana(amount: int) -> bool:
-	if mana() < amount:
-		return false
-	data.mana = mana() - amount
-	data_changed.emit()
-	return true
-
-
 # --------------------------------------------------------------- experience
 
 func grant_xp(amount: int) -> void:
@@ -502,9 +478,7 @@ func grant_xp(amount: int) -> void:
 		data.level = int(data.get("level", 1)) + 1
 		data.xp_next = int(round(float(data.get("xp_next", 60)) * 1.45))
 		data.hp_max = int(data.get("hp_max", 100)) + 10
-		data.mana_max = int(data.get("mana_max", 50)) + 4
 		data.hp = health_max()
-		data.mana = mana_max()
 		leveled = true
 	if leveled:
 		_auto_heal_armed = true
@@ -550,6 +524,8 @@ func purchase_pet(pet_id: String) -> Dictionary:
 	var definition := PetDB.get_pet(pet_id)
 	if definition.is_empty():
 		return {"ok": false, "message": "Unknown companion."}
+	if definition.has("base_pet"):
+		return {"ok": false, "message": "Win this rival in the Pet Battle Portal first."}
 	if not get_pet(pet_id).is_empty():
 		return {"ok": false, "message": "That companion already lives with you."}
 	var cost := int(definition.get("cost", 0))
@@ -728,6 +704,7 @@ func complete_pet_battle(level_id: String) -> Dictionary:
 			pet.xp = 0
 			levels = 1
 			pet_changed.emit()
+	var recruited := _recruit_duel_pet(level_id)
 	cleared_map[level_id] = true
 	data.pet_battles = cleared_map
 	data_changed.emit()
@@ -738,6 +715,7 @@ func complete_pet_battle(level_id: String) -> Dictionary:
 		"gold": gold_reward,
 		"xp": xp_reward,
 		"pet_levels": levels,
+		"recruited_pet": recruited,
 		"pet_level": int(pet.get("level", 1)),
 		"message": "Pet duel won.",
 	}
@@ -1173,7 +1151,6 @@ func defeat_in_portal() -> void:
 	lose_expedition_loot()
 	data.shield = 0
 	data.hp = maxi(1, int(round(float(health_max()) * 0.10)))
-	data.mana = int(round(float(mana_max()) * 0.5))
 	data.recovery_active = true
 	revive_active_pet()
 	_save_if_needed()
@@ -1195,7 +1172,6 @@ func defeat_at_home() -> void:
 	data.deaths = int(data.get("deaths", 0)) + 1
 	data.shield = 0
 	data.hp = maxi(1, int(round(float(health_max()) * 0.10)))
-	data.mana = int(round(float(mana_max()) * 0.5))
 	data.recovery_active = true
 	revive_active_pet()
 	_save_if_needed()
@@ -1442,6 +1418,9 @@ func _merge(base: Dictionary, incoming: Dictionary) -> Dictionary:
 
 
 func _sanitize() -> void:
+	# Mana was retired; legacy saves keep all remaining progression.
+	data.erase("mana")
+	data.erase("mana_max")
 	var completed: Array = []
 	var raw: Variant = data.get("completed_missions", [])
 	if raw is Array:
@@ -1462,8 +1441,6 @@ func _sanitize() -> void:
 	data.diamonds = maxi(0, int(data.get("diamonds", 0)))
 	data.hp_max = maxi(1, int(data.get("hp_max", 100)))
 	data.hp = clampi(int(data.get("hp", data.hp_max)), 0, int(data.hp_max))
-	data.mana_max = maxi(0, int(data.get("mana_max", 50)))
-	data.mana = clampi(int(data.get("mana", data.mana_max)), 0, int(data.mana_max))
 	data.shield = clampi(int(data.get("shield", 0)), 0, 60)
 	data.house_level = clampi(int(data.get("house_level", 1)), 1, HouseDB.max_level())
 	data.level = maxi(1, int(data.get("level", 1)))
@@ -1477,6 +1454,16 @@ func _sanitize() -> void:
 		data.settlement_layout = {}
 	if not (data.get("pet_battles", {}) is Dictionary):
 		data.pet_battles = {}
+	var guardians: Array[String] = []
+	if data.get("village_pets", []) is Array:
+		for id in data.get("village_pets", []):
+			if PetDB.PETS.has(str(id)) and str(id) not in guardians:
+				guardians.append(str(id))
+	data.village_pets = guardians
+	if not data.get("roof_guns", {}) is Dictionary:
+		data.roof_guns = {}
+	for id in data.roof_guns.keys():
+		data.roof_guns[id] = bool(data.roof_guns[id])
 	data.sea_cleaned = maxi(0, int(data.get("sea_cleaned", 0)))
 	if not (data.get("forest_health", {}) is Dictionary):
 		data.forest_health = {}
@@ -1508,6 +1495,8 @@ func _sanitize() -> void:
 	var settings: Dictionary = data.get("settings", {})
 	if not (settings.get("control_layout", {}) is Dictionary):
 		settings.control_layout = {}
+	for retired_control in ["skill_1", "skill_2", "skill_3", "mana_potion"]:
+		settings.control_layout.erase(retired_control)
 	settings.gui_scale = clampf(float(settings.get("gui_scale", 1.0)), 0.75, 1.3)
 	data.settings = settings
 	if not bool((data.get("expedition", {}) as Dictionary).get("active", false)):
@@ -1516,7 +1505,8 @@ func _sanitize() -> void:
 	data.emergency_monsters = maxi(0, int(data.get("emergency_monsters", 0)))
 	data.emergency_damage = clampi(int(data.get("emergency_damage", 0)), 0, 100)
 	data.recovery_active = bool(data.get("recovery_active", false))
-	var character_id := str(data.get("character_id", DEFAULT_CHARACTER))
+	var character_id := CharacterDB.canonical_id(str(data.get("character_id", DEFAULT_CHARACTER)))
+	data.character_id = character_id
 	if not CharacterDB.ids().has(character_id):
 		character_id = DEFAULT_CHARACTER
 		data.character_id = character_id
@@ -1526,6 +1516,7 @@ func _sanitize() -> void:
 	# Remove retired consumables from old saves.
 	if data.inventory is Dictionary:
 		data.inventory.erase("pet_revival")
+		data.inventory.erase("mana_potion")
 	# Keep starter ownership intact if a malformed save omitted it.
 	if not data.pets.has("ember"):
 		var pet_max := PetDB.max_health("ember", 1)
@@ -1540,6 +1531,10 @@ func _sanitize() -> void:
 		var pet: Dictionary = data.pets[pet_id]
 		pet.alive = true
 		pet.hp = int(pet.get("hp_max", PetDB.max_health(str(pet_id), int(pet.get("level", 1)))))
+	# Existing cleared duels earn their rivals when an older save is loaded.
+	for duel_id in PetBattleDB.ordered_ids():
+		if bool(data.pet_battles.get(duel_id, false)):
+			_recruit_duel_pet(duel_id, false)
 	# A weapon from another discipline would break combat presentation.
 	var equipped: Dictionary = data.get("equipped", {})
 	var weapon_id := str(equipped.get("weapon", ""))
@@ -1624,3 +1619,48 @@ func work_structure(id: String, delta: float) -> bool:
 	if float(entry.repair_remaining) <= 0.0:
 		return bool(repair_structure(id).get("ok", false))
 	return false
+
+
+func _recruit_duel_pet(level_id: String, notify: bool = true) -> String:
+	var def := PetBattleDB.get_level(level_id)
+	var id := str(def.get("opponent_pet", ""))
+	if id.is_empty() or not PetDB.PETS.has(id):
+		return ""
+	if not data.pets.has(id):
+		var level := clampi(int(def.get("pet_level", 1)), 1, PetDB.MAX_LEVEL)
+		var maximum := PetDB.max_health(id, level)
+		data.pets[id] = {"id": id, "level": level, "xp": 0, "hp": maximum, "hp_max": maximum, "alive": true, "owned": true}
+	var guardians: Array = data.get("village_pets", [])
+	if id not in guardians:
+		guardians.append(id)
+	data.village_pets = guardians
+	if notify:
+		pet_changed.emit()
+	return id
+
+
+const ROOF_GUN_BASE_COST := 180
+const ROOF_GUN_LEVEL_COST := 60
+
+func roof_gun_cost() -> int:
+	return ROOF_GUN_BASE_COST + (house_level() - 1) * ROOF_GUN_LEVEL_COST
+
+
+func has_roof_gun(structure_id: String) -> bool:
+	return bool(data.get("roof_guns", {}).get(structure_id, false))
+
+
+func buy_roof_gun(structure_id: String) -> Dictionary:
+	var structure := structure_state(structure_id)
+	if str(structure.get("kind", "")) != "house" or int(structure.get("health", 0)) <= 0:
+		return {"ok": false, "message": "Choose an intact house first."}
+	if has_roof_gun(structure_id):
+		return {"ok": false, "message": "This house already has a rooftop machine gun."}
+	var cost := roof_gun_cost()
+	if gold() < cost:
+		return {"ok": false, "message": "Requires %d gold." % cost}
+	data.gold = gold() - cost
+	data.roof_guns[structure_id] = true
+	data_changed.emit()
+	_save_if_needed()
+	return {"ok": true, "message": "Rooftop machine gun installed."}
