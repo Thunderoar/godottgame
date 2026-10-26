@@ -25,7 +25,7 @@ static func run(game: Game, check: Callable) -> void:
 		dummy.position = player.position + Vector2(2, 0)
 		game.world.add_child(dummy)
 		dummy.set_physics_process(false)
-		check.call(game.hud._control_nodes.size() == 4 and game.hud._control_nodes.has("attack"), "%s keeps basic attack, Use, Pack and joystick" % hero)
+		check.call(game.hud._control_nodes.size() == 5 and game.hud._control_nodes.has("attack"), "%s keeps basic attack, Use, Pack and joystick" % hero)
 		check.call(not player.has_method("try_skill") and not player.has_method("skill_cooldown"), "%s has no player skill casting or cooldowns" % hero)
 		check.call(not GameState.data.has("mana") and not GameState.data.has("mana_max") and not GameState.character_data().has("mana"), "%s has no mana stat" % hero)
 		for action in ["skill_1", "skill_2", "skill_3", "use_mana_potion"]:

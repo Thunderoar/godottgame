@@ -43,23 +43,22 @@ notes are in [`docs/LEGACY_CONVERSION.md`](docs/LEGACY_CONVERSION.md).
 | Settlement editor | B | Menu → **Build settlement** / **Finish building** |
 | Close modal | Esc | **Close** |
 
-Pack sits beside the movement joystick; Build is inside Menu. Health potions are used from Pack. There is no minimap and no collect button: loot is collected
-automatically by touch. Floating NPC name labels and timed pop-up notifications
+Pack sits beside the movement joystick; Build is inside Menu. Health potions are used from Pack. Tap the top-right minimap to open a larger picture map. Shop, portal, house, jetty and ship pictures replace letter markers and the explanatory legend; player and flashing attack indicators remain. Gold and diamond balances appear at the top left and update after earnings and purchases. The clock sits at the bottom. Dungeon loot is collected automatically by touch. Floating NPC name labels and timed pop-up notifications
 have been removed; persistent HUD panels and the purple mission guide carry that information.
 
 ## New Journey tutorial
 
-New games teach seven daytime lessons (movement, gathering, shopping, Pack, workers, housing and feeding a pet) and three nighttime lessons (fire monsters, portals and a boss). Only completing the current action advances the lesson. Only the Level 1 Tidebound Grotto boss is required for portal training. At night the tutorial retains its pointer without adding a dim overlay. A time change switches to that phase’s unfinished lessons; returning to daylight resumes daytime progress. Skip hides the tips, and Menu can reopen them.
+New games teach seven daytime lessons (movement, gathering, shopping, Pack, workers, housing and feeding a pet) and three nighttime lessons (fire monsters, portals and a boss). Lessons advance through their actions. Clearing Portal 1 (Tidebound Grotto) completes and hides the tutorial, even if the battle crosses into daytime. Portals 2-10 continue the rescue story; they are not tutorial requirements. Previously cleared Portal 1 saves need no repeat battle. At night the tutorial retains its pointer without adding a dim overlay. A time change switches to that phase’s unfinished lessons; returning to daylight resumes daytime progress. Skip hides the tips, and Menu can reopen them.
 
 ![Tutorial](docs/screenshots/tide_tutorial.png)
 
 ## Characters and combat
 
 - **Adam** — Malay swordsman with swift sword strikes.
-- **Arjun** — Indian scythe wielder with wide melee sweeps.
-- **Mei Ling** — Chinese female archer with precise ranged shots.
+- **Arjun** — Indian scythe wielder with wide melee sweeps. Locked until the sea routes, Kraken King and prison rescue are completed.
+- **Mei Ling** — Chinese female archer with precise ranged shots. Locked until Malakar is defeated in the final Drowned Throne portal.
 
-Each starts with their own weapon and uses basic attacks only. Player skills and mana have been removed. The equipment shop filters to the active
+New journeys begin as Adam. Rescue Arjun at sea and Mei Ling in the final portal; both return as village defenders and unlock the reunion ending. Each hero uses basic attacks only. Player skills and mana have been removed. The equipment shop filters to the active
 hero's weapon discipline while sharing armour and shields.
 
 ## Settlement systems
@@ -124,10 +123,7 @@ Walk to the jetty and use **Board Ship** beside the yellow **UNISZA** ship.
 The ship sails automatically to the map
 boundary, fades out and loads the underwater journey. The player dives, a turtle
 arrives and the player mounts it automatically. Use **Pick Up (E)** for rubbish
-and **Eat (F)** for food in the action ring. Correct rubbish pays 1 Gold; food
-restores 1 turtle health. Wrong actions or missed rubbish cost 1 of 5 turtle
-health. Items speed up over time. At zero health, choose Ride Again or Return to
-Shore. The player returns aboard the ship, docks beside the jetty and only then
+and **Eat (F)** for food or pink hearts in the action ring. Start at **2.5x speed with 3 lives** and steer up/down using the joystick or W/S. Correct rubbish pays 1 Gold. Food does not heal; only eating a pink heart restores a life. Dodge moving bombs: collisions explode, cost a life and briefly make the turtle blink. At zero lives the turtle flips and sinks before retry appears. Three 45-second routes lead to Kraken Island, where defeating the sea king and opening the prison rescues Arjun. The player returns aboard the ship, docks beside the jetty and only then
 steps onto the deck. Controls return after disembarking. Cleanup gold is saved;
 the run itself is temporary.
 
@@ -225,7 +221,7 @@ rules (see `docs/VISUAL_OVERHAUL.md` for the design decisions):
   and camera zoom sliders. Zoom spans 28–64 (38 default), with smooth changes
   and device-level persistence. The anchored HUD scales without moving controls
   off-screen; touch targets retain at least 44 physical pixels. The top-right
-  VITALS panel is removed. Player HP/XP and level appear overhead; the pet has overhead HP/XP. Only the phase clock and Menu remain at the top. Gold and diamonds appear in shops.
+  VITALS panel is removed. Player HP/XP and level appear overhead; the pet has overhead HP/XP. Gold and diamonds appear at the top left, Menu and the minimap at the top right, and the phase clock at the bottom. Shops also show current balances.
 - **Comfort settings.** Settings gains Effects quality (low/med/high) and
   Reduce motion. Touch buttons show keycap hints on keyboard layouts, a
   cooldown sweep on Attack and a context-sensitive
@@ -337,7 +333,7 @@ checks and two independent runtime restart checks. See the
 [map editing guide](docs/MAP_STUDIO_GUIDE.md) for direct building/road/district
 editing, district moves, workpoints, asset placement and soft terrain edges.
 
-The Construction Shop upgrades the main house through five levels. Its level controls every village house, purchased rooftop machine gun and fence, and guarantees at least that many workers of each specialist role. Additional workers can still be purchased. Wooden fences gain a stone base at Level 2, become stone at Level 3 and gain fortified towers and battlements at Levels 4-5. Rooftop machine guns must be bought per intact house for Gold (180 + 60 per level above Level 1). They fire every 0.6 / 0.5 / 0.4 / 0.3 / 0.2 seconds and stop while their house is destroyed. All five supplied pet battle backgrounds are installed, including a PNG first frame of the supplied GIF. Each duel waits for one of three powers each round. Winning recruits that rival into your pet roster and the village guard; replaying never duplicates it.
+The Construction Shop upgrades the main house through five levels. Its level controls every village house, purchased rooftop machine gun and fence, and guarantees at least that many workers of each specialist role. Additional workers can still be purchased. Wooden fences gain a stone base at Level 2, become stone at Level 3 and gain fortified towers and battlements at Levels 4-5. Rooftop machine guns must be bought at the Equipment/Weapons Shop per intact house for Gold (180 + 60 per level above Level 1). They fire every 0.6 / 0.5 / 0.4 / 0.3 / 0.2 seconds and stop while their house is destroyed. All five supplied pet battle backgrounds are installed, including a PNG first frame of the supplied GIF. Each duel waits for one of three powers each round. Winning recruits that rival into your pet roster and the village guard; replaying never duplicates it.
 
 ## Loading and picture guide
 
@@ -349,3 +345,8 @@ The [GDT2 integration report](docs/GDT2_INTEGRATION.md) records the combined
 gameplay import, preserved source snapshot, compatibility resolutions and current
 evidence: 898 gameplay checks, 86 PB checks, 84 editor checks plus both restarts,
 and native upgrade/home/guide, HUD/battle and five-background reviews.
+
+
+## BESUT rescue story update
+
+The new illustrated opening follows Adam, Arjun and Mei Ling from their fishing accident into another dimension. Sea routes lead to Arjun’s prison and the final Monster Portal leads to Mei Ling. Both become defenders after returning to BESUT. [Campaign rules and verification](docs/BESUT_STORY_CAMPAIGN.md) cover the saved ending, new turtle mechanics, tap-to-inspect NPCs, illustrated book, tutorial updates and drag-and-resize controls in Settings. Current isolated gameplay gate: **1,114 checks, PASS, exit 0**.

@@ -82,6 +82,14 @@ func begin_return(player: Player) -> void:
 	# Start with the complete hull beyond the same boundary used for departure.
 	ship.position.x = Lobby.MAP_RECT.position.x - ship.get_rect().end.x * ship.scale.x - 0.25
 	_carry_passenger()
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if is_instance_valid(game) and game._arjun_returning:
+		var friend := Sprite2D.new()
+		friend.name = "ArjunPassenger"
+		friend.texture = PixelArt.character_texture("arjun", 0)
+		friend.scale = Vector2.ONE * PixelArt.PX
+		friend.position = PASSENGER_OFFSET + Vector2(-1.1, 0.1)
+		ship.add_child(friend)
 	ship.reset_physics_interpolation()
 	passenger.reset_physics_interpolation()
 

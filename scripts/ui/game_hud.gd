@@ -12,6 +12,10 @@ const DEFAULT_CONTROL_LAYOUT := {
 	"interact": {"x": 1190.0, "y": 486.0, "size": 82.0},
 	"inventory": {"x": 24.0, "y": 160.0, "size": 64.0},
 	"build": {"x": 96.0, "y": 160.0, "size": 64.0},
+	"menu": {"x": 1166.0, "y": 18.0, "size": 64.0},
+	"ocean_joystick": {"x": 24.0, "y": 510.0, "size": 180.0},
+	"ocean_pickup": {"x": 1014.0, "y": 588.0, "size": 104.0},
+	"ocean_eat": {"x": 1144.0, "y": 588.0, "size": 104.0},
 	"health_potion": {"x": 1055.0, "y": 510.0, "size": 58.0},
 }
 
@@ -25,6 +29,7 @@ var house_panel: HousePanel
 var victory_panel: VictoryPanel
 var defeat_panel: DefeatPanel
 var field_guide_panel: FieldGuidePanel
+var map_panel: WorldMapPanel
 var mission_panel: MissionPanel
 var tutorial_guide: TutorialGuide
 var menu_panel: MenuPanel
@@ -39,6 +44,7 @@ var _gold_label: Label
 var _diamond_label: Label
 var _identity_label: Label
 var _clock_label: Label
+var _minimap: VillageMinimap
 var _xp_bar: SegmentedBar
 var _pet_xp_bar: SegmentedBar
 var _objectives_box: VBoxContainer
@@ -84,6 +90,7 @@ func _ready() -> void:
 	_build_root()
 	_build_menu_button()
 	_build_currency_panel()
+	_build_minimap()
 	_build_objectives()
 	_build_mission_guide()
 	_build_emergency_panel()
@@ -135,12 +142,42 @@ func _build_menu_button() -> void:
 
 
 func _build_currency_panel() -> void:
+	var balances := GameUI.panel(Color(0.035, 0.08, 0.09, 0.9), Color("#3a565a"))
+	balances.name = "CurrencyPanel"
+	balances.offset_left = 22
+	balances.offset_right = 366
+	balances.offset_top = 18
+	balances.offset_bottom = 66
+	balances.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(balances)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 20)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	balances.add_child(row)
+	for kind in ["gold", "diamond"]:
+		var amount := HBoxContainer.new()
+		amount.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		amount.add_theme_constant_override("separation", 7)
+		amount.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(amount)
+		var icon := GameUI.icon_rect(kind, 24)
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		amount.add_child(icon)
+		var label := GameUI.label("", 19, GameUI.GOLD if kind == "gold" else GameUI.DIAMOND)
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		label.clip_text = true
+		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		amount.add_child(label)
+		if kind == "gold":
+			_gold_label = label
+		else:
+			_diamond_label = label
 	var clock := GameUI.panel(Color(0.035, 0.08, 0.09, 0.85), Color("#3a565a"))
-	clock.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	clock.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	clock.offset_left = -110
 	clock.offset_right = 110
-	clock.offset_top = 16
-	clock.offset_bottom = 58
+	clock.offset_top = -45
+	clock.offset_bottom = -5
 	_root.add_child(clock)
 	_clock_label = GameUI.label(GameState.time_string(), 18, GameUI.GOLD)
 	_clock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -229,7 +266,7 @@ func _build_controls() -> void:
 	_inventory_button.position = Vector2(235, -94)
 	_root.add_child(_inventory_button)
 
-	_control_nodes = {"joystick": _joystick, "attack": _attack_button, "interact": _interact_button, "inventory": _inventory_button}
+	_control_nodes = {"joystick": _joystick, "attack": _attack_button, "interact": _interact_button, "inventory": _inventory_button, "menu": _menu_button}
 	_default_transforms.clear()
 	for control_id in _control_nodes:
 		var node := _control_nodes[control_id] as Control
@@ -297,6 +334,10 @@ func _layout_gui() -> void:
 			element_factor = maxf(factor, 44.0 / maxf(1.0, base_size.y * display_scale))
 		var left := float(base.left) * factor
 		var top := float(base.top) * factor
+		var control_id: Variant = _control_nodes.find_key(node)
+		if control_id != null and GameState.control_layout().has(control_id):
+			left = float(base.left)
+			top = float(base.top)
 		# Fit center journal and mission guide between edge controls at large scales.
 		if node == _objective_panel:
 			var available_width := maxf(230.0, _root.size.x - 2.0 * 330.0 * factor)
@@ -332,6 +373,8 @@ func get_control_layout_current() -> Dictionary:
 			node_size = (node as TouchActionButton).diameter
 		var base: Dictionary = _gui_layout.get(node, {})
 		result[control_id] = {"x": node.anchor_left * _root.size.x + float(base.get("left", node.offset_left)), "y": node.anchor_top * _root.size.y + float(base.get("top", node.offset_top)), "size": node_size}
+	for id in ["ocean_joystick", "ocean_pickup", "ocean_eat"]:
+		result[id] = GameState.control_layout().get(id, DEFAULT_CONTROL_LAYOUT[id]).duplicate()
 	return result
 
 
@@ -420,8 +463,8 @@ func _build_prompt() -> void:
 	_prompt_panel.anchor_bottom = 1.0
 	_prompt_panel.offset_left = -230
 	_prompt_panel.offset_right = 230
-	_prompt_panel.offset_top = -72
-	_prompt_panel.offset_bottom = -24
+	_prompt_panel.offset_top = -106
+	_prompt_panel.offset_bottom = -58
 	_prompt_panel.visible = false
 	_root.add_child(_prompt_panel)
 	_prompt_label = GameUI.label("", 15, GameUI.TEXT)
@@ -494,6 +537,8 @@ func _build_tutorial() -> void:
 
 
 func _build_modals() -> void:
+	map_panel = WorldMapPanel.new()
+	_root.add_child(map_panel)
 	field_guide_panel = FieldGuidePanel.new()
 	_root.add_child(field_guide_panel)
 	mission_panel = MissionPanel.new()
@@ -630,6 +675,8 @@ func set_world(w: Node) -> void:
 func refresh_all() -> void:
 	if _root == null:
 		return
+	_gold_label.text = str(GameState.gold())
+	_diamond_label.text = str(GameState.diamonds())
 	_refresh_objectives()
 	_refresh_loot()
 	if _attack_button:
@@ -779,7 +826,7 @@ func set_build_mode(active: bool) -> void:
 func any_modal_open() -> bool:
 	if village_services_panel != null and village_services_panel.visible:
 		return true
-	for panel in [field_guide_panel, mission_panel, shop_panel, inventory_panel, portal_panel, pet_battle_panel, sea_cleaning_panel, house_panel, victory_panel, defeat_panel, menu_panel, settings_panel, dialogue_panel, game_over_panel]:
+	for panel in [map_panel, field_guide_panel, mission_panel, shop_panel, inventory_panel, portal_panel, pet_battle_panel, sea_cleaning_panel, house_panel, victory_panel, defeat_panel, menu_panel, settings_panel, dialogue_panel, game_over_panel]:
 		if panel != null and panel.visible:
 			return true
 	return false
@@ -788,7 +835,7 @@ func any_modal_open() -> bool:
 func hide_modals() -> void:
 	if village_services_panel != null and village_services_panel.visible:
 		village_services_panel.close_panel()
-	for panel in [field_guide_panel, mission_panel, shop_panel, inventory_panel, portal_panel, pet_battle_panel, sea_cleaning_panel, house_panel, victory_panel, defeat_panel, menu_panel, settings_panel, dialogue_panel, game_over_panel]:
+	for panel in [map_panel, field_guide_panel, mission_panel, shop_panel, inventory_panel, portal_panel, pet_battle_panel, sea_cleaning_panel, house_panel, victory_panel, defeat_panel, menu_panel, settings_panel, dialogue_panel, game_over_panel]:
 		if panel != null and panel.visible:
 			panel.close_panel()
 
@@ -823,3 +870,17 @@ func release_world_controls() -> void:
 			control.cancel()
 	for action in ["attack", "interact", "move_left", "move_right", "move_up", "move_down", "open_inventory"]:
 		Input.action_release(action)
+
+func _build_minimap() -> void:
+	_minimap = VillageMinimap.new()
+	_minimap.name = "VillageMinimap"
+	_minimap.activated.connect(func() -> void:
+		var game := get_tree().get_first_node_in_group("game") as Game
+		if is_instance_valid(game): game.open_map())
+	_minimap.anchor_left = 1
+	_minimap.anchor_right = 1
+	_minimap.offset_left = -228
+	_minimap.offset_right = -22
+	_minimap.offset_top = 70
+	_minimap.offset_bottom = 214
+	_root.add_child(_minimap)

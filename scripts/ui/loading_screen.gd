@@ -4,6 +4,7 @@ extends CanvasLayer
 var cover: ColorRect
 var destination: Label
 var dots: Label
+var _jumpers: Array[Control] = []
 var _clock := 0.0
 var active := false
 var _tween: Tween
@@ -36,7 +37,16 @@ func _ready() -> void:
 		picture.custom_minimum_size = Vector2(86, 76)
 		picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icons.add_child(picture)
+		var slot := Control.new()
+		slot.custom_minimum_size = Vector2(100, 100)
+		icons.add_child(slot)
+		slot.add_child(picture)
+		picture.size = Vector2(86, 76)
+		picture.position = Vector2(7, 20)
+		if _jumpers.size() != 1:
+			_jumpers.append(picture)
+		else:
+			_jumpers.append(null)
 	stack.add_child(icons)
 	destination = GameUI.label("", 21, GameUI.TEAL)
 	destination.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -50,6 +60,10 @@ func _process(delta: float) -> void:
 	if not active:
 		return
 	_clock += delta
+	for i in _jumpers.size():
+		var actor := _jumpers[i]
+		if actor:
+			actor.position.y = 20.0 - (0.0 if GameSettings.reduce_motion() else absf(sin(_clock * 6.0 + i * 0.8)) * 18.0)
 	dots.text = ["●  ·  ·", "·  ●  ·", "·  ·  ●"][int(_clock * 4) % 3]
 
 func begin(place: String) -> void:

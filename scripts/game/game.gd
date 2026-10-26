@@ -21,6 +21,8 @@ var _outdoor_position := Vector2.ZERO
 var loading_screen: LoadingScreen
 var _sailing := false
 var _return_to_harbour := false
+var _story_active := false
+var _arjun_returning := false
 
 const EMERGENCY_DELAY := 14.0
 const SETTLEMENT_DAMAGE_TICK := 5.0
@@ -37,6 +39,7 @@ func _ready() -> void:
 	hud.visible = false
 	loading_screen = LoadingScreen.new()
 	add_child(loading_screen)
+	add_child(NpcInfo.new())
 	_connect_hud()
 	GameState.player_defeated.connect(_on_player_defeated)
 	GameState.game_over_triggered.connect(_on_game_over)
@@ -44,7 +47,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	if is_instance_valid(world) and not _game_over:
+	if is_instance_valid(world) and not _game_over and not _story_active:
 		GameState.advance_world_clock(delta)
 	if world is Dungeon and GameState.expedition_active():
 		if not _emergency_triggered:
@@ -60,6 +63,7 @@ func _process(delta: float) -> void:
 
 
 func _connect_hud() -> void:
+	hud.map_panel.closed.connect(_on_modal_closed)
 	hud.field_guide_panel.closed.connect(_on_modal_closed)
 	hud.mission_panel.closed.connect(_on_modal_closed)
 	hud.village_services_panel.closed.connect(_on_modal_closed)
@@ -91,14 +95,15 @@ func _show_title() -> void:
 	_title_layer.add_child(title_screen)
 
 
-func _on_character_selected(character_id: String) -> void:
+func _on_character_selected(_character_id: String) -> void:
 	if _transitioning:
 		return
 	GameState.autosave_enabled = true
-	GameState.new_game(character_id)
+	GameState.new_game("adam")
 	_remove_title()
 	hud.visible = true
 	_game_over = false
+	await play_story("intro")
 	await _load_lobby(true)
 	hud.start_tutorial()
 
@@ -111,6 +116,8 @@ func _on_continue_requested() -> void:
 			title_screen.show_continue_error()
 		return
 	_remove_title()
+	if not bool(GameState.campaign().get("intro_seen", false)):
+		await play_story("intro")
 	hud.visible = true
 	if GameState.completed_mission_count() < MissionDB.STEPS.size():
 		hud.start_tutorial()
@@ -133,6 +140,7 @@ func _remove_title() -> void:
 # ------------------------------------------------------------------ world switching
 
 func _clear_world() -> void:
+	if world is Lobby: _arjun_returning = false
 	_portal_elapsed = 0.0
 	_emergency_triggered = false
 	_settlement_damage_accum = 0.0
@@ -181,6 +189,7 @@ func _load_lobby(transition: bool = true) -> void:
 	_transitioning = false
 	_input_locked = hud.any_modal_open() or _sailing
 	_apply_input_lock()
+	call_deferred("_check_campaign_ending")
 
 
 func _load_dungeon(portal_id: String, transition: bool = true) -> void:
@@ -305,6 +314,8 @@ func _on_player_defeated() -> void:
 		handle_portal_defeat()
 	elif world is Lobby:
 		handle_home_defeat()
+	elif world is KrakenIsland:
+		_handle_island_defeat()
 
 
 func handle_home_defeat() -> void:
@@ -328,11 +339,15 @@ func handle_home_defeat() -> void:
 
 
 func show_victory(summary: Dictionary, portal_id: String) -> void:
+	if portal_id == PortalDB.ordered_ids().back() and not bool(GameState.campaign().get("mei_ling_rescued", false)):
+		GameState.rescue_friend("mei_ling")
+		await _rescue_mei_ling()
+		return
 	hud.victory_panel.show_victory(summary, portal_id)
 
 
 func _on_modal_closed() -> void:
-	if hud.any_modal_open() or _transitioning or _sailing or world is OceanJourney:
+	if hud.any_modal_open() or _transitioning or _sailing or _story_active or world is OceanJourney:
 		return
 	_input_locked = false
 	_apply_input_lock()
@@ -642,7 +657,7 @@ func enter_ocean(boarding: ShipDeparture) -> void:
 	_transitioning = false
 
 func return_from_ocean() -> void:
-	if not world is OceanJourney or _transitioning:
+	if not (world is OceanJourney or world is KrakenIsland) or _transitioning:
 		return
 	_return_to_harbour = true
 	GameState.save_game()
@@ -661,3 +676,102 @@ func finish_ship_return(boarding: ShipDeparture) -> void:
 	world.pet.visible = true
 	world._on_presentation_changed("")
 	_on_modal_closed()
+	if _arjun_returning:
+		await _land_arjun(boarding)
+	_check_campaign_ending()
+
+
+func play_story(kind: String) -> void:
+	_story_active = true
+	_input_locked = true
+	_apply_input_lock()
+	hud.release_world_controls()
+	var story_world := world
+	var old_mode := story_world.process_mode if is_instance_valid(story_world) else Node.PROCESS_MODE_INHERIT
+	if is_instance_valid(story_world): story_world.process_mode = Node.PROCESS_MODE_DISABLED
+	var was_visible := hud.visible
+	hud.visible = false
+	var story := StorySequence.new()
+	story.kind = kind
+	add_child(story)
+	await story.completed
+	if kind == "intro": GameState.mark_story_seen("intro_seen")
+	if kind == "ending": GameState.mark_story_seen("ending_seen")
+	if is_instance_valid(story_world): story_world.process_mode = old_mode
+	_story_active = false
+	hud.visible = was_visible
+	_input_locked = hud.any_modal_open() or _sailing
+	_apply_input_lock()
+
+func enter_kraken_island() -> void:
+	if not world is OceanJourney or _transitioning: return
+	_transitioning = true
+	await loading_screen.begin("Kraken King's Island")
+	_clear_world()
+	var island := KrakenIsland.new()
+	world = island
+	_world_holder.add_child(island)
+	hud.set_world(island)
+	hud.visible = true
+	_input_locked = false
+	_apply_input_lock()
+	await loading_screen.finish()
+	_transitioning = false
+
+func _handle_island_defeat() -> void:
+	if _defeat_pending: return
+	_defeat_pending = true
+	_input_locked = true
+	_apply_input_lock()
+	await get_tree().create_timer(0.8).timeout
+	if not world is KrakenIsland: return
+	GameState.defeat_at_home()
+	await _load_lobby(true)
+	_defeat_pending = false
+
+func _rescue_mei_ling() -> void:
+	var dungeon := world as Dungeon
+	if not is_instance_valid(dungeon): return
+	hud.hide_modals()
+	var companion := Sprite2D.new()
+	companion.texture = PixelArt.character_texture("mei_ling", 0)
+	companion.scale = Vector2.ONE * PixelArt.PX
+	companion.position = dungeon.player.position + Vector2(-2, 0)
+	dungeon.add_child(companion)
+	for enemy in dungeon.get_children():
+		if enemy is Enemy or enemy is DungeonHazard: enemy.process_mode = Node.PROCESS_MODE_DISABLED
+	await play_story("mei")
+	if world != dungeon: return
+	# Both friends walk toward the same gate under a shared transition lock.
+	_input_locked = true
+	_apply_input_lock()
+	var walk := create_tween().set_parallel(true)
+	walk.tween_property(dungeon.player, "position", Vector2(24, 29), 1.6)
+	walk.tween_property(companion, "position", Vector2(22.8, 29), 1.6)
+	await walk.finished
+	await _load_lobby(true)
+	_check_campaign_ending()
+
+func _check_campaign_ending() -> void:
+	if not world is Lobby or _sailing or _transitioning or _story_active or not GameState.friends_reunited() or bool(GameState.campaign().get("ending_seen", false)): return
+	await play_story("ending")
+
+func _land_arjun(boarding: ShipDeparture) -> void:
+	var home := world as Lobby
+	var actor := boarding.ship.get_node_or_null("ArjunPassenger") as Sprite2D
+	if is_instance_valid(actor):
+		actor.reparent(home)
+		var walk := actor.create_tween()
+		walk.tween_property(actor, "global_position", boarding.global_position + Vector2(0.6, 0), 1.0)
+		walk.tween_property(actor, "global_position", home._house_position + Vector2(-3, 3), 3.0)
+		await walk.finished
+		actor.queue_free()
+	_arjun_returning = false
+	if is_instance_valid(home) and world == home: home._sync_rescued_friends()
+
+func open_map() -> void:
+	if not is_instance_valid(world) or _transitioning or _story_active or _sailing or _game_over or hud.any_modal_open(): return
+	_input_locked = true
+	_apply_input_lock()
+	hud.release_world_controls()
+	hud.map_panel.open_map()

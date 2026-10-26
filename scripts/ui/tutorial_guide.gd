@@ -56,19 +56,24 @@ func _build() -> void:
 	buttons.add_child(skip)
 	_next = GameUI.button("Next", Vector2(150, 34))
 	_next.disabled = true
+	_next.pressed.connect(func() -> void:
+		var game := get_tree().get_first_node_in_group("game") as Game
+		if is_instance_valid(game):
+			game.hud.field_guide_panel._category = 3
+			game.open_field_guide())
 	buttons.add_child(_next)
 
 
 func start() -> void:
 	_tips_enabled = true
 	_step = GameState.mission_step()
-	visible = _step < STEPS.size()
+	visible = not GameState.tutorial_complete()
 	_render()
 
 
 func _on_mission_changed() -> void:
 	_step = GameState.mission_step()
-	visible = _tips_enabled and _step < STEPS.size()
+	visible = _tips_enabled and not GameState.tutorial_complete()
 	_render()
 
 func _advance() -> void:
@@ -83,11 +88,17 @@ func _skip() -> void:
 
 func _render() -> void:
 	if _step >= STEPS.size():
+		_title.text = "Find your friends"
+		_body.text = GameState.campaign_objective() + "\nOpen the field guide for sea controls and rescue routes."
+		_counter.text = "BESUT STORY"
+		_next.text = "Story & Sea Guide"
+		_next.disabled = false
 		return
+	_next.disabled = true
 	var entry: Dictionary = STEPS[_step]
 	var title := str(entry.get("title", "Mission"))
 	_title.text = title.substr(title.find(". ") + 2) if title.contains(". ") else title
 	_body.text = str(entry.text)
 	var steps := MissionDB.phase_steps(GameState.is_night())
-	_counter.text = "%s %d/%d" % ["MALAM" if GameState.is_night() else "SIANG", steps.find(_step) + 1, steps.size()]
+	_counter.text = "%s %d/%d" % ["NIGHT" if GameState.is_night() else "DAY", steps.find(_step) + 1, steps.size()]
 	_next.text = "Do this task"

@@ -636,3 +636,18 @@ Current ship/fire verification: isolated gameplay gate **1055 checks, PASS, exit
 - Coastal checks exercise real alert/windup states, player/resident damage, melee hits, defeat and ongoing burning. The full gate additionally verifies rooftop shots against both fire monsters and sea urchins.
 
 Complete fire-silence verification: official Windows isolated gate (`tools/test_isolated.ps1`) **1073 checks, PASS, exit 0**; focused coastal audio/flow scene **76 checks, PASS, exit 0**. Both logs are clear of FAIL, SCRIPT ERROR, ERROR and WARNING entries.
+
+
+## BESUT rescue campaign update (2026-10-25)
+
+See [BESUT_STORY_CAMPAIGN.md](BESUT_STORY_CAMPAIGN.md) for the current story, sea rules and ownership. StoryChecks now runs in the isolated gameplay gate. Its focused scene is tools/story_test.tscn. The current turtle has three lives, starts at 2.5x speed, heals only from Eat on pink hearts, steers vertically and avoids moving bombs. Three 45-second routes lead to the Kraken/prison rescue. The final Monster Portal rescues Mei Ling; both friends defend BESUT and unlock the saved reunion ending. The minimap is restored, time is at the bottom, towers are purchased at the weapon shop, and real touch gestures cover NPC inspection and control dragging. Older assertions about no minimap, four controls excluding Menu, five turtle lives and healing food are superseded.
+
+Final campaign verification: **1,114 checks, PASS, exit 0** in the complete isolated gameplay gate. Native 832×480 verification: **41 checks, PASS, exit 0**, including real screen touch and drag gestures, rendered book/tower-shop fixtures and both friend damage paths. Earlier native 1280×720 and 832×480 runs passed 39 checks before the two additional tower-refresh and archer-damage assertions. Final logs contain no [FAIL], SCRIPT ERROR, ERROR or WARNING entries.
+
+## Clickable picture map and friend locks
+
+Latest isolated gameplay gate: **1,132 checks, PASS, exit 0**. Focused native map/title review at 832×480: **18 checks, PASS, exit 0**. Both logs are clean. Real touches open the expanded picture map and Close releases input. Tests verify shop/portal/home/jetty/ship textures, shared map coordinates, blocked locked-card selection, separate rescue explanations, independent unlocks and save/reload persistence.
+
+## Portal 1 tutorial completion
+
+The full isolated gameplay gate passes 1,142 checks, exit 0, with clean error logs. Ten added regression checks cover a first-portal fight spanning night to day, immediate tutorial dismissal, unchanged later-portal rescue progression, prevention of tutorial restart at the next night, and old-save reload where Portal 1 was previously cleared. APK 1.1.2 (versionCode 4) passes signature v2/v3 and 16-KiB ZIP-alignment verification.

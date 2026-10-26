@@ -1,5 +1,7 @@
 # Coastal journey and village visibility
 
+Current rules were updated by the BESUT rescue campaign on 2026-10-25; see [BESUT_STORY_CAMPAIGN.md](BESUT_STORY_CAMPAIGN.md). The implementation and evidence below describe the earlier milestone.
+
 Implemented 2026-10-25 with Godot 4.7.2 stable official (ed1daf0bf), Windows.
 
 ## Delivered behavior

@@ -192,7 +192,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 		for pair in [["trash", ocean._pickup], ["food", ocean._eat]]:
 			var kind := str(pair[0])
 			var button := pair[1] as TouchActionButton
-			ocean.health = 4
+			ocean.health = 2
 			var before_gold := GameState.gold()
 			var before_food := ocean.food_eaten
 			ocean.spawn_item(kind, ocean.mouth_position().x)
@@ -209,7 +209,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 			Input.parse_input_event(release)
 			await game.get_tree().process_frame
 			ocean.set_process(false)
-			check.call((GameState.gold() == before_gold + 1) if kind == "trash" else (ocean.food_eaten == before_food + 1 and ocean.health == 5), "native screen touch activates the %s button" % button.caption)
+			check.call((GameState.gold() == before_gold + 1) if kind == "trash" else (ocean.food_eaten == before_food + 1 and ocean.health == 2), "native screen touch activates the %s button" % button.caption)
 			check.call(not Input.is_action_pressed(button.action), "native screen touch releases %s" % button.action)
 			# Separate gestures across frames, including on slow native renderers.
 			await game.get_tree().create_timer(0.12).timeout
@@ -219,12 +219,14 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(ocean.choose_action("pickup") and GameState.gold() == gold + 1 and trash.resolved, "correct turtle rubbish pickup pays one gold and resolves the item")
 	check.call(not ocean.choose_action("pickup") and GameState.gold() == gold + 1, "a resolved ocean item cannot pay twice")
 	if capture.is_valid(): await capture.call("08_player_net_animation")
-	ocean.health = 4
+	ocean.health = 2
 	ocean.spawn_item("food", ocean.mouth_position().x)
-	check.call(ocean.choose_action("eat") and ocean.health == 5 and ocean._mouth_time > 0, "correct food opens the turtle mouth and restores health")
+	check.call(ocean.choose_action("eat") and ocean.health == 2 and ocean._mouth_time > 0, "correct food opens the turtle mouth without restoring health")
 	ocean._process(0.01)
 	if capture.is_valid(): await capture.call("09_turtle_eat_animation")
+	ocean.health = 3
 	for kind in ["food", "trash"]:
+		ocean._hurt_time = 0
 		ocean.spawn_item(kind, ocean.mouth_position().x)
 		var hp := ocean.health
 		check.call(not ocean.choose_action("pickup" if kind == "food" else "eat") and ocean.health == hp - 1, "wrong action on %s costs turtle health" % kind)
@@ -232,17 +234,20 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	var base_speed := ocean.speed()
 	ocean.elapsed += 120
 	check.call(ocean.speed() > base_speed and ocean.speed() <= OceanJourney.MAX_SPEED, "food and rubbish travel faster as the journey progresses")
+	ocean.elapsed = 0
 	var hp := ocean.health
 	ocean.spawn_item("trash", ocean.mouth_position().x - OceanJourney.ACTION_REACH - 0.05)
 	ocean._process(0.01)
-	check.call(ocean.health == hp - 1, "missed rubbish also harms the turtle")
+	check.call(ocean.health == hp, "missed rubbish does not inflict bomb damage")
 	ocean._pickup._press()
 	check.call(Input.is_action_pressed("ocean_pickup"), "Pick Up touch uses its shared InputMap action")
 	ocean._pickup.cancel()
 	check.call(not Input.is_action_pressed("ocean_pickup"), "cancelling Pick Up releases its synthetic input")
 	for i in ocean.health:
+		ocean._hurt_time = 0
 		ocean.spawn_item("trash", ocean.mouth_position().x)
 		ocean.choose_action("eat")
+	ocean._process(2.2)
 	check.call(ocean.phase == OceanJourney.Phase.FINISHED and ocean.health == 0 and ocean._retry.visible, "zero turtle health ends the run and exposes Ride Again")
 	if capture.is_valid(): await capture.call("10_turtle_result")
 	ocean.restart()

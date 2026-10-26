@@ -117,6 +117,7 @@ func _ready() -> void:
 				_player_spawn = marker.get("position", SPAWN)
 	_build_player_and_pet()
 	_sync_village_pets()
+	_sync_rescued_friends()
 	GameState.pet_changed.connect(_sync_village_pets)
 	var authored_layer := AuthoredMapRenderer.new()
 	authored_layer.name = "AuthoredMap"
@@ -1124,6 +1125,7 @@ func _on_data_changed() -> void:
 	if not is_node_ready() or GameState.game_over_active:
 		return
 	_build_water_keepers()
+	_sync_rescued_friends()
 
 
 func _on_pet_changed() -> void:
@@ -1662,8 +1664,8 @@ func get_guidance_targets() -> Array:
 		if not bool(GameState.portal_state(portal_id).get("cleared", false)):
 			monster_pending = true
 			break
-	if monster_pending:
-		targets.append({"label": "MONSTER", "position": _layout.approach("monster_portal"), "color": Color("#b08cff")})
+	if monster_pending and not bool(GameState.campaign().get("mei_ling_rescued", false)):
+		targets.append({"label": "RESCUE MEI LING" if GameState.tutorial_complete() else "MONSTER", "position": _layout.approach("monster_portal"), "color": Color("#b08cff")})
 	if not bool(GameState.pet_battle_state("pet_duel_1").get("cleared", false)):
 		targets.append({"label": "PET DUEL", "position": _layout.approach("pet_portal"), "color": Color("#5bd6cf")})
 	if GameState.house_level() < HouseDB.max_level():
@@ -1849,3 +1851,21 @@ func _sync_village_pets() -> void:
 		guardian.home = _player_spawn + Vector2((slot % 3 - 1) * 1.8, 2.0 + floorf(slot / 3.0))
 		guardian.position = guardian.home
 		add_child(guardian)
+
+
+func _sync_rescued_friends() -> void:
+	if not is_node_ready(): return
+	var story := GameState.campaign()
+	for id in ["arjun", "mei_ling"]:
+		if not bool(story.get(id + "_rescued", false)): continue
+		var game := get_tree().get_first_node_in_group("game") as Game
+		if id == "arjun" and is_instance_valid(game) and game._arjun_returning: continue
+		var exists := false
+		for child in get_children():
+			if child is VillageHero and child.hero_id == id: exists = true
+		if exists: continue
+		var friend := VillageHero.new()
+		friend.hero_id = id
+		friend.home = _house_position + Vector2(-3 if id == "arjun" else 3, 3)
+		friend.position = friend.home
+		add_child(friend)

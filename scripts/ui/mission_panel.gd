@@ -10,8 +10,13 @@ func open_missions() -> void:
 
 func _rebuild() -> void:
 	_clear_content()
+	add_section("RESCUE YOUR FRIENDS", GameUI.GOLD)
+	add_body_text(GameState.campaign_objective(), GameUI.TEXT, 16)
 	var lesson := MissionDB.step(GameState.mission_step())
-	if lesson.is_empty():
+	if GameState.tutorial_complete():
+		add_section("Tutorial complete", GameUI.PURPLE)
+		add_body_text("Portal 1 is the only Monster Battle Portal required for training. Continue your adventure to rescue Arjun and Mei Ling.", GameUI.TEXT, 17)
+	elif lesson.is_empty():
 		add_section("Night training complete" if GameState.is_night() else "Day training complete", GameUI.PURPLE)
 		add_body_text("Training changes with the time of day. Protect the village and prepare for the next lesson.", GameUI.TEXT, 17)
 	else:

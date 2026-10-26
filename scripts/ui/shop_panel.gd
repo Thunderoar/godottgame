@@ -14,6 +14,9 @@ extends ModalBase
 var shop_type := "potion"
 var shopkeeper := "Merchant"
 
+var _gun_house := "cottage"
+var _tower_message := ""
+var _tower_button: Button
 var _band: ShopScene
 var _gold_label: Label
 var _diamond_label: Label
@@ -82,6 +85,7 @@ func _clear_content() -> void:
 	# Closing frees previews at the end of the frame. A fast reopen must not
 	# animate or greet through references from the previous shop visit.
 	_band = null
+	_tower_button = null
 	_gold_label = null
 	_diamond_label = null
 	_selected_card = null
@@ -108,6 +112,8 @@ func _current_signature() -> String:
 				parts.append(item_id)
 		"equipment":
 			parts.append(GameState.character_weapon_style())
+			parts.append(JSON.stringify(GameState.data.get("roof_guns", {})))
+			parts.append(str(GameState.house_level()))
 			for item_id in ItemDB.equipment_for_style(GameState.character_weapon_style()):
 				parts.append(item_id)
 			parts.append("wood:%d" % mini(1, GameState.item_count("wood")))
@@ -156,6 +162,7 @@ func _rebuild() -> void:
 	keeper_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_currency_root.add_child(keeper_hint)
 
+	add_body_text(NpcInfo.description(shop_type), GameUI.TEAL, 14)
 	_build_detail_pane()
 
 	match shop_type:
@@ -164,6 +171,7 @@ func _rebuild() -> void:
 			_add_stock_grid(ItemDB.stock_for("potion"))
 			add_body_text("Health potions are permanent inventory; your pack stores up to nine.", GameUI.MUTED, 13)
 		"equipment":
+			_add_roof_gun_shop()
 			add_section("EQUIPMENT  •  %s discipline" % GameState.character_weapon_style().capitalize(), GameUI.GOLD)
 			_add_stock_grid(_equipment_stock(), true)
 			add_body_text("This counter stocks gear for your hero's weapon discipline. Armour and shields are shared.", GameUI.MUTED, 13)
@@ -455,6 +463,8 @@ func _stat_pill(kind: String, text: String) -> PanelContainer:
 # ------------------------------------------------------------------ refresh
 
 func _refresh_in_place() -> void:
+	if is_instance_valid(_tower_button):
+		_tower_button.disabled = GameState.has_roof_gun(_gun_house) or GameState.gold() < GameState.roof_gun_cost() or int(GameState.structure_state(_gun_house).get("health", 0)) <= 0
 	# Everything mutable updates in place: currencies, card states, pet pens.
 	# No children are freed here, so scroll and hover survive data_changed.
 	if _gold_label != null:
@@ -648,3 +658,35 @@ func _icon_kind(item_id: String) -> String:
 		"material":
 			return "wood"
 	return "spark"
+
+func _add_roof_gun_shop() -> void:
+	add_section("ROOFTOP MACHINE GUNS", GameUI.GOLD)
+	add_body_text("Buy one for each house. Guns target fire monsters and sea urchins; house upgrades improve their fire rate.", GameUI.MUTED, 13)
+	var picker := OptionButton.new()
+	picker.custom_minimum_size = Vector2(0, 42)
+	var structures: Dictionary = GameState.data.get("structures", {})
+	for id in structures:
+		var entry := GameState.structure_state(str(id))
+		if str(entry.get("kind", "")) != "house":
+			continue
+		var index := picker.item_count
+		picker.add_item("%s%s" % [entry.get("name", "House"), " - Installed" if GameState.has_roof_gun(str(id)) else ""])
+		picker.set_item_metadata(index, str(id))
+		if str(id) == _gun_house:
+			picker.select(index)
+	picker.item_selected.connect(func(index: int) -> void:
+		_gun_house = str(picker.get_item_metadata(index))
+		_rebuild())
+	content.add_child(picker)
+	var installed := GameState.has_roof_gun(_gun_house)
+	var button := GameUI.button("Machine gun installed" if installed else ("Buy rooftop machine gun - %d gold" % GameState.roof_gun_cost()), Vector2(0, 44))
+	button.disabled = installed or GameState.gold() < GameState.roof_gun_cost() or int(GameState.structure_state(_gun_house).get("health", 0)) <= 0
+	_tower_button = button
+	button.pressed.connect(_buy_roof_gun.bind(_gun_house))
+	content.add_child(button)
+
+func _buy_roof_gun(id: String) -> void:
+	var result := GameState.buy_roof_gun(id)
+	_tower_message = str(result.get("message", ""))
+	Sfx.play("equip" if bool(result.get("ok", false)) else "deny", -10.0)
+	_rebuild()

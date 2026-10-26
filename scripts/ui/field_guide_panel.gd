@@ -13,8 +13,8 @@ func open_book() -> void:
 func _rebuild() -> void:
 	_clear_content()
 	var tabs := HBoxContainer.new()
-	for i in 3:
-		var button := GameUI.button(["NPC", "Monster", "Boss"][i], Vector2(130, 44))
+	for i in 4:
+		var button := GameUI.button(["People", "Monsters", "Bosses", "Story & Sea"][i], Vector2(145, 44))
 		button.toggle_mode = true
 		button.button_pressed = _category == i
 		button.pressed.connect(func() -> void:
@@ -33,6 +33,9 @@ func _rebuild() -> void:
 	illustration.entry = entry
 	illustration.custom_minimum_size.y = clampf(get_viewport_rect().size.y - 300, 180, 320)
 	content.add_child(illustration)
+	add_body_text(FieldGuideDB.description(entry), GameUI.TEXT, 16)
+	if _category == 3:
+		add_body_text(GameState.campaign_objective(), GameUI.GOLD, 14)
 	var navigation := HBoxContainer.new()
 	navigation.alignment = BoxContainer.ALIGNMENT_CENTER
 	var previous := GameUI.button("‹", Vector2(75, 44))

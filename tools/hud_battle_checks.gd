@@ -4,9 +4,9 @@ static func run(game: Game, check: Callable) -> void:
 	var hud := game.hud
 	var lobby := game.world as Lobby
 	check.call(hud._xp_bar == null and hud._pet_xp_bar == null, "XP bars removed from screen HUD")
-	check.call(hud._gold_label == null and hud._diamond_label == null and hud._identity_label == null, "balances and player identity removed from top HUD")
+	check.call(hud._gold_label.text == str(GameState.gold()) and hud._diamond_label.text == str(GameState.diamonds()) and hud._identity_label == null, "top-left HUD displays current gold and diamonds")
 	check.call(hud._health_potion_button == null and hud._build_button == null, "potion shortcuts and screen Build button removed")
-	check.call(hud._control_nodes.size() == 4 and hud._clock_label.is_visible_in_tree(), "only four world touch controls remain and clock is visible")
+	check.call(hud._control_nodes.size() == 5 and hud._clock_label.is_visible_in_tree(), "four gameplay controls plus customizable Menu remain and clock is visible")
 	check.call(lobby.get_node("MonsterBattlePortal").position == lobby._layout.position_of("monster_portal") and lobby.get_node("PetBattlePortal").position == lobby._layout.position_of("pet_portal") and lobby.get_node_or_null("TwinCaveHill") == null, "standalone portals follow the authored sanctuary positions")
 	game.open_menu()
 	await game.get_tree().process_frame

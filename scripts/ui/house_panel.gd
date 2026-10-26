@@ -38,7 +38,7 @@ func _rebuild() -> void:
 	add_body_text("Orange builders repair damaged buildings by day. Work takes 10 seconds after arrival. Hire extra builders at the Worker Shop.", GameUI.TEAL, 15)
 	if not _message.is_empty():
 		add_body_text(_message, GameUI.GOLD, 14)
-	_add_roof_gun_shop()
+	add_body_text("Rooftop tower defenses are sold at the Equipment Shop.", GameUI.TEAL, 14)
 	_structure_id = "cottage"
 	content.add_child(GameUI.spacer(2))
 	var level := GameState.structure_level(_structure_id)

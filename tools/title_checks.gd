@@ -14,14 +14,18 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(title.current_page == TitleScreen.Page.HEROES and title._heroes.is_visible_in_tree(), "Start Game opens a dedicated hero selection page")
 	for i in CharacterDB.CHARACTERS.size():
 		title._card_buttons[i].pressed.emit()
-		check.call(title.selected_character_id == CharacterDB.ids()[i] and title._card_buttons[i].button_pressed, "hero card previews %s without starting the game" % CharacterDB.ids()[i])
+		if i == 0:
+			check.call(title.selected_character_id == "adam" and title._card_buttons[i].button_pressed, "Adam is available before either friend is rescued")
+		else:
+			check.call(title.selected_character_id == "adam" and title._overlay.visible and title._card_status[i].text == "LOCKED" and not title._card_buttons[i].button_pressed, "%s stays locked and explains its rescue route" % CharacterDB.ids()[i])
+			title._overlay_close.pressed.emit()
 	var browsed := GameState.data.duplicate(true)
 	browsed.erase("play_time")
 	check.call(game.world == null and browsed == original and not FileAccess.file_exists(GameState.SAVE_PATH), "browsing heroes does not create a world or write a save")
 	title._back_button.pressed.emit()
 	check.call(title.current_page == TitleScreen.Page.HOME, "Back returns from selection to the main menu")
 	title._start_button.pressed.emit()
-	check.call(title.selected_character_id == "mei_ling", "Back preserves the pending hero choice")
+	check.call(title.selected_character_id == "adam", "Back preserves the available Adam selection")
 	title._open_credits()
 	check.call(title._overlay.visible and title._start_button.focus_mode == Control.FOCUS_NONE, "title overlays isolate keyboard focus from the page")
 	title._close_overlay()
@@ -42,7 +46,7 @@ static func run(game: Game, check: Callable) -> void:
 	saved.character_selected.connect(func(id: String) -> void: selected.append(id))
 	check.call(not saved._continue_button.disabled and saved._save_summary.text.contains("Arjun"), "saved journey summary identifies the existing hero")
 	saved._start_button.pressed.emit()
-	saved._card_buttons[2].pressed.emit()
+	saved._card_buttons[0].pressed.emit()
 	saved._begin_button.pressed.emit()
 	check.call(saved._overlay.visible and selected.is_empty(), "Begin requires explicit replacement confirmation when a save exists")
 	check.call(FileAccess.get_file_as_string(GameState.SAVE_PATH) == saved_text and GameState.journey_serial == saved_serial, "opening replacement confirmation leaves saved progress unchanged")
@@ -69,7 +73,7 @@ static func run(game: Game, check: Callable) -> void:
 	var replace := saved._overlay_actions.get_child(1) as Button
 	replace.pressed.emit()
 	replace.pressed.emit()
-	check.call(selected == ["mei_ling"], "replacement confirms exactly one selected-hero handoff")
+	check.call(selected == ["adam"], "replacement confirms exactly one Adam campaign handoff")
 	saved.queue_free()
 	await game.get_tree().process_frame
 	GameState.delete_save()

@@ -33,7 +33,7 @@ func _layout_guide() -> void:
 	for candidate in candidates:
 		var point: Vector2 = candidate
 		point.y = minf(point.y, size.y - extent.y - 16)
-		if not Rect2(point, extent).intersects(target_rect.grow(35)):
+		if not Rect2(point, extent).intersects(target_rect.grow(35)) and (not is_instance_valid(hud._minimap) or not Rect2(point, extent).intersects(hud._minimap.get_global_rect())):
 			guide.position = point
 			return
 
@@ -132,4 +132,4 @@ func _draw() -> void:
 
 
 func dim_strength() -> float:
-	return 0.0 if GameState.is_night() else 0.72
+	return 0.0

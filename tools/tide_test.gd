@@ -33,6 +33,9 @@ func _ready() -> void:
 
 	await TitleChecks.run(game, _check)
 	game.title_screen._begin_button.pressed.emit()
+	await get_tree().process_frame
+	for scene in game.get_children():
+		if scene is StorySequence: scene.finish()
 	for frame in 100:
 		if is_instance_valid(game.world) and not game._transitioning:
 			break
@@ -55,7 +58,7 @@ func _ready() -> void:
 	_check(GameState.water_keeper_count() == 1, "new journeys start with one water keeper")
 	_check(game.call("player").get_node_or_null("VitalHud") is PlayerVitalHud, "player keeps its world HP/XP indicator")
 	_check(not _has_label(hud, "VITALS") and hud.get("_health_bar") == null and hud.get("_pet_bar") == null, "obsolete top-right VITALS construction is removed")
-	_check(hud.get("_minimap") == null, "no minimap exists")
+	_check(hud.get("_minimap") is VillageMinimap, "live minimap exists at the top right")
 	_check(hud.get("_emergency_panel") != null, "emergency HUD exists")
 	_check(hud.get("_recovery_panel") != null, "recovery HUD exists")
 	_check(hud.get("_joystick") != null, "touch joystick exists")
@@ -136,6 +139,9 @@ func _ready() -> void:
 	await _test_pet_shop_close()
 	await preload("res://tools/combat_revamp_checks.gd").run(game, _check)
 	await preload("res://tools/coastal_checks.gd").run(game, _check)
+	await preload("res://tools/portal_tutorial_checks.gd").run(game, _check)
+	await StoryChecks.run(game, _check)
+	await MapUnlockChecks.run(game, _check)
 	await _test_forest_game_over()
 
 	GameState.delete_save()
@@ -474,7 +480,7 @@ func _test_menu_and_settings() -> void:
 	_check(is_equal_approx(hud.get_gui_scale(), 1.10) and is_equal_approx(GameState.gui_scale(), 1.10), "GUI scale setting applies and persists")
 	hud.call("set_control_layout", "attack", 100.0, 500.0, 88.0)
 	var attack := hud.get("_attack_button") as TouchActionButton
-	_check(attack.get_global_rect().position.distance_to(Vector2(110, 550)) < 0.5 and is_equal_approx(attack.diameter, 88.0), "button positions and sizes are customizable")
+	_check(attack.get_global_rect().position.distance_to(Vector2(100, 500)) < 0.5 and is_equal_approx(attack.diameter, 88.0), "button positions and sizes are customizable")
 	hud.call("set_gui_scale", old_scale)
 	hud.call("reset_control_layout")
 	hud.settings_panel.close_panel()

@@ -8,6 +8,10 @@ const CONTROL_ROWS := [
 	["attack", "Basic Attack"],
 	["interact", "Use"],
 	["inventory", "Pack"],
+	["menu", "Menu"],
+	["ocean_joystick", "Sea Joystick"],
+	["ocean_pickup", "Sea Pick Up"],
+	["ocean_eat", "Sea Eat"],
 ]
 
 var _rows: Dictionary = {}
@@ -93,6 +97,12 @@ func _rebuild() -> void:
 	add_body_text("Low drops ambient life, wind bending and hit-stop; Reduce motion disables shake and camera look-ahead.", GameUI.MUTED, 13)
 
 	add_section("TOUCH CONTROLS", GameUI.GOLD)
+	var drag_editor := GameUI.button("Drag buttons to customize layout", Vector2(0, 48))
+	drag_editor.pressed.connect(func() -> void:
+		var editor := ControlLayoutEditor.new()
+		editor.closed.connect(_rebuild)
+		get_tree().root.add_child(editor))
+	content.add_child(drag_editor)
 	add_body_text("Adjust X, Y and size. Changes apply immediately and are saved.", GameUI.MUTED, 13)
 	var layout := hud.get_control_layout_current()
 	_rows.clear()

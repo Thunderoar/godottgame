@@ -35,6 +35,8 @@ var _cards: BoxContainer
 var _card_buttons: Array[Button] = []
 var _card_portraits: Array[TextureRect] = []
 var _card_status: Array[Label] = []
+var _card_locks: Array[TextureRect] = []
+var _card_unlock_text: Array[Label] = []
 var _card_details: Array[Control] = []
 var _card_names: Array[Label] = []
 var _hero_intro: Label
@@ -70,6 +72,7 @@ func _ready() -> void:
 	_build_overlay()
 	resized.connect(_layout)
 	GameSettings.changed.connect(_on_settings_changed)
+	GameState.data_changed.connect(_refresh_hero_locks)
 	_show_page(Page.HOME, false)
 	call_deferred("_layout")
 
@@ -182,7 +185,7 @@ func _build_heroes(parent: Control) -> void:
 	var words := VBoxContainer.new()
 	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	words.add_child(_label("CHOOSE YOUR ROAD", 32, CREAM))
-	_hero_intro = _paragraph("Three heroes. One home to protect. Choose how you fight.", 15, MUTED)
+	_hero_intro = _paragraph("Three friends, separated by a sea monster. Your campaign begins as Adam.", 15, MUTED)
 	words.add_child(_hero_intro)
 	heading.add_child(words)
 	_heroes.add_child(heading)
@@ -240,6 +243,18 @@ func _character_card(character: Dictionary, index: int) -> Button:
 	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	box.add_child(portrait)
 	_card_portraits.append(portrait)
+	var lock_picture := TextureRect.new()
+	lock_picture.texture = PixelArt.icon("lock")
+	lock_picture.set_anchors_preset(Control.PRESET_CENTER)
+	lock_picture.offset_left = -22
+	lock_picture.offset_top = -22
+	lock_picture.offset_right = 22
+	lock_picture.offset_bottom = 22
+	lock_picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	lock_picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	lock_picture.modulate = GOLD
+	portrait.add_child(lock_picture)
+	_card_locks.append(lock_picture)
 	var hero_name := _label(str(character.get("name", "Hero")), 28, CREAM)
 	box.add_child(hero_name)
 	_card_names.append(hero_name)
@@ -257,6 +272,10 @@ func _character_card(character: Dictionary, index: int) -> Button:
 	status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	box.add_child(status)
 	_card_status.append(status)
+	var unlock_text := _paragraph(_unlock_requirement(id), 14, MUTED)
+	unlock_text.custom_minimum_size.y = 50
+	box.add_child(unlock_text)
+	_card_unlock_text.append(unlock_text)
 	_card_buttons.append(card)
 	# The entire card is a single mouse/touch/keyboard target.
 	_ignore_mouse(padding)
@@ -275,6 +294,7 @@ func _show_page(page: Page, animate: bool = true) -> void:
 	current_page = page
 	_home.visible = page == Page.HOME
 	_heroes.visible = page == Page.HEROES
+	if not _hero_available(selected_character_id): selected_character_id = "adam"
 	_select_character(selected_character_id)
 	var target: Control = _start_button if page == Page.HOME else _card_buttons[CharacterDB.ids().find(selected_character_id)]
 	target.grab_focus()
@@ -291,17 +311,52 @@ func _show_page(page: Page, animate: bool = true) -> void:
 
 
 func _select_character(character_id: String) -> void:
-	if _departing or not CharacterDB.ids().has(character_id):
+	if _departing or not CharacterDB.ids().has(character_id): return
+	if not _hero_available(character_id):
+		_refresh_hero_locks()
+		_show_unlock_requirement(character_id)
 		return
 	selected_character_id = character_id
-	for i in _card_buttons.size():
-		var selected := str(CharacterDB.CHARACTERS[i].get("id", "")) == character_id
-		_card_buttons[i].set_pressed_no_signal(selected)
-		_card_status[i].text = "●  SELECTED" if selected else "SELECT HERO"
-		_card_status[i].add_theme_color_override("font_color", GOLD if selected else MUTED)
-	var character := CharacterDB.get_character(character_id)
-	_hero_summary.text = "%s  /  %s" % [str(character.get("name", "")), str(character.get("weapon", ""))]
+	_refresh_hero_locks()
+	_hero_summary.text = "Adam · Sword · Rescue Arjun at sea and Mei Ling in the final portal"
 
+func _hero_available(id: String) -> bool:
+	return id == "adam" or bool(GameState.campaign().get(id + "_rescued", false))
+
+func _unlock_requirement(id: String) -> String:
+	match id:
+		"arjun": return "Complete all 3 sea routes. Defeat the Kraken King, then open Arjun's prison to rescue him."
+		"mei_ling": return "Defeat Malakar in Drowned Throne, the final Monster Portal, to rescue Mei Ling."
+	return "Available from the start. Begin Adam's story and find your missing friends."
+
+func _refresh_hero_locks() -> void:
+	if _card_buttons.is_empty(): return
+	if not _hero_available(selected_character_id): selected_character_id = "adam"
+	for i in _card_buttons.size():
+		var id := str(CharacterDB.CHARACTERS[i].get("id", ""))
+		var locked := not _hero_available(id)
+		var selected := id == selected_character_id and not locked
+		_card_buttons[i].set_pressed_no_signal(selected)
+		_card_locks[i].visible = locked
+		_card_portraits[i].self_modulate = Color(0.28, 0.32, 0.36) if locked else Color.WHITE
+		_card_status[i].text = "LOCKED" if locked else ("ADAM · STORY HERO" if id == "adam" else "RESCUED · VILLAGE DEFENDER")
+		_card_status[i].add_theme_color_override("font_color", Color("#e1a58b") if locked else GOLD)
+		_card_unlock_text[i].text = _unlock_requirement(id) if locked or id == "adam" else ("Rescued! Arjun guards BESUT with his scythe." if id == "arjun" else "Rescued! Mei Ling guards BESUT with her bow.")
+
+func _show_unlock_requirement(id: String) -> void:
+	var index := CharacterDB.ids().find(id)
+	_open_overlay(str(CharacterDB.get_character(id).get("name", "Friend")) + " · LOCKED", _card_buttons[index])
+	var portrait := TextureRect.new()
+	portrait.texture = PixelArt.portrait(id, 96)
+	portrait.custom_minimum_size = Vector2(0, 130)
+	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	portrait.modulate = Color(0.5, 0.55, 0.6)
+	_overlay_body.add_child(portrait)
+	_overlay_body.add_child(_paragraph(_unlock_requirement(id), 20, CREAM))
+	_overlay_body.add_child(_paragraph("After the rescue, your friend returns to BESUT and helps defend the village.", 16, MUTED))
+	_overlay_close.text = "Back"
+	_overlay_close.grab_focus()
 
 func _request_begin() -> void:
 	if _departing or current_page != Page.HEROES or _overlay.visible:
@@ -310,7 +365,7 @@ func _request_begin() -> void:
 		_open_overlay("Begin a new journey?", _begin_button)
 		_overlay_body.add_child(_paragraph("Your saved journey", 13, GOLD))
 		_overlay_body.add_child(_paragraph(_saved_journey_text(), 19, CREAM))
-		_overlay_body.add_child(_paragraph("Starting as %s will replace this journey and its progress. You can go back and continue your saved adventure instead." % str(CharacterDB.get_character(selected_character_id).get("name", "Hero")), 17, MUTED))
+		_overlay_body.add_child(_paragraph("Starting Adam's story will replace this journey and its progress. You can go back and continue your saved adventure instead.", 17, MUTED))
 		var replace := _button("Replace Save & Begin", _begin_journey, true, false)
 		_overlay_actions.add_child(replace)
 		_overlay_close.text = "Keep Saved Journey"
@@ -325,7 +380,7 @@ func _begin_journey() -> void:
 	_departing = true
 	_set_page_focus(false)
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	character_selected.emit(selected_character_id)
+	character_selected.emit("adam")
 
 
 func _request_continue() -> void:

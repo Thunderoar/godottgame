@@ -38,6 +38,21 @@ func _texture(texture: Texture2D, centre: Vector2, extent: float) -> void:
 	draw_texture_rect(texture, Rect2(centre - fitted / 2, fitted), false)
 
 func _picture(id: String, at: Vector2, extent: float) -> void:
+	if id.begins_with("hero:"):
+		_texture(PixelArt.character_texture(id.get_slice(":", 1), 0), at, extent)
+		return
+	if id in ["turtle", "heart", "bomb", "kraken", "ship"]:
+		var texture: Texture2D = CoastalArt.turtle_texture()
+		match id:
+			"heart": texture = CampaignArt.heart_texture()
+			"bomb": texture = CampaignArt.bomb_texture()
+			"kraken": texture = CampaignArt.kraken_texture()
+			"ship": texture = PixelArt.ship_texture()
+		_texture(texture, at, extent)
+		return
+	if id == "prison":
+		for i in 5: draw_line(at + Vector2(-extent * 0.4 + i * extent * 0.2, -extent * 0.4), at + Vector2(-extent * 0.4 + i * extent * 0.2, extent * 0.4), _ink, 3)
+		return
 	if id.begins_with("npc:"):
 		_texture(PixelArt.npc_texture(id.get_slice(":", 1)), at, extent)
 		return

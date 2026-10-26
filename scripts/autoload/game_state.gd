@@ -76,6 +76,7 @@ func _make_default(character_id: String) -> Dictionary:
 	}
 	return {
 		"version": SAVE_VERSION,
+		"campaign": {"intro_seen": false, "ocean_stage": 1, "arjun_rescued": false, "mei_ling_rescued": false, "ending_seen": false},
 		"character_id": str(character.id),
 		"character_name": str(character.name),
 		"character_title": str(character.title),
@@ -740,7 +741,14 @@ func forest_tree_health(tree_id: String, max_health: int) -> int:
 const MAX_WATER_KEEPERS := 5
 
 
+func tutorial_complete() -> bool:
+	# Clearing Portal 1 ends training, even if its fight crosses a day/night boundary.
+	return bool(portal_state("tidebound_grotto").get("cleared", false)) or completed_mission_count() >= MissionDB.STEPS.size()
+
+
 func mission_step() -> int:
+	if tutorial_complete():
+		return MissionDB.STEPS.size()
 	var completed: Array = data.get("completed_missions", [])
 	for index in MissionDB.phase_steps(is_night()):
 		if str(MissionDB.step(int(index)).get("event", "")) not in completed:
@@ -752,7 +760,10 @@ func completed_mission_count() -> int:
 
 func record_mission_event(event: String) -> void:
 	var lesson := MissionDB.step(mission_step())
-	if lesson.is_empty() or str(lesson.get("event", "")) != event:
+	# Only real first-portal entry/clear callers send these events. Their result
+	# must survive a clock phase change during the battle.
+	var portal_event := event == "portal" or (event == "boss" and bool(portal_state("tidebound_grotto").get("cleared", false)))
+	if not portal_event and (lesson.is_empty() or str(lesson.get("event", "")) != event):
 		return
 	var completed: Array = data.get("completed_missions", [])
 	if event not in completed:
@@ -883,7 +894,7 @@ func control_layout() -> Dictionary:
 func set_control_layout(control_id: String, x: float, y: float, control_size: float) -> void:
 	var settings: Dictionary = data.get("settings", {})
 	var layout: Dictionary = settings.get("control_layout", {})
-	layout[control_id] = {"x": snappedf(x, 1.0), "y": snappedf(y, 1.0), "size": snappedf(control_size, 1.0)}
+	layout[control_id] = {"x": clampf(snappedf(x, 1.0), 0, 8192), "y": clampf(snappedf(y, 1.0), 0, 8192), "size": clampf(snappedf(control_size, 1.0), 42, 260)}
 	settings.control_layout = layout
 	data.settings = settings
 	data_changed.emit()
@@ -1418,6 +1429,7 @@ func _merge(base: Dictionary, incoming: Dictionary) -> Dictionary:
 
 
 func _sanitize() -> void:
+	_sanitize_campaign()
 	# Mana was retired; legacy saves keep all remaining progression.
 	data.erase("mana")
 	data.erase("mana_max")
@@ -1664,3 +1676,60 @@ func buy_roof_gun(structure_id: String) -> Dictionary:
 	data_changed.emit()
 	_save_if_needed()
 	return {"ok": true, "message": "Rooftop machine gun installed."}
+
+
+# --------------------------------------------------------------- BESUT campaign
+const OCEAN_STAGES := 3
+
+func campaign() -> Dictionary:
+	return (data.get("campaign", {}) as Dictionary).duplicate(true)
+
+func _sanitize_campaign() -> void:
+	var raw: Variant = data.get("campaign", {})
+	var clean: Dictionary = raw if raw is Dictionary else {}
+	data.campaign = {"intro_seen": bool(clean.get("intro_seen", false)), "ocean_stage": clampi(int(clean.get("ocean_stage", 1)), 1, OCEAN_STAGES), "arjun_rescued": bool(clean.get("arjun_rescued", false)), "mei_ling_rescued": bool(clean.get("mei_ling_rescued", false)), "ending_seen": bool(clean.get("ending_seen", false))}
+	if not bool(data.campaign.arjun_rescued) or not bool(data.campaign.mei_ling_rescued):
+		data.campaign.ending_seen = false
+
+func mark_story_seen(which: String) -> void:
+	if which not in ["intro_seen", "ending_seen"]:
+		return
+	if which == "ending_seen" and not friends_reunited():
+		return
+	data.campaign[which] = true
+	data_changed.emit()
+	_save_if_needed()
+
+func advance_ocean_stage(stage: int) -> bool:
+	if stage != int(campaign().get("ocean_stage", 1)) or stage >= OCEAN_STAGES:
+		return false
+	data.campaign.ocean_stage = stage + 1
+	data_changed.emit()
+	_save_if_needed()
+	return true
+
+func rescue_friend(id: String) -> bool:
+	if id not in ["arjun", "mei_ling"]:
+		return false
+	var key := id + "_rescued"
+	if bool(campaign().get(key, false)):
+		return false
+	data.campaign[key] = true
+	data_changed.emit()
+	_save_if_needed()
+	return true
+
+func friends_reunited() -> bool:
+	var story := campaign()
+	return bool(story.get("arjun_rescued", false)) and bool(story.get("mei_ling_rescued", false))
+
+func campaign_objective() -> String:
+	var story := campaign()
+	if friends_reunited():
+		return "Three friends reunited. BESUT is your new home."
+	var goals: Array[String] = []
+	if not bool(story.get("arjun_rescued", false)):
+		goals.append("Rescue Arjun: ship > sea route %d/3 > Kraken Island" % int(story.get("ocean_stage", 1)))
+	if not bool(story.get("mei_ling_rescued", false)):
+		goals.append("Rescue Mei Ling: defeat the final portal boss")
+	return "\n".join(goals)
