@@ -119,7 +119,7 @@ func _add_level_card(level_id: String) -> void:
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.add_theme_constant_override("separation", 2)
 	hbox.add_child(info)
-	var title_line := "%s  •  %s%s" % [str(def.get("name", level_id)), str(def.get("subtitle", "")), "  •  CLEARED" if cleared else ""]
+	var title_line := "%s  •  %s" % [str(def.get("name", level_id)), str(def.get("subtitle", ""))]
 	info.add_child(GameUI.label(title_line, 19, GameUI.GOLD if cleared else GameUI.TEXT))
 	info.add_child(GameUI.label("Opponent: %s   •   Companion Lv %d+" % [str(def.get("opponent_name", "Rival")), int(def.get("pet_level", 1))], 13, GameUI.MUTED))
 	var lore := GameUI.label(str(def.get("lore", "")), 13, GameUI.MUTED)

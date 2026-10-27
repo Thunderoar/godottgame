@@ -16,7 +16,8 @@ var _passenger_mask := 0
 var _front_hull: Sprite2D
 
 func _ready() -> void:
-	prompt = "Board Ship"
+	prompt = ""
+	show_marker = false
 	interact_radius = 2.2
 	_moored_position = ship.position
 	_build_front_hull()
@@ -87,8 +88,10 @@ func begin_return(player: Player) -> void:
 		var friend := Sprite2D.new()
 		friend.name = "ArjunPassenger"
 		friend.texture = PixelArt.character_texture("arjun", 0)
-		friend.scale = Vector2.ONE * PixelArt.PX
-		friend.position = PASSENGER_OFFSET + Vector2(-1.1, 0.1)
+		friend.scale = Vector2.ONE
+		friend.position = (PASSENGER_OFFSET + Vector2(-1.1, 0.1)) / ship.scale
+		friend.z_as_relative = false
+		friend.z_index = player.z_index
 		ship.add_child(friend)
 	ship.reset_physics_interpolation()
 	passenger.reset_physics_interpolation()
@@ -129,3 +132,16 @@ func _physics_process(delta: float) -> void:
 		var game := get_tree().get_first_node_in_group("game") as Game
 		if is_instance_valid(game) and game.world == get_parent():
 			game.enter_ocean(self)
+
+func _unhandled_input(event: InputEvent) -> void:
+	var point := Vector2.ZERO
+	if event is InputEventScreenTouch and event.pressed: point = event.position
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed: point = event.position
+	else: return
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if not is_instance_valid(game) or game.world != get_parent() or game._input_locked or not available: return
+	if game.world._settlement_editor.active: return
+	var world_point := get_canvas_transform().affine_inverse() * point
+	if is_instance_valid(ship) and ship.get_rect().has_point(ship.to_local(world_point)):
+		game.board_ship(self, true)
+		get_viewport().set_input_as_handled()

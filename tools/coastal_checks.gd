@@ -238,7 +238,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	var hp := ocean.health
 	ocean.spawn_item("trash", ocean.mouth_position().x - OceanJourney.ACTION_REACH - 0.05)
 	ocean._process(0.01)
-	check.call(ocean.health == hp, "missed rubbish does not inflict bomb damage")
+	check.call(ocean.health == hp, "rubbish behind the turtle remains recoverable until it exits the screen")
 	ocean._pickup._press()
 	check.call(Input.is_action_pressed("ocean_pickup"), "Pick Up touch uses its shared InputMap action")
 	ocean._pickup.cancel()

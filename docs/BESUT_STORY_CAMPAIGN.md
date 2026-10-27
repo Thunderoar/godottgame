@@ -17,9 +17,9 @@ When both friends have returned, an illustrated reunion reveals that their fishi
 - Initial speed is 2.5 times the previous baseline; three starting lives.
 - Steer up/down with the joystick, W/S or arrow keys. The rider stays on the shell.
 - Pick Up/E collects rubbish for one Gold; each item resolves once.
-- Eat/F consumes food without restoring health. Pink hearts periodically appear: Eat one to restore one life, capped at three, with a recovery effect.
+- Eat/F consumes fish to refill fullness without restoring health. Pink hearts periodically appear: Eat one to restore one life, capped at three, with a recovery effect.
 - Bombs drift horizontally and vertically. Contact explodes, costs a life and starts a 1.4-second blinking protection window. Swept collision prevents fast bombs skipping through the turtle.
-- Wrong item actions cost a life. Missed items do not act as bomb collisions.
+- Wrong item actions cost a life. Each missed rubbish item costs one life, including during blinking protection; missed fish and avoided hazards do not.
 - At zero lives, the turtle flips, sinks and fades with its rider; retry becomes available after that animation. Retry preserves cleared-route checkpoints and earned cleanup Gold.
 - Controls opens Settings locally during a sea run; the run waits while that settings panel is visible.
 
@@ -70,3 +70,23 @@ Full isolated gate: 1,142 checks, PASS, exit 0; clean logs. APK 1.1.2 (versionCo
 ## Top-left balances
 
 Gold and diamonds now appear together with their pixel icons in the top-left HUD. GameState data changes refresh both readouts immediately. The panel scales with the existing GUI layout and passes pointer input through to the world. Native 832x480 layout inspected; existing map/card review passes 18 checks, exit 0. APK 1.1.3, versionCode 5, 55537255 bytes; SHA-256 a1ed273a274a9cd3ad7ac894f101dbbb1a3b6db498fa13cc69997b1b1ef571cd. Signature v2/v3 and 16-KiB ZIP alignment verified. Output: build/android/ProtectBESUT-1.1.3.apk; stable APK updated identically.
+
+## Windows control and ocean update 1.2.1
+
+Sprint is permanently visible next to Attack; talk/use/board touch buttons are removed. Tap NPCs and nearby objects directly, and tap the ship to board immediately. Stamina appears below HP. All portal-name CLEARED labels are hidden, including monster/pet selection titles, while progression remains saved. The turtle now swims horizontally and vertically using normalised joystick/WASD input. Animated open-jaw sharks, fish, mermaid, whale, megalodon and diver appear above a decorated seabed with coral, seaweed, sand, crabs, starfish, treasure chests, pearls and a wreck. A portrait timeline spans the three sea routes. Missed objects continue to the viewport edge; the old action-range ring is removed. Street lamps and nearby magnetic currency collection are present in the Windows project.
+
+Verification: isolated full gameplay 1,168 PASS (exit 0); final native 832x480 review 28 PASS (exit 0), including real ship screen taps and inspected controls/ocean fixtures. APK 1.2.1, code 7, 55,554,313 bytes, SHA-256 d25e11e1dc7bf4bf353c27e27df05cbc724469490a192d253b8d4f8df845d01e. Package com.tidesworn.protectbesut and signing certificate match the original 1.1.3 APK; signature v2/v3 and 16-KiB ZIP alignment verify. build/android/ProtectBESUT-1.2.1.apk and stable ProtectBESUT.apk are identical.
+
+## Automatic route travel (1.2.2)
+
+Finishing routes 1 and 2 now visibly carries Adam forwards on the turtle, then automatically loads the next sea route and swims in from the left. The next checkpoint is saved before departure. Successful-route progression does not repeat the diving/rescue introduction or wait for a Next button. The third route uses the same forward swim before entering Kraken Island. Death still offers Ride Again. Each new route retains the previous three-life reset.
+
+1.2.2 verification: full gameplay 1,191 PASS; native story/transition review 62 PASS at 832x480; both exit 0 with clean script/error logs. APK 55558409 bytes, SHA-256 0397042603ee47b9846540dbe03bcb4f3e07fb35499df98f26f3e028fd8b82ba; original package/signature retained, v2/v3 and 16-KiB alignment verified. Output: build/android/ProtectBESUT-1.2.2.apk; stable ProtectBESUT.apk updated identically.
+
+## Kraken fortress and hunger update (1.3.0)
+
+The Kraken arena uses the same blue-grey portal flagstone renderer as the supplied reference, with stone pillars, purple runic circles and dungeon lighting. The camera frames the entire boss, player and illustrated prison. A visible arm grips Arjun’s locked cage while the fighting tentacle alternates an orange telegraph, extending slam and hook/drag. Collision-aware pulling cannot pass through walls; defeating the real boss unlocks the cage for a separate tap-to-free action. Kraken and cage use new cached, original pixel art.
+
+Fish restore 35 fullness (capped at 100), never lives. Swimming drains fullness at 3 per second; zero fullness costs one turtle life per five seconds until fed. Pink hearts still heal. Every rubbish item must be collected: an escaped or uncollected end-of-route item costs one life even during blink immunity, and a wrongly eaten rubbish item cannot bypass the penalty. Final route spawns allow enough travel time to collect rubbish before the timer ends. A fatal missed-rubbish penalty prevents advancing the checkpoint. Fullness, lives and missed counts reset on a new route or retry. The HUD and illustrated guide separate fullness from health.
+
+1.3.0 verification: 1,217 full gameplay checks PASS and 25 native checks PASS at 832x480, exit 0. APK 55570862 bytes, SHA-256 7de1f1c21f8d578fc0ce624533f1f8f7cd0848f6c1f581f73451b89a6334094b. Original application ID and signing certificate retained; v2/v3 signatures and 16-KiB ZIP alignment verified. Output: build/android/ProtectBESUT-1.3.0.apk; stable ProtectBESUT.apk updated identically.

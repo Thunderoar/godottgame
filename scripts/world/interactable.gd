@@ -52,3 +52,19 @@ func is_interactable_available() -> bool:
 
 func interact(_player: Node) -> void:
 	pass
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not available: return
+	var at := Vector2.ZERO
+	if event is InputEventScreenTouch and event.pressed: at = event.position
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed: at = event.position
+	else: return
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if not is_instance_valid(game) or game._input_locked or game._transitioning or not is_instance_valid(game.world) or not game.world.is_ancestor_of(self): return
+	if game.world is Lobby and game.world._settlement_editor.active: return
+	var actor := game.player()
+	if not is_instance_valid(actor) or actor.dead or actor.sleeping or actor.global_position.distance_to(global_position) > interact_radius: return
+	var point := get_canvas_transform().affine_inverse() * at
+	if point.distance_to(global_position + Vector2(0,-0.65)) <= 1.05:
+		interact(actor)
+		get_viewport().set_input_as_handled()

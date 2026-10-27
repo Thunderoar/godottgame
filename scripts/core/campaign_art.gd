@@ -19,16 +19,4 @@ static func bomb_texture() -> Texture2D:
 		return img)
 
 static func kraken_texture() -> Texture2D:
-	return PixelArt.cached_texture("campaign/kraken_king/v1", func() -> Image:
-		var img := PixelArt.image(128, 112)
-		for i in 8:
-			var x := 12 + i * 15
-			PixelArt.ellipse(img, x, 82 + i % 2 * 8, 11, 20, Color("#704b95"))
-			PixelArt.ellipse(img, x, 87 + i % 2 * 8, 4, 12, Color("#b583ba"))
-		PixelArt.ellipse(img, 64, 49, 40, 37, Color("#65408a"))
-		PixelArt.ellipse(img, 61, 40, 31, 24, Color("#8e63ac"))
-		for x in [44, 80]:
-			PixelArt.ellipse(img, x, 51, 9, 8, Color("#ffe8a2"))
-			PixelArt.ellipse(img, x + 2, 51, 3, 6, Color("#b43150"))
-		PixelArt._fill_polygon(img, [Vector2i(38, 18), Vector2i(36, 2), Vector2i(53, 10), Vector2i(64, 0), Vector2i(76, 10), Vector2i(93, 2), Vector2i(90, 18)], Color("#eac779"))
-		return img)
+	return KrakenArt.body_texture()

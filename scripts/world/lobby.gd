@@ -100,6 +100,7 @@ func _ready() -> void:
 	_build_portals()
 	_build_gathering()
 	_build_dock_and_ship()
+	_build_street_lamps()
 	# Preserve the historical RNG state without letting flowers own tree IDs.
 	for i in LEGACY_FOREST_PREFIX_DRAWS: _rng.randf()
 	_build_forest()
@@ -697,6 +698,22 @@ func _build_gathering() -> void:
 
 
 # ------------------------------------------------------------------ dock & ship
+
+func _build_street_lamps() -> void:
+	var points: Array[Vector2] = []
+	for route in _layout.routes:
+		var path := _layout.route_points(route)
+		if path.size() < 2: continue
+		var middle := path[path.size() / 2] + Vector2(1.1,0.3)
+		if points.any(func(at: Vector2) -> bool: return at.distance_to(middle) < 4.5): continue
+		points.append(middle)
+		if points.size() >= 12: break
+	for at in points:
+		var post := StreetLamp.new()
+		post.position = at
+		add_child(post)
+		_local_lights.append(post.light)
+
 
 func _build_dock_and_ship() -> void:
 	var dock := Sprite2D.new()

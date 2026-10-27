@@ -61,7 +61,7 @@ func _add_portal_card(portal_id: String) -> void:
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.add_theme_constant_override("separation", 3)
 	hbox.add_child(info)
-	var title_line := "%s%s" % [str(def.name), "  •  CLEARED" if cleared else ""]
+	var title_line := str(def.name)
 	info.add_child(GameUI.label(title_line, 20, GameUI.GOLD if cleared else GameUI.TEXT))
 	info.add_child(GameUI.label("%s   •   Level %d+" % [str(def.subtitle), int(def.level_required)], 13, GameUI.MUTED))
 	var lore := GameUI.label(str(def.lore), 13, GameUI.MUTED)

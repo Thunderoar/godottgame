@@ -247,9 +247,9 @@ func _build_controls() -> void:
 	_root.add_child(_attack_button)
 
 	_interact_button = TouchActionButton.new()
-	_interact_button.action = "interact"
-	_interact_button.caption = "Use"
-	_interact_button.icon_kind = "talk"
+	_interact_button.action = "sprint"
+	_interact_button.caption = "Sprint"
+	_interact_button.icon_kind = "sprint"
 	_interact_button.accent = Color("#61c9ba")
 	_interact_button.diameter = 82
 	_anchor_bottom_right(_interact_button, Vector2(-88, -234), Vector2(-6, -152))
@@ -643,12 +643,6 @@ func _update_prompt() -> void:
 		_last_prompt = prompt
 		_prompt_panel.visible = prompt != ""
 		_prompt_label.text = prompt
-		if _interact_button:
-			if prompt.length() > 0:
-				var short := "Pick Up" if prompt.begins_with("Pick Up") else prompt.split(" ")[0]
-				_interact_button.set_contextual(short.trim_suffix("."), _prompt_icon_kind(prompt))
-			else:
-				_interact_button.set_contextual("Use", "talk")
 
 
 func _use_quick_potion(item_id: String) -> void:
@@ -659,7 +653,7 @@ func set_world(w: Node) -> void:
 	world = w
 	_last_prompt = ""
 	if _interact_button:
-		_interact_button.set_contextual("Use", "talk")
+		_interact_button.set_contextual("Sprint", "sprint")
 	_prompt_panel.visible = false
 	if is_instance_valid(_boss_panel):
 		_boss_panel.visible = false
@@ -777,7 +771,7 @@ func _apply_touch_mode() -> void:
 	if _joystick:
 		_joystick.visible = show_touch
 	var hints := _show_key_hints()
-	for pair in [["attack", _attack_button], ["interact", _interact_button], ["open_inventory", _inventory_button], ["toggle_build", _build_button], ["use_health_potion", _health_potion_button]]:
+	for pair in [["attack", _attack_button], ["sprint", _interact_button], ["open_inventory", _inventory_button], ["toggle_build", _build_button], ["use_health_potion", _health_potion_button]]:
 		var button := pair[1] as TouchActionButton
 		if button == null:
 			continue
@@ -868,7 +862,7 @@ func release_world_controls() -> void:
 			control.cancel()
 		elif control is TouchJoystick:
 			control.cancel()
-	for action in ["attack", "interact", "move_left", "move_right", "move_up", "move_down", "open_inventory"]:
+	for action in ["attack", "interact", "sprint", "move_left", "move_right", "move_up", "move_down", "open_inventory"]:
 		Input.action_release(action)
 
 func _build_minimap() -> void:

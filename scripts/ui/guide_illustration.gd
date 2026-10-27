@@ -51,7 +51,15 @@ func _picture(id: String, at: Vector2, extent: float) -> void:
 		_texture(texture, at, extent)
 		return
 	if id == "prison":
-		for i in 5: draw_line(at + Vector2(-extent * 0.4 + i * extent * 0.2, -extent * 0.4), at + Vector2(-extent * 0.4 + i * extent * 0.2, extent * 0.4), _ink, 3)
+		_texture(KrakenArt.prison_texture(),at,extent)
+		return
+	if id == "trash_missed":
+		_texture(PixelArt.rubbish_texture(),at,extent*0.7)
+		_cross(at+Vector2(extent*0.23,-extent*0.25),extent*0.14)
+		return
+	if id == "fullness":
+		draw_rect(Rect2(at-Vector2(extent*0.42,9),Vector2(extent*0.84,18)),Color("#a99c7d"))
+		draw_rect(Rect2(at-Vector2(extent*0.42,9),Vector2(extent*0.7,18)),Color("#55a287"))
 		return
 	if id.begins_with("npc:"):
 		_texture(PixelArt.npc_texture(id.get_slice(":", 1)), at, extent)

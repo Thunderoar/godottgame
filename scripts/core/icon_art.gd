@@ -60,6 +60,11 @@ static func draw_icon(img: Image, kind: String, size: int) -> void:
 			_backpack(img, s)
 		"build":
 			_build(img, s)
+		"sprint":
+			PixelArt.ellipse(img, int(21*s), int(6*s), int(3*s), int(3*s), Color("#8fe8f7"))
+			for seg in [[19,11,14,19],[16,14,9,12],[16,15,23,18],[14,19,21,24],[14,19,9,27]]:
+				_line(img, seg[0]*s, seg[1]*s, seg[2]*s, seg[3]*s, Color("#8fe8f7"), 3*s)
+			_line(img, 3*s, 18*s, 9*s, 18*s, Color("#f2c45a"), 2*s)
 		"talk":
 			_talk(img, s)
 		"door":

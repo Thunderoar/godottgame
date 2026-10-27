@@ -15,6 +15,10 @@ signal sleep_changed(active: bool, progress: float, label: String)
 signal nearby_changed(interactable: Node)
 signal hurt_flash
 
+const STAMINA_MAX := 100.0
+const SPRINT_MULTIPLIER := 1.7
+const STAMINA_DRAIN := 24.0
+const STAMINA_REGEN := 20.0
 const INTERACT_RANGE := 2.0
 const ACCEL := 26.0
 const FRICTION := 30.0
@@ -26,6 +30,10 @@ const FOOTSTEP_INTERVAL := 0.3
 
 enum AttackPhase { NONE, ANTICIPATION, ACTIVE, RECOVERY }
 
+var stamina := STAMINA_MAX
+var sprinting := false
+var exhausted := false
+var _stamina_delay := 0.0
 var controls_locked := false
 var facing := Vector2.DOWN
 var nearby: Node = null
@@ -109,6 +117,7 @@ func _build_visual() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_update_stamina(delta)
 	if invulnerable > 0.0:
 		invulnerable = maxf(0.0, invulnerable - delta)
 		if _visual:
@@ -141,7 +150,7 @@ func _physics_process(delta: float) -> void:
 	var input := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if input.length_squared() > 0.01:
 		facing = input.normalized()
-		var target := input.limit_length(1.0) * GameState.move_speed()
+		var target := input.limit_length(1.0) * GameState.move_speed() * (SPRINT_MULTIPLIER if sprinting else 1.0)
 		# Turning against the current slide direction grips harder.
 		var turn := turn_assistance if velocity.dot(input) < -0.5 else 1.0
 		velocity = velocity.move_toward(target, acceleration * turn * delta)
@@ -165,6 +174,21 @@ func _physics_process(delta: float) -> void:
 		try_interact()
 
 	_update_nearby()
+
+
+func _update_stamina(delta: float) -> void:
+	var moving := Input.get_vector("move_left", "move_right", "move_up", "move_down").length_squared() > 0.01
+	sprinting = Input.is_action_pressed("sprint") and moving and not controls_locked and not sleeping and not dead and not exhausted and stamina > 0
+	if sprinting:
+		stamina = maxf(0.0, stamina - STAMINA_DRAIN * delta)
+		_stamina_delay = 0.7
+		if stamina <= 0:
+			exhausted = true
+			sprinting = false
+	else:
+		_stamina_delay = maxf(0, _stamina_delay - delta)
+		if _stamina_delay <= 0: stamina = minf(STAMINA_MAX, stamina + STAMINA_REGEN * delta)
+		if stamina >= 25: exhausted = false
 
 
 func _update_footsteps(delta: float) -> void:

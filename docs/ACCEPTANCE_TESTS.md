@@ -651,3 +651,17 @@ Latest isolated gameplay gate: **1,132 checks, PASS, exit 0**. Focused native ma
 ## Portal 1 tutorial completion
 
 The full isolated gameplay gate passes 1,142 checks, exit 0, with clean error logs. Ten added regression checks cover a first-portal fight spanning night to day, immediate tutorial dismissal, unchanged later-portal rescue progression, prevention of tutorial restart at the next night, and old-save reload where Portal 1 was previously cleared. APK 1.1.2 (versionCode 4) passes signature v2/v3 and 16-KiB ZIP-alignment verification.
+
+## Permanent Sprint, direct ship taps and marine background (1.2.1)
+
+The isolated gameplay gate passes 1,168 checks, exit 0, with clean script/error logs. The final native 832x480 control/ocean review passes 28 checks, exit 0, including two additional checks for the monster/pet portal title suffixes. Captures were inspected for the visible permanent Sprint button, overhead stamina, four-direction turtle steering, portrait timeline, shark and marine/seabed objects. Real touches verify that Sprint never talks/boards, the yellow student opens directly, and tapping the ship boards from outside the old interaction radius. CLEARED labels are absent while saved clear flags remain intact.
+
+ProtectBESUT-1.2.1.apk uses versionCode 7 and the original com.tidesworn.protectbesut application ID. Signature v2/v3 and 16-KiB alignment verify; the certificate matches APK 1.1.3. The stable ProtectBESUT.apk copy is updated identically.
+
+## Automatic sea-route animations (1.2.2)
+
+Full isolated gameplay: 1,191 checks PASS, exit 0, clean script/error logs. Native 832x480 story/rescue review: 62 checks PASS, exit 0. Route checks cover forward movement with the mounted rider, saved checkpoints during departure, hidden Next/locked controls, protection against duplicate completion or bypass, automatic entry into routes 2 and 3, and final island transition. Inspected captures show departure and both arrival animations. APK 1.2.2 (code 8) verifies signature v2/v3 and 16-KiB ZIP alignment; its certificate matches 1.2.1 for original-app updates.
+
+## Kraken fortress, fullness and compulsory rubbish (1.3.0)
+
+Full isolated gameplay: 1,217 checks PASS, exit 0, clean script/error logs. Native 832x480 focused review: 25 checks PASS, exit 0; inspected captures show the portal-style floor, stone pillars/runes, complete Kraken and held cage, grappling tentacle, and separate fullness/life meters. Coverage includes fish-only satiety, heart-only healing, fullness cap/drain/starvation/recovery, one penalty per missed rubbish including concurrent misses and blink immunity, no penalties for avoided hazards/fish, fatal route-end prevention, safe late spawns, physical pillar collision, dodged versus caught hooks, real pull motion blocked by a wall, and boss-gated prison release. Full story checks also verify the returning Arjun sprite retains human world scale.

@@ -1,7 +1,13 @@
 class_name OceanJourney
 extends Node2D
 ## Automatic turtle journey. Touch and keyboard share the two InputMap actions.
-enum Phase { DIVE, RESCUE, RUNNING, FINISHED }
+enum Phase { DIVE, RESCUE, RUNNING, FINISHED, TRAVELLING, ARRIVING }
+const ROUTE_EXIT_SECONDS := 2.0
+const ROUTE_ENTRY_SECONDS := 1.2
+const FULLNESS_MAX := 100.0
+const FULLNESS_DRAIN := 3.0
+const FISH_FULLNESS := 35.0
+const STARVATION_SECONDS := 5.0
 const MAX_HEALTH := 3
 const START_MULTIPLIER := 2.5
 const STAGE_SECONDS := 45.0
@@ -18,6 +24,9 @@ var player: Player
 var camera: Camera2D
 var turtle: Sprite2D
 var health := MAX_HEALTH
+var fullness := FULLNESS_MAX
+var missed_trash := 0
+var _starvation_clock := 0.0
 var elapsed := 0.0
 var trash_collected := 0
 var food_eaten := 0
@@ -25,7 +34,11 @@ var mistakes := 0
 var items: Array[Dictionary] = []
 var stage := 1
 var stage_cleared := false
+var _turtle_x := TURTLE_AT.x
 var _turtle_y := TURTLE_AT.y
+var _shark_clock := 7.0
+var _progress: OceanProgress
+var scenery: OceanScenery
 var _heart_clock := 12.0
 var _bomb_clock := 3.0
 var _sink_time := 0.0
@@ -40,11 +53,19 @@ var _rng := RandomNumberGenerator.new()
 var _layer: CanvasLayer
 var _status: Label
 var _vitals: Label
+var _fullness_label: Label
+var _fullness_bar: ProgressBar
+var _fullness_fill: StyleBoxFlat
 var _score: Label
 var _pickup: TouchActionButton
 var _eat: TouchActionButton
 var _retry: Button
 var _return: Button
+var _controls_button: Button
+var _travel_clock := 0.0
+var _travel_start := Vector2.ZERO
+var _travel_end := Vector2.ZERO
+var _destination_requested := false
 
 func _ready() -> void:
 	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
@@ -57,6 +78,10 @@ func _ready() -> void:
 	camera.zoom = Vector2.ONE * 32
 	add_child(camera)
 	camera.make_current()
+	get_viewport().size_changed.connect(_fit_ocean_camera)
+	_fit_ocean_camera()
+	scenery = OceanScenery.new()
+	add_child(scenery)
 	player = Player.new()
 	player.position = Vector2(9.2, 4.5)
 	add_child(player)
@@ -99,15 +124,33 @@ func _build_ui() -> void:
 	header.offset_left = 22
 	header.offset_top = 18
 	header.offset_right = -22
-	header.offset_bottom = 118
+	header.offset_bottom = 172
 	root.add_child(header)
 	var box := VBoxContainer.new()
 	header.add_child(box)
 	box.add_child(GameUI.label("TURTLE OCEAN JOURNEY", 24, Color("#ffe2a0")))
 	_vitals = GameUI.label("", 19, Color("#baf3df"))
-	box.add_child(_vitals)
+	var vital_row := HBoxContainer.new()
+	vital_row.add_theme_constant_override("separation",12)
+	box.add_child(vital_row)
+	_vitals.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vital_row.add_child(_vitals)
+	_fullness_label = GameUI.label("",16,GameUI.GREEN)
+	vital_row.add_child(_fullness_label)
+	_fullness_bar = ProgressBar.new()
+	_fullness_bar.custom_minimum_size = Vector2(200,16)
+	_fullness_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_fullness_bar.min_value = 0
+	_fullness_bar.max_value = FULLNESS_MAX
+	_fullness_bar.show_percentage = false
+	_fullness_bar.add_theme_stylebox_override("background",GameUI.style(Color("#203441"),Color("#54757a"),1))
+	_fullness_fill = GameUI.style(Color("#78d4af"),Color("#78d4af"),0)
+	_fullness_bar.add_theme_stylebox_override("fill",_fullness_fill)
+	vital_row.add_child(_fullness_bar)
 	_score = GameUI.label("", 14, Color("#afdae2"))
 	box.add_child(_score)
+	_progress = OceanProgress.new()
+	box.add_child(_progress)
 	_status = GameUI.label("", 18, Color("#fff0c6"))
 	_status.anchor_left = 0.08
 	_status.anchor_right = 0.92
@@ -137,8 +180,8 @@ func _build_ui() -> void:
 	_return.anchor_right = 1
 	_return.offset_left = -210
 	_return.offset_right = -40
-	_return.offset_top = 140
-	_return.offset_bottom = 180
+	_return.offset_top = 186
+	_return.offset_bottom = 226
 	_return.pressed.connect(return_to_shore)
 	root.add_child(_return)
 	_retry = GameUI.button("Ride Again", Vector2(180, 48))
@@ -168,6 +211,10 @@ func _process(delta: float) -> void:
 	_clock += delta
 	if phase in [Phase.DIVE, Phase.RESCUE]:
 		_advance_intro(delta)
+	elif phase == Phase.TRAVELLING:
+		_advance_route_exit(delta)
+	elif phase == Phase.ARRIVING:
+		_advance_route_entry(delta)
 	elif phase == Phase.RUNNING:
 		_update_run(delta)
 		if Input.is_action_just_pressed("ocean_pickup"):
@@ -178,6 +225,8 @@ func _process(delta: float) -> void:
 	_hurt_time = maxf(0, _hurt_time - delta)
 	turtle.texture = CoastalArt.turtle_texture(_mouth_time > 0, 0 if GameSettings.reduce_motion() else int(_clock * 3) % 2)
 	turtle.modulate = Color(1, 0.65, 0.65, 0.25 if int(_hurt_time * 12) % 2 else 1.0) if _hurt_time > 0 else Color.WHITE
+	if phase == Phase.FINISHED and health > 0:
+		player.position = turtle.position + Vector2(-0.55, -1.0)
 	if phase == Phase.FINISHED and health == 0:
 		_sink_time += delta
 		turtle.rotation = lerpf(0.0, PI, clampf(_sink_time, 0, 1))
@@ -204,19 +253,28 @@ func _advance_intro(delta: float) -> void:
 		player.reset_physics_interpolation()
 		turtle.reset_physics_interpolation()
 		phase = Phase.RUNNING
-		_status.text = "Move up/down to dodge bombs. Pick Up rubbish · Eat food · Eat pink hearts for lives."
+		_status.text = "Swim in all directions. Collect ALL rubbish · Eat fish when hungry · Dodge sharks and bombs."
 
 func _update_run(delta: float) -> void:
-	if is_instance_valid(_ocean_settings) and _ocean_settings.visible: return
+	if phase != Phase.RUNNING or (is_instance_valid(_ocean_settings) and _ocean_settings.visible): return
 	elapsed += delta
-	_turtle_y = clampf(_turtle_y + Input.get_axis("move_up", "move_down") * VERTICAL_SPEED * delta, 6.8, 18.0)
-	turtle.position = Vector2(TURTLE_AT.x, _turtle_y)
+	_update_fullness(delta)
+	if phase != Phase.RUNNING: return
+	var steering := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	_turtle_x = clampf(_turtle_x + steering.x * VERTICAL_SPEED * delta, visible_left() + 3.2, visible_right() - 5.0)
+	_turtle_y = clampf(_turtle_y + steering.y * VERTICAL_SPEED * delta, 7.3, 18.0)
+	turtle.position = Vector2(_turtle_x, _turtle_y)
 	player.position = turtle.position + Vector2(-0.55, -1.0)
 	_spawn_clock -= delta
 	_heart_clock -= delta
 	_bomb_clock -= delta
+	_shark_clock -= delta
+	if _shark_clock <= 0:
+		spawn_item("shark")
+		_shark_clock = _rng.randf_range(7.0, 10.0) - stage * 0.5
 	if _spawn_clock <= 0:
-		spawn_item("trash" if _rng.randf() < 0.5 else "food")
+		var trash_clear_time := (visible_right()-visible_left()+8.0) / maxf(0.1,speed()) + 1.0
+		spawn_item("trash" if _rng.randf() < 0.5 and elapsed < STAGE_SECONDS-trash_clear_time else "food")
 		_spawn_clock = maxf(1.2, 2.1 - stage * 0.15)
 	if _heart_clock <= 0:
 		spawn_item("heart")
@@ -228,38 +286,44 @@ func _update_run(delta: float) -> void:
 		if item.get("resolved", false): continue
 		var sprite := item.node as Sprite2D
 		var previous := sprite.position
-		sprite.position.x -= speed() * delta
+		sprite.position.x -= speed() * (1.35 if item.kind == "shark" else 1.0) * delta
+		if item.kind == "shark": sprite.texture = OceanArt.creature("shark", int(_clock * 3) % 2)
 		sprite.position.y = float(item.get("lane", TURTLE_AT.y)) + sin(_clock * (1.4 if item.kind == "bomb" else 3.0) + float(item.phase)) * (1.4 if item.kind == "bomb" else 0.12)
-		if item.kind == "bomb":
+		if item.kind in ["bomb", "shark"]:
 			# Swept hit test prevents fast bombs tunnelling through the shell.
 			var closest := Geometry2D.get_closest_point_to_segment(turtle.position + Vector2(0.6, 0), previous, sprite.position)
-			if closest.distance_to(turtle.position + Vector2(0.6, 0)) < 1.5 and _hurt_time <= 0:
+			if closest.distance_to(turtle.position + Vector2(0.6, 0)) < (2.1 if item.kind == "shark" else 1.5) and _hurt_time <= 0:
 				var blast_at := sprite.position
-				_resolve_item(item, false)
+				if item.kind == "bomb": _resolve_item(item, false)
 				Vfx.burst(blast_at, Color("#ff9c45"), 14)
 				Vfx.ring(blast_at, 2.5, Color("#ffe09a"), 0.45)
 				Sfx.play("hit", -7)
-				_mistake("Bomb! Move up or down to dodge. You are briefly protected.")
-		if not item.get("resolved", false) and sprite.position.x < mouth_position().x - ACTION_REACH:
+				_mistake("Shark bite! Dodge its open jaws." if item.kind == "shark" else "Bomb! Move in any direction to dodge.")
+		if not item.get("resolved", false) and sprite.position.x + sprite.texture.get_width() * sprite.scale.x * 0.5 < visible_left() - 1.0:
 			_resolve_item(item, false)
+			if item.kind == "trash":
+				missed_trash += 1
+				_mistake("Rubbish missed! Every piece must be collected. -1 life.",true)
 		if phase == Phase.FINISHED: break
 	if elapsed >= STAGE_SECONDS and phase == Phase.RUNNING:
 		_complete_stage()
 
-func spawn_item(kind: String, at_x: float = 43.0) -> Dictionary:
+func spawn_item(kind: String, at_x: float = INF) -> Dictionary:
+	if is_inf(at_x): at_x = visible_right() + 5.0
 	var sprite := Sprite2D.new()
 	match kind:
 		"trash": sprite.texture = PixelArt.rubbish_texture(0)
 		"heart": sprite.texture = CampaignArt.heart_texture()
 		"bomb": sprite.texture = CampaignArt.bomb_texture()
+		"shark": sprite.texture = OceanArt.creature("shark")
 		_: sprite.texture = CoastalArt.food_texture()
-	sprite.scale = Vector2.ONE * PixelArt.PX * 1.8
-	var lane := clampf(_turtle_y + _rng.randf_range(-4.0, 4.0), 7.0, 18.0) if at_x >= 40.0 else mouth_position().y
+	sprite.scale = Vector2.ONE * PixelArt.PX * (1.4 if kind == "shark" else 1.8)
+	var lane := clampf(_turtle_y + _rng.randf_range(-4.0, 4.0), 7.0, 18.0) if at_x >= visible_right() else mouth_position().y
 	sprite.position = Vector2(at_x, lane)
 	sprite.z_index = 7
 	add_child(sprite)
 	var tag := Label.new()
-	tag.text = {"trash": "PICK UP", "food": "EAT", "heart": "+1 LIFE · EAT", "bomb": "DODGE!"}.get(kind, "")
+	tag.text = {"trash": "PICK UP", "food": "EAT", "heart": "+1 LIFE · EAT", "bomb": "DODGE!", "shark": "SHARK · DODGE!"}.get(kind, "")
 	tag.scale = Vector2.ONE / 1.8
 	tag.position = Vector2(-20, -24)
 	tag.add_theme_font_size_override("font_size", 12)
@@ -274,7 +338,7 @@ func actionable_item() -> Dictionary:
 	var closest: Dictionary = {}
 	var distance := ACTION_REACH + 0.001
 	for item in items:
-		if item.resolved or item.kind == "bomb": continue
+		if item.resolved or item.kind in ["bomb", "shark"]: continue
 		var d := (item.node as Sprite2D).position.distance_to(mouth_position())
 		if d < distance:
 			closest = item
@@ -285,14 +349,15 @@ func choose_action(action: String) -> bool:
 	if phase != Phase.RUNNING or action not in ["pickup", "eat"] or (is_instance_valid(_ocean_settings) and _ocean_settings.visible): return false
 	var item := actionable_item()
 	if item.is_empty():
-		_status.text = "Move to the item, then act inside the glowing ring. Dodge bombs!"
+		_status.text = "Get close to the item, then Pick Up or Eat. Dodge bombs and sharks!"
 		return false
 	var correct: bool = (action == "pickup" and item.kind == "trash") or (action == "eat" and item.kind in ["food", "heart"])
 	_resolve_item(item, correct)
 	if action == "pickup": player.play_pickup(3.2)
 	else: _mouth_time = 0.4
 	if not correct:
-		_mistake("Wrong action! Pick Up rubbish; Eat food or pink hearts.")
+		if item.kind == "trash": missed_trash += 1
+		_mistake("Wrong action! Pick Up rubbish; Eat fish or pink hearts.",item.kind == "trash")
 		return false
 	if item.kind == "trash":
 		trash_collected += 1
@@ -307,7 +372,9 @@ func choose_action(action: String) -> bool:
 		Sfx.play("skill_recover", -12)
 	else:
 		food_eaten += 1
-		_status.text = "Food eaten. Only pink hearts restore a life."
+		fullness = minf(FULLNESS_MAX,fullness+FISH_FULLNESS)
+		_starvation_clock = 0
+		_status.text = "Fish eaten · Fullness +35%. Pink hearts restore lives."
 		Vfx.sparks(mouth_position(), Vector2.UP, Color("#ffe09a"), 5)
 	return true
 
@@ -325,8 +392,8 @@ func _resolve_item(item: Dictionary, animate: bool) -> void:
 	else:
 		sprite.queue_free()
 
-func _mistake(message: String) -> void:
-	if phase != Phase.RUNNING or _hurt_time > 0: return
+func _mistake(message: String, ignore_immunity: bool = false) -> void:
+	if phase != Phase.RUNNING or (_hurt_time > 0 and not ignore_immunity): return
 	health = maxi(0, health - 1)
 	mistakes += 1
 	_hurt_time = HIT_IMMUNITY
@@ -343,15 +410,20 @@ func _mistake(message: String) -> void:
 		_retry.visible = false
 
 func restart() -> void:
-	if phase != Phase.FINISHED:
+	if phase != Phase.FINISHED or health > 0:
 		return
 	for item in items:
 		(item.node as Node).queue_free()
 	items.clear()
 	health = MAX_HEALTH
+	fullness = FULLNESS_MAX
+	missed_trash = 0
+	_starvation_clock = 0
 	stage = int(GameState.campaign().get("ocean_stage", 1))
 	stage_cleared = false
+	_turtle_x = TURTLE_AT.x
 	_turtle_y = TURTLE_AT.y
+	_shark_clock = 7.0
 	_heart_clock = 12.0
 	_bomb_clock = 3.0
 	_sink_time = 0.0
@@ -370,6 +442,8 @@ func restart() -> void:
 	turtle.position = Vector2(-6, 12.8)
 
 func return_to_shore() -> void:
+	if phase in [Phase.TRAVELLING, Phase.ARRIVING]: return
+	_ocean_joystick.cancel()
 	_pickup.cancel()
 	_eat.cancel()
 	var game := get_tree().get_first_node_in_group("game") as Game
@@ -377,22 +451,36 @@ func return_to_shore() -> void:
 		game.return_from_ocean()
 
 func _refresh_ui() -> void:
+	_progress.progress = clampf((stage - 1 + minf(elapsed / STAGE_SECONDS, 1.0)) / float(GameState.OCEAN_STAGES), 0, 1)
+	_progress.queue_redraw()
 	_vitals.text = "TURTLE HEALTH  %s  %d/%d" % ["♥".repeat(health) + "♡".repeat(MAX_HEALTH - health), health, MAX_HEALTH]
-	_score.text = "Sea route %d/3 · %ds / %ds · Speed %.1fx · Gold %d" % [stage, mini(int(elapsed), int(STAGE_SECONDS)), int(STAGE_SECONDS), speed() / INITIAL_SPEED, GameState.gold()]
+	_score.text = "Sea route %d/3 · %ds / %ds · Speed %.1fx · Gold %d · Rubbish %d · Missed %d" % [stage, mini(int(elapsed), int(STAGE_SECONDS)), int(STAGE_SECONDS), speed() / INITIAL_SPEED, GameState.gold(),trash_collected,missed_trash]
+	_fullness_label.text = "FULLNESS %d%%" % roundi(fullness)
+	_fullness_bar.value = fullness
+	_fullness_fill.bg_color = Color("#ef9273") if fullness < 30 else Color("#78d4af")
+	_fullness_label.add_theme_color_override("font_color",_fullness_fill.bg_color)
+	var travelling := phase in [Phase.TRAVELLING, Phase.ARRIVING]
+	_pickup.visible = not travelling
+	_eat.visible = not travelling
+	if is_instance_valid(_ocean_joystick): _ocean_joystick.visible = not travelling
+	_return.disabled = travelling
+	if is_instance_valid(_controls_button): _controls_button.disabled = travelling
 	_pickup.set_touch_enabled(phase == Phase.RUNNING)
 	_eat.set_touch_enabled(phase == Phase.RUNNING)
 
 func _exit_tree() -> void:
 	Input.action_release("ocean_pickup")
 	Input.action_release("ocean_eat")
+	if is_instance_valid(_ocean_joystick): _ocean_joystick.cancel()
 	if is_instance_valid(_pickup): _pickup.cancel()
 	if is_instance_valid(_eat): _eat.cancel()
 
 func _draw() -> void:
-	draw_rect(Rect2(-60, -40, 160, 100), Color("#103b59"))
+	var ocean_color: Color = [Color("#103b59"),Color("#114d60"),Color("#182f54")][clampi(stage-1,0,2)]
+	draw_rect(Rect2(-60, -40, 160, 100), ocean_color)
 	for band in 12:
 		var y := float(band) * 2.2 - 2.0
-		draw_rect(Rect2(-40, y, 120, 2.25), Color("#103b59").lerp(Color("#071d35"), clampf(float(band) / 12, 0, 1)))
+		draw_rect(Rect2(-40, y, 120, 2.25), ocean_color.lerp(Color("#071d35"), clampf(float(band) / 12, 0, 1)))
 	for i in 8:
 		var x := i * 7.0 - 4
 		draw_colored_polygon(PackedVector2Array([Vector2(x, 0), Vector2(x + 1, 0), Vector2(x + 8, 19), Vector2(x + 4, 19)]), Color(0.35, 0.79, 0.86, 0.035))
@@ -401,34 +489,92 @@ func _draw() -> void:
 		var x := fposmod(i * 7.17 - drift, 48.0) - 4
 		var y := fposmod(i * 2.61 - drift * 1.4, 22.0)
 		draw_arc(Vector2(x, y), 0.05 + (i % 3) * 0.025, 0, TAU, 8, Color(0.55, 0.91, 0.95, 0.24), PixelArt.PX)
-	for i in 16:
-		var x := fposmod(i * 4.31 - elapsed * 0.3, 48) - 4
-		draw_line(Vector2(x, 24), Vector2(x + sin(i) * 0.4, 20.7 - (i % 3) * 0.25), Color("#286d73"), 0.16)
-	if phase == Phase.RUNNING:
-		var point := mouth_position()
-		draw_arc(point, ACTION_REACH, 0, TAU, 40, Color(0.6, 0.95, 0.85, 0.35), 0.05)
-		draw_line(point + Vector2(0, -2.5), point + Vector2(0, -2.1), Color("#ffe4a0"), 0.07)
 
 func _complete_stage() -> void:
-	if stage_cleared: return
+	if stage_cleared or phase != Phase.RUNNING or health <= 0: return
+	for item in items.duplicate():
+		if item.kind == "trash" and not item.resolved:
+			_resolve_item(item,false)
+			missed_trash += 1
+			_mistake("Rubbish left behind! -1 life for each missed piece.",true)
+			if health <= 0: return
 	stage_cleared = true
-	phase = Phase.FINISHED
+	phase = Phase.TRAVELLING
 	_pickup.cancel()
 	_eat.cancel()
 	_ocean_joystick.cancel()
-	for item in items.duplicate(): _resolve_item(item, false)
+	Input.action_release("ocean_pickup")
+	Input.action_release("ocean_eat")
+	for item in items.duplicate(): _resolve_item(item,false)
+	if stage < GameState.OCEAN_STAGES: GameState.advance_ocean_stage(stage)
+	_retry.visible = false
+	_hurt_time = 0
+	_mouth_time = 0
+	_travel_clock = 0
+	_travel_start = turtle.position
+	_travel_end = Vector2(visible_right()+5,TURTLE_AT.y)
+	_destination_requested = false
+	_status.text = "Route %d complete! Swimming ahead to sea route %d..." % [stage,stage+1] if stage < GameState.OCEAN_STAGES else "Kraken Island ahead! The turtle carries Adam ashore..."
+	_refresh_ui()
+
+func _advance_route_exit(delta: float) -> void:
+	if _destination_requested: return
+	_travel_clock += delta
+	var progress := clampf(_travel_clock / ROUTE_EXIT_SECONDS,0,1)
+	var eased := progress * progress * (3.0-2.0*progress)
+	turtle.position = _travel_start.lerp(_travel_end,eased)
+	player.position = turtle.position + Vector2(-0.55,-1.0)
+	if progress < 1: return
 	if stage < GameState.OCEAN_STAGES:
-		GameState.advance_ocean_stage(stage)
-		_status.text = "Route cleared! Next: sea route %d/3. Progress saved." % (stage + 1)
-		_retry.text = "Next Sea Route"
-		_retry.visible = true
+		_begin_next_route()
 	else:
-		_status.text = "Kraken Island! The turtle carries Adam ashore..."
-		var ride := create_tween()
-		ride.tween_property(turtle, "position:x", 38.0, 2.0)
-		await ride.finished
+		_destination_requested = true
 		var game := get_tree().get_first_node_in_group("game") as Game
 		if is_instance_valid(game) and game.world == self: game.enter_kraken_island()
+
+func _begin_next_route() -> void:
+	stage += 1
+	stage_cleared = false
+	phase = Phase.ARRIVING
+	elapsed = 0
+	health = MAX_HEALTH
+	fullness = FULLNESS_MAX
+	missed_trash = 0
+	_starvation_clock = 0
+	trash_collected = 0
+	food_eaten = 0
+	mistakes = 0
+	_spawn_clock = 1.2
+	_heart_clock = 12.0
+	_bomb_clock = 3.0
+	_shark_clock = 7.0
+	_hurt_time = 0
+	_sink_time = 0
+	_travel_clock = 0
+	_turtle_x = TURTLE_AT.x
+	_turtle_y = TURTLE_AT.y
+	turtle.position = Vector2(visible_left()-5,TURTLE_AT.y)
+	turtle.rotation = 0
+	turtle.modulate = Color.WHITE
+	player.modulate = Color.WHITE
+	player.position = turtle.position + Vector2(-0.55,-1.0)
+	_travel_start = turtle.position
+	_travel_end = TURTLE_AT
+	_status.text = "Sea route %d / %d" % [stage,GameState.OCEAN_STAGES]
+	scenery.modulate = Color("#d1f0f1") if stage == 2 else Color("#d5cdec")
+	_refresh_ui()
+
+func _advance_route_entry(delta: float) -> void:
+	_travel_clock += delta
+	var progress := clampf(_travel_clock / ROUTE_ENTRY_SECONDS,0,1)
+	var eased := progress * progress * (3.0-2.0*progress)
+	turtle.position = _travel_start.lerp(_travel_end,eased)
+	player.position = turtle.position + Vector2(-0.55,-1.0)
+	if progress < 1: return
+	phase = Phase.RUNNING
+	_turtle_x = turtle.position.x
+	_turtle_y = turtle.position.y
+	_status.text = "Sea route %d · Collect ALL rubbish. Eat fish for fullness · Dodge sharks and bombs." % stage
 
 func _build_ocean_controls() -> void:
 	var root := _pickup.get_parent() as Control
@@ -438,7 +584,8 @@ func _build_ocean_controls() -> void:
 	root.add_child(_ocean_settings)
 	_ocean_settings.closed.connect(_apply_ocean_layout)
 	var settings := GameUI.button("Controls", Vector2(110, 40))
-	settings.position = Vector2(24, 140)
+	_controls_button = settings
+	settings.position = Vector2(24, 186)
 	settings.pressed.connect(func() -> void:
 		_ocean_joystick.cancel()
 		_pickup.cancel()
@@ -464,3 +611,23 @@ func _apply_ocean_layout() -> void:
 		if node is TouchJoystick:
 			node.radius = extent * 0.38
 			node.knob_radius = extent * 0.16
+
+func visible_right() -> float:
+	return camera.position.x + get_viewport_rect().size.x / camera.zoom.x * 0.5
+
+func visible_left() -> float:
+	return camera.position.x - get_viewport_rect().size.x / camera.zoom.x * 0.5
+
+func _fit_ocean_camera() -> void:
+	camera.zoom = Vector2.ONE * minf(get_viewport_rect().size.x / 40.0, get_viewport_rect().size.y / 22.5)
+
+func _update_fullness(delta: float) -> void:
+	var previous_fullness := fullness
+	fullness = maxf(0.0,fullness-FULLNESS_DRAIN*delta)
+	if fullness > 0:
+		_starvation_clock = 0
+		return
+	_starvation_clock += maxf(0,delta-previous_fullness/FULLNESS_DRAIN)
+	while _starvation_clock >= STARVATION_SECONDS and phase == Phase.RUNNING:
+		_starvation_clock -= STARVATION_SECONDS
+		_mistake("The turtle is hungry! Eat fish to refill fullness. -1 life.",true)

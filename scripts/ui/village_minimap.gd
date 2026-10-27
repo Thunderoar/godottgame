@@ -109,7 +109,7 @@ func _draw() -> void:
 	var world := game.world
 	var bounds: Rect2 = world.get_map_rect() if world.has_method("get_map_rect") else Rect2(0, 0, 64, 40)
 	var area := _area(bounds)
-	if world is Lobby or world is Dungeon:
+	if world is Lobby or world is Dungeon or world is KrakenIsland:
 		draw_texture_rect(world.background.texture, area, false)
 	else:
 		draw_rect(area, Color("#285a77"))

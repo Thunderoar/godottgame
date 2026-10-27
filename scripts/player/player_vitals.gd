@@ -42,11 +42,15 @@ func _draw() -> void:
 	var height := 0.11
 	var gap := 0.045
 	var top := -height - gap
-	draw_rect(Rect2(-width * 0.5 - 0.04, top - 0.04, width + 0.08, height * 2.0 + gap + 0.08), Color(0.015, 0.035, 0.04, 0.9))
+	draw_rect(Rect2(-width * 0.5 - 0.04, top - 0.04, width + 0.08, height * 3.0 + gap * 2.0 + 0.08), Color(0.015, 0.035, 0.04, 0.9))
 	draw_rect(Rect2(-width * 0.5, top, width, height), Color("#321a20"))
 	draw_rect(Rect2(-width * 0.5, top, width * hp_ratio, height), Color("#df525d"))
 	draw_rect(Rect2(-width * 0.5, top, width, height), Color(0.86, 0.74, 0.62, 0.65), false, 0.018)
 	var xp_ratio := clampf(float(GameState.data.get("xp", 0)) / maxi(1, int(GameState.data.get("xp_next", 60))), 0, 1)
-	var xp_y := 0.0
+	var actor := get_parent() as Player
+	var stamina_ratio := actor.stamina / Player.STAMINA_MAX if is_instance_valid(actor) else 1.0
+	draw_rect(Rect2(-width * 0.5, 0, width, height), Color("#25313d"))
+	draw_rect(Rect2(-width * 0.5, 0, width * stamina_ratio, height), Color("#efb85f") if actor.exhausted else Color("#5bd9e4"))
+	var xp_y := height + gap
 	draw_rect(Rect2(-width * 0.5, xp_y, width, height), Color("#263730"))
 	draw_rect(Rect2(-width * 0.5, xp_y, width * xp_ratio, height), Color("#8ae1b5"))

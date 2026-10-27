@@ -6,8 +6,8 @@ const DAY_STEPS := [0, 1, 2, 3, 5, 6, 7]
 const NIGHT_STEPS := [4, 8, 9]
 
 const STEPS := [
-	{"event": "move", "title": "1. Learn to move", "text": "Use WASD or the left joystick. Walk along the dotted arrows to the yard marker.", "target": "yard"},
-	{"event": "gather", "title": "2. Gather wood", "text": "Follow the arrows to driftwood. Stand beside it and press E or Use. Wood can be sold at the equipment shop.", "target": "wood"},
+	{"event": "move", "title": "1. Learn to move", "text": "Use WASD or the left joystick. Hold Shift or the Sprint button to run; the blue bar below health is stamina. Tap NPCs and nearby objects directly. Walk along the dotted arrows to the yard marker.", "target": "yard"},
+	{"event": "gather", "title": "2. Gather wood", "text": "Follow the arrows to driftwood. Stand beside it and tap the driftwood, or press E. Wood can be sold at the equipment shop.", "target": "wood"},
 	{"event": "buy", "title": "3. Buy a potion", "text": "Visit Mara's Potion Shop. Click or touch the shop to open it, then press Buy on a health potion.", "target": "potion"},
 	{"event": "inventory", "title": "4. Open your backpack", "text": "Tap Pack or press I to inspect your items, equip weapons and use supplies.", "target": ""},
 	{"event": "fire_kill", "title": "5. Protect a tree", "text": "Day and night each last 3 minutes. New monsters arrive only at night; survivors remain dangerous by day. Follow the arrows to a fire monster and press F or Attack. Fire monsters can attack you, exposed residents and mature trees. Drops are collected automatically.", "target": "fire"},

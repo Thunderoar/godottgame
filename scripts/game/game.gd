@@ -618,11 +618,11 @@ func open_field_guide() -> void:
 	hud.field_guide_panel.open_book()
 
 
-func board_ship(boarding: ShipDeparture) -> bool:
+func board_ship(boarding: ShipDeparture, direct_tap: bool = false) -> bool:
 	if not world is Lobby or _transitioning or _input_locked or _sailing or _game_over or is_instance_valid(home_interior) or GameState.recovery_active() or GameState.emergency_active():
 		return false
 	var p := player()
-	if not is_instance_valid(boarding) or boarding.get_parent() != world or not is_instance_valid(p) or p.dead or p.sleeping or p.global_position.distance_to(boarding.global_position) > boarding.interact_radius:
+	if not is_instance_valid(boarding) or boarding.get_parent() != world or not is_instance_valid(p) or p.dead or p.sleeping or (not direct_tap and p.global_position.distance_to(boarding.global_position) > boarding.interact_radius):
 		return false
 	_sailing = true
 	_input_locked = true

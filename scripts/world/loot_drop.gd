@@ -7,6 +7,9 @@ extends Interactable
 @export var amount := 10
 @export var item_id := ""
 
+const MAGNET_RADIUS := 4.0
+const MAGNET_SPEED := 10.0
+var attracting := false
 var pop_velocity := Vector2.ZERO
 
 var _sprite: Sprite2D
@@ -48,9 +51,16 @@ func _physics_process(delta: float) -> void:
 		pop_velocity.y += delta * 3.0
 	if _sprite:
 		_sprite.position.y = -0.18 + sin(_t * 3.2) * 0.06
-	var player := get_tree().get_first_node_in_group("player")
+	var game := get_tree().get_first_node_in_group("game") as Game
+	var player := game.player() if is_instance_valid(game) and game.world == get_parent() else null
 	if player != null and is_instance_valid(player):
-		if global_position.distance_to(player.global_position) <= 0.9:
+		if player.dead: return
+		var distance := global_position.distance_to(player.global_position)
+		if kind in ["gold","diamond"] and (attracting or distance <= MAGNET_RADIUS):
+			attracting = true
+			pop_velocity = Vector2.ZERO
+			global_position = global_position.move_toward(player.global_position,MAGNET_SPEED * delta)
+		if global_position.distance_to(player.global_position) <= (0.35 if attracting else 0.9):
 			_collect()
 
 

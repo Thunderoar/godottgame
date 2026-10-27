@@ -4,7 +4,7 @@ extends Interactable
 ## frame (PortalDB theme, never a portal-id special case), an 8-frame swirling
 ## interior, orbiting motes, a pulsing rune glow, a ground light pool and a
 ## wake-up burst when the player approaches. Locked gates are sealed with a
-## slab and chains; cleared gates wear a golden aura and banner.
+## slab and chains; cleared gates keep a subtle golden aura without a text banner.
 ##
 ## Kept contracts: Interactable with portal_id / gate_kind / gate_title, group
 ## battle_portal, interact() routing to Game.open_portals / open_pet_battles.
@@ -133,7 +133,7 @@ func _build_visuals(palette: Dictionary, shown_title: String, is_pet: bool) -> v
 	_banner = Label.new()
 	_banner.z_as_relative = false
 	_banner.z_index = 711
-	_banner.text = "CLEARED"
+	_banner.text = ""
 	_banner.add_theme_font_size_override("font_size", 11)
 	_banner.add_theme_color_override("font_color", Color("#ffd88a"))
 	_banner.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
@@ -183,13 +183,13 @@ func _refresh() -> void:
 	_cleared = bool(state.get("cleared", false))
 	available = unlocked
 	prompt = "Enter the Monster Battle Portal" if unlocked else "Open the Monster Battle Portal"
-	# Locked gates show the sealed frame; cleared gates gain the aura + banner.
+	# Locked gates show the sealed frame; saved clears gain the aura only.
 	if _frame:
 		_frame.texture = PixelArt.portal_frame_texture(_theme, not unlocked and not _cleared)
 	if _swirl:
 		_swirl.visible = unlocked
 	if _banner:
-		_banner.visible = _cleared
+		_banner.visible = false
 	queue_redraw()
 
 

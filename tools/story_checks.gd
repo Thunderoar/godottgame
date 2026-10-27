@@ -147,18 +147,36 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(ocean.turtle.modulate.a < 0.05 and ocean._retry.visible, "sinking fades the turtle and then exposes retry")
 	ocean.restart()
 	check.call(ocean.health == 3 and ocean.turtle.rotation == 0 and ocean.player.modulate.a == 1, "retry restores turtle and passenger visibility")
-	ocean.phase = OceanJourney.Phase.RUNNING
-	ocean.elapsed = OceanJourney.STAGE_SECONDS
-	ocean._update_run(0)
-	check.call(ocean.stage_cleared and int(GameState.campaign().get("ocean_stage")) == 2, "completing a sea route saves its next checkpoint")
-	ocean.restart()
-	ocean.phase = OceanJourney.Phase.RUNNING
-	ocean.elapsed = OceanJourney.STAGE_SECONDS
-	ocean._update_run(0)
-	ocean.restart()
-	ocean.phase = OceanJourney.Phase.RUNNING
-	ocean.elapsed = OceanJourney.STAGE_SECONDS
-	ocean._update_run(0)
+	for route in range(1,GameState.OCEAN_STAGES+1):
+		ocean.phase = OceanJourney.Phase.RUNNING
+		ocean.elapsed = OceanJourney.STAGE_SECONDS
+		ocean._refresh_ui()
+		ocean._eat._press()
+		var start_position := ocean.turtle.position
+		ocean._update_run(0)
+		check.call(ocean.phase == OceanJourney.Phase.TRAVELLING and ocean.stage_cleared, "route %d automatically begins forward departure" % route)
+		check.call(int(GameState.campaign().get("ocean_stage")) == mini(route+1,GameState.OCEAN_STAGES), "route %d saves its checkpoint before the travel animation" % route)
+		check.call(not ocean._retry.visible and ocean._return.disabled and ocean._controls_button.disabled and not Input.is_action_pressed("ocean_eat"), "route %d transit hides Next and releases/locks gameplay controls" % route)
+		var lives := ocean.health
+		var saved_route := int(GameState.campaign().get("ocean_stage"))
+		ocean._complete_stage()
+		ocean.restart()
+		ocean._mistake("cannot damage between routes")
+		check.call(ocean.phase == OceanJourney.Phase.TRAVELLING and ocean.health == lives and int(GameState.campaign().get("ocean_stage")) == saved_route and not ocean.choose_action("eat"), "route %d transit cannot be skipped, damaged or rewarded twice" % route)
+		if route == 1:
+			GameState.save_game()
+			check.call(GameState.load_game() and int(GameState.campaign().get("ocean_stage")) == 2, "next sea checkpoint survives a save reload during departure")
+		ocean._process(OceanJourney.ROUTE_EXIT_SECONDS*0.5)
+		check.call(ocean.turtle.position.x > start_position.x and ocean.player.position.distance_to(ocean.turtle.position) < 1.5, "route %d visibly carries Adam forwards with the turtle" % route)
+		if capture.is_valid() and route == 1: await capture.call("05b_route_1_swim_forward")
+		ocean._process(OceanJourney.ROUTE_EXIT_SECONDS*0.5)
+		if route < GameState.OCEAN_STAGES:
+			check.call(ocean.stage == route+1 and ocean.phase == OceanJourney.Phase.ARRIVING and ocean.elapsed == 0 and ocean.health == OceanJourney.MAX_HEALTH, "route %d loads automatically after the outgoing turtle leaves the screen" % (route+1))
+			ocean._process(OceanJourney.ROUTE_ENTRY_SECONDS*0.5)
+			check.call(ocean.turtle.position.x > ocean.visible_left()-5 and ocean.player.position.distance_to(ocean.turtle.position) < 1.5, "route %d has a visible mounted entry animation" % (route+1))
+			if capture.is_valid(): await capture.call("05c_route_%d_arrival" % (route+1))
+			ocean._process(OceanJourney.ROUTE_ENTRY_SECONDS*0.5)
+			check.call(ocean.phase == OceanJourney.Phase.RUNNING and not ocean._return.disabled and not ocean._controls_button.disabled and not ocean._retry.visible, "route %d resumes gameplay without a confirmation button" % (route+1))
 	for i in 180:
 		if game.world is KrakenIsland and not game._transitioning: break
 		await game.get_tree().create_timer(0.025).timeout
@@ -184,6 +202,8 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	var home := game.world as Lobby
 	var boarding := home.ship_boarding
 	check.call(boarding.ship.get_node_or_null("ArjunPassenger") != null, "rescued Arjun is visible aboard the returning ship")
+	var returning_friend := boarding.ship.get_node_or_null("ArjunPassenger") as Sprite2D
+	check.call(returning_friend != null and is_equal_approx(returning_friend.global_scale.x,PixelArt.PX), "rescued Arjun keeps the correct human scale aboard the ship")
 	boarding.ship.position = boarding._moored_position
 	boarding._physics_process(0)
 	home.player.position = boarding.position

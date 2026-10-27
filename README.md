@@ -350,3 +350,19 @@ and native upgrade/home/guide, HUD/battle and five-background reviews.
 ## BESUT rescue story update
 
 The new illustrated opening follows Adam, Arjun and Mei Ling from their fishing accident into another dimension. Sea routes lead to Arjun’s prison and the final Monster Portal leads to Mei Ling. Both become defenders after returning to BESUT. [Campaign rules and verification](docs/BESUT_STORY_CAMPAIGN.md) cover the saved ending, new turtle mechanics, tap-to-inspect NPCs, illustrated book, tutorial updates and drag-and-resize controls in Settings. Current isolated gameplay gate: **1,114 checks, PASS, exit 0**.
+
+## Controls and ocean update (1.2.1)
+
+Sprint is a permanent hold button beside Attack; it never changes to Talk, Use or Board. Its stamina bar sits below player HP. NPCs and nearby interactable objects respond to direct taps; tap the ship itself to board immediately. Gold and Diamonds within four world units fly toward the player. Roadside lamps illuminate the village. Portal clear state stays saved without a CLEARED banner above the gate.
+
+The ocean joystick/WASD steers forwards, backwards, up, down and diagonally. Sharks approach with open jaws; bombs and sharks cost lives with blink protection. Missed objects travel to the screen edge instead of disappearing behind the turtle. Animated fish, mermaid, whale, megalodon and scuba diver populate the sea, above coral, seaweed, sand, crabs, starfish, treasure chests, pearls and a wreck. The Adam-to-Arjun timeline shows progress through all three routes.
+
+## Automatic sea travel (1.2.2)
+
+Finishing each sea route starts a two-second forward swim. After routes 1 and 2, the next route loads automatically and the mounted turtle swims in from the left over 1.2 seconds. Route 3 swims forward into the Kraken Island transition. No Next Sea Route button or repeated dive/rescue introduction is required. Gameplay controls wait until entry completes; the next checkpoint is saved before departure, and each new route retains the existing three-life reset.
+
+## Kraken fortress and fullness (1.3.0)
+
+The Kraken fight now uses the portal-style blue stone floor, pillars and purple runes from the supplied reference. New Kraken/prison pixel art shows one arm holding Arjun’s cage while another extends, slams, hooks and drags Adam after an orange warning. Dragging respects walls; boss defeat unlocks the cage for a separate rescue action.
+
+Fish refill FULLNESS instead of healing. Fullness drains while swimming; at zero, the turtle loses a life every five seconds until fed. Every missed rubbish item subtracts one life, even during blinking protection; rubbish left at route end is also charged before progression. Pink hearts still restore lives. Late spawns allow enough time to collect mandatory rubbish, and fatal penalties keep the current checkpoint.

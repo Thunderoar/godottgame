@@ -32,7 +32,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	for group in ["residents", "village_heroes", "village_pets", "interactable"]:
 		for node in get_tree().get_nodes_in_group(group):
 			if not is_instance_valid(node) or not node is Node2D or node.is_queued_for_deletion() or not game.world.is_ancestor_of(node): continue
-			if group == "interactable" and not (node is MissionNPC or node is AuthoredInteraction or node is CoastalGuard): continue
+			if group == "interactable" and not (node is MissionNPC or node is AuthoredInteraction or node is CoastalGuard or node is UniszaStudent): continue
 			if node is Resident and (node.dead or node.sheltered): continue
 			if node.get_parent() is Resident and (node.get_parent().dead or node.get_parent().sheltered): continue
 			var distance: float = (node.global_position + Vector2(0, -0.6)).distance_to(point)
@@ -40,6 +40,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				selected = node
 				best = distance
 	if not is_instance_valid(selected): return
+	if selected is UniszaStudent:
+		selected.interact(game.player())
+		get_viewport().set_input_as_handled()
+		return
 	var title := "BESUT Resident"
 	var role := "resident"
 	if selected is Resident:
