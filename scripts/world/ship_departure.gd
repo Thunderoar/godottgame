@@ -3,6 +3,7 @@ extends Interactable
 const SAIL_SPEED := 3.6
 const DISEMBARK_SPEED := 2.5
 const PASSENGER_OFFSET := Vector2(1.05, -0.65)
+const ARJUN_OFFSET := Vector2(-1.55, -0.65)
 const HULL_FACE := Rect2(0, 82, 208, 30)
 var ship: Sprite2D
 var passenger: Player
@@ -85,14 +86,18 @@ func begin_return(player: Player) -> void:
 	_carry_passenger()
 	var game := get_tree().get_first_node_in_group("game") as Game
 	if is_instance_valid(game) and game._arjun_returning:
-		var friend := Sprite2D.new()
+		var friend := PlayerSprite.new()
 		friend.name = "ArjunPassenger"
-		friend.texture = PixelArt.character_texture("arjun", 0)
+		friend.character_id = "arjun"
+		friend.base_scale = Vector2.ONE
 		friend.scale = Vector2.ONE
-		friend.position = (PASSENGER_OFFSET + Vector2(-1.1, 0.1)) / ship.scale
+		friend.offset = Vector2(0, -24)
+		friend.position = ARJUN_OFFSET / ship.scale
 		friend.z_as_relative = false
 		friend.z_index = player.z_index
+		friend.set_meta("passenger_onboard", true)
 		ship.add_child(friend)
+		friend.set_facing(2, false)
 	ship.reset_physics_interpolation()
 	passenger.reset_physics_interpolation()
 

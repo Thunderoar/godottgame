@@ -33,7 +33,7 @@ func _layout_guide() -> void:
 	for candidate in candidates:
 		var point: Vector2 = candidate
 		point.y = minf(point.y, size.y - extent.y - 16)
-		if not Rect2(point, extent).intersects(target_rect.grow(35)) and (not is_instance_valid(hud._minimap) or not Rect2(point, extent).intersects(hud._minimap.get_global_rect())):
+		if not Rect2(point, extent).intersects(target_rect.grow(35)) and (not is_instance_valid(hud._map_button) or not Rect2(point, extent).intersects(hud._map_button.get_global_rect())):
 			guide.position = point
 			return
 
@@ -58,6 +58,7 @@ func _find_action(node: Node, item: String, caption: String = "") -> Control:
 
 func _resolve_target() -> Rect2:
 	var step := GameState.mission_step()
+	if step >= MissionDB.STEPS.size(): return Rect2()
 	var modal: ModalBase
 	for child in get_parent().get_children():
 		if child is ModalBase and child.visible:

@@ -9,11 +9,26 @@ var cycle := 4.5
 var clock := 0.0
 var player: Player
 var tint := Color("#de745a")
+var element := ""
 var _hit := false
+var _material: ShaderMaterial
 
 func _ready() -> void:
 	add_to_group("dungeon_hazards")
 	z_index = -1
+	_material = RealmPresentation.spell_material(element if element != "" else "dark")
+	var surface := Sprite2D.new()
+	surface.texture = RealmPresentation.quad()
+	surface.scale = Vector2.ONE*RADIUS
+	surface.material = _material
+	add_child(surface)
+	_update_visual()
+
+func _update_visual() -> void:
+	_material.set_shader_parameter("clock",clock)
+	_material.set_shader_parameter("activation",1.0 if clock >= WARNING_SECONDS else 0.0)
+	_material.set_shader_parameter("fade",1.0 if clock < WARNING_SECONDS+ACTIVE_SECONDS else 0.12)
+	_material.set_shader_parameter("motion",not GameSettings.reduce_motion() and GameSettings.effects_at_least("med"))
 
 func _physics_process(delta: float) -> void:
 	clock = fmod(clock + delta, cycle)
@@ -22,16 +37,11 @@ func _physics_process(delta: float) -> void:
 	if is_active() and not _hit and is_instance_valid(player) and not player.dead and not player.controls_locked and global_position.distance_to(player.global_position) < RADIUS:
 		_hit = true
 		player.take_damage(damage, global_position)
-	queue_redraw()
+		if element in ["ice","forest","lightning"]: player.apply_elemental_slow(1.2,0.5)
+	_update_visual()
 
 func is_active() -> bool:
 	return clock >= WARNING_SECONDS and clock < WARNING_SECONDS + ACTIVE_SECONDS
 
 func _draw() -> void:
-	var warning := clock < WARNING_SECONDS
-	var color := tint if is_active() else (Color("#ffd383") if warning else tint.darkened(0.45))
-	draw_circle(Vector2.ZERO, RADIUS, Color(color, 0.32 if is_active() else 0.09))
-	draw_arc(Vector2.ZERO, RADIUS, 0, TAU, 40, color, 0.07, true)
-	for i in 6:
-		var direction := Vector2.from_angle(i * TAU / 6)
-		draw_line(direction * 0.55, direction * (1.1 if is_active() else 0.85), color, 0.08)
+	pass

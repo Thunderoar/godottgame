@@ -187,9 +187,15 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	ocean._process(1.2)
 	check.call(ocean.phase == OceanJourney.Phase.RESCUE and ocean.turtle.position.x > -6, "turtle automatically swims toward the diving player")
 	ocean._process(2.0)
+	check.call(ocean.phase == OceanJourney.Phase.BRIEFING and ocean._sea_guide.visible, "sea tutorial appears before the timed route and names rubbish, fish, bombs and sharks")
+	var briefing_time := ocean.elapsed
+	ocean._process(1.0)
+	check.call(ocean.elapsed == briefing_time and ocean.items.is_empty(), "reading the sea tutorial cannot spawn hazards or drain route time")
+	if capture.is_valid(): await capture.call("06b_sea_tutorial")
+	ocean.dismiss_sea_guide()
 	check.call(ocean.phase == OceanJourney.Phase.RUNNING and ocean.player.position.distance_to(ocean.turtle.position) < 1.5, "player automatically boards the turtle")
 	if capture.is_valid():
-		for pair in [["trash", ocean._pickup], ["food", ocean._eat]]:
+		for pair in [["trash", ocean._pickup]]:
 			var kind := str(pair[0])
 			var button := pair[1] as TouchActionButton
 			ocean.health = 2
@@ -220,17 +226,16 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(not ocean.choose_action("pickup") and GameState.gold() == gold + 1, "a resolved ocean item cannot pay twice")
 	if capture.is_valid(): await capture.call("08_player_net_animation")
 	ocean.health = 2
-	ocean.spawn_item("food", ocean.mouth_position().x)
-	check.call(ocean.choose_action("eat") and ocean.health == 2 and ocean._mouth_time > 0, "correct food opens the turtle mouth without restoring health")
+	var food := ocean.spawn_item("food", ocean.mouth_position().x)
+	ocean._update_run(0)
+	check.call(food.resolved and ocean.health == 2 and ocean._mouth_time > 0, "nearby food automatically opens the turtle mouth without restoring health")
 	ocean._process(0.01)
 	if capture.is_valid(): await capture.call("09_turtle_eat_animation")
 	ocean.health = 3
-	for kind in ["food", "trash"]:
-		ocean._hurt_time = 0
-		ocean.spawn_item(kind, ocean.mouth_position().x)
-		var hp := ocean.health
-		check.call(not ocean.choose_action("pickup" if kind == "food" else "eat") and ocean.health == hp - 1, "wrong action on %s costs turtle health" % kind)
-	check.call(GameState.gold() == gold + 1, "wrong turtle actions never award gold")
+	food = ocean.spawn_item("food", ocean.mouth_position().x)
+	check.call(not ocean.choose_action("pickup") and not food.resolved and ocean.health == 3, "Pick Up ignores fish without costing turtle health")
+	ocean._update_run(0)
+	check.call(food.resolved and GameState.gold() == gold + 1, "automatic feeding never awards rubbish gold")
 	var base_speed := ocean.speed()
 	ocean.elapsed += 120
 	check.call(ocean.speed() > base_speed and ocean.speed() <= OceanJourney.MAX_SPEED, "food and rubbish travel faster as the journey progresses")
@@ -245,8 +250,8 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(not Input.is_action_pressed("ocean_pickup"), "cancelling Pick Up releases its synthetic input")
 	for i in ocean.health:
 		ocean._hurt_time = 0
-		ocean.spawn_item("trash", ocean.mouth_position().x)
-		ocean.choose_action("eat")
+		ocean.spawn_item("trash", ocean.visible_left() - 10)
+		ocean._update_run(0)
 	ocean._process(2.2)
 	check.call(ocean.phase == OceanJourney.Phase.FINISHED and ocean.health == 0 and ocean._retry.visible, "zero turtle health ends the run and exposes Ride Again")
 	if capture.is_valid(): await capture.call("10_turtle_result")

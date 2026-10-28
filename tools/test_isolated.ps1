@@ -9,7 +9,7 @@ $repo = Split-Path -Parent $PSScriptRoot
 $runRoot = Join-Path ([IO.Path]::GetTempPath()) ('tidesworn-tests-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $runRoot | Out-Null
 # A backup is evidence only; never restore over a concurrent live game.
-$realSave = Join-Path $env:APPDATA 'Godot\app_userdata\Save The World\tidesworn_save.json'
+$realSave = Join-Path $env:APPDATA 'Godot\app_userdata\Protect Besut\tidesworn_save.json'
 if (Test-Path -LiteralPath $realSave) {
 	Copy-Item -LiteralPath $realSave -Destination (Join-Path $runRoot 'player-save-backup.json')
 }
@@ -26,7 +26,7 @@ try {
 		$arguments += @('--audio-driver', 'Dummy', '--resolution', '1280x720', "res://tools/${Review}_review.tscn")
 	} else {
 		$arguments += '--headless'
-		if ($ImportOnly) { $arguments += '--import' } else { $arguments += 'res://tools/tide_test.tscn' }
+		if ($ImportOnly) { $arguments += @('--import','--recovery-mode') } else { $arguments += 'res://tools/tide_test.tscn' }
 	}
 	$stdout = Join-Path $runRoot 'test.log'
 	$stderr = Join-Path $runRoot 'errors.log'

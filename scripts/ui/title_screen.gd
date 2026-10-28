@@ -326,7 +326,7 @@ func _hero_available(id: String) -> bool:
 func _unlock_requirement(id: String) -> String:
 	match id:
 		"arjun": return "Complete all 3 sea routes. Defeat the Kraken King, then open Arjun's prison to rescue him."
-		"mei_ling": return "Defeat Malakar in Drowned Throne, the final Monster Portal, to rescue Mei Ling."
+		"mei_ling": return "Defeat %s in %s, the final Monster Portal, to rescue Mei Ling." % [PortalDB.get_portal("drowned_throne").get("boss_name","Abyss Monarch"),PortalDB.get_portal("drowned_throne").get("name","Abyssal Throne")]
 	return "Available from the start. Begin Adam's story and find your missing friends."
 
 func _refresh_hero_locks() -> void:

@@ -6,9 +6,13 @@ var _heal := 0.0
 var _exit: Interactable
 var _status: Label
 var _leaving := false
+var _floor_texture: Texture2D
 const EXIT_FOOTPRINT := Rect2(-1.3, 3.7, 2.6, 1.5)
 
 func _ready() -> void:
+	texture_filter=CanvasItem.TEXTURE_FILTER_LINEAR
+	if ResourceLoader.exists("res://assets/authored/realistic/wood-floor.png"):
+		_floor_texture=load("res://assets/authored/realistic/wood-floor.png") as Texture2D
 	z_index = 0
 	position = Vector2(96, 24)
 	var walls := StaticBody2D.new()
@@ -51,8 +55,9 @@ func _ready() -> void:
 	bed.add_to_group("home_beds")
 	add_child(bed)
 	var table := Sprite2D.new()
-	table.texture = PixelArt.icon("food")
-	table.scale = Vector2.ONE * 0.055
+	table.texture = RealisticArt.get_texture("realistic/home_table")
+	if table.texture==null: table.texture=PixelArt.icon("food")
+	table.scale = Vector2.ONE * PixelArt.PX
 	table.position = Vector2(3, 0)
 	add_child(table)
 
@@ -80,15 +85,19 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	draw_rect(Rect2(-7, -5, 14, 10), Color("#302c31"))
 	draw_rect(Rect2(-6.5, -4.5, 13, 9), Color("#8a6546"))
-	for y in range(-4, 5):
-		draw_line(Vector2(-6.5, y), Vector2(6.5, y), Color("#624831"), 0.055)
+	if _floor_texture:
+		draw_texture_rect(_floor_texture,Rect2(-6.5,-4.5,13,9),false)
+	else:
+		for y in range(-4, 5):
+			draw_line(Vector2(-6.5, y), Vector2(6.5, y), Color("#624831"), 0.055)
 	draw_rect(Rect2(-7, -5, 14, 1.2), Color("#48505b"))
+	if _floor_texture:
+		draw_texture_rect(_floor_texture,Rect2(-6.5,-5,13,1.2),false,Color("#8b7963"))
 	for x in [-4, 4]:
 		draw_rect(Rect2(x - 0.7, -4.8, 1.4, 0.8), Color("#b6d5d3"))
 		draw_line(Vector2(x, -4.8), Vector2(x, -4), Color("#4c504f"), 0.09)
 	draw_rect(Rect2(-2.5, -1.8, 5, 4), Color("#754852"))
 	draw_rect(Rect2(-2.3, -1.6, 4.6, 3.6), Color("#ad7666"), false, 0.12)
-	draw_rect(Rect2(2, -0.8, 2, 1.6), Color("#513b2d"))
 
 	draw_rect(Rect2(-1.6, 4.4, 3.2, 0.6), Color("#d6b87b"))
 

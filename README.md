@@ -1,6 +1,6 @@
 # PB (Protect BESUT)
 
-A playable 2D pixel-art survival action-RPG vertical slice for **Godot 4.7.2**.
+A playable survival action-RPG vertical slice for **Godot 4.7.2**, with realistic prerendered 3D artwork over a 2D world and controls. Procedural pixel art remains the fallback.
 
 **Created by Qayyim, Farhan and Ayiz.**
 
@@ -43,7 +43,7 @@ notes are in [`docs/LEGACY_CONVERSION.md`](docs/LEGACY_CONVERSION.md).
 | Settlement editor | B | Menu → **Build settlement** / **Finish building** |
 | Close modal | Esc | **Close** |
 
-Pack sits beside the movement joystick; Build is inside Menu. Health potions are used from Pack. Tap the top-right minimap to open a larger picture map. Shop, portal, house, jetty and ship pictures replace letter markers and the explanatory legend; player and flashing attack indicators remain. Gold and diamond balances appear at the top left and update after earnings and purchases. The clock sits at the bottom. Dungeon loot is collected automatically by touch. Floating NPC name labels and timed pop-up notifications
+Pack sits beside the movement joystick; Build is inside Menu. Health potions are used from Pack. Press the top-right Map button to open the picture map; Close returns to gameplay. No minimap stays on the HUD. Shop, portal, house, jetty and ship pictures replace letter markers and the explanatory legend; player and flashing attack indicators remain. Gold and diamond balances appear at the top left and update after earnings and purchases. The clock sits at the bottom. Dungeon loot is collected automatically by touch. Floating NPC name labels and timed pop-up notifications
 have been removed; persistent HUD panels and the purple mission guide carry that information.
 
 ## New Journey tutorial
@@ -56,7 +56,7 @@ New games teach seven daytime lessons (movement, gathering, shopping, Pack, work
 
 - **Adam** — Malay swordsman with swift sword strikes.
 - **Arjun** — Indian scythe wielder with wide melee sweeps. Locked until the sea routes, Kraken King and prison rescue are completed.
-- **Mei Ling** — Chinese female archer with precise ranged shots. Locked until Malakar is defeated in the final Drowned Throne portal.
+- **Mei Ling** — Chinese female archer with precise ranged shots. Locked until Abyss Monarch is defeated in the final Abyssal Throne portal.
 
 New journeys begin as Adam. Rescue Arjun at sea and Mei Ling in the final portal; both return as village defenders and unlock the reunion ending. Each hero uses basic attacks only. Player skills and mana have been removed. The equipment shop filters to the active
 hero's weapon discipline while sharing armour and shields.
@@ -221,7 +221,7 @@ rules (see `docs/VISUAL_OVERHAUL.md` for the design decisions):
   and camera zoom sliders. Zoom spans 28–64 (38 default), with smooth changes
   and device-level persistence. The anchored HUD scales without moving controls
   off-screen; touch targets retain at least 44 physical pixels. The top-right
-  VITALS panel is removed. Player HP/XP and level appear overhead; the pet has overhead HP/XP. Gold and diamonds appear at the top left, Menu and the minimap at the top right, and the phase clock at the bottom. Shops also show current balances.
+  VITALS panel is removed. Player HP/XP and level appear overhead; the pet has overhead HP/XP. Gold and diamonds appear at the top left, Menu and Map buttons at the top right, and the phase clock at the bottom. The map appears only after pressing Map. Shops also show current balances.
 - **Comfort settings.** Settings gains Effects quality (low/med/high) and
   Reduce motion. Touch buttons show keycap hints on keyboard layouts, a
   cooldown sweep on Attack and a context-sensitive
@@ -363,6 +363,10 @@ Finishing each sea route starts a two-second forward swim. After routes 1 and 2,
 
 ## Kraken fortress and fullness (1.3.0)
 
-The Kraken fight now uses the portal-style blue stone floor, pillars and purple runes from the supplied reference. New Kraken/prison pixel art shows one arm holding Arjun’s cage while another extends, slams, hooks and drags Adam after an orange warning. Dragging respects walls; boss defeat unlocks the cage for a separate rescue action.
+The Kraken fight uses a textured fortress floor, pillars and purple runes. The Kraken holds Arjun’s cage while another arm extends, slams, hooks and drags Adam after an orange warning. Dragging respects walls; boss defeat unlocks the cage for a separate rescue action.
 
-Fish refill FULLNESS instead of healing. Fullness drains while swimming; at zero, the turtle loses a life every five seconds until fed. Every missed rubbish item subtracts one life, even during blinking protection; rubbish left at route end is also charged before progression. Pink hearts still restore lives. Late spawns allow enough time to collect mandatory rubbish, and fatal penalties keep the current checkpoint.
+Nearby fish automatically refill FULLNESS. Fullness drains while swimming; at zero the turtle dies. At 50% or above movement is fast in every direction; below 50% it slows. Every missed rubbish item subtracts one life, even during blinking protection; rubbish left at route end is also charged before progression. Pink hearts restore lives. Late spawns allow enough time to collect mandatory rubbish, and fatal penalties keep the current checkpoint.
+
+Graphics/sea tutorial/night performance pass: see [REALM_GRAPHICS_AND_PERFORMANCE.md](docs/REALM_GRAPHICS_AND_PERFORMANCE.md) for current assets, native captures and measured limits.
+
+Realistic village, house tiers, five shops, characters, pets and ocean presentation: see [REALISTIC_WORLD.md](docs/REALISTIC_WORLD.md). The game keeps its 2D movement and collisions with imported prerendered 3D artwork.

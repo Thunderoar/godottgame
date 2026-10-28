@@ -79,13 +79,37 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	game.hud.visible = false
 	ocean.set_process(false)
 	ocean._process(4)
+	ocean.dismiss_sea_guide()
+	var full_moves: Array[float] = []
 	for action in ["move_right","move_left","move_up","move_down"]:
 		var start := ocean.turtle.position
 		Input.action_press(action)
 		ocean._process(0.2)
 		Input.action_release(action)
 		var movement := ocean.turtle.position-start
+		full_moves.append(movement.length())
 		check.call(movement.x > 0 if action == "move_right" else (movement.x < 0 if action == "move_left" else (movement.y < 0 if action == "move_up" else movement.y > 0)), "turtle responds to %s" % action)
+	check.call(full_moves.all(func(distance: float) -> bool: return is_equal_approx(distance, OceanJourney.VERTICAL_SPEED * 0.2)), "forward, reverse and vertical swimming have the same fast speed")
+	var fast_scroll := ocean.speed()
+	ocean.fullness = OceanJourney.FAST_FULLNESS_THRESHOLD
+	check.call(ocean.fullness_speed_multiplier() == 1.0, "50 percent fullness keeps the fast movement tier")
+	ocean.fullness = 40
+	check.call(is_equal_approx(ocean.speed(),fast_scroll * OceanJourney.HUNGRY_SPEED_MULTIPLIER), "below 50 percent fullness slows ocean travel by the same movement multiplier")
+	for action in ["move_right","move_left","move_up","move_down"]:
+		var start := ocean.turtle.position
+		Input.action_press(action)
+		ocean._process(0.1)
+		Input.action_release(action)
+		check.call(is_equal_approx(ocean.turtle.position.distance_to(start),OceanJourney.VERTICAL_SPEED * OceanJourney.HUNGRY_SPEED_MULTIPLIER * 0.1), "hungry swimming consistently slows %s" % action)
+	ocean.fullness = 75
+	check.call(ocean.swim_speed() > ocean.speed(), "fed reverse steering can catch rubbish drifting behind the turtle")
+	var diagonal_start := ocean.turtle.position
+	Input.action_press("move_right")
+	Input.action_press("move_up")
+	ocean._process(0.1)
+	Input.action_release("move_right")
+	Input.action_release("move_up")
+	check.call(is_equal_approx(ocean.turtle.position.distance_to(diagonal_start),ocean.swim_speed()*0.1), "diagonal steering is normalized to the same swim speed")
 	check.call(ocean.player.position.distance_to(ocean.turtle.position) < 1.5, "rider follows horizontal and vertical turtle movement")
 	var kinds := ocean.scenery.life.map(func(a: Dictionary) -> String: return str(a.kind))
 	check.call(["fish","whale","megalodon","mermaid","diver"].all(func(kind: String) -> bool: return kind in kinds), "marine background includes fish, whale, megalodon, mermaid and scuba diver")
@@ -103,7 +127,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(ocean.health == hp-1 and not shark.resolved, "open-jaw shark bites cost a life while the shark continues swimming")
 	ocean._update_run(0.05)
 	check.call(ocean.health == hp-1, "blinking protection prevents repeated shark damage")
-	check.call(ocean.actionable_item().get("kind","") != "shark", "Pick Up and Eat cannot consume a shark")
+	check.call(ocean.actionable_item().get("kind","") != "shark", "Pick Up cannot consume a shark")
 	ocean._resolve_item(shark,false)
 	ocean.stage = 2
 	ocean.elapsed = OceanJourney.STAGE_SECONDS/2

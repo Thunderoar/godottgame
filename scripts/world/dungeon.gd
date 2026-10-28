@@ -19,6 +19,7 @@ var camera: FollowCamera
 var boss: Enemy
 var canvas_modulate: CanvasModulate
 var background: Sprite2D
+var _floor_material: ShaderMaterial
 
 var _definition: Dictionary = {}
 var _markers: Array[Dictionary] = []
@@ -78,6 +79,8 @@ func _build_lighting() -> void:
 		"throne": Color("#a09a84"),
 	}.get(_theme(), Color("#7d84a0")) as Color
 	canvas_modulate.color = ambient.lightened(0.18)
+	if ElementDB.ELEMENTS.has(_theme()):
+		canvas_modulate.color = Color(str(ElementDB.get_element(_theme()).get("glow","#af92ca"))).lerp(Color.WHITE,0.67)
 	add_child(canvas_modulate)
 
 
@@ -91,6 +94,24 @@ func _build_ground() -> void:
 	background.z_index = -1000
 	background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	add_child(background)
+	if ElementDB.ELEMENTS.has(_theme()):
+		var floor_art := Sprite2D.new()
+		floor_art.name = "RealmStoneFloor"
+		floor_art.texture = load("res://assets/authored/realms/basalt-floor-v2.png") as Texture2D
+		floor_art.position = Vector2(24,16)
+		floor_art.scale = Vector2(45,28.4)/floor_art.texture.get_size()
+		floor_art.z_as_relative = false
+		floor_art.z_index = -999
+		floor_art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+		_floor_material = RealmPresentation.floor_material(_theme())
+		floor_art.material = _floor_material
+		add_child(floor_art)
+		GameSettings.changed.connect(_on_graphics_settings_changed)
+		_on_graphics_settings_changed("")
+
+func _on_graphics_settings_changed(_key: String) -> void:
+	if _floor_material != null:
+		_floor_material.set_shader_parameter("motion",not GameSettings.reduce_motion() and GameSettings.effects_at_least("med"))
 
 
 func _make_dungeon_texture() -> Texture2D:
@@ -98,7 +119,7 @@ func _make_dungeon_texture() -> Texture2D:
 	# (no random per-cell tile soup -> no visible grid maze), sparse accent
 	# tiles, smooth large-scale shading, and real wall faces with depth. The
 	# per-theme palette comes from PixelArt.portal_theme_palette.
-	var key := "dungeon_v3_%s" % portal_id
+	var key := "dungeon_v4_%s_%s" % [portal_id,_theme()]
 	if PixelArt.CACHE.has(key):
 		return PixelArt.CACHE[key]
 	var w := int(map_rect.size.x * 32.0)
@@ -111,6 +132,7 @@ func _make_dungeon_texture() -> Texture2D:
 	# Material hue comes from the semantic stone role plus this portal's theme.
 	var tint: Color = palette["glow"]
 	var stone := WorldPalette.color("stone").lerp(WorldPalette.color("sea_deep"), 0.38).lerp(tint, 0.08)
+	if ElementDB.ELEMENTS.has(_theme()): stone = Color(str(ElementDB.get_element(_theme()).get("floor","#404050")))
 	var mortar := stone.darkened(0.23)
 	img.fill(mortar)
 	for row in int(ceil(h / 16.0)):
@@ -176,6 +198,7 @@ func _make_dungeon_texture() -> Texture2D:
 		PixelArt.rect(img, x, y, 4, 2, mineral.darkened(0.18))
 		PixelArt.rect(img, x + 2, y - 2, 3, 2, mineral)
 		if i % 4 == 0: PixelArt.hline(img, x + 2, y - 2, 2, mineral.lightened(0.2))
+	if ElementDB.ELEMENTS.has(_theme()): ElementalArt.paint_floor(img,_theme(),rng)
 	var tex := ImageTexture.create_from_image(img)
 	PixelArt.CACHE[key] = tex
 	return tex
@@ -223,10 +246,14 @@ func _add_pillar(at: Vector2) -> void:
 	add_child(holder)
 	var art := Sprite2D.new()
 	art.texture = load("res://assets/sprites/TX Props__TX Props Pillar.tres")
+	if ElementDB.ELEMENTS.has(_theme()): art.texture = ElementalArt.pillar_texture(_theme())
 	art.centered = false
 	var sz := art.texture.get_size()
 	art.offset = Vector2(-sz.x * 0.5, -sz.y)
 	art.scale = Vector2(PixelArt.PX, PixelArt.PX) * 1.3
+	if ElementDB.ELEMENTS.has(_theme()):
+		art.scale *= 88.0/sz.y
+		art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	art.modulate = Color(0.72, 0.78, 0.8)
 	holder.add_child(art)
 	var body := StaticBody2D.new()
@@ -274,10 +301,14 @@ func _build_decor() -> void:
 			continue
 		var sprite := Sprite2D.new()
 		sprite.texture = load(str(prop_pool[i % prop_pool.size()]))
+		if ElementDB.ELEMENTS.has(theme): sprite.texture = ElementalArt.pillar_texture(theme)
 		sprite.centered = false
 		var sz := sprite.texture.get_size()
 		sprite.offset = Vector2(-sz.x * 0.5, -sz.y)
 		sprite.scale = Vector2(PixelArt.PX, PixelArt.PX) * (1.0 if theme != "kelp" else 1.3)
+		if ElementDB.ELEMENTS.has(theme):
+			sprite.scale *= 88.0/sz.y
+			sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		sprite.position = Vector2(x, y)
 		sprite.modulate = glow.darkened(0.15).lerp(Color(0.55, 0.62, 0.66), 0.4)
 		if theme in ["kelp", "reef", "coral"]:
@@ -399,7 +430,8 @@ func _build_monsters() -> void:
 		var p := spots[i % spots.size()]
 		if i >= spots.size():
 			p += Vector2(_rng.randf_range(-2.0, 2.0), _rng.randf_range(-2.0, 2.0))
-		var enemy := Enemy.new()
+		var enemy := ElementalMinion.new()
+		enemy.element = str(_definition.get("element","chaos"))
 		enemy.kind = kind
 		enemy.monster_level = level
 		enemy.max_hp = 38 + level * 12 + i * 2
@@ -412,7 +444,9 @@ func _build_monsters() -> void:
 		add_child(enemy)
 	# Exactly one boss.
 	var boss_def := PortalDB.get_portal(portal_id)
-	boss = Enemy.new()
+	var ruler := ElementalBoss.new()
+	ruler.element = str(boss_def.get("element","chaos"))
+	boss = ruler
 	boss.name = "Boss"
 	boss.kind = str(boss_def.get("boss_id", "grotto_warden"))
 	boss.is_boss = true
@@ -428,10 +462,10 @@ func _build_monsters() -> void:
 	boss.body_radius = 1.0
 	boss.gold_reward = 0
 	boss.diamond_chance = 0.0
-	boss.position = Vector2(24, 7)
+	boss.position = Vector2(24, 9)
 	boss.boss_finished.connect(_on_boss_finished)
 	add_child(boss)
-	_markers.append({"position": Vector2(24, 7), "color": Color("#d75a58"), "size": 5.0, "shape": "disc"})
+	_markers.append({"position": boss.position, "color": Color("#d75a58"), "size": 5.0, "shape": "disc"})
 
 
 func _build_exit() -> void:
@@ -565,6 +599,7 @@ func _build_hazards() -> void:
 		hazard.cycle = float(_definition.get("hazard_cycle", 4.5))
 		hazard.clock = index * 0.45
 		hazard.tint = PixelArt.portal_theme_palette(_theme()).get("glow", Color("#de745a"))
+		hazard.element = str(_definition.get("element",""))
 		add_child(hazard)
 
 
@@ -578,7 +613,7 @@ func _build_boss_arrival() -> void:
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var warning := Label.new()
 	warning.name = "BossArrival"
-	warning.text = "%s\n%s" % [_definition.get("boss_name", "An ancient horror"), _definition.get("boss_ability_name", "Awakens")]
+	warning.text = "%s\n%s REALM · THREE POWERS" % [_definition.get("boss_name", "An ancient horror"),str(_definition.get("element",_theme())).to_upper()]
 	root.add_child(warning)
 	warning.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	warning.offset_left = 16

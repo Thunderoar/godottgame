@@ -14,8 +14,7 @@ const DEFAULT_CONTROL_LAYOUT := {
 	"build": {"x": 96.0, "y": 160.0, "size": 64.0},
 	"menu": {"x": 1166.0, "y": 18.0, "size": 64.0},
 	"ocean_joystick": {"x": 24.0, "y": 510.0, "size": 180.0},
-	"ocean_pickup": {"x": 1014.0, "y": 588.0, "size": 104.0},
-	"ocean_eat": {"x": 1144.0, "y": 588.0, "size": 104.0},
+	"ocean_pickup": {"x": 1144.0, "y": 588.0, "size": 104.0},
 	"health_potion": {"x": 1055.0, "y": 510.0, "size": 58.0},
 }
 
@@ -45,6 +44,7 @@ var _diamond_label: Label
 var _identity_label: Label
 var _clock_label: Label
 var _minimap: VillageMinimap
+var _map_button: Button
 var _xp_bar: SegmentedBar
 var _pet_xp_bar: SegmentedBar
 var _objectives_box: VBoxContainer
@@ -330,7 +330,7 @@ func _layout_gui() -> void:
 		var element_factor := factor
 		if node in _control_nodes.values():
 			element_factor = maxf(factor, 44.0 / maxf(1.0, base_size.x * display_scale))
-		elif node == _menu_button:
+		elif node == _menu_button or node == _map_button:
 			element_factor = maxf(factor, 44.0 / maxf(1.0, base_size.y * display_scale))
 		var left := float(base.left) * factor
 		var top := float(base.top) * factor
@@ -355,6 +355,10 @@ func _layout_gui() -> void:
 		node.offset_bottom = node.offset_top + base_size.y
 		node.pivot_offset = Vector2.ZERO
 		node.scale = Vector2.ONE * element_factor
+	if is_instance_valid(_map_button) and is_instance_valid(_menu_button):
+		var extent := _map_button.size*_map_button.scale
+		var below := _menu_button.position.y+_menu_button.size.y*_menu_button.scale.y+8.0/maxf(0.1,display_scale)
+		_map_button.position=Vector2(_menu_button.position.x,below).clamp(Vector2(6,6),(_root.size-extent-Vector2(6,6)).max(Vector2(6,6)))
 
 	if _inventory_button and _build_button and not GameState.control_layout().has("inventory") and not GameState.control_layout().has("build"):
 		var pack_right := _inventory_button.position.x + _inventory_button.size.x * _inventory_button.scale.x
@@ -373,7 +377,7 @@ func get_control_layout_current() -> Dictionary:
 			node_size = (node as TouchActionButton).diameter
 		var base: Dictionary = _gui_layout.get(node, {})
 		result[control_id] = {"x": node.anchor_left * _root.size.x + float(base.get("left", node.offset_left)), "y": node.anchor_top * _root.size.y + float(base.get("top", node.offset_top)), "size": node_size}
-	for id in ["ocean_joystick", "ocean_pickup", "ocean_eat"]:
+	for id in ["ocean_joystick", "ocean_pickup"]:
 		result[id] = GameState.control_layout().get(id, DEFAULT_CONTROL_LAYOUT[id]).duplicate()
 	return result
 
@@ -604,8 +608,10 @@ func _anchor_bottom_right(ctrl: Control, top_left_from_corner: Vector2, bottom_r
 func _process(delta: float) -> void:
 	if not visible:
 		return
-	_clock_label.text = GameState.time_string()
-	_clock_label.add_theme_color_override("font_color", GameUI.GOLD)
+	var time_text := GameState.time_string()
+	if _clock_label.text != time_text:
+		_clock_label.text = time_text
+		_clock_label.add_theme_color_override("font_color", GameUI.GOLD)
 	_loot_timer += delta
 	if _loot_timer > 0.25:
 		_loot_timer = 0.0
@@ -866,15 +872,24 @@ func release_world_controls() -> void:
 		Input.action_release(action)
 
 func _build_minimap() -> void:
+	# Preserve the private map-model accessor for existing tools; the HUD shows
+	# only a button and performs no continuous compact-map drawing or updates.
 	_minimap = VillageMinimap.new()
 	_minimap.name = "VillageMinimap"
-	_minimap.activated.connect(func() -> void:
+	_minimap.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	_root.add_child(_minimap)
+	_minimap.hide()
+	_minimap.set_process(false)
+	_map_button=GameUI.button("Map",Vector2(92,44))
+	_map_button.name="MapButton"
+	_map_button.anchor_left=1
+	_map_button.anchor_right=1
+	_map_button.offset_left=-114
+	_map_button.offset_right=-22
+	_map_button.offset_top=70
+	_map_button.offset_bottom=114
+	_map_button.add_theme_font_size_override("font_size",15)
+	_map_button.pressed.connect(func() -> void:
 		var game := get_tree().get_first_node_in_group("game") as Game
 		if is_instance_valid(game): game.open_map())
-	_minimap.anchor_left = 1
-	_minimap.anchor_right = 1
-	_minimap.offset_left = -228
-	_minimap.offset_right = -22
-	_minimap.offset_top = 70
-	_minimap.offset_bottom = 214
-	_root.add_child(_minimap)
+	_root.add_child(_map_button)

@@ -51,7 +51,7 @@ func _build() -> void:
 	interior.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	interior.stretch_mode = TextureRect.STRETCH_SCALE
 	interior.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	interior.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	interior.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	interior.modulate = Color(0.92, 0.95, 0.92)
 	holder.add_child(interior)
 
@@ -67,7 +67,7 @@ func _build() -> void:
 	_bust.custom_minimum_size = Vector2(72, 88)
 	_bust.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_bust.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_bust.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_bust.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	_bust.pivot_offset = Vector2(36, 84)
 	bust_box.add_child(_bust)
 	var name_label := GameUI.label(keeper_name, 13, GameUI.GOLD)
@@ -84,7 +84,7 @@ func _build() -> void:
 	_prop.custom_minimum_size = Vector2(20, 20)
 	_prop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_prop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_prop.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_prop.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	_prop.set_anchors_preset(Control.PRESET_CENTER_LEFT)
 	_prop.offset_left = 108
 	_prop.offset_top = -14
@@ -104,7 +104,7 @@ func _build() -> void:
 			browser.custom_minimum_size = Vector2(48, 72)
 			browser.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			browser.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			browser.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			browser.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 			browser.modulate = Color(0.42, 0.46, 0.5, 0.8)
 			browser.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
 			browser.offset_left = -160 - i * 70
@@ -152,7 +152,7 @@ func _build() -> void:
 	_emote.custom_minimum_size = Vector2(30, 30)
 	_emote.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_emote.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_emote.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_emote.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	_emote.visible = false
 	speech_row.add_child(_emote)
 	set_process(true)

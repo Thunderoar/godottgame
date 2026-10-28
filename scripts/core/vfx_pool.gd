@@ -37,7 +37,8 @@ func _ready() -> void:
 		_sparks.append(s)
 	for i in RING_COUNT:
 		var r := Sprite2D.new()
-		r.texture = PixelArt.light_texture()
+		r.texture = RealmPresentation.impact_ring()
+		r.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		r.visible = false
 		r.z_as_relative = false
 		r.z_index = 688
@@ -109,7 +110,7 @@ func ring(at: Vector2, radius: float, color: Color, duration: float) -> void:
 	if r == null:
 		return
 	r.visible = true
-	r.modulate = Color(color.r, color.g, color.b, 0.22)
+	r.modulate = Color(color.r, color.g, color.b, 0.62)
 	r.scale = Vector2(radius * 0.9 / 64.0, radius * 0.9 / 64.0)
 	r.global_position = at
 	var tween := r.create_tween().set_parallel(true)

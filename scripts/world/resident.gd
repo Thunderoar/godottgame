@@ -6,7 +6,8 @@ extends CharacterBody2D
 @export var resident_name := "Resident"
 @export var role := "resident"
 @export var activity := "Tending the settlement"
-@export var speed := 0.9
+const WALK_SPEED := 0.9
+@export var speed := WALK_SPEED
 @export var waypoints: Array[Vector2] = []
 @export var shelter := Vector2(34, 23)
 @export var combat_enabled := false
@@ -404,8 +405,8 @@ func _walk_to(destination: Vector2, pace: float, delta: float) -> bool:
 	if wanted.length() > 0.1 and global_position.distance_to(before) < wanted.length() * delta * 0.1:
 		_stuck_time += delta
 		if _stuck_time > 0.75:
-			if lobby:
-				lobby.invalidate_resident_routes()
+			# A crowd is dynamic; retry this actor without rebuilding every static
+			# navigation cell for every resident. Actual edits invalidate in Lobby.
 			_path_goal = Vector2(INF, INF)
 			_stuck_time = 0.0
 	else:

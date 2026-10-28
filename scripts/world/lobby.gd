@@ -62,6 +62,9 @@ var _emergency_monsters: Array[Enemy] = []
 var _forest_monsters: Array[Enemy] = []
 var _shop_stalls: Array[Sprite2D] = []
 var _local_lights: Array[PointLight2D] = []
+const LIGHT_UPDATE_SECONDS := 0.12
+const MAX_VISIBLE_LIGHTS := 4
+var _light_update_clock := 0.0
 var _tree_positions: Array[Vector2] = []
 var _forest_trees: Array[ForestTree] = []
 var _authored_map: AuthoredMap
@@ -77,6 +80,7 @@ const RECOVERY_RADIUS := 4.3
 
 
 func _ready() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	journey_serial = GameState.journey_serial
 	add_to_group("world")
 	y_sort_enabled = true
@@ -162,7 +166,13 @@ func _build_background() -> void:
 	background.scale = Vector2(PixelArt.PX, PixelArt.PX)
 	background.z_as_relative = false
 	background.z_index = -1000
-	background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	background.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	var terrain_override := AssetRegistry.get_texture("terrain_village_layout_%d_%d" % [WorldPalette.generation,_layout.signature()])
+	if terrain_override == null and ResourceLoader.exists("res://assets/authored/realistic/surfaces.png"):
+		var terrain_material := ShaderMaterial.new()
+		terrain_material.shader = preload("res://assets/shaders/realistic_terrain.gdshader")
+		terrain_material.set_shader_parameter("materials",load("res://assets/authored/realistic/surfaces.png"))
+		background.material = terrain_material
 	# Daylight grade. The old neon look was actually the PointLight2Ds being
 	# ~13x oversized (one 128px light covered the entire map); with correctly
 	# sized lights the baked terrain needs only a gentle sunny lift.
@@ -411,7 +421,13 @@ func _add_window_lights(art: Sprite2D, level: int) -> void:
 		windows.material = unshaded
 		art.add_child(windows)
 	windows.visible = true
-	windows.texture = PixelArt.cached_texture("monsoon/windows/%d" % level, func() -> Image: return MonsoonArt.house(level, true))
+	if art.texture.has_meta("realistic_art"):
+		windows.texture=art.texture
+		var authored_glow := ShaderMaterial.new()
+		authored_glow.shader=preload("res://assets/shaders/realistic_windows.gdshader")
+		windows.material=authored_glow
+	else:
+		windows.texture = PixelArt.cached_texture("monsoon/windows/%d" % level, func() -> Image: return MonsoonArt.house(level, true))
 	windows.modulate.a = MonsoonLighting.lantern_strength(float(GameState.data.get("world_time", 0.0))) * 0.85
 
 
@@ -626,11 +642,18 @@ func _update_daylight() -> void:
 	var clock := float(GameState.data.get("world_time", 0.0))
 	_grade.color = MonsoonLighting.grade(clock)
 	var strength := MonsoonLighting.lantern_strength(clock)
+	var focus := player.global_position if is_instance_valid(player) else SPAWN
+	var nearby: Array[PointLight2D] = []
+	for lamp in _local_lights:
+		if is_instance_valid(lamp) and lamp.global_position.distance_squared_to(focus) < 24.0*24.0: nearby.append(lamp)
+	nearby.sort_custom(func(a: PointLight2D,b: PointLight2D) -> bool: return a.global_position.distance_squared_to(focus) < b.global_position.distance_squared_to(focus))
+	var budget := MAX_VISIBLE_LIGHTS if GameSettings.effects_at_least("high") else 2
+	nearby.resize(mini(budget,nearby.size()))
 	for lamp in _local_lights:
 		if not is_instance_valid(lamp): continue
 		if not lamp.has_meta("day_energy"): lamp.set_meta("day_energy", lamp.energy)
 		lamp.energy = float(lamp.get_meta("day_energy")) * strength
-		lamp.enabled = GameSettings.effects_at_least("med") and strength > 0.02
+		lamp.enabled = GameSettings.effects_at_least("med") and strength > 0.02 and lamp in nearby
 	for window in get_tree().get_nodes_in_group("monsoon_windows"):
 		if is_ancestor_of(window): window.modulate.a = strength * 0.85
 
@@ -1097,7 +1120,7 @@ func _build_grass_fields(grass_paths: Array) -> void:
 		field.texture = tex
 		field.z_index = 2
 		field.material = Shaders.wind_material()
-		field.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		field.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		add_child(field)
 
 
@@ -1524,7 +1547,10 @@ var _ward_mote_timer := 0.0
 
 
 func _process(delta: float) -> void:
-	_update_daylight()
+	_light_update_clock -= delta
+	if _light_update_clock <= 0.0:
+		_light_update_clock = LIGHT_UPDATE_SECONDS
+		_update_daylight()
 	var game := get_tree().get_first_node_in_group("game") as Game
 	if (not is_instance_valid(game) or not is_instance_valid(game.home_interior)) and is_instance_valid(player) and GameState.mission_step() == 0 and player.position.distance_to(_mission_walk_origin) >= 3.0:
 		GameState.record_mission_event("move")
@@ -1750,6 +1776,16 @@ func _build_beach_landmarks() -> void:
 	art.scale = Vector2.ONE * PixelArt.PX
 	art.offset = Vector2(0, -25)
 	sign.add_child(art)
+	if art.texture.has_meta("realistic_art"):
+		var nameplate := Label.new()
+		nameplate.text="BESUT"
+		nameplate.scale=Vector2.ONE*PixelArt.PX
+		nameplate.position=Vector2(-0.74,-1.65)
+		nameplate.add_theme_font_size_override("font_size",14)
+		nameplate.add_theme_color_override("font_color",Color("#fff0cf"))
+		nameplate.add_theme_color_override("font_outline_color",Color("#36271b"))
+		nameplate.add_theme_constant_override("outline_size",2)
+		sign.add_child(nameplate)
 	sign.set_meta("text", "BESUT")
 
 
