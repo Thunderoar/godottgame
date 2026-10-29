@@ -2127,3 +2127,61 @@ Evidence:
 (successful import). `docs/SEA_URCHIN_ARRIVAL.md` records runtime ownership and
 the isolated `-Urchin -Capture` review route. The optional GIF preview assembles
 eight rendered storyboard samples; it is not a continuous gameplay recording.
+
+
+## Objectives left-edge tab and shared Hide tips choice (2026-10-30)
+
+The objective tracker now retracts horizontally to a narrow `›` tab flush with
+its screen's left edge; expanding restores its scrollable objective cards.
+Default device settings start folded. Existing explicit collapse preferences
+are preserved. Folded content no longer leaves a full-width objective summary
+on screen. Header input remains non-modal, supports mouse/keyboard and a separate
+touch finger, and retains a minimum 44-physical-pixel target at the reviewed
+sizes/scales. The tooltip tracks the immediate objective; urgent guidance also
+colors the tab without reopening it.
+
+`TutorialGuide._skip()` (Hide tips) now persists the device-level boolean
+`GameSettings.tutorial_hidden`. Both the tutorial card and village objective
+selection respect it. Hidden training omits lesson and wait-for-day/night rows
+and falls through to eligible village work and outstanding rescue goals, while
+recovery/urgent defense and world-specific exploration/boss guidance remain.
+It does not complete lessons, clear portals, grant rewards or bypass project
+prerequisites. Automatic startup/Continue respects the saved choice. The existing
+Menu > Show current mission tips action explicitly resets it and restores both
+surfaces. Defaults/sanitization include the new preference; it is not save-game
+progression. Older releases did not persist Hide tips, so an unrecorded historical
+choice cannot be reconstructed.
+
+Verification:
+
+- Canonical `./tools/test_isolated.sh` on the updated checkout: **6,076 checks,
+  PASS, exit 0**, with no `[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers.
+  Additional art edits appeared during that run in `monsoon_art.gd`,
+  `world_composition.gd`, `monsoon_checks.gd` and `docs/ART_DIRECTION.md`; they
+  were preserved, and this gate does not certify their latest bytes. The focused
+  objective suite was rerun on the latest checkout: **76 checks, PASS, exit 0**.
+- Focused rendered objective suite: **76 checks, PASS, exit 0**, with no `[FAIL]`,
+  `SCRIPT ERROR` or `ERROR:` markers. Inspected expanded/collapsed and hidden-tip
+  captures, including 1280x720 and 832x480. Layout/input checks cover 75%, 100% and
+  130% UI scale, customized joystick position, raw second-finger touch, mouse,
+  keyboard, focus loss, held movement and modal/world changes.
+- Added coverage for immediate training suppression, hidden phase-wait guidance,
+  day-phase changes, persisted preference reload, automatic startup, unchanged
+  journey data, retained urgent defense and the actual Menu re-enable button.
+- Same-input behavioral probe before/after/rollback: baseline starts expanded and
+  collapses to a 320-wide summary at x=22, still showing `lesson_move` after Hide
+  tips; modified starts folded as a 64-wide tab at x=0 and shows `arjun`/`mei_ling`
+  after Hide tips. Neither path completes training or mutates progression; urgent
+  defense remains. Separate-copy rollback reproduces the literal baseline probe
+  output and all nine original SHA-256 hashes.
+- Initial regression fixtures assumed the first lesson was still movement and
+  inspected Menu buttons before its deferred rebuild; corrected fixtures use the
+  actual current lesson and wait for native modal layout. Two stale full-gate
+  attempts were stopped on their owned test processes and are not claimed as PASS.
+- Linux Godot 4.7.2 Compatibility/OpenGL via Xvfb/llvmpipe, Dummy audio. Input-method
+  and unsupported V-Sync warnings remain; no physical-phone, Windows, export or
+  listening-quality validation is claimed. Import retains the existing Android
+  build-tools SDK fallback diagnostic. Live saves/settings remain isolated.
+
+Evidence and verified rollback:
+`/tmp/tidesworn-objectives-left-B63fCJtC/VERIFICATION.txt`.

@@ -24,7 +24,13 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	await game._load_lobby(false)
 	game.world.process_mode = Node.PROCESS_MODE_DISABLED
 	game.hud.visible = true
-	game.hud.tutorial_guide._skip()
+	game.hud.tutorial_guide.hide()
+	GameSettings.set_value("tutorial_hidden", false, false)
+	GameSettings.set_value("objectives_collapsed", GameSettings.DEFAULTS.objectives_collapsed, false)
+	game.hud._refresh_objectives()
+	game.hud._layout_gui()
+	await _settle(game)
+	check.call(game.hud.objective_tracker.collapsed() and is_zero_approx(game.hud.objective_tracker.position.x), "default objectives fold into a left-edge tab")
 	GameSettings.set_value("objectives_collapsed", false, false)
 	var tracker := game.hud.objective_tracker
 	game.hud._refresh_objectives()
@@ -36,11 +42,11 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(GameState.data == before, "objective refresh is read-only and creates no progression or reward mutations")
 	Input.action_press("move_right")
 	await _click(game, tracker._header)
-	check.call(tracker.collapsed() and tracker._summary.visible and not tracker._scroll.visible, "touching the header collapses to a current-objective summary")
+	check.call(tracker.collapsed() and not tracker._summary.visible and not tracker._scroll.visible and tracker.size.x * tracker.scale.x < 100, "touching the header retracts all objective content into a narrow left-edge tab")
 	check.call(Input.is_action_pressed("move_right") and not game._input_locked and not game.get_tree().paused, "collapsing objectives does not release held movement or pause the world")
 	Input.action_release("move_right")
 	GameState.record_mission_event("move")
-	check.call(tracker.collapsed() and tracker._entries[0].id == "lesson_gather" and tracker._summary.text == tracker._entries[0].title, "progress updates a collapsed summary without reopening it")
+	check.call(tracker.collapsed() and tracker._entries[0].id == "lesson_gather" and tracker._header.tooltip_text.contains(str(tracker._entries[0].title)), "progress updates the folded tab tooltip without reopening it")
 	await _click(game, tracker._header)
 	check.call(not tracker.collapsed(), "a second header touch restores expanded objectives")
 	var header_center := _rect(tracker._header).get_center()
@@ -84,9 +90,9 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	legacy_config.set_value(GameSettings.SECTION, "ui_scale", 100)
 	legacy_config.save(GameSettings.config_path)
 	GameSettings.load_settings()
-	check.call(not tracker.collapsed(), "older device settings without the new key default to expanded objectives")
+	check.call(tracker.collapsed(), "older device settings without the collapse key default to the left-edge tab")
 	GameSettings.set_value("objectives_collapsed", {}, false)
-	check.call(not tracker.collapsed(), "invalid collapse preference values sanitize to the default")
+	check.call(tracker.collapsed(), "invalid collapse preference values sanitize to the folded default")
 	GameSettings.set_value("objectives_collapsed", false, false)
 	GameSettings.config_path = config_path
 	GameState.advance_world_clock(180)
@@ -95,6 +101,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	var danger := ObjectiveTrackerData.entries(game.world, {"fires": 1})
 	check.call(danger[0].id == "defend" and bool(danger[0].urgent), "local burning trees take priority over normal village lessons")
 	check.call(ObjectiveTrackerData.entries(game.world, {"monsters": 2})[0].id == "defend", "ordinary village attackers also take priority without requiring an expedition emergency")
+	await _hidden_tutorial(game, check, capture)
 	game.open_menu()
 	game.hud._update_objective_visibility()
 	check.call(not tracker.visible, "opening a full-screen modal hides the objective tracker")
@@ -190,6 +197,50 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	GameState.autosave_enabled = autosave
 	game.set_process(ticking)
 
+static func _hidden_tutorial(game: Game, check: Callable, capture: Callable) -> void:
+	var tracker := game.hud.objective_tracker
+	var before := GameState.data.duplicate(true)
+	game.hud.start_tutorial(true)
+	game.hud.tutorial_guide._skip()
+	check.call(bool(GameSettings.get_value("tutorial_hidden")) and not game.hud.tutorial_guide.visible, "Hide tips records the shared tutorial visibility choice")
+	check.call(not tracker._entries.any(func(row: Dictionary) -> bool: return str(row.id).begins_with("lesson_") or row.id == "phase"), "Hide tips immediately removes tutorial lessons and phase-wait guidance from objectives")
+	check.call(tracker._entries.any(func(row: Dictionary) -> bool: return row.id == "arjun") and tracker._entries.any(func(row: Dictionary) -> bool: return row.id == "mei_ling"), "hidden tutorial leaves both unfinished rescue objectives available")
+	check.call(GameState.data == before and not GameState.tutorial_complete(), "hiding tutorial guidance grants no lessons, portal clears, unlocks or rewards")
+	check.call(ObjectiveTrackerData.entries(game.world, {"fires": 1})[0].id == "defend", "hiding tutorial does not hide urgent village defense")
+	GameState.data.completed_missions = MissionDB.NIGHT_STEPS.map(func(index: int) -> String: return str(MissionDB.step(index).event))
+	game.hud._refresh_objectives()
+	check.call(not tracker._entries.any(func(row: Dictionary) -> bool: return row.id == "phase"), "hidden tutorial also suppresses the wait-for-dawn objective")
+	GameState.data = before.duplicate(true)
+	GameState.data.world_time = 0.0
+	game.hud._refresh_objectives()
+	check.call(not tracker._entries.any(func(row: Dictionary) -> bool: return str(row.id).begins_with("lesson_") or row.id == "phase"), "hidden training stays hidden after a day-phase change")
+	GameSettings.save_settings()
+	GameSettings.set_value("tutorial_hidden", false, false)
+	GameSettings.load_settings()
+	game.hud.start_tutorial()
+	game.hud._refresh_objectives()
+	check.call(bool(GameSettings.get_value("tutorial_hidden")) and not game.hud.tutorial_guide.visible and tracker._entries[0].id != "lesson_move", "hidden tutorial survives settings reload and automatic tutorial startup")
+	check.call(not GameState.data.settings.has("tutorial_hidden"), "tutorial visibility preference stays outside journey progression")
+	if capture.is_valid():
+		GameSettings.set_value("objectives_collapsed", true, false)
+		await _settle(game)
+		await capture.call("hidden_tutorial_left_tab")
+		GameSettings.set_value("objectives_collapsed", false, false)
+		await _settle(game)
+		await capture.call("hidden_tutorial_story_goals")
+	game.open_menu()
+	await _settle(game) # ModalBase rebuilds its buttons after a process frame.
+	var show_tips: Button
+	for child in game.hud.menu_panel.content.get_children():
+		if child is Button and child.text == "Show current mission tips": show_tips = child
+	check.call(show_tips != null, "the player can re-enable hidden training from the existing Menu action")
+	if show_tips != null: show_tips.pressed.emit()
+	check.call(not bool(GameSettings.get_value("tutorial_hidden")) and tracker._entries.any(func(row: Dictionary) -> bool: return row.id == "lesson_" + str(MissionDB.step(GameState.mission_step()).event)) and game.hud.tutorial_guide.visible, "Show current mission tips explicitly restores both tutorial surfaces")
+	game.hud.tutorial_guide.hide()
+	GameState.data = before
+	GameState._emit_all()
+
+
 static func _layouts(game: Game, check: Callable, capture: Callable) -> void:
 	var tracker := game.hud.objective_tracker
 	for dimensions in [Vector2i(1280, 720), Vector2i(832, 480)]:
@@ -212,7 +263,8 @@ static func _layouts(game: Game, check: Callable, capture: Callable) -> void:
 				await capture.call("expanded_%dx%d" % [dimensions.x, dimensions.y])
 			GameSettings.set_value("objectives_collapsed", true, false)
 			await _settle(game)
-			check.call(_rect(tracker).size.y < rect.size.y and tracker._summary.visible, "collapse reclaims space while keeping the current goal at %dx%d / %d%%" % [dimensions.x, dimensions.y, scale_percent])
+			check.call(_rect(tracker).size.y < rect.size.y and _rect(tracker).size.x < rect.size.x * 0.4 and not tracker._summary.visible and is_zero_approx(_rect(tracker).position.x), "collapse retracts to a narrow left-edge tab at %dx%d / %d%%" % [dimensions.x, dimensions.y, scale_percent])
+			check.call(tracker._header.size.x * tracker.scale.x >= 43.9 and tracker._header.size.y * tracker.scale.y >= 43.9, "folded objective tab preserves a 44-pixel touch target at %dx%d / %d%%" % [dimensions.x, dimensions.y, scale_percent])
 			if capture.is_valid() and scale_percent == 100:
 				await capture.call("collapsed_%dx%d" % [dimensions.x, dimensions.y])
 	GameSettings.set_value("objectives_collapsed", false, false)

@@ -46,7 +46,7 @@ func _rebuild() -> void:
 		close_panel()
 		var hud := get_tree().get_first_node_in_group("hud") as GameHUD
 		if hud:
-			hud.start_tutorial())
+			hud.start_tutorial(true))
 	content.add_child(help)
 	var title := GameUI.button("Return to Title", Vector2(320, 52))
 	title.pressed.connect(func() -> void:

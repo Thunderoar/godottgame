@@ -38,12 +38,13 @@ static func _village(counts: Dictionary) -> Array[Dictionary]:
 		out.append(_entry("recovery", "Recover at the cottage", "Rest in the recovery ward before heading out again.", "RECOVERY"))
 	elif GameState.emergency_active() or int(counts.get("fires", 0)) > 0 or int(counts.get("monsters", 0)) > 0:
 		out.append(_entry("defend", "Defend BESUT", "Fight the attackers and protect the residents and burning trees.", "URGENT", true))
+	var show_training := not bool(GameSettings.get_value("tutorial_hidden"))
 	var lesson := MissionDB.step(GameState.mission_step())
-	if not lesson.is_empty():
+	if show_training and not lesson.is_empty():
 		var title := str(lesson.get("title", "Learn to play"))
 		if title.contains(". "): title = title.substr(title.find(". ") + 2)
 		out.append(_entry("lesson_" + str(lesson.event), title, str(LESSON_HINTS.get(str(lesson.event), "Follow the village path markers.")), "NIGHT TRAINING" if GameState.is_night() else "DAY TRAINING"))
-	elif not GameState.tutorial_complete():
+	elif show_training and not GameState.tutorial_complete():
 		out.append(_entry("phase", "Prepare for dawn" if GameState.is_night() else "Prepare for night", "This phase's lessons are complete. Help the village and keep supplies ready.", "TRAINING"))
 	else:
 		var project := GameState.project_status()

@@ -27,6 +27,7 @@ func _ready() -> void:
 	add_theme_stylebox_override("panel", GameUI.style(Color(0.03, 0.075, 0.085, 0.94), Color("#5c8c85"), 2, 0))
 	visible = false
 	_build()
+	GameSettings.changed.connect(_on_setting_changed)
 	GameState.data_changed.connect(_on_mission_changed)
 	GameState.day_phase_changed.connect(func(_night: bool) -> void: _on_mission_changed())
 
@@ -64,11 +65,17 @@ func _build() -> void:
 	buttons.add_child(_next)
 
 
-func start() -> void:
-	_tips_enabled = true
-	_step = GameState.mission_step()
-	visible = not GameState.tutorial_complete()
-	_render()
+func start(show_hidden: bool = false) -> void:
+	# Only the explicit Menu action re-enables a user's hidden tutorial.
+	if show_hidden: GameSettings.set_value("tutorial_hidden", false)
+	_tips_enabled = not bool(GameSettings.get_value("tutorial_hidden"))
+	_on_mission_changed()
+
+
+func _on_setting_changed(key: String) -> void:
+	if key == "tutorial_hidden":
+		_tips_enabled = not bool(GameSettings.get_value("tutorial_hidden"))
+		_on_mission_changed()
 
 
 func _on_mission_changed() -> void:
@@ -83,7 +90,7 @@ func _advance() -> void:
 func _skip() -> void:
 	_tips_enabled = false
 	visible = false
-	GameState.toast_requested.emit("Tutorial skipped. Open Backpack or speak to residents for help.", "info")
+	GameSettings.set_value("tutorial_hidden", true)
 
 
 func _render() -> void:

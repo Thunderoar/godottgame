@@ -113,7 +113,7 @@ func _ready() -> void:
 		hud.tutorial_guide._on_mission_changed()
 		tutorial_path._process(0.6)
 		_check(not hud.tutorial_guide.visible and tutorial_path._points.is_empty(), "mission updates do not restore hidden tips or arrows")
-		hud.start_tutorial()
+		hud.start_tutorial(true)
 		tutorial_path._process(0.001)
 		_check(hud.tutorial_guide.visible and tutorial_path._points.size() > 1, "showing tutorial tips restores their guidance trail")
 		hud.tutorial_guide.call("_skip")
@@ -188,6 +188,8 @@ func _ready() -> void:
 	await _test_pet_shop_close()
 	await preload("res://tools/combat_revamp_checks.gd").run(game, _check)
 	await preload("res://tools/coastal_checks.gd").run(game, _check)
+	# Prior combat/coast fixtures hide tips; this fixture explicitly opts back in.
+	GameSettings.set_value("tutorial_hidden", false, false)
 	await preload("res://tools/portal_tutorial_checks.gd").run(game, _check)
 	await preload("res://tools/control_ocean_checks.gd").run(game, _check)
 	# Includes fullness-based speed/death and the Kraken's moving combat AI.

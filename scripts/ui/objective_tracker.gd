@@ -3,6 +3,7 @@ extends PanelContainer
 ## Non-modal objective accordion. Only its visible rectangle receives pointer input.
 
 const BODY_FONT := 14
+const TAB_WIDTH := 64.0
 var _header: Button
 var _summary: Label
 var _scroll: ScrollContainer
@@ -13,11 +14,15 @@ var _cards: Array[Dictionary] = []
 var _height_limit := 320.0
 var _compact := false
 var _touch_id := -1
+var _expanded_width := 320.0
+var _display_scale := 1.0
+var _panel_style: StyleBoxFlat
 
 func _ready() -> void:
 	name = "ObjectiveTracker"
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	add_theme_stylebox_override("panel", GameUI.style(Color(0.035, 0.08, 0.09, 0.94), GameUI.BORDER, 1, 0))
+	_panel_style = GameUI.style(Color(0.035, 0.08, 0.09, 0.94), GameUI.BORDER, 1, 0)
+	add_theme_stylebox_override("panel", _panel_style)
 	_box = VBoxContainer.new()
 	_box.add_theme_constant_override("separation", 8)
 	add_child(_box)
@@ -111,7 +116,8 @@ func _label(text: String, font_size: int, color: Color, parent: Control) -> Labe
 func fit(width: float, height: float, zoom: float, display_scale: float) -> void:
 	scale = Vector2.ONE * zoom
 	_height_limit = height / zoom
-	size.x = width / zoom
+	_expanded_width = width / zoom
+	_display_scale = display_scale
 	_header.custom_minimum_size.y = maxf(40.0, 44.0 / maxf(0.1, zoom * display_scale))
 	_compact = _height_limit < _header.custom_minimum_size.y + 100.0
 	_sync_expansion()
@@ -119,10 +125,22 @@ func fit(width: float, height: float, zoom: float, display_scale: float) -> void
 
 func _sync_expansion() -> void:
 	if not is_instance_valid(_header): return
-	_header.text = "OBJECTIVES  %s" % ("+" if collapsed() else "−")
-	_header.tooltip_text = "Expand objectives" if collapsed() else "Collapse objectives"
-	_summary.visible = collapsed() or _compact
-	_scroll.visible = not collapsed() and not _compact
+	var folded := collapsed()
+	_header.text = "›" if folded else "‹  OBJECTIVES"
+	_header.alignment = HORIZONTAL_ALIGNMENT_CENTER if folded else HORIZONTAL_ALIGNMENT_LEFT
+	_header.add_theme_font_size_override("font_size", 24 if folded else 15)
+	_header.tooltip_text = "Expand objectives" if folded else "Collapse objectives to the left"
+	if folded and not _entries.is_empty(): _header.tooltip_text += "\n" + str(_entries[0].title)
+	_header.add_theme_color_override("font_color", GameUI.RED.lightened(0.3) if not _entries.is_empty() and bool(_entries[0].get("urgent", false)) else GameUI.TEXT)
+	_header.custom_minimum_size.x = 44.0 / maxf(0.1, scale.x * _display_scale) if folded else 0.0
+	_panel_style.content_margin_left = 4 if folded else 12
+	_panel_style.content_margin_right = 4 if folded else 12
+	_panel_style.content_margin_top = 4 if folded else 8
+	_panel_style.content_margin_bottom = 4 if folded else 8
+	_summary.visible = not folded and _compact
+	_scroll.visible = not folded and not _compact
+	# Hide all content before assigning width so minimum sizes can shrink to a tab.
+	size.x = maxf(TAB_WIDTH, _header.custom_minimum_size.x + 8.0) if folded else _expanded_width
 	_fit_body()
 
 func _fit_body() -> void:

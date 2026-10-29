@@ -435,7 +435,7 @@ func _layout_objectives() -> void:
 		display_scale = minf(float(get_window().size.x) / maxf(1, _root.size.x), float(get_window().size.y) / maxf(1, _root.size.y))
 	var zoom := maxf(get_gui_scale() * fit, 12.0 / (ObjectiveTracker.BODY_FONT * maxf(0.1, display_scale)))
 	var gap := 10.0 * fit
-	var left := _status_strip.position.x
+	var left := 0.0 # The accordion folds into the screen's left edge.
 	var width := minf(320.0 * zoom, _root.size.x * 0.38)
 	var top := _status_strip.position.y + _status_strip.size.y * _status_strip.scale.y + gap
 	var bottom := _root.size.y - gap
@@ -914,6 +914,10 @@ func _on_setting_changed(key: String) -> void:
 		_layout_gui()
 	if key == "touch_controls":
 		_apply_touch_mode()
+	if key == "objectives_collapsed":
+		_layout_objectives()
+	if key == "tutorial_hidden":
+		_refresh_objectives()
 
 
 func flash_hurt() -> void:
@@ -937,9 +941,9 @@ func show_toast(_text: String, _tone: String = "info") -> void:
 	pass
 
 
-func start_tutorial() -> void:
+func start_tutorial(show_hidden: bool = false) -> void:
 	if tutorial_guide != null:
-		tutorial_guide.start()
+		tutorial_guide.start(show_hidden)
 
 
 func set_build_mode(active: bool) -> void:
