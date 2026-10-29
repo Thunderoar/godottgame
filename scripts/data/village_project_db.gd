@@ -19,7 +19,9 @@ static func ordered_ids() -> Array[String]:
 	return [WORKSHOP]
 
 static func default_progression(legacy: bool = false) -> Dictionary:
-	return {"schema": 1, "legacy_access": legacy, "tracked_project": "", "projects": {WORKSHOP: {"state": "not_started", "remaining": WORK_SECONDS}}}
+	var projects := {}
+	for id in ordered_ids(): projects[id] = {"state": "not_started", "remaining": float(get_project(id).seconds)}
+	return {"schema": 1, "legacy_access": legacy, "first_clear_acknowledged": false, "tracked_project": "", "projects": projects}
 
 static func npc_lines(speaker: String) -> Array:
 	if speaker == "Rami":

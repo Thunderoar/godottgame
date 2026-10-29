@@ -5,6 +5,12 @@ implemented; see [VILLAGE_WORKSHOP.md](VILLAGE_WORKSHOP.md) for shipped behavior
 and validation. Later district proposals below remain design work.
 The [deep audit](VILLAGE_PROGRESSION_AUDIT.md) records findings and evidence.
 
+Post-merge review: [VILLAGE_EXPANSION_AUDIT.md](VILLAGE_EXPANSION_AUDIT.md)
+audits the workshop with Twilight Wilds at `577e2af`. It supersedes the older
+first-realm XP forecast and identifies builder recovery, reward handoff and
+residential migration requirements before the next expansion. Later milestones
+below remain proposals, including the Portal-3 residential gate.
+
 Inspected the working tree at commit `263edaf` on `main` in
 `C:/Users/LUQMAN/Documents/tournamentgame/godottgame`, including the local opening
 and dock-arrival changes. Existing edits were preserved. Source and resource

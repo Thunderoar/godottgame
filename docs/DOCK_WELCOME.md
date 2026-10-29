@@ -8,7 +8,7 @@ The conversation ends: “You can look for a way home and still have a place her
 
 ## Runtime and presentation
 
-- `scripts/ui/dock_conversation.gd` owns the 12 dialogue lines, Back/Next, explicit Skip, keyboard E/Enter/Space and Escape. Lines have no automatic timeout. The current speaker is always named; Rahim's portrait remains on the right when Adam replies.
+- `scripts/ui/dock_conversation.gd` owns the 12 dialogue lines, Back/Next, explicit Skip, keyboard E/Enter/Space and Escape. Lines have no automatic timeout. The current speaker is always named; the right-hand portrait switches between Rahim and Adam with the speaker, including when using Back. Both portraits retain their original colours.
 - `scripts/game/game.gd` owns control release, the initial story suspension, HUD restoration and world/journey validity. Later optional conversations use three shorter reminder lines and keep the normal simulation running. World replacement cancels the conversation without saving its completion.
 - `scripts/world/dock_host.gd` draws an original small pixel character, matching the portrait's sky-blue headband, mint shirt, cream cloth and water cup. It does not sample an illustrated/realistic NPC atlas. Lobby places him relative to the resolved dock approach; he uses the existing direct-tap and nearby E interaction API.
 - `campaign.dock_welcome_seen` has defaults and load sanitisation. Saves made before the feature inherit their raw `intro_seen` value before merging defaults. A new save with an explicit pending welcome resumes at the dock on Continue. Completion/explicit Skip saves once through GameState, and later village returns keep their normal home/recovery arrival.
@@ -43,6 +43,34 @@ Final asset: `assets/authored/characters/pak_rahim.png`, generated with the buil
 Final generation prompt:
 
 > Use case: illustration-story. Asset type: original transparent dialogue portrait for the cozy pixel fantasy RPG Protect BESUT. Create an ORIGINAL character named Pak Rahim, a kind Malay village water keeper in his early forties, with a friendly slightly rounded face, warm brown skin, large expressive dark brown eyes, tiny neat moustache and chin beard, short tousled dark hair with just two silver strands, a soft sky-blue tied headband, a loose seafoam-teal short-sleeved linen work shirt, a pale cream scarf draped over one shoulder and tied sash. A small leaf stitched on a cloth pocket. He offers a simple wooden cup of water in one hand and rests the other hand near his sash. His smile is gentle and reassuring, like a good neighbour welcoming a frightened shipwreck survivor. Art direction: lighthearted cute airy anime-ish hand-drawn storybook JRPG character design; softly rounded shapes, clear delicate coloured linework, restrained flat cel shading, pastel mint and sky blue with peach and cream, lots of luminous breathing space; whimsical and sincere. No resemblance to any existing character or supplied game art. Composition: waist-up three-quarter portrait, head turned LEFT and eyes looking toward text to his left, both hands fully visible, head and shoulders fully within canvas, tall portrait silhouette on transparent background, no frame, no scenery, no text, no watermark. Avoid realism, muscular heroic anatomy, heavy painted rendering, glossy mobile-game illustration, dramatic dark lighting, armour, weapons, mature grimdark styling. This is a finished character cutout asset, not a screenshot or UI mockup.
+
+### Adam's dialogue portrait — 2026-10-30
+
+Adam's portrait is grounded in his first concern for Arjun and Mei Ling, his urge
+to return to sea before recovering, his surprise at unconditional help, and his
+eventual promise to defend BESUT. He is a youthful Malay survivor with warm tan
+skin and short brown hair; no exact age is established. The earlier cup-bearing
+draft was rejected and removed from the project.
+
+The final assets are `assets/authored/characters/adam_concerned.png`,
+`adam_surprised.png` and `adam_resolved.png`. The base was generated with the
+built-in imagegen tool from a written brief with **no image references**. Neither
+Rahim's portrait nor the Modern Illustrated theme may be used as a reference for
+Adam. The two expression edits reference only this new Adam base.
+
+The asymmetrical torso leans forward toward the conversation, with arms lowered
+and no cup, weapon or other prop. Sand/ochre and ivory clothing, slate trousers
+and a small green neckline tie give him a distinct palette. This is a deliberate
+dialogue-costume interpretation; the existing gameplay sprite's green tunic is
+unchanged. Simple cel shadows and coloured outlines keep the anime-inspired art
+light and readable. All three 1024-by-1536 PNGs preserve generated transparency.
+
+The two early replies use concern; "Why help?" uses surprised vulnerability; his
+final promise uses a tentative closed-mouth smile. Explicit expression IDs live
+on the dialogue entries. All textures load once per chat and use the same fixed
+portrait rectangle. Back restores the expression belonging to the earlier line;
+revealing words never changes the portrait or its layout. Rahim retains his own
+portrait on his lines and in later reminder conversations.
 
 ## Verification route
 

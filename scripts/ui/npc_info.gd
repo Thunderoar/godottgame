@@ -9,7 +9,7 @@ static func description(role: String) -> String:
 		"fighter", "swordsman", "defender": return "SWORDSMAN · Patrols BESUT and attacks nearby sea urchins. Protect the houses where vulnerable residents shelter."
 		"potion": return "POTION MERCHANT · Sells health potions. Buy with Gold, then use them from Pack. Mana and player skills are no longer used."
 		"equipment": return "WEAPONS & TOWER DEFENSE · Basic swords, armour and shields are available from arrival. Restore Bram's West Workshop after Chaos Citadel to license advanced swords. Buy rooftop machine guns for intact houses here. Guns target fire monsters and sea urchins. Sell gathered wood for Gold."
-		"pet": return "PET KEEPER · Buy and feed companions, then select your active pet. Winning tournament duels recruits rivals as permanent village guardians."
+		"pet": return "PET KEEPER · Feed and select your owned companions here. Bond with wild companions in Twilight Wilds to recruit village guardians. Luma joins after Chaos Citadel."
 		"house": return "CONSTRUCTION MERCHANT · Upgrade the main house using Diamonds. Its level improves village houses, worker baselines, fences and purchased rooftop guns. After Chaos Citadel, commission the free West Workshop restoration. Builders work there by day, or you can help at its workbench."
 		"services": return "WORKER SHOP · Hire Water Keepers, Builders, Tree Planters and Swordsmen. Each specialist has a different job."
 		"guard": return "COASTAL GUARD · Catches floating rubbish for one Gold. If rubbish reaches the beach, approach it and press Pick Up. Each piece pays only once."
@@ -54,7 +54,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		title = CharacterDB.get_character(role).get("name", "Friend")
 	elif selected is VillagePet:
 		title = PetDB.name_of(selected.pet_id)
-		game.open_dialogue(title, ["TOURNAMENT GUARDIAN · Won in a pet duel. Cannot die. Patrols the village and attacks fire monsters and sea urchins."])
+		game.open_dialogue(title, ["BONDED GUARDIAN · Recruited through a companion challenge. Cannot die. Patrols the village and attacks fire monsters and sea urchins."])
 		get_viewport().set_input_as_handled()
 		return
 	elif selected is CoastalGuard: title = "Coastal Guard"; role = "guard"

@@ -21,6 +21,7 @@ static func run(game: Game, check: Callable) -> void:
 	for child in home.get_children():
 		if child is CharacterBody2D: child.set_physics_process(false)
 	game.hud.tutorial_guide._skip()
+	await _builder_recovery(game, check)
 	var player := game.player()
 	var id := VillageProjectDB.WORKSHOP
 	var structure := VillageProjectDB.WORKSHOP_STRUCTURE
@@ -162,9 +163,19 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(int(GameState.structure_state(structure).health) == 123 and GameState.has_roof_gun(structure) and site.target.is_intact(), "legacy repaired cottages retain HP, shelter and bought rooftop guns")
 	GameState.save_game()
 	check.call(GameState.load_game() and GameState.village_legacy_access(), "legacy migration remains stable after a second load")
-	GameState.data.village_progression = {"schema": 1, "legacy_access": "true", "projects": {id: {"state": "working", "remaining": -100}, "unknown": {"state": "complete"}}}
+	var current := GameState._make_default("adam")
+	current.village_progression.erase("first_clear_acknowledged")
+	for ruin in ["home_damaged_house", "home_destroyed_house", "home_ruined_house"]:
+		current.structures[ruin] = {"health": 123, "maximum": 200, "kind": "house", "name": ruin, "level": 1, "repair_remaining": 4.0}
+		current.roof_guns[ruin] = true
+	_write_save(current)
+	check.call(GameState.load_game() and not GameState.village_legacy_access() and not bool(GameState.data.village_progression.first_clear_acknowledged), "existing schema-1 saves gain the notice default without a broad legacy entitlement")
+	for ruin in ["home_damaged_house", "home_destroyed_house", "home_ruined_house"]:
+		check.call(int(GameState.structure_state(ruin).health) == 123 and GameState.has_roof_gun(ruin) and not GameState.structure_project_locked(ruin) and float(GameState.structure_state(ruin).repair_remaining) == 4.0, "current-schema residential HP, gun and partial repair survive: " + ruin)
+	GameState.data.village_progression = {"schema": 1, "legacy_access": "true", "first_clear_acknowledged": "true", "projects": {id: {"state": "working", "remaining": -100}, "unknown": {"state": "complete"}}}
 	GameState._sanitize()
 	check.call(not GameState.village_legacy_access() and str(GameState.project_status().state) == "not_started" and GameState.data.village_progression.projects.size() == 1, "malformed project records cannot fabricate work or legacy access")
+	check.call(not bool(GameState.data.village_progression.first_clear_acknowledged), "malformed acknowledgement strings never hide unread first-clear rewards")
 	var future := GameState.data.duplicate(true)
 	future.village_progression.schema = 99
 	_write_save(future)
@@ -183,3 +194,87 @@ static func _write_save(value: Dictionary) -> void:
 	var file := FileAccess.open(GameState.SAVE_PATH, FileAccess.WRITE)
 	file.store_string(JSON.stringify(value))
 	file.close()
+
+static func _builder_recovery(game: Game, check: Callable) -> void:
+	var saved := GameState.data.duplicate(true)
+	var home := game.world as Lobby
+	var builder: Resident
+	var blocked: SettlementTarget
+	var reachable: SettlementTarget
+	for actor in home._residents:
+		if actor.worker_role == "builder": builder = actor
+	for node in game.get_tree().get_nodes_in_group("structures"):
+		if node.structure_id == "home_ruined_house": blocked = node
+		if node.structure_id == "home_destroyed_house": reachable = node
+	var original_position := builder.position
+	builder._release_build_task()
+	for id in GameState.data.structures: GameState.data.structures[id].health = int(GameState.data.structures[id].maximum)
+	GameState._emit_all()
+	await game.get_tree().physics_frame
+	await game.get_tree().physics_frame
+	GameState.damage_structure(blocked.structure_id, 100000)
+	GameState.damage_structure(reachable.structure_id, 100000)
+	var point := builder._build_workpoint(blocked)
+	var barrier := StaticBody2D.new()
+	barrier.collision_layer = 1
+	home.add_child(barrier)
+	for rect in [Rect2(-1.3,-1.3,2.6,0.35), Rect2(-1.3,0.95,2.6,0.35), Rect2(-1.3,-1.3,0.35,2.6), Rect2(0.95,-1.3,0.35,2.6)]:
+		var shape := CollisionShape2D.new()
+		var box := RectangleShape2D.new()
+		box.size = rect.size
+		shape.shape = box
+		shape.position = point + rect.get_center()
+		barrier.add_child(shape)
+	builder.position = point + Vector2(0,3)
+	await game.get_tree().physics_frame
+	await game.get_tree().physics_frame
+	home.invalidate_resident_routes()
+	check.call(home.resident_path(builder.position, point, false).is_empty(), "builder regression fixture encloses the exact repair workpoint")
+	check.call(not home.resident_path(builder.position, builder._build_workpoint(reachable), false).is_empty(), "builder regression retains another reachable repair")
+	builder._repair_buildings(0.016)
+	check.call(builder._build_target == reachable and blocked.builder == null, "builder skips an unreachable nearest ruin and claims reachable work")
+	check.call(float(GameState.structure_state(reachable.structure_id).get("repair_remaining", 0)) == 0, "selecting a distant reachable job supplies no remote labour")
+	builder._release_build_task()
+	builder._build_target = blocked
+	blocked.builder = builder
+	builder._path_goal = Vector2(INF,INF)
+	builder._repair_buildings(0.016)
+	check.call(builder._build_target == null and blocked.builder == null, "a previously owned repair releases its claim when its exact route becomes blocked")
+	GameState.complete_portal(RealmDB.PORTAL)
+	check.call(bool(GameState.start_village_project(VillageProjectDB.WORKSHOP).ok), "blocked ordinary repairs do not prevent a valid civic commission")
+	builder._run_worker(0.016)
+	check.call(home.workshop.current_worker() == builder and float(GameState.project_status().remaining) == 10, "released builder can travel to queued workshop work without supplying remote labour")
+	home.workshop.release_worker(false)
+	# A stale route ending short of the actual workpoint must time out as well.
+	builder._build_target = reachable
+	reachable.builder = builder
+	var destination := builder._build_workpoint(reachable)
+	builder._path_goal = destination
+	builder._path_exact = true
+	builder._path_revision = home.resident_routes_revision()
+	builder._path = PackedVector2Array([builder.position])
+	builder._path_index = 0
+	builder._build_last_position = builder.position
+	for step in 22: builder._repair_buildings(0.1)
+	check.call(builder._build_target == null and reachable.builder == null, "a stalled short route releases the ordinary repair lease and backs off")
+	barrier.queue_free()
+	await game.get_tree().physics_frame
+	await game.get_tree().physics_frame
+	home.invalidate_resident_routes()
+	builder._release_build_task()
+	builder._build_retry_after[blocked.get_instance_id()] = Time.get_ticks_msec() + 30000
+	GameState.data.structures[reachable.structure_id].health = int(GameState.data.structures[reachable.structure_id].maximum)
+	builder.position = point + Vector2(0,3)
+	builder._repair_buildings(0.016)
+	check.call(builder._build_target == blocked, "geometry revision clears retry backoff and makes a newly opened repair available")
+	GameState.data.world_time = 180.0
+	builder._repair_buildings(0.016)
+	check.call(builder._build_target == null and blocked.builder == null, "night releases the recovered ordinary repair without discarding its saved work")
+	builder.position = original_position
+	builder.velocity = Vector2.ZERO
+	builder._build_retry_after.clear()
+	builder._path_goal = Vector2(INF,INF)
+	GameState.data = saved
+	GameState._emit_all()
+	await game.get_tree().physics_frame
+	await game.get_tree().physics_frame

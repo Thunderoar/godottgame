@@ -48,6 +48,13 @@ const PLANT_SECONDS := 2.0
 @export var water_power := false
 @export var worker_role := ""
 var _build_target: SettlementTarget
+const BUILD_STALL_SECONDS := 2.0
+const BUILD_RETRY_MSEC := 3000
+var _build_retry_after: Dictionary = {}
+var _build_route_revision := -1
+var _build_stalled := 0.0
+var _build_last_position := Vector2.ZERO
+var _path_exact := false
 var _tree_task: ForestTree
 var _care_clock := 0.0
 var _care_search := 0.0
@@ -382,13 +389,14 @@ func _seek_shelter(delta: float) -> bool:
 	return true
 
 
-func _walk_to(destination: Vector2, pace: float, delta: float) -> bool:
+func _walk_to(destination: Vector2, pace: float, delta: float, exact_goal: bool = false) -> bool:
 	var lobby := get_parent() as Lobby
 	var revision := lobby.resident_routes_revision() if lobby else 0
-	if destination.distance_to(_path_goal) > 0.3 or revision != _path_revision:
+	if destination.distance_to(_path_goal) > 0.3 or revision != _path_revision or exact_goal != _path_exact:
 		_path_goal = destination
+		_path_exact = exact_goal
 		_path_index = 0
-		_path = lobby.resident_path(global_position, destination, shopping_state != Shopping.WALK_TO_SHOP) if lobby else PackedVector2Array([destination])
+		_path = lobby.resident_path(global_position, destination, not exact_goal and shopping_state != Shopping.WALK_TO_SHOP) if lobby else PackedVector2Array([destination])
 		_path_revision = lobby.resident_routes_revision() if lobby else 0
 	if _path.is_empty():
 		velocity = velocity.move_toward(Vector2.ZERO, delta * 8.0)
@@ -581,6 +589,9 @@ func _run_worker(delta: float) -> void:
 		_release_project_task()
 		return
 	if worker_role == "builder":
+		# Finish a valid repair before civic work, but release a failed claim so
+		# it cannot monopolize the crew or prevent a commissioned project.
+		if is_instance_valid(_build_target) and _repair_buildings(delta): return
 		var home := get_parent() as Lobby
 		if is_instance_valid(home) and is_instance_valid(home.workshop) and home.workshop.work_builder(self, delta): return
 	if worker_role == "builder" and _repair_buildings(delta):
@@ -635,19 +646,37 @@ func _release_build_task() -> void:
 	if is_instance_valid(_build_target) and _build_target.builder == self:
 		_build_target.builder = null
 	_build_target = null
+	_build_stalled = 0.0
+
+func _build_workpoint(target: SettlementTarget) -> Vector2:
+	if target.structure_kind == "house": return target.shelter_position() + Vector2(0, 0.5)
+	var point := target.attack_position(global_position)
+	return point + (global_position - point).normalized() * 0.8
+
+func _abandon_build_task() -> void:
+	if is_instance_valid(_build_target):
+		_build_retry_after[_build_target.get_instance_id()] = Time.get_ticks_msec() + BUILD_RETRY_MSEC
+	_release_build_task()
+	_path_goal = Vector2(INF, INF)
 
 func _repair_buildings(delta: float) -> bool:
-	if GameState.is_night():
+	var home := get_parent() as Lobby
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if dead or sheltered or not is_instance_valid(home) or not is_instance_valid(game) or game.world != home or home.journey_serial != GameState.journey_serial or GameState.is_night():
 		_release_build_task()
 		return false
+	var revision := home.resident_routes_revision()
+	if revision != _build_route_revision:
+		_build_route_revision = revision
+		_build_retry_after.clear()
 	if is_instance_valid(_build_target):
-		if GameState.structure_project_locked(_build_target.structure_id): _release_build_task()
+		if _build_target.is_queued_for_deletion() or _build_target.get_parent().get_parent() != home or _build_target.builder != self or GameState.structure_project_locked(_build_target.structure_id): _release_build_task()
 	if is_instance_valid(_build_target):
 		var state := GameState.structure_state(_build_target.structure_id)
 		if int(state.get("health", 0)) >= int(state.get("maximum", 1)):
 			_release_build_task()
 	if not is_instance_valid(_build_target):
-		var best := INF
+		var candidates: Array[SettlementTarget] = []
 		for node in get_tree().get_nodes_in_group("structures"):
 			if not is_instance_valid(node) or node.get_parent().get_parent() != get_parent() or node.is_queued_for_deletion():
 				continue
@@ -655,21 +684,29 @@ func _repair_buildings(delta: float) -> bool:
 			if GameState.structure_project_locked(node.structure_id): continue
 			if int(state.get("health", 0)) >= int(state.get("maximum", 1)) or (is_instance_valid(node.builder) and node.builder != self):
 				continue
-			var distance := global_position.distance_to(node.attack_position(global_position))
-			if distance < best:
-				best = distance
-				_build_target = node
+			if int(_build_retry_after.get(node.get_instance_id(), 0)) > Time.get_ticks_msec(): continue
+			candidates.append(node)
+		candidates.sort_custom(func(a: SettlementTarget, b: SettlementTarget) -> bool: return global_position.distance_squared_to(_build_workpoint(a)) < global_position.distance_squared_to(_build_workpoint(b)))
+		for candidate in candidates:
+			if home.resident_path(global_position, _build_workpoint(candidate), false).is_empty():
+				_build_retry_after[candidate.get_instance_id()] = Time.get_ticks_msec() + BUILD_RETRY_MSEC
+				continue
+			_build_target = candidate
+			break
 		if is_instance_valid(_build_target):
 			_build_target.builder = self
+			_build_last_position = global_position
+			_build_stalled = 0.0
 	if not is_instance_valid(_build_target):
 		return false
-	var point := _build_target.attack_position(global_position)
-	if _build_target.structure_kind == "house":
-		point = _build_target.shelter_position() + Vector2(0, 0.5)
-	else:
-		point += (global_position - point).normalized() * 0.8
+	var point := _build_workpoint(_build_target)
 	if global_position.distance_to(point) > 0.4:
-		_walk_to(point, 2.8, delta)
+		_walk_to(point, 2.8, delta, true)
+		_build_stalled = _build_stalled + delta if global_position.distance_to(_build_last_position) < 0.002 else 0.0
+		_build_last_position = global_position
+		if _path.is_empty() or _build_stalled >= BUILD_STALL_SECONDS:
+			_abandon_build_task()
+			return false
 		return true
 	velocity = Vector2.ZERO
 	if GameState.start_structure_work(_build_target.structure_id):

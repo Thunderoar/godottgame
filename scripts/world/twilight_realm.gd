@@ -227,7 +227,8 @@ func clear_interest_view(at: Vector2) -> bool:
 
 func _landmark_hint(id: String) -> String:
 	if combat != null and not combat.active_id.is_empty(): return str(RealmCombatDB.pair(combat.active_id).hint)
-	return "The wilds are peaceful. Find missed companions, visit onward passages, or return to BESUT." if _boss_defeated else str(RealmDB.LANDMARKS[id].hint)
+	if not _boss_defeated: return str(RealmDB.LANDMARKS[id].hint)
+	return "The wilds are peaceful. Visit onward passages or return to BESUT." if GameState.unbonded_realm_pets().is_empty() else "The wilds are peaceful. Find missed companions, visit onward passages, or return to BESUT."
 
 func set_message(message: String) -> void:
 	_message = message
@@ -350,7 +351,7 @@ func _on_boss_finished(_enemy: Enemy) -> void:
 	_place("exit", "citadel", RealmDB.BOSS, "Citadel restored\nReturn to BESUT")
 	for child in get_children():
 		if child is RealmInteractable: child.refresh()
-	set_message("Citadel restored · +%d Gold · +%d diamonds. Explore peacefully, or return through the rift." % [int(summary.gold), int(summary.diamonds)])
+	set_message("Citadel restored · +%d Gold · +%d diamonds · Luma joined. Return to BESUT for Bram's free workshop." % [int(summary.gold), int(summary.diamonds)])
 
 func challenge_pet(encounter: RealmInteractable) -> void:
 	var game := get_tree().get_first_node_in_group("game") as Game

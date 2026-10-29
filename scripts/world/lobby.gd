@@ -1789,13 +1789,15 @@ func get_guidance_targets() -> Array:
 	var monster_pending := false
 	if targets.is_empty() and GameState.tracked_village_project() == VillageProjectDB.WORKSHOP and is_instance_valid(workshop) and str(GameState.project_status().state) != "complete":
 		return [{"label": "WEST WORKSHOP", "position": workshop.workpoint(), "color": Color("#f2c45a")}]
+	if targets.is_empty() and GameState.first_clear_notice_pending() and is_instance_valid(workshop) and str(GameState.project_status().state) == "not_started":
+		return [{"label": "FREE WEST WORKSHOP", "position": workshop.workpoint(), "color": Color("#f2c45a")}]
 	for portal_id in PortalDB.ordered_ids():
 		if not bool(GameState.portal_state(portal_id).get("cleared", false)):
 			monster_pending = true
 			break
 	if monster_pending and not bool(GameState.campaign().get("mei_ling_rescued", false)):
 		targets.append({"label": "RESCUE MEI LING" if GameState.tutorial_complete() else "MONSTER", "position": _layout.approach("monster_portal"), "color": Color("#b08cff")})
-	if not bool(GameState.pet_battle_state("pet_duel_1").get("cleared", false)):
+	if not GameState.unbonded_realm_pets().is_empty():
 		targets.append({"label": "WILD PETS", "position": _layout.approach("monster_portal"), "color": Color("#5bd6cf")})
 	if GameState.house_level() < HouseDB.max_level():
 		targets.append({"label": "BUILD", "position": _shop_customer_position("house", CONSTRUCTION_SHOP), "color": Color("#f2c45a")})

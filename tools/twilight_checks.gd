@@ -162,6 +162,12 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(panel._battle_resolved and not bool(panel._last_result.ok) and GameState.get_pet("dusk_moth").is_empty(), "losing peacefully grants no wild recruit")
 	panel.close_panel()
 	check.call(GameState.health() == hp and GameState.has_living_pet(), "wild challenge loss does not damage persistent health or companion readiness")
+	moth.interact(realm.player)
+	panel._opponent_hp = 1
+	panel.choose_skill("burst")
+	panel._process(0)
+	panel.close_panel()
+	check.call(GameState.unbonded_realm_pets().is_empty() and not bool(GameState.pet_battle_state("pet_duel_1").cleared), "both habitat bonds finish wild guidance without fabricating a legacy tournament clear")
 	var blocked_path := routes.path(Vector2(12,32), RealmDB.CAMP, false)
 	var blocked_length := _length(blocked_path)
 	realm.open_shortcut()
@@ -243,8 +249,25 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	cat.interact(realm.player)
 	check.call(game.hud.pet_battle_panel.visible, "friendly habitats become available immediately after boss victory")
 	game.hud.pet_battle_panel.close_panel()
+
+	game.hud._refresh_progression_notice()
+	check.call(GameState.first_clear_notice_pending() and game.hud._progression_notice.visible and game.hud._progression_text.text.contains("Luma") and game.hud._progression_text.text.contains("FREE"), "actual boss victory visibly explains Luma and the free village workshop without a modal")
+	check.call(not game.hud._gui_layout.has(game.hud._progression_notice), "reward reminder owns its responsive layout independently of saved touch controls")
+	if capture.is_valid():
+		await capture.call("06_first_clear_rewards")
+		check.call(game.get_viewport_rect().encloses(game.hud._progression_notice.get_global_rect()) and game.hud._progression_notice.get_global_rect().size.y < game.get_viewport_rect().size.y * 0.46, "rendered first-clear reminder fits its content and leaves most of the world visible")
+	realm.survey()
+	check.call(GameState.first_clear_notice_pending() and game.hud._progression_notice.visible, "landmark hints cannot erase the durable first-clear reward reminder")
+	var level_reason := GameState.portal_clear_reason("sunken_crypt")
+	check.call(not bool(level_reason.ok) and str(level_reason.reason).contains("70 XP") and str(level_reason.reason).contains("Defend BESUT"), "boss-only clear explains the exact remaining player XP and a preparation route")
+	var passage_labels := {}
+	for child in realm.get_children():
+		if child is RealmInteractable and child.kind == "passage": passage_labels[child.stable_id] = child.label.text
+	check.call(str(passage_labels.get("sunken_crypt", "")).contains("70 XP") and str(passage_labels.get("drowned_throne", "")).contains("previous guardian"), "passage labels distinguish an earned level gate from a still-sealed predecessor gate")
+	check.call(GameState.xp_to_level(1) == 0 and GameState.xp_to_level(4) == 220, "level preparation sums all intervening thresholds without negative XP")
 	GameState.save_game()
 	check.call(GameState.load_game() and bool(GameState.realm_progress().visit_active), "safe post-boss presence survives reload")
+	check.call(GameState.first_clear_notice_pending(), "unread first-clear rewards survive real save/reload")
 	await game._load_dungeon(RealmDB.PORTAL,false)
 	await game.get_tree().process_frame
 	realm = game.world as TwilightRealm
@@ -261,6 +284,39 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 		if game.world is Lobby and not game._transitioning: break
 		await game.get_tree().create_timer(0.03).timeout
 	check.call(game.world is Lobby and not bool(GameState.realm_progress().visit_active), "return rift clears realm presence and returns to the village")
+	game.hud._refresh_progression_notice()
+	check.call(game.hud._progression_notice.visible and game.hud._progression_plan.visible and str(game.world.get_guidance_targets()[0].label) == "FREE WEST WORKSHOP", "return from the actual boss offers village plans and directs unread restoration guidance to the workshop")
+	game.hud._progression_plan.pressed.emit()
+	game.hud._refresh_progression_notice()
+	check.call(game.hud.mission_panel.visible and game.player().controls_locked and not game.hud._progression_notice.visible, "village plans opens the registered journal and hides the reminder behind modal ownership")
+	game.hud.mission_panel.close_panel()
+	game.hud._refresh_progression_notice()
+	check.call(game.hud._progression_notice.visible and not game.player().controls_locked, "closing plans restores controls and leaves the unread reminder available")
+	if capture.is_valid():
+		await capture.call("07_village_reward_plans")
+		var display_scale := float(game.get_window().size.y) / game.get_viewport_rect().size.y
+		check.call(game.hud._progression_dismiss.get_global_rect().size.y * display_scale >= 43.9, "rendered Got it action retains a 44-pixel touch target")
+		var at := game.get_viewport().get_final_transform() * game.hud._progression_dismiss.get_global_rect().get_center()
+		var touch := InputEventScreenTouch.new()
+		touch.index = 0
+		touch.position = at
+		touch.pressed = true
+		Input.parse_input_event(touch)
+		await game.get_tree().process_frame
+		touch = InputEventScreenTouch.new()
+		touch.index = 0
+		touch.position = at
+		touch.pressed = false
+		Input.parse_input_event(touch)
+		await game.get_tree().process_frame
+	else:
+		game.hud._progression_dismiss.pressed.emit()
+	GameState.save_game()
+	check.call(GameState.load_game() and not GameState.first_clear_notice_pending(), "explicit Got it acknowledgement persists without recommissioning or granting rewards")
+	for portal_id in PortalDB.ordered_ids(): GameState.data.portals[portal_id].cleared = true
+	GameState.data.campaign.mei_ling_rescued = true
+	GameState.data.house_level = HouseDB.max_level()
+	check.call(not game.world.get_guidance_targets().any(func(target: Dictionary) -> bool: return str(target.label) == "WILD PETS"), "completed habitat content never leaves an unreachable old-duel objective in village guidance")
 	GameState.start_expedition(RealmDB.PORTAL)
 	await game._load_dungeon(RealmDB.PORTAL,false)
 	await game.get_tree().process_frame

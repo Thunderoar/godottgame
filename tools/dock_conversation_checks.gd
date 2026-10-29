@@ -38,6 +38,11 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	await game.get_tree().physics_frame
 	check.call(float(GameState.data.world_time) == clock and game.player().position == position and dialogue.page == 0, "reading neither advances the village clock nor moves Adam nor times out a line")
 	check.call(dialogue._portrait.texture != null and dialogue._portrait.texture.get_image().get_pixel(0, 0).a == 0, "original anime portrait loads with a transparent background")
+	check.call(dialogue._adam_portrait != null and dialogue._adam_portrait != dialogue._rahim_portrait and dialogue._adam_portrait.get_image().get_pixel(0, 0).a == 0, "Adam has his own imported transparent dialogue portrait")
+	var expression_assets_valid := dialogue._adam_expressions.size() == 3
+	for texture: Texture2D in dialogue._adam_expressions.values():
+		expression_assets_valid = expression_assets_valid and texture != null and texture.get_size() == dialogue._adam_portrait.get_size() and texture.get_image().get_pixel(0, 0).a == 0
+	check.call(expression_assets_valid, "all three Adam expressions load with transparent backgrounds and matching canvas dimensions")
 	game.play_dock_conversation(true)
 	check.call(game._dock_conversation == dialogue, "duplicate conversation requests cannot create another story owner")
 	dialogue.set_process(false)
@@ -50,8 +55,14 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 		dialogue.reveal_line()
 		await game.get_tree().process_frame
 		var viewport := dialogue._root.get_global_rect()
+		var expected_portrait := DockConversation.ADAM_PORTRAIT_PATH if DockConversation.WELCOME[page].speaker == "Adam" else DockConversation.PORTRAIT_PATH
+		if page == 6: expected_portrait = DockConversation.ADAM_SURPRISED_PATH
+		if page == 9: expected_portrait = DockConversation.ADAM_RESOLVED_PATH
+		check.call(dialogue._portrait.texture.resource_path == expected_portrait and dialogue._portrait.modulate == Color.WHITE, "dock line %d shows its named speaker's artwork in its original colours" % page)
 		check.call(viewport.encloses(dialogue._panel.get_global_rect()) and viewport.encloses(dialogue._portrait.get_global_rect()), "dock line %d keeps its box and right-hand portrait in the viewport" % page)
 		check.call(dialogue._line.get_minimum_size().y <= dialogue._line.size.y + 1 and dialogue._line.get_global_rect().end.x < dialogue._portrait.get_global_rect().position.x and dialogue._line.get_global_rect().end.y <= dialogue._next.get_global_rect().position.y, "dock line %d fits fully above the buttons and beside the portrait" % page)
+		if capture.is_valid() and page in [1, 6, 9]:
+			await capture.call({1: "dock_adam_reply", 6: "dock_adam_surprised", 9: "dock_adam_promise"}[page])
 	if capture.is_valid(): await capture.call("dock_promise")
 	dialogue.page = 0
 	dialogue._render()
@@ -208,6 +219,15 @@ static func _check_presentation(dialogue: DockConversation, check: Callable, cap
 	check.call(dialogue.page == 1 and _all_words_at(dialogue, 0.0) and dialogue._voice.stream == Sfx.dialogue_voice("Adam"), "Adam's response fades in with a distinct lighter voice")
 	dialogue._previous()
 	check.call(dialogue.page == 0 and _all_words_at(dialogue, 0.0) and dialogue._voice.stream == Sfx.dialogue_voice("Pak Rahim"), "Back restarts the correct line and voice without leaving the old sound playing")
+	check.call(dialogue._portrait.texture == dialogue._rahim_portrait, "Back from Adam's reply restores Rahim's portrait with his voice")
+	dialogue.page = 9
+	dialogue._render()
+	dialogue._previous()
+	dialogue._previous()
+	dialogue._previous()
+	check.call(dialogue.page == 6 and dialogue._portrait.texture.resource_path == DockConversation.ADAM_SURPRISED_PATH, "Back across speaker changes restores Adam's earlier surprise instead of his later resolve")
+	dialogue.page = 0
+	dialogue._render()
 	GameSettings.set_effects_volume(0, false)
 	check.call(not dialogue._voice.playing and dialogue._revealing, "live zero effects volume silences talking without cancelling the text fade")
 	dialogue._process(0.2)

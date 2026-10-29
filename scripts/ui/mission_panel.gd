@@ -12,6 +12,9 @@ func open_missions() -> void:
 
 func _rebuild() -> void:
 	_clear_content()
+	if bool(GameState.portal_state(RealmDB.PORTAL).get("cleared", false)):
+		add_section("CHAOS CITADEL RESTORED", GameUI.GOLD)
+		add_body_text(GameState.first_clear_notice_text(), GameUI.TEXT, 15)
 	add_section("GROWING BESUT", GameUI.GOLD)
 	content.add_child(VillageProjectCard.new())
 	add_section("RESCUE YOUR FRIENDS", GameUI.GOLD)
@@ -19,7 +22,7 @@ func _rebuild() -> void:
 	var lesson := MissionDB.step(GameState.mission_step())
 	if GameState.tutorial_complete():
 		add_section("Tutorial complete", GameUI.PURPLE)
-		add_body_text("Portal 1 is the only Monster Battle Portal required for training. Continue your adventure to rescue Arjun and Mei Ling.", GameUI.TEXT, 17)
+		add_body_text("Chaos Citadel completes training. Onward passages have level requirements: defend BESUT or replay cleared later stages to prepare. The restored Twilight Wilds stay peaceful. Continue to rescue Arjun and Mei Ling.", GameUI.TEXT, 17)
 	elif lesson.is_empty():
 		add_section("Night training complete" if GameState.is_night() else "Day training complete", GameUI.PURPLE)
 		add_body_text("Training changes with the time of day. Protect the village and prepare for the next lesson.", GameUI.TEXT, 17)

@@ -833,6 +833,12 @@ func claim_realm_cache(id: String) -> Dictionary:
 	expedition_changed.emit()
 	return {"ok": true, "message": "25 Gold banked. The restored road keeps your gift safe." if restored else "25 Gold carried — return through the rift to bank it. Defeat loses carried loot."}
 
+func unbonded_realm_pets() -> Array[String]:
+	var result: Array[String] = []
+	for id in RealmDB.ENCOUNTERS:
+		if not realm_pet_bonded(str(id)): result.append(str(id))
+	return result
+
 func wild_encounter_reason(id: String) -> Dictionary:
 	if not RealmDB.ENCOUNTERS.has(id): return {"ok": false, "reason": "Unknown habitat."}
 	if not bool(data.realm_progress.visit_active) or health() <= 0: return {"ok": false, "reason": "Visit the Twilight Wilds first."}
@@ -1211,7 +1217,8 @@ func portal_clear_reason(portal_id: String) -> Dictionary:
 		return {"ok": false, "reason": "Sealed until the previous guardian falls."}
 	var level_req := int(def.get("level_required", 1))
 	if int(data.get("level", 1)) < level_req:
-		return {"ok": false, "reason": "Requires level %d." % level_req}
+		var needed := xp_to_level(level_req)
+		return {"ok": false, "reason": "Requires level %d · %d XP to go. Defend BESUT or replay a cleared onward stage." % [level_req, needed]}
 	if emergency_active():
 		return {"ok": false, "reason": "Defend the settlement before entering another portal."}
 	if recovery_active():
@@ -1221,6 +1228,12 @@ func portal_clear_reason(portal_id: String) -> Dictionary:
 
 func can_enter_portal(portal_id: String) -> bool:
 	return bool(portal_clear_reason(portal_id).ok)
+
+func xp_to_level(target_level: int) -> int:
+	if target_level <= int(data.get("level", 1)): return 0
+	var needed := int(data.get("xp_next", 60)) - int(data.get("xp", 0))
+	for level in range(int(data.get("level", 1)) + 1, target_level): needed += xp_for_level(level)
+	return maxi(0, needed)
 
 
 func start_expedition(portal_id: String) -> bool:
@@ -1561,13 +1574,15 @@ func objective_lines() -> Array[String]:
 	if expedition_active():
 		var portal_id := expedition_portal()
 		out.append("Defeat %s" % str(PortalDB.get_portal(portal_id).get("boss_name", "the boss")))
+	elif first_clear_notice_pending():
+		out.append("Bram offers the free West Workshop; Luma can be selected at Nia's")
 	elif not bool(portal_state("tidebound_grotto").get("cleared", false)):
 		out.append("Explore Twilight Wilds through the Dimension Portal")
 	else:
 		out.append("Explore the onward passages beyond Chaos Citadel")
 	if house_level() < HouseDB.max_level():
 		out.append("Upgrade the cottage")
-	if not bool(pet_battle_state("pet_duel_1").get("cleared", false)):
+	if not unbonded_realm_pets().is_empty():
 		out.append("Discover the wild companions of Twilight Wilds")
 	return out.slice(0, 1)
 
@@ -1983,20 +1998,43 @@ func _sanitize_village_progression() -> void:
 	if not raw is Dictionary: raw = {}
 	var clean := VillageProjectDB.default_progression()
 	clean.legacy_access = raw.get("legacy_access", false) is bool and raw.get("legacy_access", false) == true
+	clean.first_clear_acknowledged = raw.get("first_clear_acknowledged", false) is bool and raw.get("first_clear_acknowledged", false) == true
 	var projects: Variant = raw.get("projects", {})
 	if not projects is Dictionary: projects = {}
 	for id in VillageProjectDB.ordered_ids():
+		var definition := VillageProjectDB.get_project(id)
+		var duration := float(definition.seconds)
 		var entry: Variant = projects.get(id, {})
 		if not entry is Dictionary: continue
 		var state := str(entry.get("state", "not_started"))
 		if state not in ["not_started", "working", "complete"]: state = "not_started"
-		var remaining := float(entry.get("remaining", VillageProjectDB.WORK_SECONDS)) if entry.get("remaining", 0) is float or entry.get("remaining", 0) is int else VillageProjectDB.WORK_SECONDS
-		if not is_finite(remaining) or remaining < 0: remaining = VillageProjectDB.WORK_SECONDS
-		if state != "not_started" and not bool(portal_state("tidebound_grotto").get("cleared", false)): state = "not_started"
-		clean.projects[id] = {"state": state, "remaining": 0.0 if state == "complete" else (VillageProjectDB.WORK_SECONDS if state == "not_started" else clampf(remaining, 0, VillageProjectDB.WORK_SECONDS))}
+		var remaining := float(entry.get("remaining", duration)) if entry.get("remaining", 0) is float or entry.get("remaining", 0) is int else duration
+		if not is_finite(remaining) or remaining < 0: remaining = duration
+		if state != "not_started" and not bool(portal_state(str(definition.portal)).get("cleared", false)): state = "not_started"
+		clean.projects[id] = {"state": state, "remaining": 0.0 if state == "complete" else (duration if state == "not_started" else clampf(remaining, 0, duration))}
 	var tracked := str(raw.get("tracked_project", ""))
 	if tracked in VillageProjectDB.ordered_ids() and str(clean.projects[tracked].state) != "complete": clean.tracked_project = tracked
 	data.village_progression = clean
+
+func first_clear_notice_pending() -> bool:
+	return bool(portal_state(RealmDB.PORTAL).get("cleared", false)) and not bool(data.get("village_progression", {}).get("first_clear_acknowledged", false))
+
+func first_clear_notice_text() -> String:
+	var lines: Array[String] = []
+	if not get_pet("luma").is_empty(): lines.append("Luma joined you. Select your new companion at Nia's Pet Shop.")
+	if str(project_status().state) == "complete":
+		lines.append("West Workshop restored. Advanced swords are available at Garrick's.")
+	elif str(project_status().state) == "working":
+		lines.append("West Workshop commissioned. Builders work by day; you can help at the bench.")
+	else:
+		lines.append("Bram offers a FREE West Workshop restoration. Visit Construction or Missions.")
+	return "\n".join(lines)
+
+func acknowledge_first_clear() -> void:
+	if not first_clear_notice_pending(): return
+	data.village_progression.first_clear_acknowledged = true
+	_save_if_needed()
+	data_changed.emit()
 
 func village_legacy_access() -> bool:
 	var value: Variant = (data.get("village_progression", {}) as Dictionary).get("legacy_access", false)

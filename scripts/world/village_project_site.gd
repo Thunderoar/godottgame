@@ -112,7 +112,7 @@ func work_builder(actor: Resident, delta: float) -> bool:
 	if not _claim(actor): return false
 	actor._release_build_task()
 	if actor.global_position.distance_to(workpoint()) > 0.4:
-		actor._walk_to(workpoint(), 2.8, delta)
+		actor._walk_to(workpoint(), 2.8, delta, true)
 		_stalled = _stalled + delta if actor.global_position.distance_to(_last_position) < 0.002 else 0.0
 		_last_position = actor.global_position
 		if actor._path.is_empty() or _stalled > 2.0:

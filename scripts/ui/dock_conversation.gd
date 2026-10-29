@@ -4,20 +4,23 @@ extends CanvasLayer
 signal completed
 
 const PORTRAIT_PATH := "res://assets/authored/characters/pak_rahim.png"
+const ADAM_PORTRAIT_PATH := "res://assets/authored/characters/adam_concerned.png"
+const ADAM_SURPRISED_PATH := "res://assets/authored/characters/adam_surprised.png"
+const ADAM_RESOLVED_PATH := "res://assets/authored/characters/adam_resolved.png"
 const WORD_FADE_SECONDS := 0.12
 const SPEECH_SPEED := 1.25
 const REDUCED_FADE_SECONDS := 0.18
 const WELCOME := [
 	{"speaker": "Pak Rahim", "line": "Easy now, Adam. The dock's steady, even if your legs aren't. Here. Small sips."},
-	{"speaker": "Adam", "line": "There were three of us. Arjun. Mei Ling. Have you seen them?"},
+	{"speaker": "Adam", "expression": "concerned", "line": "There were three of us. Arjun. Mei Ling. Have you seen them?"},
 	{"speaker": "Pak Rahim", "line": "Only you, I'm afraid. The turtle wouldn't leave until we'd brought you ashore. Stubborn little thing. A good friend to have."},
-	{"speaker": "Adam", "line": "Then I need to go back out. They could still be out there."},
+	{"speaker": "Adam", "expression": "concerned", "line": "Then I need to go back out. They could still be out there."},
 	{"speaker": "Pak Rahim", "line": "I know. I won't ask you to give up on them. But you can barely hold that cup. Let us help you get your strength back first."},
 	{"speaker": "Pak Rahim", "line": "I'm Rahim. I look after the village's water. Most days that means thirsty seedlings. Today, it means you. Welcome to BESUT."},
-	{"speaker": "Adam", "line": "You don't even know me. Why help?"},
+	{"speaker": "Adam", "expression": "surprised", "line": "You don't even know me. Why help?"},
 	{"speaker": "Pak Rahim", "line": "You washed up on our shore, lad. That was introduction enough. There's a cottage ready for you. No debt attached."},
 	{"speaker": "Pak Rahim", "line": "We have our troubles, too. After dark, creatures come for the trees and homes. We keep one another safe. You won't have to face your troubles alone, either."},
-	{"speaker": "Adam", "line": "When I'm steady, I'll help. And I'll find my friends. I just... don't know where to start."},
+	{"speaker": "Adam", "expression": "resolved", "line": "When I'm steady, I'll help. And I'll find my friends. I just... don't know where to start."},
 	{"speaker": "Pak Rahim", "line": "Start small. Come off the dock. Meet your neighbours. We'll ask about Arjun and Mei Ling, one person at a time."},
 	{"speaker": "Pak Rahim", "line": "And Adam? You can look for a way home and still have a place here. Both can be true."},
 ]
@@ -34,6 +37,9 @@ var _done := false
 var _root: Control
 var _panel: Panel
 var _portrait: TextureRect
+var _rahim_portrait: Texture2D
+var _adam_portrait: Texture2D
+var _adam_expressions: Dictionary[String, Texture2D] = {}
 var _speaker: Label
 var _role: Label
 var _line: HFlowContainer
@@ -84,8 +90,14 @@ func _ready() -> void:
 	_line.position = Vector2(26, 113)
 	_panel.add_child(_line)
 	_portrait = TextureRect.new()
-	_portrait.name = "RahimPortrait"
-	_portrait.texture = load(PORTRAIT_PATH) as Texture2D
+	_portrait.name = "SpeakerPortrait"
+	_rahim_portrait = load(PORTRAIT_PATH) as Texture2D
+	_adam_portrait = load(ADAM_PORTRAIT_PATH) as Texture2D
+	_adam_expressions = {
+		"concerned": _adam_portrait,
+		"surprised": load(ADAM_SURPRISED_PATH) as Texture2D,
+		"resolved": load(ADAM_RESOLVED_PATH) as Texture2D,
+	}
 	_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_portrait.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
@@ -147,7 +159,7 @@ func _render() -> void:
 	_speaker.text = str(entry.speaker)
 	_role.text = "Village water keeper" if entry.speaker == "Pak Rahim" else "Still finding his feet"
 	_prepare_words(str(entry.line))
-	_portrait.modulate = Color.WHITE if entry.speaker == "Pak Rahim" else Color(0.84, 0.91, 0.90)
+	_portrait.texture = _adam_expressions.get(str(entry.get("expression", "concerned")), _adam_portrait) if entry.speaker == "Adam" else _rahim_portrait
 	_back.disabled = page == 0
 	_next.text = "Let's begin" if page == entries().size() - 1 else "Next"
 	_counter.text = "%02d / %02d" % [page + 1, entries().size()]

@@ -11,8 +11,11 @@ are unchanged.
 1. Start a journey with basic swords, armour, shields, potions, companion care
    and all four starter specialists available. The ruined western cottage is
    marked **West Workshop** in the village and on the picture map.
-2. Defeat the first portal guardian in Chaos Citadel. Its victory panel explains
-   the new opportunity; the saved clear flag also reveals it on later loads.
+2. Defeat the first portal guardian in Chaos Citadel. A saved, dismissible
+   **New for BESUT** reminder explains Luma and the free workshop while peaceful
+   exploration continues. It remains available after returning home and reload;
+   Village plans opens Missions. Got it dismisses the reminder permanently for
+   this journey. The reward explanation remains in Missions afterward.
 3. Visit Bram's Construction Shop, open Missions, or approach the site to
    commission **A Roof for the Workshop**. This first commission is free.
 4. A builder physically travels to the workbench and performs ten seconds of
@@ -55,6 +58,10 @@ entering an otherwise eligible portal.
 - Builders call this job from their normal continuous-movement loop. Ordinary
   repair selection and APIs exclude the pending new-journey site. Project labor
   does not also decrement the ordinary damage-repair timer.
+- Ordinary repair selection checks the exact working approach. Empty or stalled
+  routes release the claim and back off for three seconds; a geometry revision
+  allows an immediate retry. Existing valid repairs finish before project work,
+  while failed jobs cannot monopolize a builder. Work still requires arrival.
 - Lobby reconciles activity destinations after state changes and layout refresh.
   Future building/yard space is reserved on the resolved runtime layout, leaving
   source resources and the terrain-bake identity unchanged. Dragging cannot
@@ -74,6 +81,7 @@ Saved schema, in addition to existing `structures` and `portals`:
 village_progression:
   schema: 1
   legacy_access: false
+  first_clear_acknowledged: false
   tracked_project: "" | "west_workshop"
   projects:
     west_workshop:
@@ -114,5 +122,6 @@ settings, with captures at 1280×720 and 832×480.
 Measured final results and evidence locations are recorded in
 [ACCEPTANCE_TESTS.md](ACCEPTANCE_TESTS.md). These fixtures validate the feature's
 rules and integration; they do not establish natural first-boss difficulty,
-Android behavior or performance measurements. The separate late-campaign XP gap
-identified in the audit is unchanged.
+Android behavior or performance measurements. The post-merge XP forecast is in
+[VILLAGE_EXPANSION_AUDIT.md](VILLAGE_EXPANSION_AUDIT.md); this repair adds preparation
+guidance without changing XP or level requirements.

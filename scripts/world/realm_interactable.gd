@@ -52,7 +52,11 @@ func refresh() -> void:
 		label.text = "%s\n%s" % [caption, "Bonded · friendly spar" if bonded else "Wild · approach to challenge"]
 	elif kind == "passage":
 		var reason := GameState.portal_clear_reason(stable_id)
-		label.text = "%s\n%s" % [caption, "Enter" if bool(reason.ok) else str(reason.reason)]
+		var access := "Enter" if bool(reason.ok) else str(reason.reason)
+		var required := int(PortalDB.get_portal(stable_id).get("level_required", 1))
+		if not bool(reason.ok) and bool(GameState.portal_state(stable_id).get("unlocked", false)) and int(GameState.data.get("level", 1)) < required:
+			access = "Level %d · %d XP needed" % [required, GameState.xp_to_level(required)]
+		label.text = "%s\n%s" % [caption, access]
 	elif kind == "shortcut":
 		label.text = "Rootway winch\n" + ("Shortcut open" if GameState.realm_progress().shortcut else "Open the shortcut")
 	else:

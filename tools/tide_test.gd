@@ -199,6 +199,7 @@ func _ready() -> void:
 	# Includes authored-size combat poses and interrupted tween regression checks.
 	await preload("res://tools/presentation_checks.gd").run(game, _check)
 	await StatusStripChecks.run(game, _check)
+	# Includes blocked repair recovery and the real Twilight -> village reward handoff.
 	await VillageProjectChecks.run(game, _check)
 	# Compact realm: living habitats, memories/cache transactions and three owned combat encounters.
 	await preload("res://tools/twilight_checks.gd").run(game, _check)

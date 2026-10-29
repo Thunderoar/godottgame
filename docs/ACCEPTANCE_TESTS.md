@@ -1,5 +1,62 @@
 # Acceptance Tests for AI Agents
 
+## Village progression repairs (2026-10-29)
+
+- Ordinary builders validate exact repair approaches before claiming work.
+  Empty and stalled paths release ownership and retry after three seconds;
+  geometry revisions clear backoff. They still travel physically and supply
+  ten seconds of daytime labour after arrival. A failed repair cannot prevent
+  a queued West Workshop job. Night, shelter, death and world retirement retain
+  existing cancellation and partial-work behavior.
+- The actual Twilight boss victory grants Luma and workshop eligibility while
+  showing a persistent, dismissible New for BESUT reminder. Landmark surveys,
+  world replacement and save/reload retain unread rewards. Got it persists via
+  a defaulted, strictly sanitized `village_progression.first_clear_acknowledged`
+  flag. Village plans opens the registered Missions panel, with normal control
+  locking/closing; the reminder yields to modal/world ownership and does not pause.
+- Both habitat bonds/legacy owned pets complete wild-companion guidance without
+  manufacturing an old tournament result. No retired tournament requirement
+  remains in village guidance or the NPC description of obtaining guardians.
+- Level-locked passages explain exact missing player XP and preparation through
+  village defense or cleared later-stage replays. Their nearby labels keep the
+  level/XP requirement compact only for earned passages; sealed passages retain
+  the previous-guardian prerequisite. Existing level gates and all reward/balance values
+  remain unchanged; a peaceful first-realm revisit still has no repeat boss.
+- `VillageProjectChecks` covers blocked repair selection, released existing
+  claims, work arrival, queued civic work, stalled endpoints, geometry retries,
+  night interruption and malformed notice flags. `twilight_checks.gd` covers
+  the real boss/return/journal/acknowledgement path, both habitat bonds, stale
+  guidance and cumulative level-threshold arithmetic. Both run in the canonical
+  `tools/tide_test.gd`; the native Twilight route captures the new reward reminder.
+
+Final verification on native Windows / Godot 4.7.2:
+
+- Canonical isolated gameplay: **5,757 checks, PASS**, exit 0; empty stderr,
+  no `[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers. This includes **70 workshop
+  checks**, including preservation of current schema-1 residential HP, purchased
+  guns and partial repair work when the new notice default is merged.
+- Native Compatibility/OpenGL Twilight reviews at **1280x720** and **832x480**:
+  **83 checks, PASS** each, exit 0, empty stderr. Inspected the reminder after
+  actual boss victory and on village return at both sizes. The rendered panel
+  fits its content; Got it retains a 44-pixel touch target and is exercised by
+  injected touch. The village-plans journal route restores controls on close.
+- The initial 90-second import wrapper timed out without script errors. An
+  isolated retry with a 180-second bound and explicit `--quit` passed, exit 0;
+  the existing Android build-tools-directory diagnostic remains. No Android
+  export, physical-device or natural player-pacing measurement is claimed.
+- `git diff --check` passed. Source art/maps/bakes and normal player data were
+  not changed by this repair. The separately edited Android version settings
+  were preserved, outside this change's implementation scope.
+
+Evidence: gameplay logs under
+`C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-3b4a249d4436485c9d0297470d59ac5d/`;
+successful import under
+`C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-710e5b3fb6914267a9007d852c6525bc/`.
+Focused logs and captures are under
+`C:/Users/LUQMAN/AppData/Local/Temp/besut-progression-fixes-e8530d55d1544360a8f89421ec5422e7/`:
+`twilight_test-4ccd739afa8a4eabb848e9cff14ab905/` (1280x720) and
+`twilight_test-54caefdaa30347e78e30c02147856b50/` (832x480).
+
 This document is the acceptance contract for automated agents and human
 reviewers working on **Save The World - Tidesworn** in Godot 4.x.
 
@@ -1952,3 +2009,34 @@ After training completes, separate campaign/project navigation remains unchanged
 Twilight Wilds retains its landmark-based exploration with no guidance trail.
 `tools/tide_test.gd` checks cached-arrow removal, refresh/update suppression,
 restoration and unchanged mission completion.
+
+## Adam's original dock-dialogue portraits (2026-10-30)
+
+Adam now appears on his own replies with three transparent expression assets:
+concern while asking after his friends, surprised vulnerability at "Why help?",
+and a tentative smile for his final promise. His asymmetrical forward-leaning
+pose, lowered arms and sand/ochre clothing were created from a written brief
+without image references. Expression edits reference only this new Adam base.
+The rejected cup-bearing draft was removed. No gameplay sprite, dialogue wording,
+save schema, story suspension or world-input ownership changed.
+
+Native Windows Compatibility-renderer dialogue reviews at **1280x720** and
+**832x480** each passed **90 checks, exit 0**, with empty error logs. Captures of
+all three expressions were inspected for text clearance, alpha compositing and
+consistent framing; compact concern/resolve captures were also inspected. The
+checks cover the expression on every line, Back restoring earlier expressions,
+matching transparent asset dimensions, word fades, real synthetic touch/keyboard
+advance, live presentation settings and New Journey/Continue/cancellation flows.
+The audio driver was Dummy; this does not establish physical-device validation
+or listening quality.
+
+Evidence: `C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-0b469ca243fd4cfa805ff554c4e16a57`
+(1280x720), `C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-450ec21edd2b4d4999d217437620c037`
+(832x480). Isolated import completed with exit 0, no script/error markers and the
+existing Android build-tools-directory warning.
+
+Canonical isolated gameplay with the final expression assets: **5,950 checks,
+PASS, exit 0**, with an empty error log and no `[FAIL]`, `SCRIPT ERROR` or `ERROR:`
+markers. Evidence:
+`C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-be4ca5d585294c6db091581728cb714b`.
+`git diff --check` passes. Player saves were isolated; no exported build was made.

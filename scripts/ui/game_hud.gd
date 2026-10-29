@@ -42,6 +42,10 @@ var _root: Control
 var _gold_label: Label
 var _diamond_label: Label
 var _status_strip: HudStatusStrip
+var _progression_notice: PanelContainer
+var _progression_text: Label
+var _progression_plan: Button
+var _progression_dismiss: Button
 var _tally_timer := 0.0
 const TALLY_REFRESH_SECONDS := 0.5
 var _identity_label: Label
@@ -105,6 +109,7 @@ func _ready() -> void:
 	_build_recovery_panel()
 	_build_tutorial()
 	_build_modals()
+	_build_progression_notice()
 	_build_fade()
 	_capture_gui_layout()
 	_apply_saved_settings()
@@ -164,6 +169,64 @@ func _build_currency_panel() -> void:
 
 func _build_objectives() -> void:
 	pass
+
+func _build_progression_notice() -> void:
+	_progression_notice = GameUI.panel(Color("#142b2f"), GameUI.GOLD)
+	_progression_notice.name = "FirstClearNotice"
+	_progression_notice.visible = false
+	_root.add_child(_progression_notice)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
+	_progression_notice.add_child(box)
+	box.add_child(GameUI.label("NEW FOR BESUT", 16, GameUI.GOLD))
+	_progression_text = GameUI.label("", 16, GameUI.TEXT)
+	_progression_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(_progression_text)
+	var actions := HBoxContainer.new()
+	actions.add_theme_constant_override("separation", 10)
+	box.add_child(actions)
+	_progression_plan = GameUI.button("Village plans", Vector2(170, 44))
+	_progression_plan.pressed.connect(_open_progression_plans)
+	actions.add_child(_progression_plan)
+	_progression_dismiss = GameUI.button("Got it", Vector2(110, 44))
+	_progression_dismiss.pressed.connect(func() -> void:
+		if _progression_context(): GameState.acknowledge_first_clear())
+	actions.add_child(_progression_dismiss)
+
+func _progression_context() -> bool:
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if not is_instance_valid(game) or not is_instance_valid(world) or game.world != world or world.is_queued_for_deletion(): return false
+	if game._transitioning or game._story_active or game._sailing or game._input_locked or game._game_over or game._defeat_pending or is_instance_valid(game.home_interior): return false
+	if not is_instance_valid(game.player()) or game.player().dead or game.player().sleeping: return false
+	return (world is TwilightRealm or world is Lobby) and not (world is Lobby and world._settlement_editor.active)
+
+func _refresh_progression_notice() -> void:
+	if not is_instance_valid(_progression_notice): return
+	_progression_notice.visible = GameState.first_clear_notice_pending() and _progression_context() and not any_modal_open()
+	if not _progression_notice.visible: return
+	_progression_text.text = GameState.first_clear_notice_text()
+	_progression_plan.visible = world is Lobby
+	_layout_progression_notice()
+
+func _layout_progression_notice() -> void:
+	if not is_instance_valid(_progression_notice) or _root.size.x < 1: return
+	var fit := minf(1.0, minf(_root.size.x / 1280.0, _root.size.y / 720.0))
+	var factor := clampf(get_gui_scale() * fit, 0.85, 1.3)
+	_progression_notice.scale = Vector2.ONE * factor
+	_progression_notice.size.x = minf(500.0, (_root.size.x - 32.0) / factor)
+	_progression_notice.position = Vector2((_root.size.x - _progression_notice.size.x * factor) * 0.5, maxf(64.0, 76.0 * fit))
+	var display_scale := 1.0
+	if DisplayServer.get_name() != "headless": display_scale = float(get_window().size.y) / maxf(1.0, _root.size.y)
+	for button in [_progression_plan, _progression_dismiss]: button.custom_minimum_size.y = maxf(44.0, 44.0 / maxf(0.1, factor * display_scale))
+	# A wrapped label can briefly request a tall minimum before its width is
+	# assigned. Let the panel shrink again once container layout has settled.
+	_progression_notice.size.y = 0
+
+func _open_progression_plans() -> void:
+	if not _progression_context() or not world is Lobby or any_modal_open(): return
+	var game := get_tree().get_first_node_in_group("game") as Game
+	release_world_controls()
+	game.open_missions()
 
 func _build_mission_guide() -> void:
 	# Navigation is drawn on world paths; no bottom notification strip.
@@ -283,7 +346,7 @@ func set_gui_scale(value: float, persist: bool = true) -> void:
 
 func _capture_gui_layout() -> void:
 	for child in _root.get_children():
-		if child is Control and not child is ModalBase and not child is TutorialSpotlight and child != tutorial_guide and child != _fade and child != _vignette and child != _status_strip:
+		if child is Control and not child is ModalBase and not child is TutorialSpotlight and child != tutorial_guide and child != _fade and child != _vignette and child != _status_strip and child != _progression_notice:
 			_gui_layout[child] = {"left": child.offset_left, "top": child.offset_top, "size": child.size.max(child.get_combined_minimum_size())}
 
 
@@ -296,6 +359,7 @@ func _layout_gui() -> void:
 		return
 	# Each element retains its own anchor. Root and full-screen overlays never scale.
 	_root.scale = Vector2.ONE
+	_layout_progression_notice()
 	var fit := minf(1.0, minf(_root.size.x / 1280.0, _root.size.y / 720.0))
 	var factor := get_gui_scale() * fit
 	var display_scale := 1.0
@@ -622,6 +686,7 @@ func _process(delta: float) -> void:
 	if _mission_timer > 0.2:
 		_mission_timer = 0.0
 		_update_mission_guide()
+		_refresh_progression_notice()
 	_refresh_recovery()
 	_update_prompt()
 	if any_modal_open() or _sleep_panel.visible:
@@ -674,6 +739,7 @@ func refresh_all() -> void:
 	if _root == null:
 		return
 	_status_strip.refresh_currency()
+	_refresh_progression_notice()
 	_refresh_objectives()
 	_refresh_loot()
 	if _attack_button:

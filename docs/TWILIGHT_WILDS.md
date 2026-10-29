@@ -86,6 +86,25 @@ Continue resumes an active realm visit at its last safe checkpoint; unfinished e
 
 Boss victory commits the existing first-portal rewards, banks expedition loot and opens its existing successor. It restores the terrain/light, removes hostile packs/spells, and leaves the player free to explore. Saved realm presence remains valid after expedition banking; Continue reconstructs the peaceful cleared world. A return rift appears in the chamber. Cleared first realms remain peaceful on revisits rather than automatically repeating the boss.
 
+A dismissible **New for BESUT** reminder names Luma and Bram's free West Workshop
+restoration. It survives landmark changes, returning home and save/reload until
+Got it is selected. In the village, Village plans opens the existing Missions
+panel, which retains the reward explanation. Unread workshop guidance yields to
+emergency defense. The reminder hides during modals, travel, stories, home
+interiors and settlement editing without pausing simulation.
+
+Wild-companion guidance checks the two actual habitat bonds/owned pets, including
+legacy ownership, rather than requiring a retired tournament victory. Both bonds
+complete habitat guidance without inventing old duel clears.
+
+Onward passages retain their combat-level gates. Labels show required level and
+remaining player XP; an attempted locked entry explains village defense and
+cleared later-stage replays as preparation. The peaceful first realm cannot be
+farmed after clearing it. Six first-realm encounters plus its first boss provide
+342 player XP; a boss-only zero-XP fixture still needs 70 XP for level 3. Companion
+challenge XP does not level Adam. No XP, price, enemy or house-tier rebalance is
+part of this guidance update.
+
 The expanded map reveals terrain and pet locations as cells are explored. The boss marker appears only after discovering the citadel. No ground route points directly to an undiscovered boss.
 
 ## Campaign compatibility and scope
