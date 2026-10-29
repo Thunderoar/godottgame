@@ -546,6 +546,7 @@ func _finish_battle(won: bool) -> void:
 		return
 	_battle_resolved = true
 	_battle_active = false
+	Sfx.stop_battle_music()
 	_turn_active = false
 	_awaiting_next = false
 	_result_visible = true
@@ -612,7 +613,7 @@ func _reward_chip(kind: String, text: String, color: Color) -> Control:
 
 
 func close_panel() -> void:
-	if _battle_active:
+	if _battle_active or _result_visible:
 		Sfx.stop_battle_music()
 	_battle_active = false
 	_battle_resolved = false

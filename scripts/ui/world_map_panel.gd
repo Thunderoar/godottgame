@@ -7,7 +7,8 @@ func _ready() -> void:
 	super._ready()
 
 func open_map() -> void:
-	open_panel("BESUT")
+	var game := get_tree().get_first_node_in_group("game") as Game
+	open_panel("TWILIGHT WILDS · DISCOVERED PATHS" if is_instance_valid(game) and game.world is TwilightRealm else "BESUT")
 
 func _rebuild() -> void:
 	_clear_content()

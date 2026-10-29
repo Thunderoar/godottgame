@@ -1,7 +1,7 @@
 class_name PortalDB
 extends RefCounted
-## Ten-portal campaign. Each portal has at least ten regular monsters, exactly
-## one boss, a level gate, a distinct boss ability and a persistent unlock chain.
+## Stable campaign IDs. Twilight Wilds authors six local encounters for stage 1;
+## later legacy arenas retain their monster counts and persistent unlock chain.
 
 const PORTALS := {
 	"tidebound_grotto": {
@@ -11,7 +11,7 @@ const PORTALS := {
 		"theme": "chaos",
 		"monster_kind": "minion_chaos",
 		"monster_level": 1,
-		"monster_count": 12,
+		"monster_count": 6,
 		"element": "chaos",
 		"boss_id": "demon_chaos",
 		"boss_name": "Shadow & Chaos Fiend",

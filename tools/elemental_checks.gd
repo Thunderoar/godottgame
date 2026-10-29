@@ -129,7 +129,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 			if node is ElementalMinion and node.element == boss.element:
 				minions += 1
 				sample = node
-		check.call(minions == int(def.monster_count),"%s small monsters match their ruler's element" % portal_id)
+		check.call(minions == (6 if world is TwilightRealm else int(def.monster_count)),"%s small monsters match their ruler's element" % portal_id)
 		var sample_start := sample.position
 		sample._player = world.player
 		sample._target = world.player

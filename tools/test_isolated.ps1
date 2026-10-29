@@ -2,9 +2,13 @@ param(
 	[Parameter(Mandatory = $true)][string]$Godot,
 	[switch]$ImportOnly,
 	[switch]$VisualReview,
+	[switch]$Twilight,
+	[switch]$Capture,
+	[ValidateSet('1280x720', '832x480')][string]$Resolution = '1280x720',
 	[ValidateSet('forest', 'village', 'interaction')][string]$Review = 'forest'
 )
 $ErrorActionPreference = 'Stop'
+if ($Capture -and (-not $Twilight -or $ImportOnly -or $VisualReview)) { throw 'Capture requires Twilight and cannot be combined with import or another visual review.' }
 $repo = Split-Path -Parent $PSScriptRoot
 $runRoot = Join-Path ([IO.Path]::GetTempPath()) ('tidesworn-tests-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $runRoot | Out-Null
@@ -25,8 +29,13 @@ try {
 	if ($VisualReview) {
 		$arguments += @('--audio-driver', 'Dummy', '--resolution', '1280x720', "res://tools/${Review}_review.tscn")
 	} else {
-		$arguments += '--headless'
-		if ($ImportOnly) { $arguments += @('--import','--recovery-mode') } else { $arguments += 'res://tools/tide_test.tscn' }
+		if ($Capture) { $arguments += @('--audio-driver', 'Dummy', '--resolution', $Resolution) } else { $arguments += '--headless' }
+		if ($ImportOnly) {
+			$arguments += @('--import','--recovery-mode')
+		} else {
+			$arguments += $(if ($Twilight) { 'res://tools/twilight_test.tscn' } else { 'res://tools/tide_test.tscn' })
+			if ($Capture) { $arguments += @('--', '--capture') }
+		}
 	}
 	$stdout = Join-Path $runRoot 'test.log'
 	$stderr = Join-Path $runRoot 'errors.log'
@@ -45,7 +54,8 @@ try {
 	Get-Content -LiteralPath $stderr
 	if (Select-String -Path $stdout, $stderr -Pattern '\[FAIL\]|SCRIPT ERROR|ERROR:' -Quiet) { throw 'Godot reported errors.' }
 	if ($exitCode -ne 0) { throw "Godot exited $exitCode." }
-	if (-not $ImportOnly -and -not $VisualReview -and -not (Select-String -Path $stdout -Pattern '^--- tide test: [0-9]+ checks, PASS ---$' -Quiet)) { throw 'Acceptance PASS summary missing.' }
+	$summary = if ($Twilight) { '^--- twilight test: [0-9]+ checks, PASS ---$' } else { '^--- tide test: [0-9]+ checks, PASS ---$' }
+	if (-not $ImportOnly -and -not $VisualReview -and -not (Select-String -Path $stdout -Pattern $summary -Quiet)) { throw 'Acceptance PASS summary missing.' }
 	if ($VisualReview -and -not (Select-String -Path $stdout -Pattern ("^${Review} review: PASS$") -Quiet)) { throw 'Visual review did not complete.' }
 } finally {
 	$env:APPDATA = $oldAppData

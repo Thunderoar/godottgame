@@ -7,7 +7,7 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(hud._gold_label.text == str(GameState.gold()) and hud._diamond_label.text == str(GameState.diamonds()) and hud._identity_label == null, "top-left HUD displays current gold and diamonds")
 	check.call(hud._health_potion_button == null and hud._build_button == null, "potion shortcuts and screen Build button removed")
 	check.call(hud._control_nodes.size() == 5 and hud._clock_label.is_visible_in_tree(), "four gameplay controls plus customizable Menu remain and clock is visible")
-	check.call(lobby.get_node("MonsterBattlePortal").position == lobby._layout.position_of("monster_portal") and lobby.get_node("PetBattlePortal").position == lobby._layout.position_of("pet_portal") and lobby.get_node_or_null("TwinCaveHill") == null, "standalone portals follow the authored sanctuary positions")
+	check.call(lobby.get_node("MonsterBattlePortal").position == lobby._layout.position_of("monster_portal") and lobby.get_node_or_null("PetBattlePortal") == null and lobby.get_node_or_null("TwinCaveHill") == null, "unified portal follows the authored sanctuary position")
 	game.open_menu()
 	await game.get_tree().process_frame
 	await game.get_tree().process_frame

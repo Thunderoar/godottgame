@@ -4,6 +4,18 @@
 The project/application name is still **Save The World**; the player-facing title is
 **PB (Protect BESUT)**. Tidesworn is also the name of the editor workspace.
 
+**2026-10-29 runtime update:** the current Windows configuration names the application
+`Protect Besut`. One village Dimension Portal now enters `TwilightRealm`, a `Dungeon`
+subclass for the stable first-stage ID `tidebound_grotto`. First-realm exploration,
+protected in-world pet challenges, discovery/checkpoint persistence, threshold-only
+boss activation and peaceful post-clear revisits supersede the older paired-portal,
+first-arena pursuit and first-expedition emergency descriptions below. Later legacy
+stages and both rescue paths remain intact through physical onward passages. Read
+`docs/TWILIGHT_WILDS.md` and the newest acceptance section for current ownership/rules.
+Windows focused review: `tools/test_isolated.ps1 -Godot <console-executable> -Twilight`
+with optional `-Capture -Resolution 832x480` (or `1280x720`). Normal menus still run
+the simulation; an accepted wild challenge explicitly suspends its realm until closed.
+
 ## 1. Ground truth and scope
 
 - This checkout is `/home/roku/Documents/ChatGPT/game`; `project.godot` is at its root.

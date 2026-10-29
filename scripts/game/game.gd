@@ -48,9 +48,9 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	if is_instance_valid(world) and not _game_over and not _story_active:
+	if is_instance_valid(world) and not _game_over and not _story_active and not hud.wild_challenge.visible:
 		GameState.advance_world_clock(delta)
-	if world is Dungeon and GameState.expedition_active():
+	if world is Dungeon and not world is TwilightRealm and GameState.expedition_active():
 		if not _emergency_triggered:
 			_portal_elapsed += delta
 			if _portal_elapsed >= EMERGENCY_DELAY and GameState.is_night():
@@ -72,6 +72,7 @@ func _connect_hud() -> void:
 	hud.inventory_panel.closed.connect(_on_modal_closed)
 	hud.portal_panel.closed.connect(_on_modal_closed)
 	hud.pet_battle_panel.closed.connect(_on_modal_closed)
+	hud.wild_challenge.closed.connect(_on_modal_closed)
 	hud.sea_cleaning_panel.closed.connect(_on_modal_closed)
 	hud.house_panel.closed.connect(_on_modal_closed)
 	hud.victory_panel.closed.connect(_on_modal_closed)
@@ -123,7 +124,9 @@ func _on_continue_requested() -> void:
 	hud.visible = true
 	if GameState.completed_mission_count() < MissionDB.STEPS.size():
 		hud.start_tutorial()
-	if GameState.expedition_active():
+	if bool(GameState.realm_progress().visit_active):
+		await _load_dungeon(RealmDB.PORTAL, true)
+	elif GameState.expedition_active():
 		var portal_id := GameState.expedition_portal()
 		await _load_dungeon(portal_id, true)
 	else:
@@ -147,6 +150,8 @@ func _remove_title_if_owner(expected: CanvasLayer) -> void:
 # ------------------------------------------------------------------ world switching
 
 func _clear_world() -> void:
+	hud.wild_challenge.close_panel()
+	hud.release_world_controls()
 	if _arjun_walk and _arjun_walk.is_valid(): _arjun_walk.kill()
 	if world is Lobby: _arjun_returning = false
 	_portal_elapsed = 0.0
@@ -208,10 +213,10 @@ func _load_dungeon(portal_id: String, transition: bool = true) -> void:
 	_input_locked = true
 	_apply_input_lock()
 	if transition:
-		await loading_screen.begin(str(PortalDB.get_portal(portal_id).get("name", "Portal")))
+		await loading_screen.begin("Twilight Wilds" if portal_id == RealmDB.PORTAL else str(PortalDB.get_portal(portal_id).get("name", "Portal")))
 	_clear_world()
 	hud.set_build_mode(false)
-	var dungeon := Dungeon.new()
+	var dungeon: Dungeon = TwilightRealm.new() if portal_id == RealmDB.PORTAL else Dungeon.new()
 	dungeon.setup(portal_id)
 	dungeon.name = "Dungeon"
 	world = dungeon
@@ -241,12 +246,16 @@ var _portal_fx_active := false
 
 
 func enter_portal(portal_id: String) -> void:
-	if _transitioning or _portal_fx_active:
+	if _transitioning or _portal_fx_active or _input_locked or _defeat_pending or _game_over or _sailing or is_instance_valid(home_interior) or hud.any_modal_open():
+		return
+	if not world is Lobby and not world is TwilightRealm:
 		return
 	var reason := GameState.portal_clear_reason(portal_id)
 	if not bool(reason.ok):
 		GameState.toast_requested.emit(str(reason.reason), "bad")
 		return
+	if world is TwilightRealm:
+		GameState.leave_portal_safely()
 	if not GameState.start_expedition(portal_id):
 		return
 	if portal_id == PortalDB.ordered_ids()[0]:
@@ -266,6 +275,8 @@ func _portal_entry_transition(portal_id: String) -> void:
 		_load_dungeon(portal_id, true)
 		return
 	_portal_fx_active = true
+	var expected_world := world
+	var expected_journey := GameState.journey_serial
 	_input_locked = true
 	_apply_input_lock()
 	Sfx.play("portal_in", -6.0)
@@ -279,17 +290,20 @@ func _portal_entry_transition(portal_id: String) -> void:
 			tween.tween_property(visual, "modulate:a", 0.1, 0.3)
 	await get_tree().create_timer(0.28).timeout
 	_portal_fx_active = false
+	if world != expected_world or GameState.journey_serial != expected_journey or _game_over or _defeat_pending: return
 	_load_dungeon(portal_id, true)
 
 
 func _nearest_gate_center(from: Vector2) -> Vector2:
 	# Drift slightly toward the paired gates so the pull reads as "into them".
 	if world is Lobby:
-		return ((world as Lobby)._layout.position_of("monster_portal") + (world as Lobby)._layout.position_of("pet_portal")) * 0.5
+		return (world as Lobby)._layout.position_of("monster_portal")
 	return from
 
 
 func return_to_lobby(from_defeat: bool = false) -> void:
+	if world is TwilightRealm:
+		GameState.end_realm_visit()
 	hud.hide_modals()
 	_defeat_pending = false
 	_portal_elapsed = 0.0
@@ -305,6 +319,7 @@ func handle_portal_defeat() -> void:
 	if _defeat_pending:
 		return
 	_defeat_pending = true
+	var defeated_world := world
 	if player() != null:
 		player().controls_locked = true
 		player().die()
@@ -315,6 +330,7 @@ func handle_portal_defeat() -> void:
 	GameState.boss_health_changed.emit(false, "", 0, 0)
 	GameState.defeat_in_portal()
 	await get_tree().create_timer(0.7).timeout
+	if world != defeated_world or _game_over: return
 	hud.defeat_panel.show_defeat(portal_name, lost.replace("Unbanked: ", ""), companion)
 
 

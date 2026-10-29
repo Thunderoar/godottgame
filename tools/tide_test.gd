@@ -61,7 +61,7 @@ func _ready() -> void:
 	_check(GameState.mission_step() == 0 and game.world._mission_walk_origin == village_layout.approach("jetty_deck"), "dock placement does not complete the first movement lesson before the player moves")
 	var monster_gate := village_layout.position_of("monster_portal")
 	var pet_gate := village_layout.position_of("pet_portal")
-	_check(monster_gate.is_equal_approx(Vector2(34.8, 6.3)) and pet_gate.is_equal_approx(Vector2(41.2, 6.3)), "both portals stand side by side at the northern map edge")
+	_check(monster_gate.is_equal_approx(Vector2(34.8, 6.3)) and pet_gate.is_equal_approx(Vector2(41.2, 6.3)), "legacy northern anchors remain stable for layout and forest compatibility")
 	_check(game.world.get_node_or_null("TwinCaveHill") == null and game.world.get_node_or_null("CaveRockCollision") == null, "cave artwork and cave collision are removed")
 	_check(GameState.item_count("rusty_sword") == 1, "Qayyim owns a starter sword")
 	_check(GameState.equipped_item("weapon") == "rusty_sword", "starter sword equipped")
@@ -115,7 +115,7 @@ func _ready() -> void:
 	var abilities := {}
 	for portal_id in portal_ids:
 		var def := PortalDB.get_portal(portal_id)
-		_check(int(def.get("monster_count", 0)) >= 10, "%s has at least ten regular monsters" % portal_id)
+		_check(int(def.get("monster_count", 0)) >= (6 if portal_id == RealmDB.PORTAL else 10), "%s defines its authored encounter population" % portal_id)
 		_check(str(def.get("boss_ability", "")) != "", "%s defines a boss ability" % portal_id)
 		_check(PixelArt.enemy_texture(str(def.get("boss_id", "")), true) != null, "%s boss art generates" % portal_id)
 		abilities[str(def.get("boss_ability", ""))] = true
@@ -165,6 +165,7 @@ func _ready() -> void:
 	await preload("res://tools/presentation_checks.gd").run(game, _check)
 	await StatusStripChecks.run(game, _check)
 	await VillageProjectChecks.run(game, _check)
+	await preload("res://tools/twilight_checks.gd").run(game, _check)
 	await _test_forest_game_over()
 
 	GameState.delete_save()
@@ -256,10 +257,9 @@ func _test_settlement_expansion() -> void:
 				pet_gate = node
 			else:
 				monster_gate = node
-	_check(monster_gate != null and pet_gate != null, "monster and pet battle portals exist")
-	_check(get_tree().get_nodes_in_group("battle_portal").size() == 2, "the two battle portals are paired")
-	if monster_gate != null and pet_gate != null:
-		_check(absf(monster_gate.position.y - pet_gate.position.y) < 0.2 and absf(monster_gate.position.x - pet_gate.position.x) < 10.0, "monster and pet portals stand side by side")
+	_check(monster_gate != null and pet_gate == null, "one unified dimension portal replaces the paired gates")
+	_check(get_tree().get_nodes_in_group("battle_portal").size() == 1, "only one battle entrance is instantiated")
+
 
 	var trees := get_tree().get_nodes_in_group("forest_tree")
 	_check(trees.size() >= 60, "the forest contains many protected trees (%d)" % trees.size())
@@ -595,12 +595,12 @@ func _test_pet_battle_portal() -> void:
 	for node in get_tree().get_nodes_in_group("battle_portal"):
 		if node is PortalEntrance and node.gate_kind == "pet":
 			pet_gate = node
-	_check(pet_gate != null, "pet battle gate is interactable")
-	pet_gate.interact(game.player())
+	_check(pet_gate == null, "wild challenges replace the village pet gate")
+	game.open_pet_battles() # Legacy battle engine remains covered for old save compatibility.
 	await get_tree().process_frame
 	await get_tree().process_frame
 	var panel := hud.pet_battle_panel as PetBattlePanel
-	_check(panel.visible, "pet portal opens tournament")
+	_check(panel.visible, "legacy manual duel presentation remains available to compatibility tools")
 	var gold_before := GameState.gold()
 	var level_before := int(GameState.get_active_pet().get("level", 1))
 	_check(panel.start_battle("pet_duel_1"), "first duel starts")
@@ -676,7 +676,9 @@ func _test_rubbish_system() -> void:
 
 func _test_portal_combat_and_auto_loot() -> void:
 	GameState.set_health(GameState.health_max())
-	game.call("enter_portal", "tidebound_grotto")
+	GameState.data.portals.sunken_crypt.unlocked = true
+	GameState.data.level = maxi(3, int(GameState.data.level))
+	game.call("enter_portal", "sunken_crypt")
 	await get_tree().create_timer(0.8).timeout
 	_check(game.world is Dungeon, "portal dungeon loads")
 	# Large imported art can finish construction before the fade has unlocked
@@ -875,12 +877,14 @@ func _test_boss_and_progression() -> void:
 	_check(boss != null, "boss instance exists")
 	if boss == null:
 		return
+	game.player().position = RealmDB.BOSS_THRESHOLD
+	game.world._physics_process(0.1)
 	boss.call("take_damage", 999999, Vector2.ZERO, game.call("player"))
 	await get_tree().create_timer(0.8).timeout
 	_check(GameState.portal_state("tidebound_grotto").cleared, "boss victory permanently clears portal")
 	_check(GameState.portal_state("sunken_crypt").unlocked, "boss victory unlocks next portal")
 	_check(not GameState.get_pet("luma").is_empty(), "first clear grants unique companion")
-	_check(hud.victory_panel.visible, "victory panel is shown")
+	_check(not hud.victory_panel.visible and game.world._boss_defeated, "first boss victory restores the realm for continued exploration")
 	var saved_level := int(GameState.data.level)
 	GameState.data.level = 1
 	var level_reason := GameState.portal_clear_reason("sunken_crypt")

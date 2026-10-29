@@ -28,7 +28,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	await game.get_tree().process_frame
 	check.call(game.hud._map_button is Button and game.hud._map_button.anchor_right == 1 and not game.hud._minimap.visible, "top-right Map button keeps the map hidden until requested")
 	check.call(game.hud._clock_label.get_parent().anchor_bottom == 1, "world clock is anchored to the bottom of the screen")
-	check.call(FieldGuideDB.entries(3).size() == 4 and NpcInfo.description("water").contains("extinguishes"), "book includes four story/sea pages and NPC job explanations")
+	check.call(FieldGuideDB.entries(3).size() == 5 and FieldGuideDB.entries(3).any(func(entry: Dictionary) -> bool: return entry.name == "Twilight Wilds") and NpcInfo.description("water").contains("extinguishes"), "book includes the exploration page, four story/sea pages and NPC job explanations")
 	if capture.is_valid(): await capture.call("01_village_map_clock")
 	var villager := game.world._residents[0] as Resident
 	villager.set_physics_process(false)

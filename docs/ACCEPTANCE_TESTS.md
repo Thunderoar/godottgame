@@ -1385,3 +1385,125 @@ Evidence under
 Earlier native grouped-panel captures with Map overlap are superseded by the
 final 136-check review. The redundant source ZIP was removed after validation;
 the disposable source, patch and logs remain outside the checkout.
+
+## Twilight Wilds — unified entrance and first exploration dimension (2026-10-29)
+
+This supersedes the earlier two-village-portal rules and the first stage's immediate
+pursuit/emergency expectations. Stable campaign IDs and later legacy arena rules
+remain compatible. See [TWILIGHT_WILDS.md](TWILIGHT_WILDS.md) for ownership and scope.
+
+- One village Dimension Portal enters Twilight Wilds directly, with no destination
+  list. The retired pet entrance produces no node or map icon; old layout anchors
+  and the original village forest fixture remain stable.
+- A connected authored route has two optional pet habitats, six local imp encounters,
+  the watchpost winch/physical shortcut, a resting checkpoint and Chaos Citadel.
+  Ordinary movement remains continuous. Paths to both habitats and the lantern are
+  verified against physics; the opened shortcut produces a shorter valid route.
+- Starter Ember can challenge Bramble Cat and Dusk Moth without tournament-order
+  or purchased-level prerequisites. Duels occur in the discovered clearing, with
+  manual Attack/Shield/Special buttons and keys 1/2/3. A real injected screen touch
+  chooses Attack. Waiting indefinitely never spends a player turn.
+- Accepted challenges suspend the realm, projectiles, hazards, companion support
+  and world clock. Settings also suspends the duel. Win/loss/cancel and world
+  replacement restore camera, participant positions, controls and audio ownership.
+  Full-screen challenge UI is excluded from ordinary HUD-widget scaling. Live
+  touch-setting changes cannot expose world controls beneath the challenge.
+- First bonds commit once, recruit the stable companion/village guardian and award
+  participant XP plus Gold. Duplicate callbacks fail. Friendly repeat spars give
+  neither Gold nor guaranteed levels. Losing/cancelling leaves saved HP and ownership
+  unharmed. Already-owned pets remain owned, including migrated duel recruits.
+- Exploration persists discovered cells/landmarks, shortcut, checkpoint and realm
+  presence through defaults/sanitization and save/load. Old active first-portal saves
+  migrate safely; malformed destinations and duplicate/invalid records are sanitized.
+  Continue reconstructs at the safe checkpoint and resets unfinished combat.
+- The shared day/night clock continues during ordinary exploration. Long nighttime
+  visits do not start the legacy expedition emergency. Village waves/saved attackers
+  and later-stage emergencies retain their existing behavior.
+- The ruler stays dormant and invulnerable until the chamber threshold. Local packs
+  do not globally alert. Retreat resets boss HP, attack sequence, effects and camera
+  framing. Active combat frames the entire chamber even with a close zoom preference;
+  warnings remain essential at low effects/reduced motion.
+- First victory banks the expedition and commits the existing first-stage rewards,
+  restores terrain/light, removes hostile packs/spells, and leaves an explicitly saved
+  peaceful realm visit. There is no forced victory modal. A return rift banks/ends
+  the visit; cleared revisits do not duplicate boss rewards or respawn the ruler.
+- Exploration maps hide undiscovered terrain and the boss marker. No ground path
+  reveals an undiscovered boss. Nine physical onward passages retain the original
+  later stage gates/rewards and final Mei Ling rescue; Arjun's ocean route remains
+  independent. Three-dimension campaign compression is not part of this first slice.
+- The Field Guide and tutorial explain the new entrance, habitats and checkpoint.
+  Completed legacy pet-duel results now stop their battle track, covering the music
+  cleanup path that the old active-close test missed.
+
+Final evidence: Godot **4.7.2 stable, native Windows**. The canonical isolated gameplay
+wrapper reports **4,789 checks, PASS, exit 0**, with no `[FAIL]`, `SCRIPT ERROR` or
+`ERROR:`. Focused Compatibility/OpenGL rendered reviews at **1280×720** and
+**832×480** each report **54 checks, PASS, exit 0**, with empty error logs. Captures
+were inspected for arrival, on-location challenge controls, the complete citadel,
+restored realm and discovered map. Movement checks inspect consecutive positions;
+the focus checks include actual injected touch, protected Settings, navigation,
+reward idempotence, checkpoint/save migration, world replacement and peaceful
+post-clear revisits. `git diff --check` passed. Isolated import reported an Android
+build-tools-directory warning; no Android build or physical-phone validation is claimed.
+
+Reproduce with `tools/test_isolated.ps1 -Godot <Godot-console-executable>`; add
+`-Twilight` for the focused suite, or `-Twilight -Capture -Resolution 1280x720`
+(and `832x480`) for isolated rendered captures. The wrapper prints its external
+artifact directory and requires the exact corresponding final PASS summary.
+
+## Compact Twilight Wilds (2026-10-29)
+
+- The realm footprint is 56x52 instead of 72x72: 43.8% less area. The main authored
+  road measures 49.55 units instead of 65.73 (24.6% shorter). This is a geometry
+  measurement, not a timed player-session or performance claim.
+- Arrival/return, both habitats, watchpost winch, checkpoint, enemy homes, boundary
+  collision, terrain bridge/pool and the citadel move together. Characters, movement
+  speeds, path widths and the 20x20 boss arena retain their original scale.
+- All nine onward passages have physics-verified complete routes. Their courtyard
+  paths exclude decorative tree collisions at the entrances. The rootway remains
+  a real, persistent shortcut with a shorter valid route after opening.
+- The six-by-six discovery grid now uses normalized cells over the new bounds.
+  Existing discovery IDs, saved checkpoint IDs, bonds, shortcuts and campaign flags
+  survive; players resume at the relocated safe checkpoint. No village layout or
+  forest RNG/fixture associations were changed.
+
+Final Windows / Godot 4.7.2 verification: canonical isolated gameplay **4,803 checks,
+PASS, exit 0**; actual-renderer focused reviews **68 checks, PASS, exit 0** at each
+of **1280x720** and **832x480**. All final gameplay/review logs contain no FAIL,
+SCRIPT ERROR or ERROR markers and their error logs are empty. Arrival, compact
+exploration map and full citadel framing were inspected in rendered captures.
+The import still reports the existing Android build-tools-directory warning;
+no Android export or physical-device performance claim is made. `git diff --check`
+passed. These results supersede the pre-compaction verification count above.
+
+## Sync integration: local village/HUD work + Twilight Wilds — 2026-10-29
+
+Merged upstream `928b913` (including `0d93b16`) with the five local commits through
+`78e3e38`. Both histories and their dated evidence are retained above. The HUD's
+layout capture excludes both the owned status strip and the full-screen wild-pet
+challenge. The canonical runner executes the status-strip, village-project and
+Twilight suites together. The eighth opening beat, first-arrival dock and grouped
+currency/status sections remain present alongside the unified exploration portal.
+
+Final merged-tree verification on Windows / Godot 4.7.2:
+
+- Canonical isolated gameplay: **5,729 checks, PASS**, exit 0, stderr empty.
+- Native Twilight review at **832×480**: **68 checks, PASS**, exit 0, stderr empty;
+  inspected the wild companion challenge and its full-size controls with the
+  grouped currency/local-monster panels still correctly positioned.
+- Native status-strip review: **136 checks, PASS**, exit 0, stderr empty, covering
+  day/threat views, GUI scaling, narrow shared panels and dungeon scope.
+- Isolated import passed; its existing Android build-tools-directory diagnostic
+  remains. No Android export or physical-phone claim is made.
+- Merge conflict markers and unmerged index entries are cleared, and staged
+  `git diff --check` passed. Normal player data was not used by these tests.
+
+This is a current combined-tree PASS; earlier branch-specific counts and the
+previous concurrent village-project draft failure remain historical records.
+Evidence: `sync-import.log`, `sync-gate.log`, `sync-twilight.log` and
+`status-1280x720-076ad725/` under
+`C:/Users/LUQMAN/.codex/visualizations/2026/10/29/01a1869c-c888-7723-b100-09df8dc6fb73/`.
+The full isolated gate logs are in
+`C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-85b0628541874320a9cd4e1400d4635b`;
+Twilight captures/logs are in
+`C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-b8870d4c68a14c35a2238ad462df8ff9`.

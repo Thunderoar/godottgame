@@ -127,8 +127,10 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(game.player().sleeping, "the indoor bed starts the existing sleep recovery")
 	game.player().cancel_sleep()
 	await game.leave_home()
-	GameState.start_expedition("tidebound_grotto")
-	game._load_dungeon("tidebound_grotto", false)
+	GameState.data.portals.sunken_crypt.unlocked = true
+	GameState.data.level = maxi(3,int(GameState.data.level))
+	GameState.start_expedition("sunken_crypt")
+	game._load_dungeon("sunken_crypt", false)
 	await game.get_tree().process_frame
 	await game.get_tree().process_frame
 	var dungeon := game.world as Dungeon
@@ -137,7 +139,7 @@ static func run(game: Game, check: Callable) -> void:
 	dungeon._physics_process(Dungeon.BOSS_ARRIVAL_SECONDS)
 	check.call(initial_distance > 15 and dungeon.boss.dungeon_alerted and dungeon.boss.active, "boss awakens and pursues without needing a close approach")
 	check.call(game.get_tree().get_nodes_in_group("dungeon_hazards").size() == 6, "portal contains six telegraphed rune traps")
-	check.call(Sfx.battle_track == "tidebound_grotto" and Sfx._music.playing and Sfx._music.stream.loop_mode == AudioStreamWAV.LOOP_FORWARD, "entering a monster portal starts looping battle music")
+	check.call(Sfx.battle_track == "sunken_crypt" and Sfx._music.playing and Sfx._music.stream.loop_mode == AudioStreamWAV.LOOP_FORWARD, "entering a monster portal starts looping battle music")
 	var trap: DungeonHazard = game.get_tree().get_first_node_in_group("dungeon_hazards")
 	dungeon.player.global_position = trap.global_position
 	dungeon.player.controls_locked = false
@@ -157,6 +159,13 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(game.hud.pet_battle_panel.start_battle("pet_duel_1") and Sfx.battle_track == "pet_duel_1", "pet portal starts its own battle track")
 	game.hud.pet_battle_panel.close_panel()
 	check.call(Sfx.battle_track.is_empty(), "closing a pet battle stops its music")
+	game.hud.pet_battle_panel.open_pet_battles()
+	await game.get_tree().process_frame
+	game.hud.pet_battle_panel.start_battle("pet_duel_1")
+	game.hud.pet_battle_panel._finish_battle(true)
+	check.call(Sfx.battle_track.is_empty(), "a resolved pet duel stops its track before the result screen closes")
+	game.hud.pet_battle_panel.close_panel()
+	check.call(Sfx.battle_track.is_empty(), "closing the completed duel result cannot leave its battle music playing")
 	GameState.data = snapshot
 	GameState._emit_all()
 	game._load_lobby(false)

@@ -130,6 +130,7 @@ func _make_default(character_id: String) -> Dictionary:
 		"settlement_layout": {},
 		"pet_battles": {},
 		"village_pets": [],
+		"realm_progress": {"cells": [], "landmarks": ["arrival"], "shortcut": false, "checkpoint": "arrival", "visit_active": false, "bonded": []},
 		"roof_guns": {},
 		"sea_cleaned": 0,
 		"forest_health": {},
@@ -153,6 +154,7 @@ func _make_default(character_id: String) -> Dictionary:
 
 
 func new_game(character_id: String = DEFAULT_CHARACTER) -> void:
+	_wild_session.clear()
 	journey_serial += 1
 	_project_work_frames.clear()
 	var carried_settings: Dictionary = (data.get("settings", {}) as Dictionary).duplicate(true)
@@ -573,7 +575,7 @@ func purchase_pet(pet_id: String) -> Dictionary:
 	if definition.is_empty():
 		return {"ok": false, "message": "Unknown companion."}
 	if definition.has("base_pet"):
-		return {"ok": false, "message": "Win this rival in the Pet Battle Portal first."}
+		return {"ok": false, "message": "Meet this companion in the Twilight Wilds." if RealmDB.ENCOUNTERS.has(pet_id) else "This companion cannot be purchased."}
 	if not get_pet(pet_id).is_empty():
 		return {"ok": false, "message": "That companion already lives with you."}
 	var cost := int(definition.get("cost", 0))
@@ -701,6 +703,113 @@ func feed_pet(pet_id: String) -> Dictionary:
 		"message": "%s gains %d pet XP." % [PetDB.name_of(str(pet.id)), amount],
 	}
 
+
+var _wild_session: Dictionary = {}
+var _wild_serial := 0
+
+func realm_progress() -> Dictionary:
+	return (data.get("realm_progress", {}) as Dictionary).duplicate(true)
+
+func _sanitize_realm_progress() -> void:
+	_wild_session.clear()
+	var raw: Variant = data.get("realm_progress", {})
+	var progress: Dictionary = raw if raw is Dictionary else {}
+	var clean := {"cells": [], "landmarks": ["arrival"], "shortcut": bool(progress.get("shortcut", false)), "checkpoint": "camp" if str(progress.get("checkpoint", "arrival")) == "camp" else "arrival", "visit_active": bool(progress.get("visit_active", false)), "bonded": []}
+	for key in ["cells", "landmarks", "bonded"]:
+		var values: Variant = progress.get(key, [])
+		if not values is Array: continue
+		for value in values:
+			var id := str(value)
+			var valid := false
+			if key == "cells":
+				for x in 6:
+					for y in 6:
+						if id == "%d:%d" % [x,y]: valid = true
+			elif key == "landmarks": valid = RealmDB.LANDMARKS.has(id)
+			else: valid = RealmDB.ENCOUNTERS.has(id)
+			if valid and id not in clean[key]: clean[key].append(id)
+	data.realm_progress = clean
+	var expedition: Variant = data.get("expedition", {})
+	if expedition is Dictionary and bool(expedition.get("active", false)) and str(expedition.get("portal_id", "")) == RealmDB.PORTAL:
+		data.realm_progress.visit_active = true # Old in-flight Portal 1 saves migrate into exploration.
+
+func discover_realm_at(at: Vector2) -> void:
+	var changed := false
+	var center := Vector2i(floori(at.x / RealmDB.CELL_SIZE.x), floori(at.y / RealmDB.CELL_SIZE.y))
+	for x in range(maxi(0,center.x-1), mini(6,center.x+2)):
+		for y in range(maxi(0,center.y-1), mini(6,center.y+2)):
+			var id := "%d:%d" % [x,y]
+			if id not in data.realm_progress.cells:
+				data.realm_progress.cells.append(id)
+				changed = true
+	if changed: _save_if_needed()
+
+func discover_realm_landmark(id: String) -> void:
+	if not RealmDB.LANDMARKS.has(id) or id in data.realm_progress.landmarks: return
+	data.realm_progress.landmarks.append(id)
+	_save_if_needed()
+
+func open_realm_shortcut() -> void:
+	if bool(data.realm_progress.shortcut): return
+	data.realm_progress.shortcut = true
+	_save_if_needed()
+	data_changed.emit()
+
+func set_realm_checkpoint(id: String) -> void:
+	if id not in ["arrival", "camp"]: return
+	data.realm_progress.checkpoint = id
+	_save_if_needed()
+
+func finish_realm_rest() -> void:
+	data.hp = health_max()
+	revive_active_pet()
+	_save_if_needed()
+	data_changed.emit()
+	pet_changed.emit()
+
+func end_realm_visit() -> void:
+	_wild_session.clear()
+	data.realm_progress.visit_active = false
+	_save_if_needed()
+
+func realm_pet_bonded(id: String) -> bool:
+	return id in (data.get("realm_progress", {}) as Dictionary).get("bonded", []) or not get_pet(id).is_empty()
+
+func wild_encounter_reason(id: String) -> Dictionary:
+	if not RealmDB.ENCOUNTERS.has(id): return {"ok": false, "reason": "Unknown habitat."}
+	if not bool(data.realm_progress.visit_active) or health() <= 0: return {"ok": false, "reason": "Visit the Twilight Wilds first."}
+	if not has_living_pet(): return {"ok": false, "reason": "Your companion needs rest. Return home or visit the citadel lantern."}
+	return {"ok": true, "reason": ""}
+
+func begin_wild_encounter(id: String) -> int:
+	if not bool(wild_encounter_reason(id).ok) or not _wild_session.is_empty(): return 0
+	_wild_serial += 1
+	_wild_session = {"token": _wild_serial, "id": id, "pet": active_pet_id(), "journey": journey_serial}
+	return _wild_serial
+
+func cancel_wild_encounter(token: int) -> void:
+	if int(_wild_session.get("token", 0)) == token: _wild_session.clear()
+
+func complete_wild_encounter(token: int) -> Dictionary:
+	if _wild_session.is_empty() or int(_wild_session.token) != token or int(_wild_session.journey) != journey_serial or not bool(data.realm_progress.visit_active):
+		return {"ok": false, "message": "This challenge has ended."}
+	var id := str(_wild_session.id)
+	var participant := get_pet(str(_wild_session.pet))
+	_wild_session.clear() # Consume before signals/rebuilds can call back.
+	if participant.is_empty(): return {"ok": false, "message": "Your companion is unavailable."}
+	var first := not realm_pet_bonded(id)
+	var def: Dictionary = RealmDB.ENCOUNTERS[id]
+	var gold_reward := int(def.gold) if first else 0
+	var xp_reward := int(def.xp) if first else 0
+	if first:
+		data.gold = gold() + gold_reward
+		_give_pet_xp(participant, xp_reward)
+		_recruit_duel_pet(str(def.duel), false)
+	if id not in data.realm_progress.bonded: data.realm_progress.bonded.append(id)
+	_save_if_needed()
+	data_changed.emit()
+	pet_changed.emit()
+	return {"ok": true, "first": first, "gold": gold_reward, "xp": xp_reward, "message": "%s bonds with you. +%d Gold · +%d companion XP" % [str(def.name),gold_reward,xp_reward] if first else "A friendly spar. Your bond is already safe; no repeat rewards."}
 
 func pet_battle_state(level_id: String) -> Dictionary:
 	var cleared_map: Dictionary = data.get("pet_battles", {})
@@ -1058,6 +1167,7 @@ func can_enter_portal(portal_id: String) -> bool:
 func start_expedition(portal_id: String) -> bool:
 	if not can_enter_portal(portal_id):
 		return false
+	data.realm_progress.visit_active = portal_id == RealmDB.PORTAL
 	var state := portal_state(portal_id)
 	state.attempts = int(state.get("attempts", 0)) + 1
 	data.portals[portal_id] = state
@@ -1208,6 +1318,7 @@ func complete_portal(portal_id: String) -> Dictionary:
 
 
 func defeat_in_portal() -> void:
+	data.realm_progress.visit_active = false
 	data.deaths = int(data.get("deaths", 0)) + 1
 	lose_expedition_loot()
 	data.shield = 0
@@ -1222,6 +1333,7 @@ func defeat_in_portal() -> void:
 
 
 func leave_portal_safely() -> Dictionary:
+	data.realm_progress.visit_active = false
 	var banked := bank_expedition_loot()
 	_save_if_needed()
 	return banked
@@ -1387,13 +1499,13 @@ func objective_lines() -> Array[String]:
 		var portal_id := expedition_portal()
 		out.append("Defeat %s" % str(PortalDB.get_portal(portal_id).get("boss_name", "the boss")))
 	elif not bool(portal_state("tidebound_grotto").get("cleared", false)):
-		out.append("Enter the Tidebound Grotto")
+		out.append("Explore Twilight Wilds through the Dimension Portal")
 	else:
-		out.append("Explore the Sunken Crypt")
+		out.append("Explore the onward passages beyond Chaos Citadel")
 	if house_level() < HouseDB.max_level():
 		out.append("Upgrade the cottage")
 	if not bool(pet_battle_state("pet_duel_1").get("cleared", false)):
-		out.append("Challenge the Pet Battle Portal")
+		out.append("Discover the wild companions of Twilight Wilds")
 	return out.slice(0, 1)
 
 
@@ -1486,6 +1598,7 @@ func _merge(base: Dictionary, incoming: Dictionary) -> Dictionary:
 
 
 func _sanitize() -> void:
+	_sanitize_realm_progress()
 	_sanitize_campaign()
 	_sanitize_village_progression()
 	# Mana was retired; legacy saves keep all remaining progression.
