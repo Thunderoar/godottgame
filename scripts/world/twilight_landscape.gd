@@ -3,7 +3,7 @@ extends RefCounted
 ## Deterministic realm terrain; decorative randomness never touches Lobby RNG.
 
 static func terrain(restored: bool) -> Texture2D:
-	return PixelArt.cached_texture("twilight_terrain_v2_%s" % restored, func() -> Image:
+	return PixelArt.cached_texture("twilight_terrain_v3_%s" % restored, func() -> Image:
 		var img := PixelArt.image(int(RealmDB.SIZE.x * 12), int(RealmDB.SIZE.y * 12))
 		img.fill(Color("#334d49") if restored else Color("#303a49"))
 		var rng := RandomNumberGenerator.new()
@@ -16,8 +16,10 @@ static func terrain(restored: bool) -> Texture2D:
 			var p := Vector2(rng.randf_range(4, RealmDB.SIZE.x-4), rng.randf_range(4, RealmDB.SIZE.y-4))
 			if RealmDB.path_distance(p) > 5:
 				PixelArt.ellipse(img, int(p.x * 12), int(p.y * 12), 36, 24, Color("#293e3e") if restored else Color("#292f43"))
+		var paths: Array = RealmDB.PATHS.duplicate()
+		paths.append(RealmContentDB.HOLLOW_PATH)
 		for edge in [true, false]:
-			for path in RealmDB.PATHS:
+			for path in paths:
 				for j in range(1, path.size()):
 					var a: Vector2 = path[j - 1] * 12
 					var b: Vector2 = path[j] * 12
@@ -25,6 +27,11 @@ static func terrain(restored: bool) -> Texture2D:
 					for i in steps + 1:
 						var p := a.lerp(b, float(i) / steps)
 						PixelArt.ellipse(img, int(p.x), int(p.y), 35 if edge else 27, 30 if edge else 23, Color("#55565e") if edge else Color("#787077"))
+		for def in RealmDB.ENCOUNTERS.values():
+			var p: Vector2 = def.at * 12
+			PixelArt.ellipse(img,int(p.x),int(p.y),46,36,Color("#656278"))
+			PixelArt.ellipse_outline(img,int(p.x),int(p.y),47,37,Color("#9792a3"))
+		PixelArt.ellipse(img,96,288,31,24,Color("#575367"))
 		# A shallow runnel crosses under the old stone footbridge.
 		for x in range(36, img.get_width()-36):
 			var y := 480 + int(sin(float(x) / 95) * 13)
@@ -47,7 +54,7 @@ static func decorate(world: Node2D) -> void:
 	rng.seed = 340912
 	for i in 110:
 		var p := Vector2(rng.randf_range(3, RealmDB.SIZE.x-3), rng.randf_range(5, RealmDB.SIZE.y-3))
-		if RealmDB.path_distance(p) < 4.4 or p.distance_to(RealmDB.BOSS) < 11: continue
+		if RealmDB.path_distance(p) < 4.4 or p.distance_to(RealmDB.BOSS) < 11 or RealmContentDB.reserved(p): continue
 		var tree := Sprite2D.new()
 		tree.texture = PixelArt.authored_tree_texture()
 		tree.position = p + Vector2(0, -1.9)
@@ -76,3 +83,19 @@ static func decorate(world: Node2D) -> void:
 				stone.color = Color("#9a8b91")
 				stone.z_index = -1
 				world.add_child(stone)
+	# Clues sit outside the duel floor; none creates a new collision or rule.
+	for at in [Vector2(29,36),Vector2(20,34),Vector2(15,35)]: _prop(world,"tracks",at)
+	for at in [Vector2(39,32),Vector2(43,32.8),Vector2(49.1,28.5),Vector2(42,22.8),Vector2(49.1,24.5)]: _prop(world,"bloom",at)
+	_prop(world,"trunk",Vector2(7,33))
+	_prop(world,"trunk",Vector2(17,33))
+	_prop(world,"sign",Vector2(14.5,26.5))
+	for at in [Vector2(12,25.6),Vector2(10,24.8)]: _prop(world,"bloom",at)
+
+static func _prop(world: Node2D, kind: String, at: Vector2) -> void:
+	var prop := Sprite2D.new()
+	prop.texture = RealmContentArt.texture(kind)
+	prop.position = at + Vector2(0,-0.65)
+	prop.scale = Vector2.ONE * PixelArt.PX * 1.25
+	prop.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	prop.set_meta("realm_prop", kind)
+	world.add_child(prop)

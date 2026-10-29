@@ -113,6 +113,7 @@ func _make_default(character_id: String) -> Dictionary:
 		"expedition": {
 			"active": false,
 			"portal_id": "",
+			"pending_caches": [],
 			"gold": 0,
 			"diamonds": 0,
 			"items": {},
@@ -127,7 +128,7 @@ func _make_default(character_id: String) -> Dictionary:
 		"settlement_layout": {},
 		"pet_battles": {},
 		"village_pets": [],
-		"realm_progress": {"cells": [], "landmarks": ["arrival"], "shortcut": false, "checkpoint": "arrival", "visit_active": false, "bonded": []},
+		"realm_progress": {"cells": [], "landmarks": ["arrival"], "shortcut": false, "checkpoint": "arrival", "visit_active": false, "bonded": [], "waykeeper_met": false, "discovered_content": [], "read_fragments": [], "banked_caches": []},
 		"roof_guns": {},
 		"sea_cleaned": 0,
 		"forest_health": {},
@@ -707,8 +708,8 @@ func _sanitize_realm_progress() -> void:
 	_wild_session.clear()
 	var raw: Variant = data.get("realm_progress", {})
 	var progress: Dictionary = raw if raw is Dictionary else {}
-	var clean := {"cells": [], "landmarks": ["arrival"], "shortcut": bool(progress.get("shortcut", false)), "checkpoint": "camp" if str(progress.get("checkpoint", "arrival")) == "camp" else "arrival", "visit_active": bool(progress.get("visit_active", false)), "bonded": []}
-	for key in ["cells", "landmarks", "bonded"]:
+	var clean := {"cells": [], "landmarks": ["arrival"], "shortcut": bool(progress.get("shortcut", false)), "checkpoint": "camp" if str(progress.get("checkpoint", "arrival")) == "camp" else "arrival", "visit_active": bool(progress.get("visit_active", false)), "bonded": [], "waykeeper_met": bool(progress.get("waykeeper_met", false)), "discovered_content": [], "read_fragments": [], "banked_caches": []}
+	for key in ["cells", "landmarks", "bonded", "discovered_content", "read_fragments", "banked_caches"]:
 		var values: Variant = progress.get(key, [])
 		if not values is Array: continue
 		for value in values:
@@ -719,12 +720,23 @@ func _sanitize_realm_progress() -> void:
 					for y in 6:
 						if id == "%d:%d" % [x,y]: valid = true
 			elif key == "landmarks": valid = RealmDB.LANDMARKS.has(id)
+			elif key == "discovered_content": valid = RealmContentDB.INTERESTS.has(id)
+			elif key == "read_fragments": valid = id in RealmContentDB.FRAGMENTS
+			elif key == "banked_caches": valid = id == RealmContentDB.CACHE
 			else: valid = RealmDB.ENCOUNTERS.has(id)
 			if valid and id not in clean[key]: clean[key].append(id)
+	for id in clean.read_fragments:
+		if id not in clean.discovered_content: clean.discovered_content.append(id)
+	if clean.waykeeper_met and RealmContentDB.WAYKEEPER not in clean.discovered_content: clean.discovered_content.append(RealmContentDB.WAYKEEPER)
 	data.realm_progress = clean
 	var expedition: Variant = data.get("expedition", {})
 	if expedition is Dictionary and bool(expedition.get("active", false)) and str(expedition.get("portal_id", "")) == RealmDB.PORTAL:
 		data.realm_progress.visit_active = true # Old in-flight Portal 1 saves migrate into exploration.
+	var pending: Variant = expedition.get("pending_caches", []) if expedition is Dictionary else []
+	var valid_pending: Array = []
+	if pending is Array and expedition_active() and expedition_portal() == RealmDB.PORTAL:
+		if RealmContentDB.CACHE in pending and RealmContentDB.CACHE not in clean.banked_caches: valid_pending.append(RealmContentDB.CACHE)
+	if expedition is Dictionary: data.expedition.pending_caches = valid_pending
 
 func discover_realm_at(at: Vector2) -> void:
 	var changed := false
@@ -768,9 +780,56 @@ func end_realm_visit() -> void:
 func realm_pet_bonded(id: String) -> bool:
 	return id in (data.get("realm_progress", {}) as Dictionary).get("bonded", []) or not get_pet(id).is_empty()
 
+func discover_realm_content(id: String) -> void:
+	if not bool(data.realm_progress.visit_active) or not RealmContentDB.INTERESTS.has(id) or id in data.realm_progress.discovered_content: return
+	data.realm_progress.discovered_content.append(id)
+	_save_if_needed()
+
+func meet_realm_waykeeper() -> void:
+	if not bool(data.realm_progress.visit_active) or bool(data.realm_progress.waykeeper_met): return
+	data.realm_progress.waykeeper_met = true
+	if RealmContentDB.WAYKEEPER not in data.realm_progress.discovered_content: data.realm_progress.discovered_content.append(RealmContentDB.WAYKEEPER)
+	_save_if_needed()
+	data_changed.emit()
+
+func read_realm_fragment(id: String) -> bool:
+	if not bool(data.realm_progress.visit_active) or id not in RealmContentDB.FRAGMENTS: return false
+	if id in data.realm_progress.read_fragments: return true
+	data.realm_progress.read_fragments.append(id)
+	if id not in data.realm_progress.discovered_content: data.realm_progress.discovered_content.append(id)
+	_save_if_needed()
+	data_changed.emit()
+	return true
+
+func realm_cache_opened(id: String) -> bool:
+	return id in data.realm_progress.banked_caches or id in data.expedition.get("pending_caches", [])
+
+func claim_realm_cache(id: String) -> Dictionary:
+	if id != RealmContentDB.CACHE or not bool(data.realm_progress.visit_active) or health() <= 0:
+		return {"ok": false, "message": "The hollow waits in Twilight Wilds."}
+	if realm_cache_opened(id): return {"ok": false, "message": "The hollow is empty. Its little gift has already been found."}
+	var restored := bool(portal_state(RealmDB.PORTAL).get("cleared", false))
+	if not restored and (not expedition_active() or expedition_portal() != RealmDB.PORTAL):
+		return {"ok": false, "message": "Begin a Twilight expedition before carrying this gift."}
+	# Commit the reward and its ownership together, before any signal or animation.
+	if restored:
+		data.gold = gold() + RealmContentDB.CACHE_GOLD
+		data.realm_progress.banked_caches.append(id)
+	else:
+		data.expedition.gold = int(data.expedition.get("gold", 0)) + RealmContentDB.CACHE_GOLD
+		var pending: Array = data.expedition.get("pending_caches", [])
+		pending.append(id)
+		data.expedition.pending_caches = pending
+	if id not in data.realm_progress.discovered_content: data.realm_progress.discovered_content.append(id)
+	_save_if_needed()
+	data_changed.emit()
+	expedition_changed.emit()
+	return {"ok": true, "message": "25 Gold banked. The restored road keeps your gift safe." if restored else "25 Gold carried — return through the rift to bank it. Defeat loses carried loot."}
+
 func wild_encounter_reason(id: String) -> Dictionary:
 	if not RealmDB.ENCOUNTERS.has(id): return {"ok": false, "reason": "Unknown habitat."}
 	if not bool(data.realm_progress.visit_active) or health() <= 0: return {"ok": false, "reason": "Visit the Twilight Wilds first."}
+	if active_pet_id() == id: return {"ok": false, "reason": "Your companion already shares this clearing."}
 	if not has_living_pet(): return {"ok": false, "reason": "Your companion needs rest. Return home or visit the citadel lantern."}
 	return {"ok": true, "reason": ""}
 
@@ -1164,6 +1223,7 @@ func start_expedition(portal_id: String) -> bool:
 	data.expedition = {
 		"active": true,
 		"portal_id": portal_id,
+		"pending_caches": [],
 		"gold": 0,
 		"diamonds": 0,
 		"items": {},
@@ -1228,6 +1288,8 @@ func bank_expedition_loot() -> Dictionary:
 	data.diamonds = diamonds() + gained_diamonds
 	for id in items:
 		add_item(str(id), int(items[id]), false)
+	for id in exp.get("pending_caches", []):
+		if id == RealmContentDB.CACHE and id not in data.realm_progress.banked_caches: data.realm_progress.banked_caches.append(id)
 	_clear_expedition()
 	_save_if_needed()
 	data_changed.emit()
@@ -1248,6 +1310,7 @@ func _clear_expedition() -> void:
 	data.expedition = {
 		"active": false,
 		"portal_id": "",
+		"pending_caches": [],
 		"gold": 0,
 		"diamonds": 0,
 		"items": {},

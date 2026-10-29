@@ -89,6 +89,10 @@ func map_icons(world: Node2D) -> Array[Dictionary]:
 	elif world is TwilightRealm:
 		icons.append({"id": "exit", "position": RealmDB.RETURN_RIFT, "texture": PixelArt.portal_texture(RealmDB.PORTAL), "priority": 3, "theme": ""})
 		var progress := GameState.realm_progress()
+		for id in progress.get("discovered_content", []):
+			if not RealmContentDB.INTERESTS.has(id): continue
+			var interest: Dictionary = RealmContentDB.INTERESTS[id]
+			icons.append({"id": id, "position": interest.at, "texture": RealmContentArt.texture(str(interest.kind)), "priority": 1, "theme": ""})
 		for id in RealmDB.ENCOUNTERS:
 			var at: Vector2 = RealmDB.ENCOUNTERS[id].at
 			if RealmDB.cell_id(at) in progress.cells:

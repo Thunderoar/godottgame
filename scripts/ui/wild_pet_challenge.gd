@@ -78,12 +78,13 @@ func open_challenge(owner_world: TwilightRealm, wild: RealmInteractable) -> void
 	_resolved = false
 	_saved = {"mode": realm.process_mode, "player": realm.player.position, "pet": realm.pet.position, "wild": wild.position, "camera": realm.camera.position, "zoom": realm.camera.zoom, "camera_mode": realm.camera.process_mode}
 	realm.process_mode = Node.PROCESS_MODE_DISABLED
-	realm.player.position = wild.position + Vector2(0, 3.0)
-	realm.pet.position = wild.position + Vector2(-2.2, 0.7)
-	wild.position += Vector2(2.2, 0.7)
+	var habitat: Vector2 = RealmDB.ENCOUNTERS[wild.stable_id].at
+	realm.player.position = habitat + Vector2(0, 3.0)
+	realm.pet.position = habitat + Vector2(-2.2, 0.7)
+	wild.position = habitat + Vector2(2.2, 0.7)
 	wild.label.visible = false
 	if is_instance_valid(wild.marker): wild.marker.visible = false
-	realm.camera.position = _saved.wild + Vector2(0, 1.1)
+	realm.camera.position = habitat + Vector2(0, 1.1)
 	realm.camera.zoom = Vector2.ONE * minf(70, get_viewport_rect().size.x / 12.5)
 	realm.camera.reset_physics_interpolation()
 	var hud := get_tree().get_first_node_in_group("hud") as GameHUD

@@ -14,6 +14,16 @@ func _ready() -> void:
 func _draw() -> void:
 	var left_width := size.x * 0.30
 	draw_style_box(GameUI.style(Color("#ecdfbc"), Color("#9c8055"), 2, 0), Rect2(Vector2.ZERO, size))
+	if bool(entry.get("memory_journal", false)):
+		var read: Array = GameState.realm_progress().get("read_fragments", [])
+		for i in RealmContentDB.FRAGMENTS.size():
+			var at := Vector2(size.x * (float(i) + 0.5) / 3.0, size.y * 0.5)
+			var texture := RealmContentArt.texture("memory")
+			var dimensions := texture.get_size() * minf(76, size.y - 16) / texture.get_height()
+			var found: bool = RealmContentDB.FRAGMENTS[i] in read
+			draw_texture_rect(texture, Rect2(at - dimensions / 2, dimensions), false, Color.WHITE if found else Color("#667180"))
+			if found: draw_circle(at + Vector2(0, size.y * 0.36), 3, Color("#9e7846"))
+		return
 	draw_line(Vector2(left_width, 14), Vector2(left_width, size.y - 14), Color("#b69a70"), 3)
 	_picture(str(entry.get("actor", "npc:resident")), Vector2(left_width * 0.5, size.y * 0.49), minf(124, left_width - 35))
 	var rows: Array = entry.get("rows", [])

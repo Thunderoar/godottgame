@@ -67,6 +67,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 			var path := routes.path(RealmDB.CAMP,place.position,false)
 			check.call(not path.is_empty() and path[-1].distance_to(place.position) < 0.1, "compact layout preserves a complete route to %s" % place.caption)
 	var cat := realm.wildlife.bramble_cat as RealmInteractable
+	await preload("res://tools/realm_life_checks.gd").run(game, realm, check, capture)
 	realm.player.position = cat.position + Vector2(0,2)
 	realm.survey()
 	check.call(bool(GameState.wild_encounter_reason("bramble_cat").ok) and int(GameState.get_active_pet().level) == 1, "starter Ember can challenge the cat without tournament clears or paid levels")
@@ -174,6 +175,10 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	realm.player.set_physics_process(false)
 	realm.pet.set_physics_process(false)
 	check.call(realm.player.position.distance_to(RealmDB.CAMP) < 0.1 and not realm._boss_arrived, "Continue reconstruction uses the safe checkpoint and resets unfinished boss")
+	var hollow := realm.interests[RealmContentDB.CACHE] as RealmInterest
+	realm.player.position = hollow.position + Vector2(0,1.8)
+	hollow.interact(realm.player)
+	check.call(RealmContentDB.CACHE in GameState.expedition_loot().get("pending_caches", []), "an actual hollow interaction carries its pending gift toward citadel victory")
 	realm.player.position = RealmDB.BOSS_THRESHOLD
 	realm._physics_process(0.1)
 	check.call(realm._boss_arrived and realm.boss.active and Sfx.battle_track == RealmDB.PORTAL, "crossing the citadel threshold activates the boss and battle track")
@@ -199,6 +204,21 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(bool(GameState.realm_progress().visit_active) and not GameState.expedition_active() and not realm.player.controls_locked, "post-victory exploration has explicit saved presence after loot is banked")
 	check.call(bool(GameState.portal_state("sunken_crypt").unlocked) and not bool(GameState.campaign().mei_ling_rescued), "first dimension victory preserves later progression and separate final rescue")
 	check.call(GameState.realm_pet_bonded("bramble_cat") and not GameState.get_pet("luma").is_empty(), "wild bonds and the distinct legacy boss reward coexist")
+	check.call(RealmContentDB.CACHE in GameState.realm_progress().banked_caches and not bool(GameState.claim_realm_cache(RealmContentDB.CACHE).ok), "actual boss victory banks the hollow's pending claim without a duplicate payout")
+	var stone := realm.interests.memory_road_lights as RealmInterest
+	realm.player.position = stone.position + Vector2(0,1.6)
+	stone.interact(realm.player)
+	check.call(realm._reading_panel.visible and RealmContentDB.FRAGMENTS[0] in GameState.realm_progress().read_fragments, "memories can be read immediately after victory without reloading the restored world")
+	var keeper := realm.interests.waykeeper as RealmInterest
+	realm.player.position = keeper.position + Vector2(0,2)
+	keeper.interact(realm.player)
+	check.call(realm._reading_text.text.contains("breathing again"), "Waykeeper recognizes restoration in the same continuous visit")
+	realm.close_reading()
+	cat = realm.wildlife.bramble_cat
+	realm.player.position = cat.position + Vector2(0,2)
+	cat.interact(realm.player)
+	check.call(game.hud.wild_challenge.visible, "friendly habitats become available immediately after boss victory")
+	game.hud.wild_challenge.close_panel()
 	GameState.save_game()
 	check.call(GameState.load_game() and bool(GameState.realm_progress().visit_active), "safe post-boss presence survives reload")
 	await game._load_dungeon(RealmDB.PORTAL,false)

@@ -19,6 +19,10 @@ The realm uses its own twilight grade while the shared day/night clock continues
 
 ## Wild companions
 
+Bramble Cat rests, sniffs and walks a small three-stop circuit beside scratched timber. Dusk Moth flutters between nearby perches and moonblooms. Pawprints and pale flowers mark their approaches. Both notice Adam and stop when he comes close, so neither requires chasing or waiting. Reduce Motion holds a stable home pose. Their patrol clocks and positions are temporary; map icons remain at the habitat anchors.
+
+Each habitat reserves an 8x7 staging area before decorative trees are placed. A challenge uses that fixed floor and restores the pet's actual previous patrol position afterward. Bringing the same species as the active companion replaces the wild double with a resting bond wreath; interacting there gives a peaceful caption rather than a self-duel. Other companions can still take a reward-free friendly spar.
+
 Approach and tap a wild pet, or use E, to challenge it in its habitat. Starter Ember can challenge either animal without clearing old tournament duels or buying levels. Adam watches while his companion faces the rival in the clearing; Attack, Shield and Special are manual choices. The rival replies after the player's action. There is no forced player timeout.
 
 - **Bramble Cat:** 30 arena HP, 4 base damage; favors aggressive powers. As a companion it attacks more strongly and more often than the moth.
@@ -29,6 +33,16 @@ The world and its combat timers suspend during an accepted challenge, including 
 A first win immediately commits the bond and companion/village-guardian ownership. The cat pays 25 Gold and 50 participant XP; the moth pays 35 Gold and 65 participant XP. Already-owned pets and friendly repeat spars pay no rewards or guaranteed levels. Rewards belong to the companion that entered the challenge. Losing or leaving changes no saved arena HP and grants no rewards. Normal first-win XP can still heal a companion through level-up. Later expedition defeat cannot erase a bonded pet.
 
 ## Saves and outcomes
+
+The optional Waykeeper, Wisp, waits beside Arrival Glade. E or a nearby direct tap opens a short, non-pausing caption. His words recognize memories, bonds and the restored citadel. Meeting him gives no currency, recruitment or campaign objective.
+
+Three weathered stones preserve **The Road That Shone**, **When the Bells Fell Silent**, and **A Light Below the Throne**. They can be read in any order, before or after victory. Reading commits immediately and adds the complete text to **Menu → Field Guide → Story & Sea → Memories of Twilight**. Unknown slots conceal titles and text. Re-reading pays no XP or Gold. Captions own their text independently of landmark hints, have a touch Close button, and dismiss on walking away; they never lock movement or pause the world.
+
+The Rootway Hollow is a small northern pocket at (8,24), reached by the short optional spur from the existing rootway. The world remains **56x52** and the original main road remains **49.55 units**. A bent road marker and moonblooms mark the spur. The pocket can also be reached from the northern approach before opening the winch; the winch still shortens the grove route. No invisible shortcut prerequisite gates the cache. Nearby interactions require a clear physics line to the hollow, preventing E/touch through a wall.
+
+Its single gift is **25 Gold per journey**. In an uncleared realm, opening commits Gold to expedition loot and records a pending cache ID together. Reload keeps it opened without paying again. Banking transfers the claim into the permanent journey ledger alongside the Gold; defeat discards the pending claim with the lost loot and permits a retry. In a restored realm the gift banks immediately, whether the visit has an active expedition or is already post-victory. Opened art loses its glint. Discovery markers appear only after the actual interest is approached with a clear view, rather than merely revealing its map cell.
+
+New saved fields are `realm_progress.waykeeper_met`, `discovered_content`, `read_fragments`, `banked_caches`, and `expedition.pending_caches`. Defaults and sanitization accept old saves, reject unknown/duplicate IDs and reconcile pending claims already banked. All production writes stay in GameState; ambient motion never writes saves.
 
 `GameState.realm_progress` owns discovered cells on a normalized 6x6 map grid, landmarks, shortcut status, a stable checkpoint ID, bonded encounter IDs and saved realm presence. Unknown destinations sanitize to Arrival Glade. Old saves with an active first-portal expedition migrate to the new realm safely. Existing owned pets and cleared duel recruits remain owned.
 
@@ -47,12 +61,15 @@ This is the complete first exploration slice. The proposed three-dimension campa
 ## Ownership and verification
 
 - `RealmDB`: authored paths, landmarks, habitat definitions and checkpoint positions.
+- `RealmContentDB`: stable optional-content IDs, words, locations, reservations and journal slots.
+- `RealmContentArt`: reproducible pixel art for Wisp, stones, hollow and habitat clues.
+- `RealmWildPet` / `RealmInterest`: temporary pet routines and guarded optional interactions.
 - `TwilightLandscape`: deterministic terrain/decor; independent from village RNG.
 - `TwilightRealm`: world construction, local encounters, threshold/reset, shortcut and victory.
 - `RealmInteractable`: nearby direct tap/E routes with current-world guards.
 - `PetDuel`: presentation-free manual rules; `WildPetChallenge`: protected world staging and screen controls.
 - `GameState`: all durable progression and one-time token-guarded reward transactions.
 
-`tools/twilight_checks.gd` runs both inside the canonical isolated gameplay suite and via `tools/twilight_test.tscn`. The focused scene accepts `-- --capture` under an isolated actual renderer and writes screenshots to `TIDESWORN_TEST_ROOT`. Tests must use the same environment isolation as the canonical wrapper. See the newest Twilight section in `ACCEPTANCE_TESTS.md` for recorded evidence; older reports are historical.
+`tools/twilight_checks.gd` runs both inside the canonical isolated gameplay suite and via `tools/twilight_test.tscn`, including `tools/realm_life_checks.gd` for the first expansion. The focused scene accepts `-- --capture` under an isolated actual renderer and writes screenshots to `TIDESWORN_TEST_ROOT`. Tests must use the same environment isolation as the canonical wrapper. See the newest Twilight section in `ACCEPTANCE_TESTS.md` for recorded evidence; older reports are historical.
 
 Windows review: use the canonical isolated wrapper with -Twilight, optionally -Capture -Resolution 832x480 or 1280x720. It prints the external evidence directory and rejects incomplete/error-bearing runs.

@@ -1231,3 +1231,53 @@ exploration map and full citadel framing were inspected in rendered captures.
 The import still reports the existing Android build-tools-directory warning;
 no Android export or physical-device performance claim is made. `git diff --check`
 passed. These results supersede the pre-compaction verification count above.
+
+## Living Twilight Wilds — first expansion (2026-10-29)
+
+- The map remains 56x52 and its main road remains 49.55 units. One short optional
+  spur leads to a 5x4 hollow pocket; no village forest identities or RNG change.
+  Physics routes reach all five new interests, with or without first opening the winch.
+- Bramble Cat rests/sniffs/walks a small circuit; Dusk Moth flutters between nearby
+  perches. Both stop and notice nearby Adam instead of fleeing. Consecutive movement
+  samples verify slow, bounded steps. Reduce Motion uses a stable home pose.
+  Pawprints, scratched timber, moonblooms and a bent marker remain static clues.
+- Both habitats reserve an 8x7 tree-free duel floor. Actual injected screen taps
+  challenge the moving animals. Staging uses fixed habitat anchors and cancellation
+  restores the exact prior patrol positions. Existing protected manual duel and
+  Settings/world-replacement checks continue. Bringing the same companion replaces
+  the duplicate wild animal with a peaceful bond wreath; the API rejects self-duels.
+- Wisp, the optional Waykeeper, has short context-sensitive lines for discoveries,
+  bonds, all memories and restoration. E/tap never forces a quest or pauses the world.
+- Exactly three stable memory IDs can be read in any order and re-read without
+  currency/XP. The Field Guide appends Memories of Twilight after its existing five
+  Story & Sea pages. Unknown slots conceal titles/text; read slots retain full words.
+  Actual touch reads the stones and closes their owned caption. Landmark surveys
+  cannot replace its text. Walking away dismisses it. It fits both reviewed sizes.
+- The hollow gives exactly 25 Gold once per journey. Uncleared visits save carried
+  Gold and a pending claim together; reload cannot repay. Defeat loses both and
+  reopens the hollow while preserving knowledge. Banking and actual boss victory
+  transfer its claim to the permanent ledger with the reward. A restored hollow
+  banks immediately with or without an active expedition. Empty art loses its glint.
+- Proximity alone cannot open the hollow through a physics wall, through either
+  E or actual touch. Interest map markers require nearby discovery and clear view;
+  revealing a terrain cell alone does not expose the cache.
+- Defaults/sanitization handle old saves, unknown/duplicate content IDs, non-array
+  records and pending claims already banked. Ambient states never write saves.
+  All mutations remain in GameState. Campaign rescues and rewards retain their rules.
+- Victory releases the encounter-active flag immediately, so memories, the Waykeeper,
+  camp and friendly challenges work in the same restored visit without reloading.
+
+Coverage lives in `tools/realm_life_checks.gd` and `tools/twilight_checks.gd`, invoked
+by the canonical `tools/tide_test.gd` gate and the isolated focused scene. Native
+captures also cover the two habitats, Waykeeper, memory caption, journal and hollow
+alongside the existing arrival/duel/citadel/restoration/map review frames.
+
+Final verification on **native Windows / Godot 4.7.2**: canonical isolated gameplay
+**4,858 checks, PASS, exit 0**; Compatibility/OpenGL rendered focused reviews
+**123 checks, PASS, exit 0** at each of **1280x720** and **832x480**. The final
+gameplay and review logs contain no FAIL, SCRIPT ERROR or ERROR markers, and their
+error logs are empty. Captures were inspected for both habitats, caption/journal
+legibility, hollow, discovered map, challenge controls and full citadel framing.
+`git diff --check` passed. The isolated import retains the existing Android
+build-tools-directory warning; no Android export or physical-phone validation is
+claimed. These results supersede the earlier compact-realm counts above.

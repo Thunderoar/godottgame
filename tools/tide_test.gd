@@ -159,6 +159,7 @@ func _ready() -> void:
 	await preload("res://tools/elemental_checks.gd").run(game, _check)
 	# Includes authored-size combat poses and interrupted tween regression checks.
 	await preload("res://tools/presentation_checks.gd").run(game, _check)
+	# Compact realm coverage includes living habitats, Waykeeper, memories and cache transactions.
 	await preload("res://tools/twilight_checks.gd").run(game, _check)
 	await _test_forest_game_over()
 

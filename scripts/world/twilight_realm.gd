@@ -15,6 +15,11 @@ var _landmark := "arrival"
 var _camp: RealmInteractable
 var _camp_resting := false
 var _camp_timer := 0.0
+var interests: Dictionary = {}
+var _reading_panel: PanelContainer
+var _reading_title: Label
+var _reading_text: Label
+var _reading_origin := Vector2.ZERO
 
 func _ready() -> void:
 	portal_id = RealmDB.PORTAL
@@ -86,7 +91,7 @@ func _build_realm_bounds() -> void:
 	if GameState.realm_progress().shortcut: _shortcut_body.queue_free()
 
 func _place(kind: String, id: String, at: Vector2, title: String) -> RealmInteractable:
-	var item := RealmInteractable.new()
+	var item: RealmInteractable = RealmWildPet.new() if kind == "pet" else RealmInteractable.new()
 	item.kind = kind
 	item.stable_id = id
 	item.position = at
@@ -101,6 +106,15 @@ func _build_places() -> void:
 	for id in RealmDB.ENCOUNTERS:
 		var def: Dictionary = RealmDB.ENCOUNTERS[id]
 		wildlife[id] = _place("pet", id, def.at, def.name)
+	for id in RealmContentDB.INTERESTS:
+		var def: Dictionary = RealmContentDB.INTERESTS[id]
+		var interest := RealmInterest.new()
+		interest.kind = str(def.kind)
+		interest.stable_id = id
+		interest.caption = str(def.name)
+		interest.position = def.at
+		add_child(interest)
+		interests[id] = interest
 	# Physical legacy echoes preserve existing progression until later realms are authored.
 	var ids := PortalDB.ordered_ids()
 	for i in range(1, ids.size()):
@@ -162,6 +176,49 @@ func _build_realm_labels() -> void:
 	_hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	set_message(_landmark_hint("arrival"))
+	_reading_panel = PanelContainer.new()
+	root.add_child(_reading_panel)
+	_reading_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	var width := minf(560, get_viewport_rect().size.x - 48)
+	_reading_panel.offset_left = -width / 2
+	_reading_panel.offset_right = width / 2
+	_reading_panel.offset_top = 82
+	_reading_panel.add_theme_stylebox_override("panel", GameUI.style(Color("#171c2ff5"), Color("#a99bad"), 1, 14))
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 8)
+	_reading_panel.add_child(box)
+	var heading := HBoxContainer.new()
+	box.add_child(heading)
+	_reading_title = GameUI.label("", 19, GameUI.GOLD)
+	_reading_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_reading_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	heading.add_child(_reading_title)
+	var close := GameUI.button("Close", Vector2(76,44))
+	close.pressed.connect(close_reading)
+	heading.add_child(close)
+	_reading_text = GameUI.label("", 16, GameUI.TEXT)
+	_reading_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(_reading_text)
+	_reading_panel.hide()
+
+func show_reading(title: String, words: String, at: Vector2) -> void:
+	_reading_origin = at
+	_reading_title.text = title
+	_reading_text.text = words
+	_reading_panel.show()
+
+func close_reading() -> void:
+	if is_instance_valid(_reading_panel): _reading_panel.hide()
+
+func can_read_interest(interest: RealmInteractable, actor: Node) -> bool:
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if not is_instance_valid(game) or game.world != self or game._transitioning or game._defeat_pending or game._input_locked or _leaving or _boss_arrived: return false
+	if not is_instance_valid(actor) or actor != player or player.dead or player.sleeping: return false
+	return player.position.distance_to(interest.position) <= interest.interact_radius and clear_interest_view(interest.position)
+
+func clear_interest_view(at: Vector2) -> bool:
+	var ray := PhysicsRayQueryParameters2D.create(player.global_position, to_global(at), 1)
+	return get_world_2d().direct_space_state.intersect_ray(ray).is_empty()
 
 func _landmark_hint(id: String) -> String:
 	return "The wilds are peaceful. Find missed companions, visit onward passages, or return to BESUT." if _boss_defeated else str(RealmDB.LANDMARKS[id].hint)
@@ -172,6 +229,10 @@ func set_message(message: String) -> void:
 
 func survey() -> void:
 	if not is_instance_valid(player): return
+	if is_instance_valid(_reading_panel) and _reading_panel.visible and player.position.distance_to(_reading_origin) > 5.5: close_reading()
+	for id in interests:
+		var interest := interests[id] as RealmInterest
+		if player.position.distance_to(interest.position) <= 5.0 and clear_interest_view(interest.position): GameState.discover_realm_content(id)
 	var cell := RealmDB.cell_id(player.position)
 	if cell != _last_cell:
 		_last_cell = cell
@@ -225,6 +286,7 @@ func _physics_process(delta: float) -> void:
 			enemy._target = player
 			enemy._enter(Enemy.State.CHASE)
 	if not _boss_arrived and RealmDB.BOSS_TRIGGER.has_point(player.position):
+		close_reading()
 		_boss_arrived = true
 		camera.framing_bounds = RealmDB.BOSS_FRAME
 		camera.position = camera.framing_bounds.get_center()
@@ -276,6 +338,7 @@ func can_damage_actor(actor: Node) -> bool:
 func _on_boss_finished(_enemy: Enemy) -> void:
 	if _boss_defeated: return
 	_boss_defeated = true
+	_boss_arrived = false
 	camera.framing_bounds = Rect2()
 	var summary := GameState.complete_portal(portal_id)
 	_clear_effects()
@@ -298,6 +361,7 @@ func challenge_pet(encounter: RealmInteractable) -> void:
 	if not bool(reason.ok):
 		set_message(str(reason.reason))
 		return
+	close_reading()
 	game.hud.release_world_controls()
 	game._input_locked = true
 	game._apply_input_lock()
@@ -314,6 +378,7 @@ func rest_at_camp() -> void:
 	if _boss_arrived: return
 	var game := get_tree().get_first_node_in_group("game") as Game
 	if not is_instance_valid(game): return
+	close_reading()
 	GameState.set_realm_checkpoint("camp")
 	game.hud.release_world_controls()
 	game._input_locked = true

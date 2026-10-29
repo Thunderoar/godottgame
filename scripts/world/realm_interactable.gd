@@ -32,6 +32,7 @@ func _ready() -> void:
 		add_child(swirl)
 		move_child(swirl,0)
 	label = Label.new()
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.text = caption
 	label.add_theme_font_size_override("font_size", 14)
 	label.add_theme_color_override("font_color", Color("#e8dbb9"))
