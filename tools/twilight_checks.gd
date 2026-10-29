@@ -1,0 +1,245 @@
+extends RefCounted
+
+static func run(game: Game, check: Callable, capture: Callable = Callable()) -> void:
+	var snapshot := GameState.data.duplicate(true)
+	var autosave := GameState.autosave_enabled
+	var ticking := game.is_processing()
+	game.hud.hide_modals()
+	GameState.autosave_enabled = false
+	game.set_process(false)
+	GameState.data = GameState._make_default("adam")
+	GameState._emit_all()
+	await game._load_lobby(false)
+	await game.get_tree().process_frame
+	check.call(game.get_tree().get_nodes_in_group("battle_portal").size() == 1, "one dimension entrance replaces the paired village gates")
+	var gate := game.world.get_node("MonsterBattlePortal") as PortalEntrance
+	gate.interact(game.player())
+	for frame in 200:
+		if game.world is TwilightRealm and not game._transitioning: break
+		await game.get_tree().create_timer(0.03).timeout
+	check.call(game.world is TwilightRealm and not game.hud.portal_panel.visible, "village portal enters the explorable realm without a destination list")
+	var realm := game.world as TwilightRealm
+	if not is_instance_valid(realm): return
+	realm.player.set_physics_process(false)
+	realm.pet.set_physics_process(false)
+	check.call(realm.player.position.is_equal_approx(RealmDB.ARRIVAL), "new visitors arrive beside the return rift")
+	check.call(not realm._boss_arrived and not realm.boss.active, "citadel boss remains dormant at arrival")
+	var boss_hp := realm.boss.hp
+	realm.boss.take_damage(9999,Vector2.ZERO,realm.pet)
+	check.call(realm.boss.hp == boss_hp and not realm._boss_arrived, "weapons and companions cannot wake or damage the dormant ruler")
+	realm._physics_process(30)
+	check.call(not realm._boss_arrived and realm._packs.all(func(pack: Dictionary) -> bool: return not pack.active), "waiting at arrival never triggers global pursuit")
+	GameState.advance_world_clock(180)
+	game._process(30)
+	check.call(not GameState.emergency_active() and GameState.is_night(), "long nighttime realm exploration advances the shared clock without starting an offscreen raid")
+	GameState.advance_world_clock(150)
+	var before := realm.player.position
+	Input.action_press("move_right")
+	var positions: Array[float] = []
+	for step in 4:
+		realm.player._physics_process(0.016)
+		positions.append(realm.player.position.x)
+	Input.action_release("move_right")
+	check.call(positions[1] > positions[0] and positions[2] > positions[1] and positions[3] > positions[2], "realm movement remains continuous across consecutive physics steps")
+	realm.player.position = before
+	realm.player.velocity = Vector2.ZERO
+	var map := game.hud._minimap
+	check.call(not map.map_icons(realm).any(func(icon: Dictionary) -> bool: return icon.id == "boss"), "undiscovered citadel ruler is hidden from both map sizes")
+	if capture.is_valid():
+		realm.camera.set_physics_process(false)
+		realm.camera.position = RealmDB.ARRIVAL + Vector2(0,-4)
+		realm.camera.force_update_scroll()
+		await capture.call("01_arrival")
+	var routes := ResidentRoutes.new(realm, realm.map_rect)
+	for destination in [Vector2(17,43), Vector2(57,29), RealmDB.CAMP]:
+		var path := routes.path(RealmDB.ARRIVAL, destination, false)
+		check.call(not path.is_empty() and path[-1].distance_to(destination) < 0.1, "arrival has a complete collision-clear route to %s" % destination)
+	var cat := realm.wildlife.bramble_cat as RealmInteractable
+	realm.player.position = cat.position + Vector2(0,2)
+	realm.survey()
+	check.call(bool(GameState.wild_encounter_reason("bramble_cat").ok) and int(GameState.get_active_pet().level) == 1, "starter Ember can challenge the cat without tournament clears or paid levels")
+	var original_player := realm.player.position
+	var original_pet := realm.pet.position
+	cat.interact(realm.player)
+	var panel := game.hud.wild_challenge
+	check.call(panel.visible and realm.process_mode == Node.PROCESS_MODE_DISABLED and game.player().controls_locked, "in-world challenge suspends all world combat and locks Adam")
+	check.call(realm.player.position.distance_to(cat.position) < 6 and not game.hud.pet_battle_panel.visible, "duel is staged in the discovered habitat without an arena backdrop")
+	check.call(not game.hud._map_button.visible and not realm.pet.get_node("PetHealth").visible, "challenge hides unrelated map and overhead health widgets")
+	await game.get_tree().process_frame
+	var viewport := game.get_viewport().get_visible_rect()
+	check.call(panel._buttons.values().all(func(button: Button) -> bool: return viewport.encloses(button.get_global_rect())), "all three challenge powers remain inside the viewport")
+	game.open_settings()
+	await game.get_tree().process_frame
+	var original_touch := GameSettings.touch_controls()
+	GameSettings.set_touch_controls("always", false)
+	var paused_hp := panel.duel.rival_hp
+	panel._process(30)
+	check.call(panel.duel.rival_hp == paused_hp and realm.process_mode == Node.PROCESS_MODE_DISABLED, "Settings preserves the protected challenge and its turn")
+	check.call(not game.hud._joystick.visible, "live touch-setting changes cannot expose world controls during a challenge")
+	GameSettings.set_touch_controls(original_touch, false)
+	game.hud.settings_panel.close_panel()
+	check.call(game.player().controls_locked, "closing Settings does not release the challenge lock")
+	var hp := GameState.health()
+	var arena_hp := panel.duel.player_hp
+	panel._process(20)
+	check.call(panel.duel.player_hp == arena_hp and GameState.health() == hp and panel.duel.turn == "player", "manual challenge waits indefinitely without damaging saved player or pet")
+	if capture.is_valid():
+		realm.camera.force_update_scroll()
+		await capture.call("02_bramble_challenge")
+	var rival_hp := panel.duel.rival_hp
+	await _tap(game, panel._buttons.attack.get_global_rect().get_center())
+	check.call(panel.duel.rival_hp < rival_hp and panel.duel.player_hp == arena_hp, "player choice lands before the rival reply")
+	panel._process(0.71)
+	check.call(panel.duel.player_hp < arena_hp and panel.duel.turn == "next", "wild rival replies after the explicit choice")
+	panel.close_panel()
+	check.call(not panel.visible and realm.process_mode != Node.PROCESS_MODE_DISABLED and not game.player().controls_locked, "cancel restores the world, controls and music")
+	check.call(realm.player.position == original_player and realm.pet.position == original_pet and Sfx.battle_track.is_empty(), "cancel restores participant positions without reward")
+	check.call(GameState.get_pet("bramble_cat").is_empty(), "unfinished challenge grants no recruit")
+	cat.interact(realm.player)
+	panel.duel.rival_hp = 1
+	var gold := GameState.gold()
+	panel.choose_skill("burst")
+	panel._process(0)
+	check.call(GameState.realm_pet_bonded("bramble_cat") and GameState.gold() == gold + 25, "winning commits a unique cat recruit and first reward")
+	var token := panel._token
+	check.call(not bool(GameState.complete_wild_encounter(token).ok), "duplicate victory callback cannot pay a second reward")
+	panel.close_panel()
+	cat.interact(realm.player)
+	panel.duel.rival_hp = 1
+	var pet_level := int(GameState.get_active_pet().level)
+	gold = GameState.gold()
+	panel.choose_skill("burst")
+	panel._process(0)
+	panel.close_panel()
+	check.call(GameState.gold() == gold and int(GameState.get_active_pet().level) == pet_level, "friendly repeat sparring cannot farm Gold or guaranteed levels")
+	var moth := realm.wildlife.dusk_moth as RealmInteractable
+	realm.player.position = moth.position + Vector2(0,2)
+	moth.interact(realm.player)
+	panel.duel.player_hp = 1
+	panel.choose_skill("attack")
+	panel._process(0.71)
+	check.call(not panel._resolved, "moth's first reply shields rather than automatically winning")
+	panel.duel.rival_cooldowns.defend = 99
+	panel.duel.turn = "rival"
+	panel.duel.wait = 0
+	panel._process(0.1)
+	check.call(panel._resolved and panel.duel.result == "loss" and GameState.get_pet("dusk_moth").is_empty(), "losing peacefully grants no wild recruit")
+	panel.close_panel()
+	check.call(GameState.health() == hp and GameState.has_living_pet(), "wild challenge loss does not damage persistent health or companion readiness")
+	var blocked_path := routes.path(Vector2(18,35), RealmDB.CAMP, false)
+	var blocked_length := _length(blocked_path)
+	realm.open_shortcut()
+	await game.get_tree().process_frame
+	await game.get_tree().physics_frame
+	check.call(bool(GameState.realm_progress().shortcut) and not is_instance_valid(realm._shortcut_body), "watchpost winch opens and persists the rootway")
+	routes.invalidate()
+	var opened_path := routes.path(Vector2(18,35), RealmDB.CAMP, false)
+	check.call(not opened_path.is_empty() and _length(opened_path) < blocked_length, "the opened rootway creates a physically shorter collision-clear return path")
+	if capture.is_valid():
+		game.open_map()
+		await game.get_tree().process_frame
+		await game.get_tree().process_frame
+		await capture.call("05_discovered_map")
+		game.hud.map_panel.close_panel()
+	realm.player.position = RealmDB.CAMP
+	realm.rest_at_camp()
+	realm._physics_process(2.1)
+	check.call(GameState.realm_progress().checkpoint == "camp" and GameState.health() == GameState.health_max(), "citadel lantern saves a checkpoint and completes a safe rest")
+	GameState.save_game()
+	check.call(GameState.load_game() and GameState.realm_pet_bonded("bramble_cat") and bool(GameState.realm_progress().shortcut), "bonded pets, shortcut and discoveries survive save/load")
+	var saved_progress := GameState.realm_progress()
+	GameState.data.erase("realm_progress")
+	GameState._sanitize()
+	check.call(bool(GameState.realm_progress().visit_active) and GameState.realm_progress().checkpoint == "arrival", "old active first-portal saves migrate to a safe realm arrival")
+	GameState.data.realm_progress = saved_progress
+	await game._load_dungeon(RealmDB.PORTAL,false)
+	await game.get_tree().physics_frame
+	realm = game.world as TwilightRealm
+	if capture.is_valid(): realm.camera.set_physics_process(false)
+	realm.player.set_physics_process(false)
+	realm.pet.set_physics_process(false)
+	check.call(realm.player.position.distance_to(RealmDB.CAMP) < 0.1 and not realm._boss_arrived, "Continue reconstruction uses the safe checkpoint and resets unfinished boss")
+	realm.player.position = Vector2(36,16)
+	realm._physics_process(0.1)
+	check.call(realm._boss_arrived and realm.boss.active and Sfx.battle_track == RealmDB.PORTAL, "crossing the citadel threshold activates the boss and battle track")
+	check.call(realm.camera.framing_bounds.has_area() and realm.camera.zoom.y <= game.get_viewport_rect().size.y / 23.0 + 0.01, "boss encounter frames the whole chamber and overhead warnings even at high preferred zoom")
+	realm.player.position = RealmDB.CAMP
+	realm._physics_process(0.1)
+	check.call(not realm._boss_arrived and realm.boss.hp == realm.boss.max_hp and Sfx.battle_track.is_empty(), "retreat resets the unfinished boss without moving through walls")
+	check.call(not realm.camera.framing_bounds.has_area(), "retreat releases encounter framing back to the exploration camera")
+	realm.player.position = Vector2(36,16)
+	realm._physics_process(0.1)
+	realm.player.position = Vector2(47,15)
+	realm._physics_process(0.1)
+	check.call(not realm._boss_arrived and not realm.camera.framing_bounds.has_area(), "retreat through the eastern passage also releases the boss and camera leash")
+	realm.player.position = Vector2(36,16)
+	realm._physics_process(0.1)
+	if capture.is_valid():
+		realm.camera.position = realm.camera.framing_bounds.get_center()
+		realm.camera.force_update_scroll()
+		await capture.call("03_citadel")
+	realm.boss.take_damage(999999,Vector2.ZERO,realm.player)
+	await game.get_tree().process_frame
+	check.call(realm._boss_defeated and bool(GameState.portal_state(RealmDB.PORTAL).cleared) and not game.hud.victory_panel.visible, "boss victory restores the realm without forcing a results modal")
+	check.call(bool(GameState.realm_progress().visit_active) and not GameState.expedition_active() and not realm.player.controls_locked, "post-victory exploration has explicit saved presence after loot is banked")
+	check.call(bool(GameState.portal_state("sunken_crypt").unlocked) and not bool(GameState.campaign().mei_ling_rescued), "first dimension victory preserves later progression and separate final rescue")
+	check.call(GameState.realm_pet_bonded("bramble_cat") and not GameState.get_pet("luma").is_empty(), "wild bonds and the distinct legacy boss reward coexist")
+	GameState.save_game()
+	check.call(GameState.load_game() and bool(GameState.realm_progress().visit_active), "safe post-boss presence survives reload")
+	await game._load_dungeon(RealmDB.PORTAL,false)
+	await game.get_tree().process_frame
+	realm = game.world as TwilightRealm
+	if capture.is_valid(): realm.camera.set_physics_process(false)
+	check.call(realm._boss_defeated and not is_instance_valid(realm.boss), "revisiting the restored realm does not respawn a defeated boss")
+	realm.survey()
+	check.call(realm._hint_label.text.contains("peaceful"), "restored landmarks describe the peaceful realm rather than a living fiend")
+	if capture.is_valid():
+		realm.camera.position = Vector2(36,14)
+		realm.camera.force_update_scroll()
+		await capture.call("04_restored")
+	realm.exit_to_lobby(true)
+	for frame in 100:
+		if game.world is Lobby and not game._transitioning: break
+		await game.get_tree().create_timer(0.03).timeout
+	check.call(game.world is Lobby and not bool(GameState.realm_progress().visit_active), "return rift clears realm presence and returns to the village")
+	GameState.start_expedition(RealmDB.PORTAL)
+	await game._load_dungeon(RealmDB.PORTAL,false)
+	await game.get_tree().process_frame
+	realm = game.world as TwilightRealm
+	cat = realm.wildlife.bramble_cat
+	realm.player.position = cat.position + Vector2(0,2)
+	cat.interact(realm.player)
+	check.call(game.hud.wild_challenge.visible, "a peaceful cleared realm still supports friendly challenges")
+	await game._load_lobby(false)
+	await game.get_tree().process_frame
+	check.call(not game.hud.wild_challenge.visible and not game.player().controls_locked and Sfx.battle_track.is_empty(), "world replacement cancels a challenge and restores controls without leaking its music")
+	GameState.data.realm_progress = {"checkpoint":"invalid", "cells":["-1:2","0:0","0:0"], "landmarks":["bad"], "bonded":["missing"]}
+	GameState._sanitize()
+	check.call(GameState.realm_progress().checkpoint == "arrival" and GameState.realm_progress().cells == ["0:0"] and GameState.realm_progress().bonded.is_empty(), "malformed exploration records sanitize without invalid destinations or duplicate discoveries")
+	game._clear_world()
+	await game.get_tree().process_frame
+	GameState.data = snapshot
+	GameState._emit_all()
+	await game._load_lobby(false)
+	await game.get_tree().process_frame
+	await game.get_tree().process_frame
+	GameState.autosave_enabled = autosave
+	game.set_process(ticking)
+
+static func _length(points: PackedVector2Array) -> float:
+	var total := 0.0
+	for i in range(1, points.size()): total += points[i - 1].distance_to(points[i])
+	return total
+
+static func _tap(game: Game, point: Vector2) -> void:
+	var event := InputEventScreenTouch.new()
+	event.index = 17
+	event.position = game.get_viewport().get_final_transform() * point
+	event.pressed = true
+	Input.parse_input_event(event)
+	await game.get_tree().process_frame
+	var release := InputEventScreenTouch.new()
+	release.index = 17
+	release.position = event.position
+	Input.parse_input_event(release)
+	await game.get_tree().process_frame

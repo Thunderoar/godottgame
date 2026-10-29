@@ -7,7 +7,7 @@ extends Interactable
 ## slab and chains; cleared gates keep a subtle golden aura without a text banner.
 ##
 ## Kept contracts: Interactable with portal_id / gate_kind / gate_title, group
-## battle_portal, interact() routing to Game.open_portals / open_pet_battles.
+## battle_portal. The village entrance travels directly into Twilight Wilds.
 
 @export var portal_id := "tidebound_grotto"
 @export var gate_kind := "monster"  # monster / pet
@@ -190,7 +190,7 @@ func _refresh() -> void:
 	var unlocked := bool(state.get("unlocked", false))
 	_cleared = bool(state.get("cleared", false))
 	available = unlocked
-	prompt = "Enter the Monster Battle Portal" if unlocked else "Open the Monster Battle Portal"
+	prompt = "Enter Twilight Wilds" if unlocked else "The dimension is sealed"
 	# Locked gates show the sealed frame; saved clears gain the aura only.
 	if _frame:
 		_frame.texture = PixelArt.portal_frame_texture(_theme, not unlocked and not _cleared)
@@ -213,8 +213,12 @@ func interact(_player: Node) -> void:
 		if game.has_method("open_pet_battles"):
 			game.call("open_pet_battles")
 		return
-	if game.has_method("open_portals"):
-		game.call("open_portals", portal_id)
+	if game.world is Lobby and not is_instance_valid(game.home_interior):
+		var reason := GameState.portal_clear_reason(RealmDB.PORTAL)
+		if not bool(reason.ok):
+			prompt = str(reason.reason)
+			return
+		game.enter_portal(RealmDB.PORTAL)
 
 
 func _unhandled_input(event: InputEvent) -> void:

@@ -12,7 +12,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	var map_button := game.hud._map_button
 	var icons := minimap.map_icons(game.world)
 	var ids: Array = icons.map(func(icon: Dictionary) -> String: return str(icon.id))
-	check.call(["shop_potion", "shop_equipment", "shop_pet", "shop_house", "shop_services", "monster_portal", "pet_portal", "jetty_deck", "house", "ship"].all(func(id: String) -> bool: return id in ids), "map contains pictures for every shop, both portals, home, jetty and ship")
+	check.call(["shop_potion", "shop_equipment", "shop_pet", "shop_house", "shop_services", "monster_portal", "jetty_deck", "house", "ship"].all(func(id: String) -> bool: return id in ids), "map contains pictures for every shop, the unified portal, home, jetty and ship")
 	check.call(icons.all(func(icon: Dictionary) -> bool: return icon.texture is Texture2D and not icon.has("letter") and not icon.has("label")), "map markers use textures without letter labels or explanations")
 	check.call(not minimap.visible and not minimap.is_processing() and not game.hud.map_panel.visible, "no map is drawn or updated on the normal HUD")
 	check.call(map_button.is_visible_in_tree() and map_button.text=="Map" and map_button.mouse_filter==Control.MOUSE_FILTER_STOP, "Map button is the visible touch target")

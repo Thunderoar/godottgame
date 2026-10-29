@@ -24,7 +24,7 @@ func _ready() -> void:
 	await preload("res://tools/hud_battle_checks.gd").run(game, _check)
 	_check(game.hud._objective_panel == null and game.hud._boss_panel == null, "journal and screen boss bar removed")
 	_check(get_tree().get_nodes_in_group("mission_npc").size() == 1, "one purple question-mark mission NPC")
-	_check(lobby.get_node_or_null("TwinCaveHill") == null and get_tree().get_nodes_in_group("battle_portal").size() == 2, "two standalone northern portals remain without a cave")
+	_check(lobby.get_node_or_null("TwinCaveHill") == null and get_tree().get_nodes_in_group("battle_portal").size() == 1, "one unified northern portal remains without a cave")
 	_check(not get_tree().get_nodes_in_group("interactable").any(func(n: Node) -> bool: return n is HouseBed), "porch mattress removed")
 	_check(get_tree().get_nodes_in_group("interactable").filter(func(n: Node) -> bool: return n is HomeEntrance).size() == 1, "only the main house is enterable")
 	for role in ["builder", "water", "planter", "fighter"]:

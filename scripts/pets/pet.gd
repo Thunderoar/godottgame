@@ -144,6 +144,12 @@ func _physics_process(delta: float) -> void:
 
 # ------------------------------------------------------------------ follow
 
+func invalidate_routes() -> void:
+	if _route_planner != null: _route_planner.invalidate()
+	_follow_path.clear()
+	_route_timer = 0.0
+
+
 func _follow(delta: float) -> void:
 	var side := -1.0 if player.facing.x >= 0.0 else 1.0
 	var desired := player.global_position + Vector2(0.95 * side, 0.5) + _sniff_offset
@@ -380,6 +386,7 @@ func _nearest_enemy(max_distance: float) -> Node2D:
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion() or bool(enemy.get("dead")) or enemy.get_parent() != get_parent():
 			continue
+		if get_parent().has_method("can_damage_actor") and not get_parent().can_damage_actor(enemy): continue
 		if not enemy.has_method("take_damage"):
 			continue
 		var distance := global_position.distance_to(enemy.global_position)

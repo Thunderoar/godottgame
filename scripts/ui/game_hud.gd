@@ -23,6 +23,7 @@ var shop_panel: ShopPanel
 var inventory_panel: InventoryPanel
 var portal_panel: PortalPanel
 var pet_battle_panel: PetBattlePanel
+var wild_challenge: WildPetChallenge
 var sea_cleaning_panel: SeaCleaningPanel
 var house_panel: HousePanel
 var victory_panel: VictoryPanel
@@ -304,7 +305,7 @@ func set_gui_scale(value: float, persist: bool = true) -> void:
 
 func _capture_gui_layout() -> void:
 	for child in _root.get_children():
-		if child is Control and not child is ModalBase and not child is TutorialSpotlight and child != tutorial_guide and child != _fade and child != _vignette:
+		if child is Control and not child is ModalBase and not child is WildPetChallenge and not child is TutorialSpotlight and child != tutorial_guide and child != _fade and child != _vignette:
 			_gui_layout[child] = {"left": child.offset_left, "top": child.offset_top, "size": child.size.max(child.get_combined_minimum_size())}
 
 
@@ -573,6 +574,8 @@ func _build_modals() -> void:
 	_root.add_child(dialogue_panel)
 	game_over_panel = GameOverPanel.new()
 	_root.add_child(game_over_panel)
+	wild_challenge = WildPetChallenge.new()
+	_root.add_child(wild_challenge)
 
 
 func _build_fade() -> void:
@@ -640,15 +643,16 @@ func _process(delta: float) -> void:
 
 func _update_prompt() -> void:
 	var prompt := ""
-	var player := get_tree().get_first_node_in_group("player")
+	var game := get_tree().get_first_node_in_group("game") as Game
+	var player := game.player() if is_instance_valid(game) else null
 	if player != null and player.get("nearby") != null and is_instance_valid(player.get("nearby")):
 		var near: Node = player.get("nearby")
 		if near.has_method("get_prompt"):
 			prompt = str(near.call("get_prompt"))
 	if prompt != _last_prompt:
 		_last_prompt = prompt
-		_prompt_panel.visible = prompt != ""
 		_prompt_label.text = prompt
+	_prompt_panel.visible = prompt != "" and not any_modal_open()
 
 
 func _use_quick_potion(item_id: String) -> void:
@@ -824,6 +828,7 @@ func set_build_mode(active: bool) -> void:
 
 
 func any_modal_open() -> bool:
+	if wild_challenge != null and wild_challenge.visible: return true
 	if village_services_panel != null and village_services_panel.visible:
 		return true
 	for panel in [map_panel, field_guide_panel, mission_panel, shop_panel, inventory_panel, portal_panel, pet_battle_panel, sea_cleaning_panel, house_panel, victory_panel, defeat_panel, menu_panel, settings_panel, dialogue_panel, game_over_panel]:
@@ -833,6 +838,7 @@ func any_modal_open() -> bool:
 
 
 func hide_modals() -> void:
+	if wild_challenge != null and wild_challenge.visible: wild_challenge.close_panel()
 	if village_services_panel != null and village_services_panel.visible:
 		village_services_panel.close_panel()
 	for panel in [map_panel, field_guide_panel, mission_panel, shop_panel, inventory_panel, portal_panel, pet_battle_panel, sea_cleaning_panel, house_panel, victory_panel, defeat_panel, menu_panel, settings_panel, dialogue_panel, game_over_panel]:

@@ -14,8 +14,8 @@ const STEPS := [
 	{"event": "services", "title": "6. Meet the water keepers", "text": "Visit the Worker Shop. Blue workers fight fire monsters and extinguish trees; green workers plant protected 30-second saplings. Hire extra specialists with Gold.", "target": "services"},
 	{"event": "house", "title": "7. Learn village repairs", "text": "Visit Bram's Construction Shop. Houses shelter residents from sea urchins. Orange builders repair damaged houses and fences by day, working for 10 seconds after arrival. Preview Levels 1-5 and upgrade the main house with diamonds. Its level raises workers, fences and purchased rooftop guns. Buy tower defenses at the Equipment Shop.", "target": "house"},
 	{"event": "feed", "title": "8. Feed your companion", "text": "Buy Pet Food at Nia's Pet Shop, then feed it from the pet shop or Pack. Your pet helps you fight and heal.", "target": "pet"},
-	{"event": "portal", "title": "9. Enter your first dungeon", "text": "Follow the arrows to the Monster Battle Portal. Tap the left portal and enter Chaos Citadel. The Shore Gate brings you home during a village raid.", "target": "portal"},
-	{"event": "boss", "title": "10. Defeat the first boss", "text": "Defeat Shadow & Chaos Fiend in the Level 1 Chaos Citadel. Defeating him completes the tutorial; Portals 2-10 belong to the rescue story. Keep moving, use potions and follow the path to your current target.", "target": "boss"},
+	{"event": "portal", "title": "9. Enter your first dungeon", "text": "Follow the arrows to the Dimension Portal. Enter Twilight Wilds, explore its paths and approach wild pets to challenge them. The arrival rift always leads home.", "target": "portal"},
+	{"event": "boss", "title": "10. Defeat the first boss", "text": "Follow the old stones toward Chaos Citadel. Rest at its lantern to save a checkpoint. Cross the arch to face Shadow & Chaos Fiend; defeating him completes training and opens the onward passages.", "target": "boss"},
 ]
 
 

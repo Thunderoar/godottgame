@@ -11,6 +11,7 @@ const LOOKAHEAD_UNITS := 1.15
 
 var target: Node2D
 var bounds := Rect2(0, 0, 64, 40)
+var framing_bounds := Rect2() # Optional encounter framing, released on retreat/exit.
 var follow_speed := 6.0
 var shake_amount := 0.0
 var shake_time := 0.0
@@ -35,7 +36,11 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	zoom = zoom.lerp(Vector2.ONE * GameSettings.camera_zoom(), 1.0 - exp(-10.0 * delta))
+	var desired_zoom := GameSettings.camera_zoom()
+	if framing_bounds.has_area():
+		var available := get_viewport_rect().size / (framing_bounds.size + Vector2(2,2))
+		desired_zoom = minf(desired_zoom,minf(available.x,available.y))
+	zoom = zoom.lerp(Vector2.ONE * desired_zoom, 1.0 - exp(-10.0 * delta))
 	if is_instance_valid(target):
 		var aim: Vector2 = target.global_position + Vector2(0, -1.0)
 		# Look a little ahead of the player's facing so the view leads movement.
@@ -49,6 +54,7 @@ func _physics_process(delta: float) -> void:
 		if GameSettings.reduce_motion():
 			_look = _look.move_toward(Vector2.ZERO, delta * 6.0)
 		aim += _look
+		if framing_bounds.has_area(): aim = framing_bounds.get_center()
 		global_position = global_position.lerp(aim, 1.0 - exp(-delta * follow_speed))
 	if GameSettings.reduce_motion() or not GameSettings.screen_shake():
 		shake_time = 0.0

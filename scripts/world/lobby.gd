@@ -534,24 +534,16 @@ func _build_special_npc() -> void:
 
 func _build_portals() -> void:
 	NorthernBoundary.build_north_wall(self)
-	# The two gates stand side by side on the north path: campaign monsters on
-	# the left, companion duels on the right.
+	# One physical dimension entrance; retain the original anchor for old saves.
 	var first := PortalEntrance.new()
 	first.name = "MonsterBattlePortal"
 	first.portal_id = "tidebound_grotto"
 	first.gate_kind = "monster"
-	first.gate_title = "Monster Battle Portal"
+	first.gate_title = "Dimension Portal"
 	first.position = _layout.position_of("monster_portal", MONSTER_GATE)
 	add_child(first)
 	_markers.append({"position": first.position, "color": Color("#a47be0"), "size": 4.0, "shape": "arch"})
-	var second := PortalEntrance.new()
-	second.name = "PetBattlePortal"
-	second.portal_id = "pet_duel_1"
-	second.gate_kind = "pet"
-	second.gate_title = "Pet Battle Portal"
-	second.position = _layout.position_of("pet_portal", PET_GATE)
-	add_child(second)
-	_markers.append({"position": second.position, "color": Color("#58d6cf"), "size": 4.0, "shape": "arch"})
+
 
 
 func _on_forest_tree_felled(_tree: ForestTree) -> void:
@@ -1709,7 +1701,7 @@ func get_guidance_targets() -> Array:
 	if monster_pending and not bool(GameState.campaign().get("mei_ling_rescued", false)):
 		targets.append({"label": "RESCUE MEI LING" if GameState.tutorial_complete() else "MONSTER", "position": _layout.approach("monster_portal"), "color": Color("#b08cff")})
 	if not bool(GameState.pet_battle_state("pet_duel_1").get("cleared", false)):
-		targets.append({"label": "PET DUEL", "position": _layout.approach("pet_portal"), "color": Color("#5bd6cf")})
+		targets.append({"label": "WILD PETS", "position": _layout.approach("monster_portal"), "color": Color("#5bd6cf")})
 	if GameState.house_level() < HouseDB.max_level():
 		targets.append({"label": "BUILD", "position": _shop_customer_position("house", CONSTRUCTION_SHOP), "color": Color("#f2c45a")})
 	if targets.is_empty():

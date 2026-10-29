@@ -62,6 +62,7 @@ func map_icons(world: Node2D) -> Array[Dictionary]:
 	if world is Lobby:
 		for anchor in world._layout.anchors:
 			var id := str(anchor.get("id", ""))
+			if id == "pet_portal": continue # Retired anchor remains only for old layouts/forest identity.
 			var kind := str(anchor.get("kind", ""))
 			var texture: Texture2D
 			var priority := 1
@@ -85,6 +86,17 @@ func map_icons(world: Node2D) -> Array[Dictionary]:
 				icons.append({"id": id, "position": world._layout.position_of(id), "texture": texture, "priority": priority, "theme": theme})
 		if is_instance_valid(world.ship_boarding) and is_instance_valid(world.ship_boarding.ship):
 			icons.append({"id": "ship", "position": world.ship_boarding.ship.global_position, "texture": PixelArt.ship_texture(), "priority": 3, "theme": ""})
+	elif world is TwilightRealm:
+		icons.append({"id": "exit", "position": Vector2(36,66), "texture": PixelArt.portal_texture(RealmDB.PORTAL), "priority": 3, "theme": ""})
+		var progress := GameState.realm_progress()
+		for id in RealmDB.ENCOUNTERS:
+			var at: Vector2 = RealmDB.ENCOUNTERS[id].at
+			if RealmDB.cell_id(at) in progress.cells:
+				icons.append({"id": id, "position": at, "texture": PixelArt.pet_texture(id), "priority": 3, "theme": ""})
+		if "citadel" in progress.landmarks and is_instance_valid(world.boss) and not world.boss.dead:
+			icons.append({"id": "boss", "position": RealmDB.BOSS, "texture": PixelArt.enemy_texture(world.boss.kind,true), "priority": 4, "theme": ""})
+		if "approach" in progress.landmarks:
+			icons.append({"id": "camp", "position": RealmDB.CAMP, "texture": PixelArt.icon("spark"), "priority": 3, "theme": ""})
 	elif world is Dungeon:
 		icons.append({"id": "exit", "position": Vector2(24, 30.1), "texture": PixelArt.portal_texture("tidebound_grotto"), "priority": 3, "theme": ""})
 		if is_instance_valid(world.boss) and not world.boss.dead:
@@ -128,6 +140,14 @@ func _draw() -> void:
 		draw_rect(area, Color("#285a77"))
 		if world is KrakenIsland:
 			draw_rect(Rect2(_map(Vector2(1, 3), bounds), Vector2(38, 21) / bounds.size * area.size), Color("#958968"))
+	if world is TwilightRealm:
+		var discovered: Array = GameState.realm_progress().cells
+		for x in 6:
+			for y in 6:
+				if "%d:%d" % [x,y] not in discovered:
+					var start := _map(Vector2(x * 12,y * 12),bounds)
+					var finish := _map(Vector2((x+1)*12,(y+1)*12),bounds)
+					draw_rect(Rect2(start,finish-start+Vector2.ONE),Color("#18202c"))
 	for icon in map_icons(world): _picture(icon, _map(icon.position, bounds))
 	if int(_clock * 4) % 2 == 0:
 		for enemy in get_tree().get_nodes_in_group("enemies"):

@@ -780,6 +780,7 @@ func _lunge(dir: Vector2) -> void:
 # ------------------------------------------------------------------ damage & death
 
 func take_damage(amount: int, from_dir: Vector2 = Vector2.ZERO, _source: Node = null) -> void:
+	if get_parent().has_method("can_damage_actor") and not get_parent().can_damage_actor(self): return
 	if dead:
 		return
 	if is_boss and get_parent() is Dungeon:
