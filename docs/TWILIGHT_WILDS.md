@@ -13,7 +13,43 @@ six-by-six discovery IDs and stable checkpoint/bond IDs remain compatible.
 
 Follow the stone road from Arrival Glade across Rootbound Crossing toward Broken Watchpost and the Ashen Approach. Bramble Grove branches west; Moonpool Hollow loops east. At the watchpost, the rootway winch opens a permanent shortcut through the escarpment. The citadel lantern provides a two-second rest and a saved return checkpoint.
 
-Six local Darkfire Imp encounters activate near their home areas and disengage when the player retreats. Arrival, pet habitats and the lantern are safe from those pursuing packs. Shadow & Chaos Fiend waits beyond the citadel's inner threshold. Dormant enemies cannot be damaged by weapons or companion attacks. Retreating to the lantern resets the unfinished boss, its spells and attack sequence.
+Six guards form three authored pairs: two Darkfire Imps north of the crossing, an Imp and Ember Watcher at the watchpost, and an Imp and Rune Keeper south of the lantern. Only one pair attacks at a time. Arrival, full pet stages, reading sites and the lantern are protected from guards and their attacks. Shadow & Chaos Fiend waits beyond the citadel's inner threshold. Dormant enemies cannot be damaged by weapons or companion attacks. Retreating to the lantern resets the unfinished boss, its spells and attack sequence.
+
+## Read the Wilds: three combat encounters
+
+The Imp holds still for a 0.65-second directional warning, commits to a 0.38-second
+rush, then recovers. The Watcher locks its aim for 0.90 seconds before firing three
+non-homing shots with gaps. Use a gap, side approach or the real stone cover on the
+watchpost's outer flank. The Keeper gives a 1.05-second warning for a small fixed
+cross; ordinary diagonal movement escapes into a clear quadrant. The Field Guide's
+Monsters section illustrates all three profiles.
+
+One shared attack slot covers a pair's windup and all live damaging effects,
+including travelling shots. A whole charge, fan or cross can contact Adam once;
+cross intersections and multiple overlapping shots cannot cause duplicate hits.
+Warnings and damage share clipped geometry. Swept tests stop shots and charges at
+real walls, pursuit limits and protected spaces, including the complete 8x7 animal
+stages plus clearance. Low effects, Reduce Motion and mute retain essential cues.
+
+Only six regular guards spawn: four Imps, one Watcher and one Keeper. Total HP is
+282, with the existing base movement, 7 damage, 14 XP per guard and ordinary loot
+rules. No additional saved encounter fields, currency, stat upgrades or boss keys
+are introduced. The shared HUD still counts every living guard and the ruler,
+including dormant actors; it is not an aggro counter.
+
+Entering a different encounter or a refuge immediately invalidates old casts.
+Living guards walk home through refuge-aware routes, retain their current HP and
+settle without teleporting or healing. Killed guards stay dead for that visit;
+Continue retains the existing fresh-combat reconstruction policy. Returning actors
+do not draw the companion away from the player's active fight. Normal menus keep
+their existing simulation behavior. A protected animal challenge ends pursuing
+regular casts before suspending the world.
+
+Runtime ownership is held by `RealmEncounterDirector`, `RealmGuard` and its owned
+`RealmGuardAttack`. `RealmCombatDB` supplies the profiles/zones; `RealmGuardRoutes`
+filters only guard routes. Ordinary village/player routing and legacy ElementDB
+powers remain unchanged. The crossing homes were placed north of the bridge and
+the Watcher shifted away from the winch's silhouette during rendered review.
 
 The realm uses its own twilight grade while the shared day/night clock continues. Twilight exploration does not start the legacy dungeon emergency. Saved village attackers remain saved; returning at night still follows the village's ordinary wave and defense rules.
 
@@ -66,10 +102,13 @@ This is the complete first exploration slice. The proposed three-dimension campa
 - `RealmWildPet` / `RealmInterest`: temporary pet routines and guarded optional interactions.
 - `TwilightLandscape`: deterministic terrain/decor; independent from village RNG.
 - `TwilightRealm`: world construction, local encounters, threshold/reset, shortcut and victory.
+- `RealmCombatDB` / `RealmEncounterDirector`: authored pairs, refuges, shared attack ownership and cancellation.
+- `RealmGuard` / `RealmGuardAttack`: physical guard behavior, fixed warnings, swept collision and one-hit casts.
+- `RealmGuardRoutes` / `RealmCombatArt`: refuge-aware monster paths and reproducible profile/cover art.
 - `RealmInteractable`: nearby direct tap/E routes with current-world guards.
 - `PetDuel`: presentation-free manual rules; `WildPetChallenge`: protected world staging and screen controls.
 - `GameState`: all durable progression and one-time token-guarded reward transactions.
 
-`tools/twilight_checks.gd` runs both inside the canonical isolated gameplay suite and via `tools/twilight_test.tscn`, including `tools/realm_life_checks.gd` for the first expansion. The focused scene accepts `-- --capture` under an isolated actual renderer and writes screenshots to `TIDESWORN_TEST_ROOT`. Tests must use the same environment isolation as the canonical wrapper. See the newest Twilight section in `ACCEPTANCE_TESTS.md` for recorded evidence; older reports are historical.
+`tools/twilight_checks.gd` runs both inside the canonical isolated gameplay suite and via `tools/twilight_test.tscn`, including `tools/realm_life_checks.gd` for the first expansion and `tools/realm_combat_checks.gd` for the second. The focused scene accepts `-- --capture` under an isolated actual renderer and writes screenshots to `TIDESWORN_TEST_ROOT`. Tests must use the same environment isolation as the canonical wrapper. See the newest Twilight section in `ACCEPTANCE_TESTS.md` for recorded evidence; older reports are historical.
 
 Windows review: use the canonical isolated wrapper with -Twilight, optionally -Capture -Resolution 832x480 or 1280x720. It prints the external evidence directory and rejects incomplete/error-bearing runs.

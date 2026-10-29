@@ -54,7 +54,7 @@ static func decorate(world: Node2D) -> void:
 	rng.seed = 340912
 	for i in 110:
 		var p := Vector2(rng.randf_range(3, RealmDB.SIZE.x-3), rng.randf_range(5, RealmDB.SIZE.y-3))
-		if RealmDB.path_distance(p) < 4.4 or p.distance_to(RealmDB.BOSS) < 11 or RealmContentDB.reserved(p): continue
+		if RealmDB.path_distance(p) < 4.4 or p.distance_to(RealmDB.BOSS) < 11 or RealmContentDB.reserved(p) or RealmCombatDB.scenery_reserved(p): continue
 		var tree := Sprite2D.new()
 		tree.texture = PixelArt.authored_tree_texture()
 		tree.position = p + Vector2(0, -1.9)
@@ -90,6 +90,22 @@ static func decorate(world: Node2D) -> void:
 	_prop(world,"trunk",Vector2(17,33))
 	_prop(world,"sign",Vector2(14.5,26.5))
 	for at in [Vector2(12,25.6),Vector2(10,24.8)]: _prop(world,"bloom",at)
+	var cover := StaticBody2D.new()
+	cover.name = "WatchpostCover"
+	cover.position = RealmCombatDB.COVER
+	cover.collision_layer = 1
+	world.add_child(cover)
+	var collision := CollisionShape2D.new()
+	var box := RectangleShape2D.new()
+	box.size = RealmCombatDB.COVER_SIZE
+	collision.shape = box
+	cover.add_child(collision)
+	var art := Sprite2D.new()
+	art.texture = RealmCombatArt.cover_texture()
+	art.scale = Vector2.ONE*PixelArt.PX*1.4
+	art.position.y = -0.65
+	art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	cover.add_child(art)
 
 static func _prop(world: Node2D, kind: String, at: Vector2) -> void:
 	var prop := Sprite2D.new()

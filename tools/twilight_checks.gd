@@ -260,6 +260,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	await game.get_tree().process_frame
 	GameState.autosave_enabled = autosave
 	game.set_process(ticking)
+	await preload("res://tools/realm_combat_checks.gd").run(game,check,capture)
 
 static func _length(points: PackedVector2Array) -> float:
 	var total := 0.0

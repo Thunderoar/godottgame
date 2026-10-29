@@ -16,7 +16,7 @@ const BOSS_ARENA := Rect2(16, 1, 20, 20)
 const BOSS_FRAME := Rect2(15, 0, 22, 21)
 const ROOTWAY := Vector2(17, 29)
 const WINCH := Vector2(37, 32)
-const MINIONS := [Vector2(31,36),Vector2(36,34),Vector2(35,30),Vector2(31,27),Vector2(23,26),Vector2(28,26)]
+const MINIONS := [Vector2(31,37),Vector2(34.6,36.8),Vector2(34.8,33),Vector2(38.3,30.2),Vector2(24.1,27.4),Vector2(28.4,28.1)]
 const LANDMARKS := {
 	"arrival": {"name": "Arrival Glade", "at": Vector2(26, 45), "hint": "Follow the old stones. Your return rift stays open."},
 	"crossing": {"name": "Rootbound Crossing", "at": Vector2(33, 40), "hint": "Pawprints turn west beneath the violet leaves."},

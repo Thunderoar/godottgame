@@ -64,6 +64,9 @@ func _process(delta: float) -> void:
 	var game := get_tree().get_first_node_in_group("game") as Game
 	if is_instance_valid(game) and is_instance_valid(game.player()):
 		label.visible = game.player().global_position.distance_to(global_position) < (4.0 if kind == "passage" else 6.0)
+		var realm := get_parent() as TwilightRealm
+		if kind == "shortcut" and is_instance_valid(realm) and realm.combat != null and realm.combat.active_id == "watchpost_guard":
+			label.visible = false # The HUD hint owns this fight; keep its lanes readable.
 	if kind == "pet" and is_instance_valid(art):
 		art.position.y = -0.65 + (0.0 if GameSettings.reduce_motion() else sin(_bob * 1.8) * 0.045)
 		art.flip_h = sin(_bob * 0.3) > 0.8

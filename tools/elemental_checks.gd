@@ -123,31 +123,36 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 		var boss := world.boss as ElementalBoss
 		var def := PortalDB.get_portal(portal_id)
 		check.call(boss != null and boss.element == str(def.element) and boss.skills.size() == 3,"%s builds its matching demon with exactly three powers" % portal_id)
-		var minions := 0
-		var sample: ElementalMinion
-		for node in world.get_children():
-			if node is ElementalMinion and node.element == boss.element:
-				minions += 1
-				sample = node
-		check.call(minions == (6 if world is TwilightRealm else int(def.monster_count)),"%s small monsters match their ruler's element" % portal_id)
-		var sample_start := sample.position
-		sample._player = world.player
-		sample._target = world.player
-		sample.active = true
-		sample._state = Enemy.State.CHASE
-		sample._power_clock = 0
-		sample.position = world.player.position+Vector2(4,0)
-		sample._chase(0.016)
-		var style := str(ElementDB.get_element(sample.element).get("minion_attack",""))
-		var used_power := sample._charging
-		if style in ["ranged","homing"]: sample._physics_process(0.6)
-		for node in world.get_children():
-			if (node is ElementalEffect or node is ElementalProjectile) and node.caster == sample: used_power = true
-		check.call(used_power,"%s actually uses its %s elemental attack" % [sample.name_text(),style])
-		sample._charging = false
-		sample._power_clock = 99
-		sample.position = sample_start
-		_clear_magic(world)
+		if world is TwilightRealm:
+			var guards: Array = (world as TwilightRealm)._packs.map(func(pack: Dictionary) -> RealmGuard: return pack.enemy as RealmGuard)
+			check.call(guards.size() == 6 and guards.all(func(guard: RealmGuard) -> bool: return guard.kind == "minion_chaos"), "Twilight retains six chaos guards with explicit realm profiles" )
+			check.call(guards.filter(func(guard: RealmGuard) -> bool: return guard.profile == "watcher" or guard.profile == "keeper" ).size() == 2, "Twilight substitutes exactly one Watcher and one Keeper without altering legacy elemental powers" )
+		else:
+			var minions := 0
+			var sample: ElementalMinion
+			for node in world.get_children():
+				if node is ElementalMinion and node.element == boss.element:
+					minions += 1
+					sample = node
+			check.call(minions == (6 if world is TwilightRealm else int(def.monster_count)),"%s small monsters match their ruler's element" % portal_id)
+			var sample_start := sample.position
+			sample._player = world.player
+			sample._target = world.player
+			sample.active = true
+			sample._state = Enemy.State.CHASE
+			sample._power_clock = 0
+			sample.position = world.player.position+Vector2(4,0)
+			sample._chase(0.016)
+			var style := str(ElementDB.get_element(sample.element).get("minion_attack",""))
+			var used_power := sample._charging
+			if style in ["ranged","homing"]: sample._physics_process(0.6)
+			for node in world.get_children():
+				if (node is ElementalEffect or node is ElementalProjectile) and node.caster == sample: used_power = true
+			check.call(used_power,"%s actually uses its %s elemental attack" % [sample.name_text(),style])
+			sample._charging = false
+			sample._power_clock = 99
+			sample.position = sample_start
+			_clear_magic(world)
 		var art := boss.sprite.texture.get_image()
 		seen_art[art.get_data().hex_encode().sha256_text()] = true
 		boss._player = world.player

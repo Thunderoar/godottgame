@@ -165,7 +165,7 @@ func _ready() -> void:
 	await preload("res://tools/presentation_checks.gd").run(game, _check)
 	await StatusStripChecks.run(game, _check)
 	await VillageProjectChecks.run(game, _check)
-	# Compact realm coverage includes living habitats, Waykeeper, memories and cache transactions.
+	# Compact realm: living habitats, memories/cache transactions and three owned combat encounters.
 	await preload("res://tools/twilight_checks.gd").run(game, _check)
 	await _test_forest_game_over()
 

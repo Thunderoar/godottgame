@@ -16,6 +16,15 @@ func _ready() -> void:
 	game._remove_title()
 	game.hud.visible = true
 	await preload("res://tools/twilight_checks.gd").run(game,_check,_shot if _capture else Callable())
+	# Let final route refresh and short-lived visual callbacks retire before
+	# tearing the fixture down, then drain its queued deletions before quitting.
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	await get_tree().create_timer(0.75).timeout
+	await get_tree().process_frame
+	game.queue_free()
+	await get_tree().process_frame
+	await get_tree().process_frame
 	print("--- twilight test: %d checks, %s ---" % [checks,"PASS" if failures == 0 else "%d FAILURE(S)" % failures])
 	get_tree().quit(0 if failures == 0 else 1)
 

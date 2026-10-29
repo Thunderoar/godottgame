@@ -3,6 +3,7 @@ extends Dungeon
 ## One connected authored exploration world; Dungeon's actor/routing API stays valid.
 
 var wildlife: Dictionary = {}
+var combat: RealmEncounterDirector
 var _packs: Array[Dictionary] = []
 var _shortcut_body: StaticBody2D
 var _survey_timer := 0.0
@@ -31,6 +32,7 @@ func _ready() -> void:
 	y_sort_enabled = true
 	_boss_defeated = bool(GameState.portal_state(portal_id).get("cleared", false))
 	_build_lighting()
+	combat = RealmEncounterDirector.new(self)
 	canvas_modulate.color = Color("#d7d6ec") if not _boss_defeated else Color("#eef3dd")
 	background = Sprite2D.new()
 	background.texture = TwilightLandscape.terrain(_boss_defeated)
@@ -123,20 +125,23 @@ func _build_places() -> void:
 	if _boss_defeated: _place("exit", "citadel", RealmDB.BOSS, "The citadel is restored\nReturn to BESUT")
 
 func _build_encounters() -> void:
-	var spots := RealmDB.MINIONS
-	for i in spots.size():
-		var enemy := ElementalMinion.new()
-		enemy.disable_mode = CollisionObject2D.DISABLE_MODE_KEEP_ACTIVE
-		enemy.element = "chaos"
-		enemy.position = spots[i]
-		enemy.max_hp = 42 + i * 2
-		enemy.damage = 7
-		enemy.speed = 1.7
-		enemy.xp_reward = 14
-		enemy.gold_reward = 7
-		add_child(enemy)
-		enemy.process_mode = Node.PROCESS_MODE_DISABLED
-		_packs.append({"enemy": enemy, "home": spots[i], "active": false})
+	var index := 0
+	for pair in RealmCombatDB.PAIRS:
+		for member in 2:
+			var enemy := RealmGuard.new()
+			enemy.director = combat
+			enemy.encounter_id = str(pair.id)
+			enemy.profile = str(pair.profiles[member])
+			enemy.position = pair.homes[member]
+			enemy.home = enemy.position
+			enemy.max_hp = 42 + index * 2
+			enemy.damage = 7
+			enemy.speed = 1.7
+			enemy.xp_reward = 14
+			enemy.gold_reward = 7
+			add_child(enemy)
+			_packs.append({"enemy":enemy,"home":enemy.home,"active":false,"encounter":pair.id})
+			index += 1
 	var ruler := ElementalBoss.new()
 	ruler.disable_mode = CollisionObject2D.DISABLE_MODE_KEEP_ACTIVE
 	ruler.element = "chaos"
@@ -221,6 +226,7 @@ func clear_interest_view(at: Vector2) -> bool:
 	return get_world_2d().direct_space_state.intersect_ray(ray).is_empty()
 
 func _landmark_hint(id: String) -> String:
+	if combat != null and not combat.active_id.is_empty(): return str(RealmCombatDB.pair(combat.active_id).hint)
 	return "The wilds are peaceful. Find missed companions, visit onward passages, or return to BESUT." if _boss_defeated else str(RealmDB.LANDMARKS[id].hint)
 
 func set_message(message: String) -> void:
@@ -267,24 +273,7 @@ func _physics_process(delta: float) -> void:
 			game._apply_input_lock()
 			set_message("Rested. Checkpoint saved at the lantern. Step through the arch when ready.")
 	if _boss_defeated: return
-	for pack in _packs:
-		var enemy := pack.enemy as Enemy
-		if not is_instance_valid(enemy) or enemy.dead: continue
-		var home: Vector2 = pack.home
-		var near := player.position.distance_to(home) < 6.5
-		var safe := player.position.distance_to(RealmDB.CAMP) < 3.5 or player.position.distance_to(RealmDB.ENCOUNTERS.bramble_cat.at) < 4 or player.position.distance_to(RealmDB.ENCOUNTERS.dusk_moth.at) < 4
-		if bool(pack.active) and (player.position.distance_to(home) > 11 or safe):
-			pack.active = false
-			enemy.process_mode = Node.PROCESS_MODE_DISABLED
-			enemy.position = home
-			enemy.velocity = Vector2.ZERO
-			_clear_effects(enemy)
-		elif not bool(pack.active) and near and not safe:
-			pack.active = true
-			enemy.process_mode = Node.PROCESS_MODE_INHERIT
-			enemy._player = player
-			enemy._target = player
-			enemy._enter(Enemy.State.CHASE)
+	combat.tick(delta)
 	if not _boss_arrived and RealmDB.BOSS_TRIGGER.has_point(player.position):
 		close_reading()
 		_boss_arrived = true
@@ -324,6 +313,8 @@ func reset_boss() -> void:
 
 func _clear_effects(caster: Enemy = null) -> void:
 	for child in get_children():
+		if child is RealmGuardAttack:
+			if caster == null or child.caster == caster: child.cancel()
 		if child is ElementalEffect or child is ElementalProjectile:
 			if caster == null or child.caster == caster: child.queue_free()
 
@@ -333,12 +324,18 @@ func alert_intruders(_include_boss: bool = false) -> void:
 
 func can_damage_actor(actor: Node) -> bool:
 	if actor == boss: return _boss_arrived and not _boss_defeated
+	if actor is RealmGuard: return combat.can_damage(actor)
 	return actor.process_mode != Node.PROCESS_MODE_DISABLED
+
+func can_target_actor(actor: Node) -> bool:
+	if actor is RealmGuard: return can_damage_actor(actor) and actor.mode == RealmGuard.Mode.ENGAGED and actor.encounter_id == combat.active_id
+	return can_damage_actor(actor)
 
 func _on_boss_finished(_enemy: Enemy) -> void:
 	if _boss_defeated: return
 	_boss_defeated = true
 	_boss_arrived = false
+	combat.cancel_all()
 	camera.framing_bounds = Rect2()
 	var summary := GameState.complete_portal(portal_id)
 	_clear_effects()
@@ -362,6 +359,7 @@ func challenge_pet(encounter: RealmInteractable) -> void:
 		set_message(str(reason.reason))
 		return
 	close_reading()
+	combat.cancel_all()
 	game.hud.release_world_controls()
 	game._input_locked = true
 	game._apply_input_lock()
@@ -371,6 +369,7 @@ func open_shortcut() -> void:
 	GameState.open_realm_shortcut()
 	if is_instance_valid(_shortcut_body): _shortcut_body.queue_free()
 	if _monster_routes != null: _monster_routes.invalidate()
+	combat.invalidate_routes()
 	pet.invalidate_routes()
 	set_message("Rootway opened. The grove now loops directly to the citadel approach.")
 
@@ -379,6 +378,7 @@ func rest_at_camp() -> void:
 	var game := get_tree().get_first_node_in_group("game") as Game
 	if not is_instance_valid(game): return
 	close_reading()
+	combat.cancel_all()
 	GameState.set_realm_checkpoint("camp")
 	game.hud.release_world_controls()
 	game._input_locked = true
@@ -391,6 +391,7 @@ func exit_to_lobby(bank_loot: bool) -> void:
 	var game := get_tree().get_first_node_in_group("game") as Game
 	if _leaving or not is_instance_valid(game) or game.world != self or game._transitioning: return
 	_leaving = true
+	combat.cancel_all()
 	game.hud.release_world_controls()
 	game._input_locked = true
 	game._apply_input_lock()
@@ -406,3 +407,6 @@ func get_guidance_targets() -> Array:
 
 func minimap_markers() -> Array:
 	return []
+
+func _exit_tree() -> void:
+	if combat != null: combat.cancel_all()

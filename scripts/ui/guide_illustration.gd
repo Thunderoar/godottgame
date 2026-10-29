@@ -48,6 +48,9 @@ func _texture(texture: Texture2D, centre: Vector2, extent: float) -> void:
 	draw_texture_rect(texture, Rect2(centre - fitted / 2, fitted), false)
 
 func _picture(id: String, at: Vector2, extent: float) -> void:
+	if id.begins_with("realm_guard:"):
+		_texture(RealmCombatArt.guard_texture(id.get_slice(":",1),0),at,extent)
+		return
 	if id.begins_with("hero:"):
 		_texture(PixelArt.character_texture(id.get_slice(":", 1), 0), at, extent)
 		return

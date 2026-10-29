@@ -48,6 +48,10 @@ static func entries(category: int) -> Array[Dictionary]:
 		for id in RealmContentDB.FRAGMENTS:
 			lights.append("spark" if id in GameState.realm_progress().get("read_fragments", []) else "question")
 		pages.append({"name": "Memories of Twilight", "actor": "portal", "rows": [lights], "memory_journal": true})
+	if category == 1:
+		pages.append({"name":"Darkfire Imp", "actor":"realm_guard:imp", "rows":[["path","player","sword"]], "description":"TWILIGHT PATROL · The Imp stops to mark a rush, then charges along that fixed line. Step sideways and counter during recovery. Only one local pair pursues you; pet clearings and the citadel lantern are refuges."})
+		pages.append({"name":"Ember Watcher", "actor":"realm_guard:watcher", "rows":[["bow","path","player"]], "description":"WATCHPOST GUARD · Three marked lanes show the Watcher's fan before it fires. Its aim stays fixed. Walk into a gap, approach from the side, or use the stone cover. A whole volley can hit once. Its lantern dims during recovery."})
+		pages.append({"name":"Rune Keeper", "actor":"realm_guard:keeper", "rows":[["spark","path","player"]], "description":"ASHEN SENTRY · The Keeper marks a short cross at your position, then briefly activates it. Walk diagonally into a clear quadrant. The mark never follows you, and its intersection is one hit. Returning to the lantern ends pursuit."})
 	return pages
 
 static func description(entry: Dictionary) -> String:

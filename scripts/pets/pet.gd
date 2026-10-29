@@ -387,6 +387,7 @@ func _nearest_enemy(max_distance: float) -> Node2D:
 		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion() or bool(enemy.get("dead")) or enemy.get_parent() != get_parent():
 			continue
 		if get_parent().has_method("can_damage_actor") and not get_parent().can_damage_actor(enemy): continue
+		if get_parent().has_method("can_target_actor") and not get_parent().can_target_actor(enemy): continue
 		if not enemy.has_method("take_damage"):
 			continue
 		var distance := global_position.distance_to(enemy.global_position)

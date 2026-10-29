@@ -1,9 +1,10 @@
 # Twilight Wilds: compact content expansion plan
 
 Date: 2026-10-29. Source baseline: `928b913`, including the compact 56x52 realm.
-Status: milestone 1 implemented and verified; later milestones remain proposals.
+Status: milestones 1 and 2 implemented and verified; milestones 3 and 4 remain proposals.
 
 Detailed milestone 1 specification: [First Signs of Life](TWILIGHT_WILDS_FIRST_EXPANSION_PLAN.md).
+Detailed milestone 2 specification: [Read the Wilds — combat expansion](TWILIGHT_WILDS_COMBAT_EXPANSION_PLAN.md).
 
 ## 1. Experience and scope
 
@@ -35,11 +36,14 @@ RealmDB currently defines seven landmarks, two tameable pets, six regular enemie
 an arrival rift, checkpoint, shortcut and nine physical onward passages. Terrain and
 collision use the compact bounds; saved discoveries use normalized six-by-six cells.
 
-The regular enemies are all chaos-element Darkfire Imps with the same dash profile.
-Wild pets bob and occasionally turn; they have no habitat routines. Current realm
-interactions cover pet challenge, return, winch, rest and onward travel. There are
-no realm treasure caches, story fragments, restoration activities or environmental
-puzzles. Post-clear changes currently restore terrain/light and remove hostiles.
+Milestone 1 now gives the pets home routines and fixed duel stages, adds Wisp the
+Waykeeper, saves three memories in a journal, and exposes the one-time rootway
+hollow cache. Realm interactions also cover return, winch, rest and onward travel.
+Milestone 2 organizes six guards into three local pairs: four Darkfire Imps, one
+Ember Watcher and one Rune Keeper. It adds stationary rush warnings, a fixed fan,
+a short ground cross, physical cover and dependable retreat with one owned attack
+at a time. Restoration activities and environmental puzzles remain proposed.
+Post-clear changes restore terrain/light and remove hostiles.
 
 Use the existing landscape and lifecycle as the foundation, and introduce content
 definitions instead of adding another independent world or global quest system.
@@ -269,6 +273,11 @@ became the source of the stolen light. This adds context without rewriting Adam,
 Arjun or Mei Ling's established rescue story.
 
 ## 8. Implementation order
+
+The player-facing delivery milestones are: **1. First Signs of Life** (implemented),
+**2. Combat expansion** (implemented), **3. Environmental activities**,
+and **4. World response and polish**. The six engineering steps below describe
+dependencies across those deliveries, not a replacement numbering system.
 
 1. **Foundations:** define stable content IDs and rewards; add/sanitize/save the new
    state and pending/banked claim transactions. Verify duplicate, death, reload and

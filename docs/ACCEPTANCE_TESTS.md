@@ -1584,3 +1584,69 @@ Evidence under `C:/Users/ayiz/AppData/Local/Temp/`: full gate
 `tidesworn-tests-79f390442ef94c4bb718c549ebc3bf3b`, 1280x720 review
 `tidesworn-tests-435fdb229b564d06bf4e852a3c48aeaa`, and import
 `tidesworn-tests-0c710d0d027047a58f507898f2778530`.
+
+## Read the Wilds — compact combat expansion (2026-10-29)
+
+- The world remains 56x52, its main road about 49.55 units, and its boss arena
+  20x20. Six regular guards retain 282 total HP, base damage/movement and ordinary
+  XP/drop rules. Four Imps, one Ember Watcher and one Rune Keeper replace the six
+  identical profiles; no extra wave, permanent reward or saved combat field is added.
+- Authored pairs have separate engagement cores, bounded pursuit and physical
+  return routes. One pair can attack; its single slot covers warnings and all
+  live damaging effects. Forward/reverse handoff cannot accumulate attacking pairs.
+- Imps have a real 0.65-second stationary windup before their committed rush.
+  Consecutive positions verify continuous movement. The Watcher locks a three-shot
+  fan, with real cover stopping its outer lane. The Keeper marks a short fixed cross
+  with two collision-clear diagonal escapes. One cast contacts Adam at most once,
+  including fan overlaps and the cross intersection, independently of blink immunity.
+- Swept collision handles large time steps. Warning and hit geometry are clipped
+  against world collision, pursuit limits and protected spaces. Entire pet stages
+  plus margin, arrival, memory sites and the lantern reject incoming regular attacks.
+- Retreat preserves surviving HP, cancels pending powers and returns bodies through
+  refuge-aware monster grids without healing or snapping. Companion auto-targeting
+  does not follow returning guards. Ordinary village/player routing remains intact.
+- Weapon interruption, death, queued removal, boss ownership, defeat and world
+  replacement invalidate cast tokens before delayed damage can land. Duplicate
+  callbacks cannot repeat damage or ordinary kill/reward accounting.
+- Actual injected touch joystick input drives the physics-backed player diagonally
+  out of a cross at ordinary movement speed, then releases every movement action.
+  No new combat button is added. Normal Settings keeps world combat active; the
+  protected habitat duel ends pursuing casts before its deliberate world suspension.
+- Essential warnings survive low effects/Reduce Motion. Field Guide monster pages
+  illustrate the three silhouettes and their responses. The live HUD continues to
+  count dormant living monsters rather than pretending to be an aggro counter.
+- Existing discovery, pet bonds, cache banking/loss, checkpoint migration, peaceful
+  post-clear revisits, workshop eligibility and both rescues retain their gates.
+  Legacy elemental arenas keep their ElementDB profiles and powers.
+
+`tools/realm_combat_checks.gd` runs inside the isolated Twilight suite and the
+canonical tide gate. It supplements existing lifecycle/save/control coverage with
+owned-attack timing, physical movement, real cover, interruption, protected-space,
+touch-dodge and duplicate-hit cases. New render frames show the three warnings,
+the reduced-motion fallback and the Watcher's Field Guide page.
+
+Current native Windows / Godot 4.7.2 verification:
+
+- Canonical isolated gameplay: **5,841 checks, PASS, exit 0**.
+- Final rendered Twilight reviews: **180 checks, PASS, exit 0** at **1280x720**
+  and **832x480**. Inspected the three attack warnings, cover, low-effects cross,
+  Field Guide, protected habitats and citadel framing. The winch label yields to
+  the Watcher's lanes while its nearby interaction remains available.
+- The full gate and final rendered error logs are empty, with no FAIL, SCRIPT
+  ERROR or ERROR markers. Earlier rendered runs intermittently reported ObjectDB
+  cleanup warnings (4-9 instances); verbose diagnostic runs did not reproduce
+  them. The focused runner now drains final route/visual callbacks, explicitly
+  frees its fixture and drains queued deletions; the final two reviews have no
+  cleanup warning. This is test teardown evidence, not a general engine leak audit.
+- The isolated import passes with the existing Android build-tools directory
+  warning. Rendering uses native NVIDIA Compatibility/OpenGL. No Android export,
+  physical-phone input, player-comprehension or new performance figure is claimed.
+- Whole-checkout `git diff --check` and new-file whitespace checks pass. Existing
+  local project settings/import changes are preserved. Screenshots and isolated
+  saves remain outside the repository; normal player progress was not mutated.
+
+Evidence under `C:/Users/ayiz/AppData/Local/Temp/`: full gate
+`tidesworn-tests-cd1d90a4339e49bdb29c81831fed0795`, final 1280x720 review
+`tidesworn-tests-6bf52c258c7b4015a208245b9f3569bd` (verbose), final 832x480 review
+`tidesworn-tests-3a1651296b0840ecbec2aa0816243b7c`, and import
+`tidesworn-tests-588ff767c06a45f1949f95e599e247ef`.
