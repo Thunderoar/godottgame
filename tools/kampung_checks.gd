@@ -17,7 +17,20 @@ static func run(game: Game, check: Callable) -> void:
 			var owner := str(anchor.get("relative_to", ""))
 			var detail := {"parent": owner, "position": layout.position_of(str(anchor.id)) - layout.position_of(owner), "footprint": anchor.get("footprint", Rect2(-0.4, -0.3, 0.8, 0.3))}
 			check.call(layout.scenery_fits(detail), "districts: movable default prop avoids public circulation: " + str(anchor.id))
-	check.call(residences == 5, "districts: five ordinary households share the western residential area")
+	check.call(residences == 5, "districts: five ordinary households share the eastern residential area")
+	var commercial_right := -INF
+	var residential_left := INF
+	for anchor in layout.anchors:
+		var kind := str(anchor.get("kind", ""))
+		var plot := layout.world_footprint(str(anchor.id))
+		if kind == "shop":
+			commercial_right = maxf(commercial_right, plot.end.x)
+			check.call(anchor.position.x < 22, "districts: every shop stays in the western quarter: " + str(anchor.id))
+		elif kind in ["house", "residence"]:
+			residential_left = minf(residential_left, plot.position.x)
+			check.call(anchor.position.x >= 30, "districts: every occupied home stays in the east: " + str(anchor.id))
+	check.call(residential_left - commercial_right >= 10, "districts: at least ten world units separate all shop and home footprints")
+	check.call(layout.zone_at(Vector2(25, 19)) == "village_green", "districts: a landscaped green, not more buildings, occupies the central separation")
 	for id in ["shop_potion", "shop_equipment", "shop_pet", "shop_house", "shop_services"]:
 		check.call(layout.anchor(id).get("zone", "") == "market", "districts: merchant belongs to shared commercial district: " + id)
 	for detail in layout.scenery:
@@ -82,6 +95,17 @@ static func run(game: Game, check: Callable) -> void:
 	var carpenter: Resident
 	for resident in lobby._residents:
 		if resident.resident_name == "Rami": carpenter = resident
+	for placeable in lobby._placeables:
+		if placeable.category != "shop": continue
+		check.call(lobby._settlement_editor.building_area.encloses(Rect2(placeable.position - placeable.selection_size * 0.5, placeable.selection_size)), "districts: relocated shop fits the settlement editor: " + placeable.placeable_id)
+	var editor := lobby._settlement_editor
+	editor._selected = workshop
+	editor._dragging = true
+	editor._grab_offset = Vector2.ZERO
+	editor._drag(Vector2(10, 30))
+	check.call(workshop.position == original, "districts: expanded settlement editor rejects dragging a shop base into the sea")
+	editor._selected = null
+	editor._dragging = false
 	var before := carpenter.position
 	var before_route := carpenter.waypoints.duplicate()
 	workshop.position += Vector2(0.5, 0)

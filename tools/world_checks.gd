@@ -10,6 +10,8 @@ static func run(game: Game, check: Callable) -> bool:
 	for id in expected:
 		check.call(not layout.anchor(id).is_empty(), "required spatial landmark exists: " + id)
 	check.call(layout.allows("waterfront", "fishing_net") and not layout.allows("forest_interior", "fishing_net"), "semantic zones admit fishing tools at the waterfront and reject them in woodland")
+	var returning_route := lobby.resident_path(lobby.ship_boarding.global_position + Vector2(0.6, 0), lobby._house_position + Vector2(-3, 3), false)
+	check.call(not returning_route.is_empty() and returning_route[-1].distance_to(lobby._house_position + Vector2(-3, 3)) < 0.01, "initial resident grid reaches the exact ship-return destination after physics registration")
 	var planner := ResidentRoutes.new(lobby)
 	var query := PhysicsShapeQueryParameters2D.new()
 	var circle := CircleShape2D.new()

@@ -124,7 +124,11 @@ func _drag(world_pos: Vector2) -> void:
 	target.x = snappedf(clampf(target.x, min_x, max_x), 0.25)
 	target.y = snappedf(clampf(target.y, min_y, max_y), 0.25)
 	var home := get_parent() as Lobby
-	if home != null and not home.project_placement_allowed(_selected, target): return
+	if home != null:
+		# The wider authored settlement includes the coast; keep a dragged base on land.
+		for edge_x in [-half.x, 0.0, half.x]:
+			if WorldTerrain.is_sea(target + Vector2(edge_x, 0)): return
+		if not home.project_placement_allowed(_selected, target): return
 	_selected.global_position = target
 
 

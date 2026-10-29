@@ -1,5 +1,12 @@
 # Village layout and authoring
 
+> **2026-10-30 placement update:** The current default has shops in the west,
+> occupied homes in the east, and a 10.1-unit full-footprint gap across the
+> central green. See [Village districts](VILLAGE_DISTRICTS.md) for the revised
+> geography, save precedence, navigation and verification. Earlier positions below
+> describe the preceding layout.
+
+
 The shipped `data/maps/village.tres` references
 `data/maps/village_layout.tres` (`WorldLayout`). This is the canonical developer
 layout. Runtime code reads a deep copy; no game session writes this resource.

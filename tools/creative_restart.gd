@@ -7,7 +7,9 @@ func _ready() -> void:
 	var game := load("res://scenes/game.tscn").instantiate() as Game
 	add_child(game)
 	await get_tree().process_frame
-	await game.call("_on_character_selected", "qayyim")
+	GameState.new_game("adam")
+	game.call("_remove_title")
+	await game.call("_load_lobby", false)
 	await get_tree().process_frame
 	await get_tree().physics_frame
 	var passed := AssetRegistry.library().entries.has("demo/character")

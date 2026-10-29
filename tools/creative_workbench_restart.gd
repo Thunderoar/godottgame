@@ -7,7 +7,9 @@ func _ready() -> void:
 	var game := load("res://scenes/game.tscn").instantiate() as Game
 	add_child(game)
 	await get_tree().process_frame
-	await game.call("_on_character_selected", "qayyim")
+	GameState.new_game("adam")
+	game.call("_remove_title")
+	await game.call("_load_lobby", false)
 	for frame in 4: await get_tree().physics_frame
 	var lobby := game.world as Lobby
 	var source := lobby._authored_map
@@ -17,10 +19,11 @@ func _ready() -> void:
 		for entry in source.layout.anchors:
 			if entry.get("editor_created", false): landmark = str(entry.id)
 	passed = passed and not landmark.is_empty()
-	passed = passed and lobby._layout.position_of("shop_house").is_equal_approx(Vector2(27, 13.15))
+	passed = passed and lobby._layout.position_of("shop_house").is_equal_approx(WorldLayout.village().position_of("shop_house") + Vector2(1, 0.25))
+	var expected_workshop := WorldLayout.village().position_of("shop_house") + Vector2(1, 0.25)
 	var shop_found := false
 	for placeable in lobby._placeables:
-		if placeable.placeable_id == "shop_house": shop_found = placeable.position.is_equal_approx(Vector2(27, 13.15))
+		if placeable.placeable_id == "shop_house": shop_found = placeable.position.is_equal_approx(expected_workshop)
 	passed = passed and shop_found
 	var road_found := false
 	var district_found := false

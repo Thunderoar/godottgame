@@ -191,7 +191,7 @@ func _process(delta: float) -> void:
 	_reveal_elapsed += maxf(0.0, delta)
 	var reduced := GameSettings.reduce_motion()
 	var elapsed := _reveal_elapsed * (_reveal_duration / REDUCED_FADE_SECONDS) if reduced else _reveal_elapsed
-	if elapsed >= _reveal_duration:
+	if _reveal_elapsed >= (REDUCED_FADE_SECONDS if reduced else _reveal_duration):
 		reveal_line()
 		return
 	var current := 0

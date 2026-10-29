@@ -140,6 +140,7 @@ func _ready() -> void:
 	var guide := MissionPath.new()
 	add_child(guide)
 	call_deferred("_on_data_changed")
+	call_deferred("_sync_initial_resident_routes")
 	call_deferred("_check_forest_game_over")
 	Vfx.ensure_pool(self)
 	_on_presentation_changed("")
@@ -1741,7 +1742,7 @@ func _apply_emergency_damage(damage: int) -> void:
 func _build_settlement_editor() -> void:
 	_settlement_editor = SettlementEditor.new()
 	_settlement_editor.name = "SettlementEditor"
-	_settlement_editor.building_area = Rect2(18.2, 10.5, 27.4, 19.9)
+	_settlement_editor.building_area = Rect2(7, 7.5, 38.6, 31.5)
 	add_child(_settlement_editor)
 	for placeable in _placeables:
 		_settlement_editor.register(placeable)
@@ -1835,6 +1836,17 @@ func refresh_house() -> void:
 	if house_sprite:
 		house_sprite.texture = PixelArt.house_texture(GameState.house_level())
 		_add_window_lights(house_sprite, GameState.house_level())
+
+
+func _sync_initial_resident_routes() -> void:
+	# Early resident queries can precede registration of the complete village's
+	# static bodies. Discard that first grid once physics owns the whole map.
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	if is_queued_for_deletion() or journey_serial != GameState.journey_serial: return
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if not is_instance_valid(game) or game.world != self: return
+	invalidate_resident_routes()
 
 
 func resident_path(from: Vector2, to: Vector2, allow_nearest_goal: bool = true) -> PackedVector2Array:

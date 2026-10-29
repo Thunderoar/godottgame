@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1")
 terrain_bake_path = "res://assets/authored/village/terrain.png"
-terrain_bake_hash = 2763877382
+terrain_bake_hash = 3342420648
 terrain_palette_hash = 2346589738
 anchors = Array[Dictionary]([{
 "approach": Vector2(0, 1.2),
@@ -55,7 +55,7 @@ anchors = Array[Dictionary]([{
 "kind": "landmark",
 "movable": false,
 "owner": "Lobby",
-"position": Vector2(28, 23.7),
+"position": Vector2(14, 23.7),
 "priority": 100,
 "zone": "market"
 }, {
@@ -69,7 +69,7 @@ anchors = Array[Dictionary]([{
 "merchant": "Mara",
 "movable": true,
 "owner": "Lobby",
-"position": Vector2(22.5, 29.6),
+"position": Vector2(18, 20),
 "priority": 100,
 "yard": Rect2(-2.8, -3.8, 5.6, 5.6),
 "zone": "market"
@@ -84,7 +84,7 @@ anchors = Array[Dictionary]([{
 "merchant": "Garrick",
 "movable": true,
 "owner": "Lobby",
-"position": Vector2(26, 18.4),
+"position": Vector2(18, 12),
 "priority": 100,
 "yard": Rect2(-2.8, -3.8, 5.6, 5.6),
 "zone": "market"
@@ -99,7 +99,7 @@ anchors = Array[Dictionary]([{
 "merchant": "Nia",
 "movable": true,
 "owner": "Lobby",
-"position": Vector2(23.5, 24),
+"position": Vector2(10, 20),
 "priority": 100,
 "yard": Rect2(-2.8, -3.8, 5.6, 5.6),
 "zone": "market"
@@ -114,7 +114,7 @@ anchors = Array[Dictionary]([{
 "merchant": "Bram",
 "movable": true,
 "owner": "Lobby",
-"position": Vector2(26, 12.9),
+"position": Vector2(10.25, 12),
 "priority": 100,
 "yard": Rect2(-2.8, -3.8, 5.6, 5.6),
 "zone": "market"
@@ -129,7 +129,7 @@ anchors = Array[Dictionary]([{
 "merchant": "Amina",
 "movable": true,
 "owner": "Lobby",
-"position": Vector2(29.9, 29.2),
+"position": Vector2(18, 26),
 "priority": 100,
 "yard": Rect2(-2.8, -3.8, 5.6, 5.6),
 "zone": "market"
@@ -166,7 +166,7 @@ anchors = Array[Dictionary]([{
 "kind": "landmark",
 "movable": false,
 "owner": "Lobby",
-"position": Vector2(34, 13.8),
+"position": Vector2(28, 10),
 "priority": 100,
 "zone": "portal_grounds"
 }, {
@@ -214,7 +214,7 @@ anchors = Array[Dictionary]([{
 "kind": "landmark",
 "movable": false,
 "owner": "Lobby",
-"position": Vector2(37.9, 28.1),
+"position": Vector2(29, 29),
 "priority": 100,
 "zone": "farmland"
 }, {
@@ -310,7 +310,7 @@ anchors = Array[Dictionary]([{
 "kind": "landmark",
 "movable": false,
 "owner": "Lobby",
-"position": Vector2(28, 32.2),
+"position": Vector2(14, 22.3),
 "priority": 100,
 "zone": "market"
 }, {
@@ -322,7 +322,7 @@ anchors = Array[Dictionary]([{
 "kind": "landmark",
 "movable": false,
 "owner": "Lobby",
-"position": Vector2(42, 35.4),
+"position": Vector2(28, 37),
 "priority": 100,
 "zone": "farmland"
 }, {
@@ -350,7 +350,7 @@ anchors = Array[Dictionary]([{
 "level": 1,
 "movable": false,
 "owner": "Lobby",
-"position": Vector2(8.8, 19.4),
+"position": Vector2(41.5, 26.8),
 "priority": 100,
 "yard": Rect2(-3.8, -4.1, 7.4, 5.5),
 "zone": "residential"
@@ -379,7 +379,7 @@ anchors = Array[Dictionary]([{
 "level": 2,
 "movable": false,
 "owner": "Lobby",
-"position": Vector2(19.4, 9.3),
+"position": Vector2(34, 12),
 "priority": 100,
 "yard": Rect2(-3.6, -4.3, 7, 5.8),
 "zone": "residential"
@@ -393,7 +393,7 @@ anchors = Array[Dictionary]([{
 "level": 1,
 "movable": false,
 "owner": "Lobby",
-"position": Vector2(11.7, 11.2),
+"position": Vector2(42, 12),
 "priority": 100,
 "yard": Rect2(-3.5, -4.3, 7, 5.8),
 "zone": "residential"
@@ -407,7 +407,7 @@ anchors = Array[Dictionary]([{
 "level": 2,
 "movable": false,
 "owner": "Lobby",
-"position": Vector2(16.8, 20.2),
+"position": Vector2(42.3, 37.2),
 "priority": 100,
 "yard": Rect2(-3.6, -4, 6.8, 5.5),
 "zone": "residential"
@@ -421,7 +421,7 @@ anchors = Array[Dictionary]([{
 "level": 1,
 "movable": false,
 "owner": "Lobby",
-"position": Vector2(26.8, 6.4),
+"position": Vector2(34, 29.5),
 "priority": 100,
 "yard": Rect2(-3.2, -4.3, 6.4, 5.7),
 "zone": "residential"
@@ -487,7 +487,7 @@ anchors = Array[Dictionary]([{
 "movable": true,
 "offset": Vector2(-2.9, -1.5),
 "owner": "Lobby",
-"position": Vector2(35, 26.6),
+"position": Vector2(26.1, 27.5),
 "priority": 100,
 "relative_to": "garden_walk",
 "zone": "farmland"
@@ -501,7 +501,7 @@ anchors = Array[Dictionary]([{
 "movable": true,
 "offset": Vector2(0, -1.5),
 "owner": "Lobby",
-"position": Vector2(37.9, 26.6),
+"position": Vector2(29, 27.5),
 "priority": 100,
 "relative_to": "garden_walk",
 "zone": "farmland"
@@ -515,7 +515,7 @@ anchors = Array[Dictionary]([{
 "movable": true,
 "offset": Vector2(-2.9, 4.1),
 "owner": "Lobby",
-"position": Vector2(35, 32.2),
+"position": Vector2(26.1, 33.1),
 "priority": 100,
 "relative_to": "garden_walk",
 "zone": "farmland"
@@ -529,7 +529,7 @@ anchors = Array[Dictionary]([{
 "movable": true,
 "offset": Vector2(-2.9, 1.4),
 "owner": "Lobby",
-"position": Vector2(35, 29.5),
+"position": Vector2(26.1, 30.4),
 "priority": 100,
 "relative_to": "garden_walk",
 "zone": "farmland"
@@ -543,7 +543,7 @@ anchors = Array[Dictionary]([{
 "movable": true,
 "offset": Vector2(0, 1.4),
 "owner": "Lobby",
-"position": Vector2(37.9, 29.5),
+"position": Vector2(29, 30.4),
 "priority": 100,
 "relative_to": "garden_walk",
 "zone": "farmland"
@@ -557,7 +557,7 @@ anchors = Array[Dictionary]([{
 "movable": true,
 "offset": Vector2(0, 4.1),
 "owner": "Lobby",
-"position": Vector2(37.9, 32.2),
+"position": Vector2(29, 33.1),
 "priority": 100,
 "relative_to": "garden_walk",
 "zone": "farmland"
@@ -584,12 +584,12 @@ anchors = Array[Dictionary]([{
 "zone": "residential"
 }, {
 "axis": "horizontal",
-"gaps": PackedVector2Array(-4.3, 1.5),
+"gaps": PackedVector2Array(-2.5, 2.5),
 "id": "fence_north",
 "kind": "fence",
 "movable": true,
-"position": Vector2(35.6, 14.3),
-"span": Vector2(-4.8, 4.8),
+"position": Vector2(38, 9.3),
+"span": Vector2(-7, 7),
 "zone": "portal_grounds"
 }, {
 "axis": "vertical",
@@ -619,7 +619,7 @@ anchors = Array[Dictionary]([{
 "id": "animal_yard",
 "kind": "workspace",
 "movable": false,
-"position": Vector2(42.6, 33.1),
+"position": Vector2(28, 34.3),
 "zone": "farmland"
 }, {
 "approach": Vector2(0, 0),
@@ -628,7 +628,7 @@ anchors = Array[Dictionary]([{
 "id": "residential_court",
 "kind": "landmark",
 "movable": false,
-"position": Vector2(16, 14.1),
+"position": Vector2(38.5, 24.3),
 "zone": "residential"
 }, {
 "approach": Vector2(0, 0),
@@ -637,7 +637,7 @@ anchors = Array[Dictionary]([{
 "id": "workshop_yard",
 "kind": "landmark",
 "movable": false,
-"position": Vector2(25.1, 13.6),
+"position": Vector2(9.1, 13.6),
 "zone": "market"
 }, {
 "approach": Vector2(0, 0),
@@ -652,8 +652,8 @@ anchors = Array[Dictionary]([{
 "id": "barrel_1",
 "kind": "decoration",
 "movable": true,
-"offset": Vector2(-2.5, 0.2),
-"position": Vector2(20, 29.8),
+"offset": Vector2(-2.25, 0.2),
+"position": Vector2(15.75, 20.2),
 "relative_to": "shop_potion",
 "zone": "market"
 }, {
@@ -670,8 +670,8 @@ anchors = Array[Dictionary]([{
 "id": "signpost",
 "kind": "decoration",
 "movable": true,
-"offset": Vector2(2.5, -1.7),
-"position": Vector2(30.5, 22),
+"offset": Vector2(2.0, -3.45),
+"position": Vector2(16.0, 20.25),
 "relative_to": "market",
 "zone": "market"
 }, {
@@ -679,8 +679,8 @@ anchors = Array[Dictionary]([{
 "id": "crate_1",
 "kind": "decoration",
 "movable": true,
-"offset": Vector2(-4, 0.5),
-"position": Vector2(22, 13.4),
+"offset": Vector2(3, -2.5),
+"position": Vector2(13.25, 9.5),
 "relative_to": "shop_house",
 "zone": "homestead"
 }, {
@@ -688,7 +688,7 @@ anchors = Array[Dictionary]([{
 "kind": "decoration",
 "movable": true,
 "offset": Vector2(2.7, -1.2),
-"position": Vector2(28.7, 11.7),
+"position": Vector2(12.95, 10.8),
 "relative_to": "shop_house",
 "zone": "market"
 }, {
@@ -696,8 +696,8 @@ anchors = Array[Dictionary]([{
 "id": "crate_2",
 "kind": "decoration",
 "movable": true,
-"offset": Vector2(6.2, -1.7),
-"position": Vector2(44.1, 26.4),
+"offset": Vector2(3.45, 0.8),
+"position": Vector2(32.45, 29.8),
 "relative_to": "garden_walk",
 "zone": "farmland"
 }])
@@ -707,15 +707,15 @@ routes = Array[Dictionary]([{
 "material": "path",
 "role": "primary",
 "to": "market",
-"via": PackedVector2Array(31, 24.3),
-"width": 2.3
+"via": PackedVector2Array(24, 24.3, 21, 22.8),
+"width": 2.6
 }, {
 "from": "shop_pet",
 "id": "herbal_lane",
 "material": "path",
 "role": "secondary",
 "to": "shop_potion",
-"via": PackedVector2Array(25.8, 25.5, 25.7, 28.5, 25.4, 30.8),
+"via": PackedVector2Array(14, 22),
 "width": 1.8
 }, {
 "from": "shop_equipment",
@@ -723,7 +723,7 @@ routes = Array[Dictionary]([{
 "material": "path",
 "role": "secondary",
 "to": "shop_pet",
-"via": PackedVector2Array(27.6, 20.6, 27.6, 25.2, 24.25, 25.2),
+"via": PackedVector2Array(18.75, 14, 14, 14, 14, 21.3),
 "width": 1.8
 }, {
 "from": "market",
@@ -731,7 +731,7 @@ routes = Array[Dictionary]([{
 "material": "path",
 "role": "primary",
 "to": "shop_equipment",
-"via": PackedVector2Array(28.1, 21, 27.5, 20.3),
+"via": PackedVector2Array(14, 22.8, 14, 15, 18.75, 15),
 "width": 2.2
 }, {
 "from": "arrival",
@@ -739,7 +739,7 @@ routes = Array[Dictionary]([{
 "material": "path",
 "role": "primary",
 "to": "north_gate",
-"via": PackedVector2Array(29, 24.3, 29, 20.5, 31.6, 16.6, 34, 15.5),
+"via": PackedVector2Array(28, 24.3, 28, 16, 27.5, 15, 28, 13),
 "width": 2.2
 }, {
 "from": "market",
@@ -747,7 +747,7 @@ routes = Array[Dictionary]([{
 "material": "path",
 "role": "secondary",
 "to": "shop_pet",
-"via": PackedVector2Array(27.5, 25.3),
+"via": PackedVector2Array(12, 23.2, 12, 21.5),
 "width": 1.8
 }, {
 "from": "portal_court",
@@ -771,7 +771,7 @@ routes = Array[Dictionary]([{
 "material": "path",
 "role": "secondary",
 "to": "shop_house",
-"via": PackedVector2Array(28.7, 20.1, 28.7, 17.1, 26.3, 14.8, 23.25, 14.6),
+"via": PackedVector2Array(14, 14, 10.75, 14),
 "width": 1.8
 }, {
 "from": "north_gate",
@@ -779,7 +779,7 @@ routes = Array[Dictionary]([{
 "material": "path",
 "role": "secondary",
 "to": "east_gate",
-"via": PackedVector2Array(38.5, 15.7, 41.5, 18, 43.2, 21.5),
+"via": PackedVector2Array(28, 13.2, 38.5, 13.2, 38.5, 23.2, 44, 23.2),
 "width": 1.9
 }, {
 "from": "arrival",
@@ -787,7 +787,7 @@ routes = Array[Dictionary]([{
 "material": "path",
 "role": "primary",
 "to": "garden_walk",
-"via": PackedVector2Array(37, 24.3, 40.2, 24.3, 40.2, 28.1),
+"via": PackedVector2Array(30, 24.3, 30, 29),
 "width": 2
 }, {
 "from": "garden_walk",
@@ -795,7 +795,7 @@ routes = Array[Dictionary]([{
 "material": "path",
 "role": "secondary",
 "to": "east_gate",
-"via": PackedVector2Array(40.2, 28.1, 40.2, 24.3, 43, 23),
+"via": PackedVector2Array(30, 24.3, 38.5, 24.3, 44, 23.2),
 "width": 1.8
 }, {
 "from": "garden_walk",
@@ -803,23 +803,23 @@ routes = Array[Dictionary]([{
 "material": "path",
 "role": "primary",
 "to": "shop_services",
-"via": PackedVector2Array(32.9, 28.1, 32.9, 30.6),
-"width": 1.8
+"via": PackedVector2Array(24, 29, 22, 29.4),
+"width": 2.2
 }, {
 "from": "shop_potion",
 "id": "home_water_link",
 "material": "path",
 "role": "secondary",
 "to": "shop_services",
-"via": PackedVector2Array(26, 31.4, 28.7, 31.4),
+"via": PackedVector2Array(21.5, 21.8, 21.5, 29.4),
 "width": 1.8
 }, {
-"from": "shop_services",
+"from": "market",
 "id": "besut_court",
 "material": "path",
 "role": "secondary",
 "to": "besut",
-"via": PackedVector2Array(31, 31.5, 28, 31.5),
+"via": PackedVector2Array(),
 "width": 1.7
 }, {
 "from": "garden_walk",
@@ -827,7 +827,7 @@ routes = Array[Dictionary]([{
 "material": "path",
 "role": "secondary",
 "to": "south_gate",
-"via": PackedVector2Array(40.2, 28.1, 41.3, 29.2, 41.3, 32.4),
+"via": PackedVector2Array(30, 31.8, 38.5, 33.8),
 "width": 1.6
 }, {
 "from": "market",
@@ -835,7 +835,7 @@ routes = Array[Dictionary]([{
 "material": "path",
 "role": "primary",
 "to": "west_gate",
-"via": PackedVector2Array(26.6, 25.6, 21.2, 25.6, 20.4, 23.9),
+"via": PackedVector2Array(16, 23, 18, 22.7),
 "width": 2
 }, {
 "from": "west_gate",
@@ -874,16 +874,16 @@ routes = Array[Dictionary]([{
 "id": "coastal_loop",
 "material": "path",
 "role": "primary",
-"to": "shop_potion",
-"via": PackedVector2Array(20, 32, 22, 31.3),
+"to": "shop_services",
+"via": PackedVector2Array(20.5, 31.5, 21.5, 29.4),
 "width": 1.8
 }, {
-"from": "west_gate",
+"from": "residential_court",
 "id": "west_cottage_lane",
 "material": "path",
 "role": "secondary",
 "to": "ResidentHouseWest",
-"via": PackedVector2Array(17.2, 22.7, 12, 22.3, 8.8, 21.5),
+"via": PackedVector2Array(38.5, 27.8),
 "width": 1.8
 }, {
 "from": "residential_court",
@@ -891,7 +891,7 @@ routes = Array[Dictionary]([{
 "material": "path",
 "role": "secondary",
 "to": "ResidentHouseWestNorth",
-"via": PackedVector2Array(13.4, 13.6, 11.7, 13.1),
+"via": PackedVector2Array(38.5, 13.3, 42, 13.3),
 "width": 1.8
 }, {
 "from": "residential_court",
@@ -899,15 +899,15 @@ routes = Array[Dictionary]([{
 "material": "path",
 "role": "secondary",
 "to": "ResidentHouseNorth",
-"via": PackedVector2Array(18, 12, 19.4, 11),
+"via": PackedVector2Array(38.5, 13.3, 34, 13.3),
 "width": 1.8
 }, {
-"from": "south_gate",
+"from": "garden_walk",
 "id": "stable_lane",
 "material": "path",
 "role": "secondary",
 "to": "stable",
-"via": PackedVector2Array(39, 36.6, 42, 36.6),
+"via": PackedVector2Array(30, 34.3, 30, 38, 28, 38),
 "width": 1.8
 }, {
 "from": "stable",
@@ -915,15 +915,15 @@ routes = Array[Dictionary]([{
 "material": "path",
 "role": "secondary",
 "to": "ResidentHouseSouth",
-"via": PackedVector2Array(42, 38.2, 38.3, 38.2, 34.8, 38.2),
+"via": PackedVector2Array(28, 38.4, 34.8, 38.4),
 "width": 1.8
 }, {
-"from": "ResidentHouseNorth",
+"from": "residential_court",
 "id": "southwest_cottage_lane",
 "material": "path",
 "role": "secondary",
 "to": "ResidentHouseSouthWest",
-"via": PackedVector2Array(21.6, 10.8, 24.2, 10.8, 26.8, 8.6),
+"via": PackedVector2Array(38.5, 30.3, 34, 30.3),
 "width": 1.8
 }, {
 "from": "east_gate",
@@ -958,12 +958,12 @@ routes = Array[Dictionary]([{
 "via": PackedVector2Array(47.4, 23.1, 47.7, 26.6),
 "width": 1.2
 }, {
-"from": "west_gate",
+"from": "south_gate",
 "id": "outskirt_lane",
 "material": "path",
 "role": "secondary",
 "to": "ResidentHouseEastSouth",
-"via": PackedVector2Array(18.6, 22.4, 16.8, 21.8),
+"via": PackedVector2Array(38.5, 38, 42, 38),
 "width": 1.8
 }, {
 "from": "arrival",
@@ -990,13 +990,13 @@ routes = Array[Dictionary]([{
 "via": PackedVector2Array(),
 "width": 1.2
 }, {
-"from": "west_gate",
+"from": "arrival",
 "id": "court_link",
 "material": "path",
 "role": "secondary",
 "to": "residential_court",
-"via": PackedVector2Array(19, 23, 18.3, 22.1, 19.8, 21.1, 19.8, 17.2, 17.7, 14.1),
-"width": 1.8
+"via": PackedVector2Array(),
+"width": 2.2
 }, {
 "from": "shop_house",
 "id": "workshop_front",
@@ -1011,7 +1011,7 @@ routes = Array[Dictionary]([{
 "material": "stone",
 "role": "secondary",
 "to": "portal_court",
-"via": PackedVector2Array(36, 12.2, 38, 10.3),
+"via": PackedVector2Array(28, 8.2),
 "width": 2.3
 }, {
 "from": "garden_walk",
@@ -1019,7 +1019,7 @@ routes = Array[Dictionary]([{
 "material": "path",
 "role": "secondary",
 "to": "animal_yard",
-"via": PackedVector2Array(40.2, 28.1, 40.2, 29.2, 44, 31.3, 44, 33.5),
+"via": PackedVector2Array(30, 34.3),
 "width": 1.6
 }, {
 "from": "animal_yard",
@@ -1027,16 +1027,25 @@ routes = Array[Dictionary]([{
 "material": "path",
 "role": "secondary",
 "to": "stable",
-"via": PackedVector2Array(40.5, 33.2, 40.5, 35.7),
+"via": PackedVector2Array(30, 35.3, 30, 38, 28, 38),
 "width": 1.6
 }])
 zones = Array[Dictionary]([{
+"allowed": ["flowers", "bench", "wakaf", "planter", "banana"],
+"density": 0.02,
+"feather": 2.0,
+"id": "village_green",
+"label": "Padang Tengah / the wide village green",
+"material": "grass_light",
+"polygon": PackedVector2Array(22.5, 8, 29.5, 8, 30, 23, 30, 25, 24, 25, 22, 22),
+"strength": 0.32
+}, {
 "allowed": ["domestic", "flowers", "banana", "clothesline", "veranda", "wakaf", "planter", "bench", "drying_rack", "bucket"],
 "density": 0.08,
 "id": "residential",
-"label": "Lorong Rumah / residential compounds",
+"label": "Lorong Timur / eastern residential gardens",
 "material": "grass_warm",
-"polygon": PackedVector2Array(6, 5, 15, 4.8, 21.5, 3, 29.1, 2, 29.3, 7.2, 25, 10, 21, 12, 19.8, 16, 19.8, 22, 13, 23, 6, 21)
+"polygon": PackedVector2Array(30, 8.5, 44.8, 8.5, 45, 14, 44, 23, 45, 30, 45, 39, 30, 39)
 }, {
 "allowed": ["fern", "bush", "timber", "lantern", "banana", "tools"],
 "density": 0.65,
@@ -1053,16 +1062,16 @@ zones = Array[Dictionary]([{
 "allowed": ["domestic", "flowers", "bucket", "banana", "trough", "feed", "tools", "garden_shed", "veranda", "planter", "bench"],
 "density": 0.05,
 "id": "farmland",
-"label": "Kebun / crops and livestock",
+"label": "Kebun / southern community gardens",
 "material": "grass_warm",
-"polygon": PackedVector2Array(33.4, 24.8, 39.5, 24, 44, 23.7, 45, 27, 45.4, 31, 45.3, 37.8, 40, 38.4, 32, 37.7, 32, 33, 33, 30)
+"polygon": PackedVector2Array(24.8, 25.5, 31, 25.5, 31, 33, 38.5, 33, 38.5, 39, 25, 39)
 }, {
 "allowed": ["planter", "baskets", "timber", "tools", "feed", "bucket", "wakaf", "herbs", "signboard", "parit"],
 "density": 0.0,
 "id": "market",
-"label": "Pekan Kecil / market crescent",
+"label": "Pekan Barat / western merchant quarter",
 "material": "path",
-"polygon": PackedVector2Array(20.5, 10.2, 25, 10.5, 28, 14, 29.2, 19, 30, 22, 32.7, 24, 32.7, 32, 28, 33, 21, 32.4, 20.2, 26, 20.6, 21, 21.7, 17)
+"polygon": PackedVector2Array(7, 8, 21.5, 8, 22, 16, 22, 23, 22, 31, 16, 31, 15, 26, 7, 23)
 }, {
 "allowed": ["planter", "flowers", "domestic", "banana", "veranda", "bench", "bucket"],
 "density": 0.04,
@@ -1097,6 +1106,41 @@ zones = Array[Dictionary]([{
 "polygon": PackedVector2Array(32.5, 22.8, 35.5, 22.8, 35.5, 25.2, 32.5, 25.2)
 }])
 scenery = Array[Dictionary]([{
+"asset": "wakaf",
+"id": "green_wakaf",
+"parent": "",
+"position": Vector2(25.2, 18),
+"scale": 0.9,
+"zone": "village_green"
+}, {
+"asset": "bench",
+"id": "green_bench",
+"parent": "",
+"position": Vector2(25.5, 11.8),
+"scale": 0.85,
+"zone": "village_green"
+}, {
+"asset": "flowers",
+"id": "green_flowers_north",
+"parent": "",
+"position": Vector2(26.1, 12.4),
+"scale": 0.85,
+"zone": "village_green"
+}, {
+"asset": "flowers",
+"id": "green_flowers_south",
+"parent": "",
+"position": Vector2(24.8, 21.7),
+"scale": 0.9,
+"zone": "village_green"
+}, {
+"asset": "planter",
+"id": "green_planter",
+"parent": "",
+"position": Vector2(23.6, 16.7),
+"scale": 0.8,
+"zone": "village_green"
+}, {
 "asset": "fishing_net",
 "id": "net",
 "parent": "harbour",
@@ -1150,7 +1194,7 @@ scenery = Array[Dictionary]([{
 "asset": "bench",
 "id": "house_work_1",
 "parent": "house",
-"position": Vector2(3.7, 0.9),
+"position": Vector2(2.95, 0.9),
 "scale": 0.75,
 "zone": "homestead"
 }, {
@@ -1178,21 +1222,21 @@ scenery = Array[Dictionary]([{
 "asset": "bucket",
 "id": "shop_services_work_0",
 "parent": "shop_services",
-"position": Vector2(-2.15, -0.1),
+"position": Vector2(-2.15, 0.9),
 "scale": 0.75,
 "zone": "market"
 }, {
 "asset": "drying_rack",
 "id": "coastal_drying",
 "parent": "ResidentHouseWest",
-"position": Vector2(-2.5, 1),
+"position": Vector2(-1.5, 2.5),
 "scale": 0.8,
 "zone": "residential"
 }, {
 "asset": "wakaf",
 "id": "lorong_wakaf",
 "parent": "residential_court",
-"position": Vector2(-0.2, -2.8),
+"position": Vector2(-1.7, -2.55),
 "scale": 0.85,
 "zone": "residential"
 }, {
@@ -1213,35 +1257,35 @@ scenery = Array[Dictionary]([{
 "asset": "fishing_net",
 "id": "net_mending",
 "parent": "harbour",
-"position": Vector2(3.5, -4.6),
+"position": Vector2(1.75, -3.85),
 "scale": 0.85,
 "zone": "waterfront"
 }, {
 "asset": "trough",
 "id": "yard_trough",
 "parent": "animal_yard",
-"position": Vector2(1.6, 1.9),
+"position": Vector2(-0.65, 1.65),
 "scale": 0.8,
 "zone": "farmland"
 }, {
 "asset": "garden_shed",
 "id": "yard_shed",
 "parent": "animal_yard",
-"position": Vector2(2, -3.6),
+"position": Vector2(3.5, -3.6),
 "scale": 0.8,
 "zone": "farmland"
 }, {
 "asset": "feed",
 "id": "stable_feed",
 "parent": "stable",
-"position": Vector2(2, 0.8),
+"position": Vector2(3.5, 0.3),
 "scale": 0.85,
 "zone": "farmland"
 }, {
 "asset": "banana",
 "id": "home_banana",
 "parent": "house",
-"position": Vector2(4.7, -1.1),
+"position": Vector2(6.2, -1.1),
 "scale": 1,
 "zone": "homestead"
 }, {
@@ -1339,7 +1383,7 @@ scenery = Array[Dictionary]([{
 "footprint": Rect2(-1, -0.25, 2, 0.25),
 "id": "west_wash",
 "parent": "ResidentHouseWest",
-"position": Vector2(-2.7, -0.5),
+"position": Vector2(-0.95, -0.5),
 "scale": 0.7,
 "zone": "residential"
 }, {
@@ -1355,7 +1399,7 @@ scenery = Array[Dictionary]([{
 "footprint": Rect2(-0.5, -0.4, 1, 0.4),
 "id": "west_banana",
 "parent": "ResidentHouseEastSouth",
-"position": Vector2(-3, -1),
+"position": Vector2(-1.75, -1.0),
 "scale": 0.8,
 "zone": "residential"
 }, {
@@ -1371,7 +1415,7 @@ scenery = Array[Dictionary]([{
 "footprint": Rect2(-0.5, -0.4, 1, 0.4),
 "id": "upper_banana",
 "parent": "ResidentHouseSouthWest",
-"position": Vector2(-3.2, -0.5),
+"position": Vector2(-2.2, -0.5),
 "scale": 0.8,
 "zone": "residential"
 }, {
@@ -1387,7 +1431,7 @@ scenery = Array[Dictionary]([{
 "footprint": Rect2(-0.7, -0.4, 1.4, 0.4),
 "id": "market_seat",
 "parent": "market",
-"position": Vector2(3.2, -1.2),
+"position": Vector2(-6, -7.7),
 "scale": 0.8,
 "zone": "market"
 }, {
@@ -1411,7 +1455,7 @@ scenery = Array[Dictionary]([{
 "footprint": Rect2(-0.2, -0.2, 0.4, 0.2),
 "id": "upper_flowers",
 "parent": "ResidentHouseSouthWest",
-"position": Vector2(2.8, 0.6),
+"position": Vector2(2.8, -0.4),
 "scale": 0.75,
 "zone": "residential"
 }, {

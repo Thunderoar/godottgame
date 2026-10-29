@@ -14,7 +14,11 @@ func _ready() -> void:
 	add_child(game)
 	await get_tree().process_frame
 	var start := Time.get_ticks_usec()
-	await game.call("_on_character_selected", "qayyim")
+	GameState.new_game("adam")
+	game.call("_remove_title")
+	await game.call("_load_lobby", false)
+	game.hud.visible = true
+	for frame in 4: await get_tree().physics_frame
 	var cold := float(Time.get_ticks_usec() - start) / 1000.0
 	game.set_process(false)
 	game.hud.tutorial_guide.call("_skip")
@@ -24,7 +28,7 @@ func _ready() -> void:
 	GameState.advance_world_clock(45 - float(GameState.data.get("world_time", 0)))
 	_freeze()
 	# Identical camera/time/settings for every paired composition fixture.
-	for fixture in [["spawn", Vector2(34, 24.3)], ["market", Vector2(24, 22)], ["market-home", Vector2(29, 23)], ["portals", game.world._layout.position_of("portal_court")], ["forest-edge", Vector2(46, 22)], ["forest-interior", Vector2(55, 22)], ["beach-turtle", Vector2(14, 28)], ["jetty-ship", Vector2(9, 28.5)], ["farms-residential", Vector2(40, 28)], ["besut", Vector2(29.5, 28.3)], ["west-cottages", Vector2(15, 17)], ["residential-lane", Vector2(17, 13)], ["market-lower", Vector2(26, 29)], ["farm-yard", Vector2(39, 34)]]:
+	for fixture in [["spawn", Vector2(34, 24.3)], ["market", Vector2(14, 22)], ["market-home", Vector2(29, 23)], ["portals", game.world._layout.position_of("portal_court")], ["forest-edge", Vector2(46, 22)], ["forest-interior", Vector2(55, 22)], ["beach-turtle", Vector2(14, 28)], ["jetty-ship", Vector2(9, 28.5)], ["farms-residential", Vector2(40, 28)], ["besut", Vector2(14, 22.3)], ["east-cottages", Vector2(38, 27)], ["residential-lane", Vector2(38, 13)], ["market-lower", Vector2(18, 27)], ["farm-yard", Vector2(28, 34)]]:
 		await _look(fixture[1])
 		await _shot(fixture[0])
 	GameSettings.set_camera_zoom(64, false)
@@ -54,6 +58,9 @@ func _ready() -> void:
 	get_window().size = Vector2i(832, 480)
 	await _look(Lobby.SPAWN)
 	await _shot("small-screen")
+	for fixture in [["small-market", Vector2(14, 21)], ["small-residential", Vector2(38, 27)], ["small-green", Vector2(25, 19)]]:
+		await _look(fixture[1])
+		await _shot(fixture[0])
 	get_window().size = Vector2i(1280, 720)
 	# Continuous input produces actual intermediate positions and rendered frames.
 	await _look(Vector2(32, 24.4))
@@ -92,7 +99,7 @@ func _ready() -> void:
 	GameState.advance_world_clock(205 - float(GameState.data.get("world_time", 0)))
 	_freeze()
 	await get_tree().create_timer(0.4).timeout
-	for fixture in [["night-village", Lobby.SPAWN], ["night-forest", Vector2(53, 22)], ["night-coast", Vector2(12, 27)], ["night-portals", game.world._layout.position_of("portal_court")], ["night-residential", Vector2(15, 17)], ["night-farm", Vector2(40, 28)]]:
+	for fixture in [["night-village", Lobby.SPAWN], ["night-forest", Vector2(53, 22)], ["night-coast", Vector2(12, 27)], ["night-portals", game.world._layout.position_of("portal_court")], ["night-residential", Vector2(38, 27)], ["night-farm", Vector2(28, 34)]]:
 		await _look(fixture[1])
 		await _shot(fixture[0])
 	GameSettings.set_effects_quality("low", false)
