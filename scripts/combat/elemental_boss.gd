@@ -33,7 +33,7 @@ func _ready() -> void:
 
 func _update_art() -> void:
 	sprite.texture = PixelArt.enemy_texture(kind,true,0 if GameSettings.reduce_motion() else int(_bob*2)%2)
-	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	sprite.texture_filter = VisualStyle.texture_filter()
 
 func _sprite_rest_scale() -> Vector2:
 	return Vector2.ONE*PixelArt.PX*(205.0/sprite.texture.get_height())

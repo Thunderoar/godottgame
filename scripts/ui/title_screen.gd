@@ -619,6 +619,7 @@ func _close_overlay() -> void:
 func _open_settings() -> void:
 	_open_overlay("Make yourself at home")
 	_overlay_body.add_child(_paragraph("SETTINGS", 12, GOLD))
+	_overlay_body.add_child(VisualStyleSettings.new())
 	var volume_row := VBoxContainer.new()
 	var volume_text := _label("Master volume  ·  %d%%" % GameSettings.master_volume(), 17, CREAM)
 	volume_row.add_child(volume_text)

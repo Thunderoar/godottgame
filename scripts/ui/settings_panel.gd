@@ -1,7 +1,6 @@
 class_name SettingsPanel
 extends ModalBase
-## GUI scale and touch-control customization. Values are stored in GameState
-## and applied to the live HUD immediately.
+## Device presentation settings and journey touch-control customization.
 
 const CONTROL_ROWS := [
 	["joystick", "Joystick"],
@@ -28,6 +27,9 @@ func _rebuild() -> void:
 	if hud == null:
 		add_body_text("HUD is not available.", GameUI.RED, 16)
 		return
+
+	add_section("APPEARANCE", GameUI.GOLD)
+	content.add_child(VisualStyleSettings.new())
 
 	add_section("GUI SCALE", GameUI.GOLD)
 	var scale_row := HBoxContainer.new()

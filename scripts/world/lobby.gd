@@ -80,7 +80,7 @@ const RECOVERY_RADIUS := 4.3
 
 
 func _ready() -> void:
-	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	texture_filter = VisualStyle.texture_filter()
 	journey_serial = GameState.journey_serial
 	add_to_group("world")
 	y_sort_enabled = true
@@ -166,9 +166,9 @@ func _build_background() -> void:
 	background.scale = Vector2(PixelArt.PX, PixelArt.PX)
 	background.z_as_relative = false
 	background.z_index = -1000
-	background.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	background.texture_filter = VisualStyle.texture_filter()
 	var terrain_override := AssetRegistry.get_texture("terrain_village_layout_%d_%d" % [WorldPalette.generation,_layout.signature()])
-	if terrain_override == null and ResourceLoader.exists("res://assets/authored/realistic/surfaces.png"):
+	if not VisualStyle.is_pixel() and terrain_override == null and ResourceLoader.exists("res://assets/authored/realistic/surfaces.png"):
 		var terrain_material := ShaderMaterial.new()
 		terrain_material.shader = preload("res://assets/shaders/realistic_terrain.gdshader")
 		terrain_material.set_shader_parameter("materials",load("res://assets/authored/realistic/surfaces.png"))
@@ -1120,7 +1120,7 @@ func _build_grass_fields(grass_paths: Array) -> void:
 		field.texture = tex
 		field.z_index = 2
 		field.material = Shaders.wind_material()
-		field.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+		field.texture_filter = VisualStyle.texture_filter()
 		add_child(field)
 
 

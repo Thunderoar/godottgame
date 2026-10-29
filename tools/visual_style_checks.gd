@@ -1,0 +1,46 @@
+extends RefCounted
+## Run in either startup style. Selection is restart-bound, not a world reload.
+static func run(game: Game, check: Callable) -> void:
+	var values := GameSettings._values.duplicate(true)
+	var config_path := GameSettings.config_path
+	var active := GameSettings.active_visual_style()
+	var world := game.world
+	var player := game.player()
+	var data := GameState.data.duplicate(true)
+	GameSettings.config_path = "user://visual_style_checks.cfg"
+	GameSettings.set_visual_style("PIXEL", false)
+	check.call(GameSettings.visual_style() == "pixel", "art style normalizes Classic Pixel selection")
+	GameSettings.save_settings()
+	GameSettings.set_visual_style("modern", false)
+	GameSettings.load_settings()
+	check.call(GameSettings.visual_style() == "pixel", "art style persists across settings reload independently of journey")
+	check.call(GameSettings.active_visual_style() == active and VisualStyle.is_pixel() == (active == "pixel"), "selection never mixes art or changes active startup style")
+	check.call(game.world == world and game.player() == player and GameState.data == data, "style selection preserves world, player and every journey field")
+	GameSettings.set_visual_style("unknown", false)
+	check.call(GameSettings.visual_style() == "modern", "invalid art style falls back to current modern presentation")
+	var selector := VisualStyleSettings.new()
+	game.hud.add_child(selector)
+	check.call(selector._choice.item_count == 2 and selector._choice.get_item_text(1) == "Classic Pixel", "shared Settings selector offers modern and classic art")
+	selector._choice.item_selected.emit(1)
+	check.call(GameSettings.visual_style() == "pixel" and selector._choice.selected == 1, "Settings choice writes the authoritative device preference")
+	check.call(selector._note.text.contains("Restart") if active != "pixel" else selector._note.text.contains("restarting"), "Settings explains restart semantics")
+	var config := ConfigFile.new()
+	config.load(GameSettings.config_path)
+	config.set_value("settings", "visual_style", "broken")
+	config.save(GameSettings.config_path)
+	GameSettings.load_settings()
+	check.call(GameSettings.visual_style() == "modern", "invalid saved art style is sanitized on load")
+	config.erase_section_key("settings", "visual_style")
+	config.save(GameSettings.config_path)
+	GameSettings.load_settings()
+	check.call(GameSettings.visual_style() == "modern", "older settings without art style keep the modern default")
+	GameSettings._values = values
+	GameSettings.config_path = config_path
+	GameSettings.changed.emit("visual_style")
+	selector.queue_free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://visual_style_checks.cfg"))
+	var house := PixelArt.house_texture(1)
+	check.call(house.has_meta("realistic_art") == not VisualStyle.is_pixel(), "startup selects original pixel cottage or modern imported cottage")
+	check.call((RealisticArt.get_texture("ship") == null) == VisualStyle.is_pixel(), "startup selects pixel ship fallback without changing ship logic")
+	check.call((RealmPresentation.actor_texture("fire", true) == null) == VisualStyle.is_pixel(), "startup selects procedural elemental boss fallback or imported realm art")
+	check.call(VisualStyle.texture_filter() == (CanvasItem.TEXTURE_FILTER_NEAREST if VisualStyle.is_pixel() else CanvasItem.TEXTURE_FILTER_LINEAR), "pixel art uses crisp nearest filtering; modern art retains linear filtering")

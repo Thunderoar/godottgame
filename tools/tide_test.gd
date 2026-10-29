@@ -130,6 +130,7 @@ func _ready() -> void:
 	await _test_visual_overhaul_contracts()
 	await _test_house_and_sleep()
 	await _test_menu_and_settings()
+	await preload("res://tools/visual_style_checks.gd").run(game, _check)
 	await _test_auto_heal_and_shield()
 	await _test_pet_support()
 	await _test_pet_battle_portal()

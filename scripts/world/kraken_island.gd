@@ -16,7 +16,7 @@ var _monster_routes: ResidentRoutes
 const RUNES := [Vector2(6,4.5),Vector2(34,4.5),Vector2(10,14.5),Vector2(30,14.5)]
 
 func _ready() -> void:
-	texture_filter=CanvasItem.TEXTURE_FILTER_LINEAR
+	texture_filter=VisualStyle.texture_filter()
 	add_to_group("world")
 	Vfx.ensure_pool(self)
 	_build_arena()
@@ -82,17 +82,18 @@ func _build_arena() -> void:
 	background.z_as_relative = false
 	background.z_index = -1000
 	add_child(background)
-	var floor_art := Sprite2D.new()
-	floor_art.name="KrakenStoneFloor"
-	floor_art.texture=load("res://assets/authored/realms/basalt-floor-v2.png") as Texture2D
-	floor_art.position=Vector2(20,13)
-	floor_art.scale=Vector2(37,22)/floor_art.texture.get_size()
-	floor_art.z_as_relative=false
-	floor_art.z_index=-999
-	var floor_material := RealmPresentation.floor_material("water")
-	floor_material.set_shader_parameter("motion",false)
-	floor_art.material=floor_material
-	add_child(floor_art)
+	if not VisualStyle.is_pixel():
+		var floor_art := Sprite2D.new()
+		floor_art.name="KrakenStoneFloor"
+		floor_art.texture=load("res://assets/authored/realms/basalt-floor-v2.png") as Texture2D
+		floor_art.position=Vector2(20,13)
+		floor_art.scale=Vector2(37,22)/floor_art.texture.get_size()
+		floor_art.z_as_relative=false
+		floor_art.z_index=-999
+		var floor_material := RealmPresentation.floor_material("water")
+		floor_material.set_shader_parameter("motion",false)
+		floor_art.material=floor_material
+		add_child(floor_art)
 	painter.free()
 	canvas_modulate = CanvasModulate.new()
 	canvas_modulate.name = "FortressDarkness"
@@ -104,7 +105,7 @@ func _build_arena() -> void:
 		holder.position = at
 		add_child(holder)
 		var sprite := Sprite2D.new()
-		sprite.texture = RealmPresentation.prop_texture("water")
+		sprite.texture = ElementalArt.pillar_texture("water")
 		sprite.centered = false
 		var extent := sprite.texture.get_size()
 		sprite.offset = Vector2(-extent.x*0.5,-extent.y)

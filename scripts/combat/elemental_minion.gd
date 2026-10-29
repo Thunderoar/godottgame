@@ -23,7 +23,7 @@ func _physics_process(delta: float) -> void:
 
 func _update_art() -> void:
 	sprite.texture = PixelArt.enemy_texture(kind,false,_frame)
-	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	sprite.texture_filter = VisualStyle.texture_filter()
 
 func _sprite_rest_scale() -> Vector2:
 	return Vector2.ONE*PixelArt.PX*(64.0/sprite.texture.get_height())

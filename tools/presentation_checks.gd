@@ -9,9 +9,13 @@ static func run(game: Game, check: Callable) -> void:
 	for element in RealmPresentation.ORDER:
 		for boss in [true,false]:
 			var texture := RealmPresentation.actor_texture(element,boss)
-			check.call(texture is AtlasTexture and Rect2(Vector2.ZERO,texture.atlas.get_size()).encloses(texture.region) and texture.get_image().detect_alpha() != Image.ALPHA_NONE,"%s %s uses bounded imported transparent game art" % [element,"boss" if boss else "minion"])
+			if VisualStyle.is_pixel():
+				texture = ElementalArt.boss_texture(element) if boss else ElementalArt.minion_texture(element)
+				check.call(texture != null and texture.get_image().detect_alpha() != Image.ALPHA_NONE, "%s %s uses transparent procedural pixel art" % [element, "boss" if boss else "minion"])
+			else:
+				check.call(texture is AtlasTexture and Rect2(Vector2.ZERO,texture.atlas.get_size()).encloses(texture.region) and texture.get_image().detect_alpha() != Image.ALPHA_NONE,"%s %s uses bounded imported transparent game art" % [element,"boss" if boss else "minion"])
 			hashes[texture.get_image().get_data().hex_encode().sha256_text()] = true
-	check.call(hashes.size() == 20,"all bosses and minions use twenty distinct authored sprites")
+	check.call(hashes.size() == 20,"all bosses and minions use twenty distinct active-style sprites")
 	for element in RealmPresentation.ORDER:
 		for boss in [true,false]:
 			var actor: Enemy = ElementalBoss.new() if boss else ElementalMinion.new()

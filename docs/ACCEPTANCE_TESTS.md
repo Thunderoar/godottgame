@@ -874,3 +874,39 @@ Isolated Godot import passed with exit 0, then `./tools/test_isolated.sh` report
 **1,653 checks, PASS**, exit 0, with no `[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers.
 This is a fresh Linux headless integration run, not a new visual/device/export
 certification. Live player data was not used. `git diff --cached --check` passed.
+
+
+## Selectable art styles (2026-10-29)
+
+Title **Settings**, in-game **Menu → Settings → Appearance**, and ocean Settings
+share **Art style**: **Modern Illustrated** (default) or **Classic Pixel**.
+The device setting `visual_style` lives in `user://settings.cfg`, not the journey.
+A full game restart applies it; changing/reloading/resetting preferences during a
+session must not rebuild worlds, change actors, or mix cached art families.
+Classic restores the existing procedural art and nearest-neighbour filtering;
+Modern retains the imported realistic/realm art and surface overlays. Explicit
+Asset Library overrides retain precedence in both modes. This is an art-family
+choice, not an old gameplay version or an exact historical UI/story rollback.
+Editor source previews and authored resources stay unchanged.
+
+`tools/visual_style_checks.gd` runs in the canonical tide gate: normalization,
+invalid/missing-key fallback, persistence, selector wiring, restart latch,
+world/player/journey identity, art-family routing and filtering. For real restarts
+and rendered comparison, use the focused scene in a verified isolated environment:
+
+```sh
+review=$(mktemp -d /tmp/tidesworn-style-XXXXXXXX)
+export XDG_DATA_HOME="$review/userdata" TIDESWORN_TEST_ROOT="$review"
+# Same user data, separate processes. Selection must not flip the active family.
+for style in pixel modern; do
+  godot --headless --path . res://tools/visual_style_test.tscn -- --select-style="$style"
+  timeout 180 godot --headless --path . res://tools/visual_style_test.tscn -- --expect-style="$style"
+done
+# Substitute xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 godot --audio-driver Dummy
+# for the headless verification call to capture title/in-game/ocean Settings,
+# village, portal, ocean and Kraken. Also pass --resolution 832x480 for compact QA.
+```
+
+Require `--- visual style: N checks, PASS; active=STYLE ---`, exit 0, and no
+`[FAIL]`, `SCRIPT ERROR`, or `ERROR:`. Rendered tests cover artwork and layout,
+not physical touchscreen input or Android GPU performance. No source bake writes.

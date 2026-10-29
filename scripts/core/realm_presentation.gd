@@ -12,6 +12,7 @@ const FLOOR := preload("res://assets/shaders/realm_floor.gdshader")
 static var _regions: Dictionary = {}
 
 static func actor_texture(element: String, boss: bool) -> Texture2D:
+	if VisualStyle.is_pixel(): return null
 	var index := ORDER.find(element)
 	if index < 0: return null
 	var key := "%s/%s" % ["boss" if boss else "minion",element]
@@ -36,6 +37,7 @@ static func spell_material(element: String, projectile: bool = false) -> ShaderM
 	return material
 
 static func prop_texture(element: String) -> Texture2D:
+	if VisualStyle.is_pixel(): return null
 	var index := ORDER.find(element)
 	if index < 0: return null
 	var key := "prop/"+element

@@ -12,7 +12,7 @@ func _ready() -> void:
 		_authored.centered=false
 		_authored.offset=Vector2(-32,-64)
 		_authored.scale=Vector2.ONE*PixelArt.PX*1.65
-		_authored.texture_filter=CanvasItem.TEXTURE_FILTER_LINEAR
+		_authored.texture_filter=VisualStyle.texture_filter()
 		add_child(_authored)
 	light = PointLight2D.new()
 	light.texture = PixelArt.light_texture()

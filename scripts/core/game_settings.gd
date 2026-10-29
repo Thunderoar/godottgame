@@ -17,6 +17,7 @@ extends Node
 ##   screen_shake             bool                     default true
 ##   auto_pause_on_focus_loss bool                     default true
 ##   reduce_motion            bool                     default false
+##   visual_style             String modern|pixel     default "modern" (restart)
 ##   effects_quality          String low|med|high     default "high"
 ##
 ## This node applies what it owns: the Master bus (volume + mute) and the window
@@ -43,6 +44,8 @@ const CAMERA_ZOOM_MAX := 64
 const CAMERA_ZOOM_DEFAULT := 38
 const TOUCH_MODES := ["auto", "always", "hidden"]
 const EFFECT_QUALITIES := ["low", "med", "high"]
+const VISUAL_STYLES := ["modern", "pixel"]
+const VISUAL_STYLE_LABELS := ["Modern Illustrated", "Classic Pixel"]
 
 const DEFAULTS := {
         "master_volume": 100,
@@ -56,16 +59,20 @@ const DEFAULTS := {
         "auto_pause_on_focus_loss": true,
         "reduce_motion": false,
         "effects_quality": "high",
+        "visual_style": "modern",
 }
 
 ## Override before `load_settings()` to redirect persistence (tests do this).
 var config_path := CONFIG_PATH
 
 var _values: Dictionary = DEFAULTS.duplicate(true)
+# Latch once at startup: never mix art families or rebuild a running world.
+var _active_visual_style := "modern"
 
 
 func _ready() -> void:
         load_settings()
+        _active_visual_style = visual_style()
 
 
 # --------------------------------------------------------------- load / persist
@@ -140,6 +147,9 @@ func _sanitize_value(key: String, value: Variant) -> Variant:
                 "touch_controls":
                         var mode := str(value).to_lower()
                         return mode if TOUCH_MODES.has(mode) else str(DEFAULTS["touch_controls"])
+                "visual_style":
+                        var style := str(value).to_lower()
+                        return style if VISUAL_STYLES.has(style) else str(DEFAULTS["visual_style"])
                 "effects_quality":
                         var quality := str(value).to_lower()
                         return quality if EFFECT_QUALITIES.has(quality) else str(DEFAULTS["effects_quality"])
@@ -290,3 +300,15 @@ func camera_zoom() -> float:
 
 func set_camera_zoom(value: float, persist: bool = true) -> void:
         set_value("camera_zoom", roundi(value), persist)
+
+
+func visual_style() -> String:
+        return str(_values.get("visual_style", "modern"))
+
+
+func set_visual_style(value: String, persist: bool = true) -> void:
+        set_value("visual_style", value, persist)
+
+
+func active_visual_style() -> String:
+        return _active_visual_style

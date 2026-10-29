@@ -28,7 +28,7 @@ func _ready() -> void:
 	_spell.name = "ElementalVolume"
 	_spell.texture = RealmPresentation.quad()
 	_spell.material = _material
-	_spell.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_spell.texture_filter = VisualStyle.texture_filter()
 	add_child(_spell)
 	_update_presentation()
 

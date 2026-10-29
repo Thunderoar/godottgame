@@ -103,6 +103,7 @@ static func _prop_record(kind: String, logical: Vector2i) -> Array:
 	return ["village-props",indexes[kind],logical] if indexes.has(kind) else []
 
 static func get_texture(key: String) -> Texture2D:
+	if VisualStyle.is_pixel(): return null
 	var record := _record(key)
 	if record.is_empty(): return null
 	if _generation != WorldPalette.generation:

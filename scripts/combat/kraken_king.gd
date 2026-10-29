@@ -36,7 +36,7 @@ func _ready() -> void:
 
 func _update_body() -> void:
 	sprite.texture = KrakenArt.body_texture()
-	sprite.texture_filter=CanvasItem.TEXTURE_FILTER_LINEAR
+	sprite.texture_filter=VisualStyle.texture_filter()
 
 func _sprite_rest_scale() -> Vector2:
 	return Vector2.ONE*PixelArt.PX*1.5

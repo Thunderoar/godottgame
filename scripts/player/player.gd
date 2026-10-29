@@ -381,7 +381,7 @@ func _show_slash(arc := "lr") -> void:
 		return
 	var tex := RealmPresentation.weapon_arc(arc if arc != "shot" else "lr")
 	_attack_sprite.texture = tex
-	_attack_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_attack_sprite.texture_filter = VisualStyle.texture_filter()
 	_attack_sprite.visible = true
 	_attack_sprite.position = facing * 0.88
 	_attack_sprite.rotation = facing.angle() + (0.4 if arc != "slam" else 0.0)

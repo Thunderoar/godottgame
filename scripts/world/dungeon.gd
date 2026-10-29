@@ -94,7 +94,7 @@ func _build_ground() -> void:
 	background.z_index = -1000
 	background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	add_child(background)
-	if ElementDB.ELEMENTS.has(_theme()):
+	if not VisualStyle.is_pixel() and ElementDB.ELEMENTS.has(_theme()):
 		var floor_art := Sprite2D.new()
 		floor_art.name = "RealmStoneFloor"
 		floor_art.texture = load("res://assets/authored/realms/basalt-floor-v2.png") as Texture2D
@@ -102,7 +102,7 @@ func _build_ground() -> void:
 		floor_art.scale = Vector2(45,28.4)/floor_art.texture.get_size()
 		floor_art.z_as_relative = false
 		floor_art.z_index = -999
-		floor_art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+		floor_art.texture_filter = VisualStyle.texture_filter()
 		_floor_material = RealmPresentation.floor_material(_theme())
 		floor_art.material = _floor_material
 		add_child(floor_art)
@@ -253,7 +253,7 @@ func _add_pillar(at: Vector2) -> void:
 	art.scale = Vector2(PixelArt.PX, PixelArt.PX) * 1.3
 	if ElementDB.ELEMENTS.has(_theme()):
 		art.scale *= 88.0/sz.y
-		art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+		art.texture_filter = VisualStyle.texture_filter()
 	art.modulate = Color(0.72, 0.78, 0.8)
 	holder.add_child(art)
 	var body := StaticBody2D.new()
@@ -308,7 +308,7 @@ func _build_decor() -> void:
 		sprite.scale = Vector2(PixelArt.PX, PixelArt.PX) * (1.0 if theme != "kelp" else 1.3)
 		if ElementDB.ELEMENTS.has(theme):
 			sprite.scale *= 88.0/sz.y
-			sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+			sprite.texture_filter = VisualStyle.texture_filter()
 		sprite.position = Vector2(x, y)
 		sprite.modulate = glow.darkened(0.15).lerp(Color(0.55, 0.62, 0.66), 0.4)
 		if theme in ["kelp", "reef", "coral"]:

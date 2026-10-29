@@ -113,7 +113,7 @@ func _add_level_card(level_id: String) -> void:
 	preview.custom_minimum_size = Vector2(74, 74)
 	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	preview.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	preview.texture_filter = VisualStyle.texture_filter()
 	hbox.add_child(preview)
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -447,7 +447,7 @@ func _arena_pet(stage: Control, id: String, at: Vector2, tint: Color) -> Texture
 	sprite.modulate = tint
 	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	sprite.texture_filter = VisualStyle.texture_filter()
 	sprite.anchor_left = at.x
 	sprite.anchor_right = at.x
 	sprite.anchor_top = at.y
@@ -497,7 +497,7 @@ func _battle_card(pet_id: String, display_name: String, subtitle: String, tint: 
 	preview.custom_minimum_size = Vector2(260, 132)
 	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	preview.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	preview.texture_filter = VisualStyle.texture_filter()
 	box.add_child(preview)
 	card.set_meta("preview", preview)
 	var title := GameUI.label(display_name, 19, GameUI.TEXT)
@@ -569,7 +569,7 @@ func _render_result() -> void:
 	pose.custom_minimum_size = Vector2(120, 110)
 	pose.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pose.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	pose.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	pose.texture_filter = VisualStyle.texture_filter()
 	pose.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	content.add_child(pose)
 	if not GameSettings.reduce_motion():

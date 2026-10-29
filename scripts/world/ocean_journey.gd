@@ -71,8 +71,8 @@ var _tutorial_done := false
 var _realistic_background: Sprite2D
 
 func _ready() -> void:
-	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-	if ResourceLoader.exists("res://assets/authored/realistic/ocean-background.png"):
+	texture_filter = VisualStyle.texture_filter()
+	if not VisualStyle.is_pixel() and ResourceLoader.exists("res://assets/authored/realistic/ocean-background.png"):
 		_realistic_background=Sprite2D.new()
 		_realistic_background.texture=load("res://assets/authored/realistic/ocean-background.png") as Texture2D
 		_realistic_background.position=Vector2(20,11.25)

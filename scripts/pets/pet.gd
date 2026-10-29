@@ -86,7 +86,7 @@ func _build() -> void:
 	_sprite.scale = Vector2(PixelArt.PX, PixelArt.PX) * 1.12
 	_sprite.position = Vector2(0, -0.5)
 	_sprite.z_index = 0
-	_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_sprite.texture_filter = VisualStyle.texture_filter()
 	add_child(_sprite)
 
 	_level_label = Label.new()

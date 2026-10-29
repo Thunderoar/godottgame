@@ -10,8 +10,8 @@ var _floor_texture: Texture2D
 const EXIT_FOOTPRINT := Rect2(-1.3, 3.7, 2.6, 1.5)
 
 func _ready() -> void:
-	texture_filter=CanvasItem.TEXTURE_FILTER_LINEAR
-	if ResourceLoader.exists("res://assets/authored/realistic/wood-floor.png"):
+	texture_filter=VisualStyle.texture_filter()
+	if not VisualStyle.is_pixel() and ResourceLoader.exists("res://assets/authored/realistic/wood-floor.png"):
 		_floor_texture=load("res://assets/authored/realistic/wood-floor.png") as Texture2D
 	z_index = 0
 	position = Vector2(96, 24)

@@ -38,7 +38,7 @@ func _ready() -> void:
 	for i in RING_COUNT:
 		var r := Sprite2D.new()
 		r.texture = RealmPresentation.impact_ring()
-		r.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+		r.texture_filter = VisualStyle.texture_filter()
 		r.visible = false
 		r.z_as_relative = false
 		r.z_index = 688

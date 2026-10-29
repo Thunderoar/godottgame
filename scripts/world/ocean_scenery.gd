@@ -4,7 +4,7 @@ extends Node2D
 var clock := 0.0
 var life: Array[Dictionary] = []
 func _ready() -> void:
-	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	texture_filter = VisualStyle.texture_filter()
 	z_index = 1
 	var specs := [
 		["whale",Vector2(30,8),0.12,0.42],["megalodon",Vector2(9,9),0.1,0.35],
@@ -45,7 +45,7 @@ func _process(delta: float) -> void:
 		s.texture = OceanArt.creature(str(actor.kind),int(clock*2)%2)
 	queue_redraw()
 func _draw() -> void:
-	if not ResourceLoader.exists("res://assets/authored/realistic/ocean-background.png"):
+	if VisualStyle.is_pixel() or not ResourceLoader.exists("res://assets/authored/realistic/ocean-background.png"):
 		draw_colored_polygon(PackedVector2Array([Vector2(-20,21),Vector2(5,20.6),Vector2(20,21.1),Vector2(32,20.6),Vector2(65,21),Vector2(65,30),Vector2(-20,30)]),Color("#758e8b"))
 		for i in 75:
 			var x := fposmod(i*4.179,65)-10
