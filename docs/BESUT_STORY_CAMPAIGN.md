@@ -2,6 +2,15 @@
 
 Implemented 2026-10-25 for Godot 4.7.2.
 
+**2026-10-30 dock welcome:** after the eight opening beats, Pak Rahim, the village
+water keeper, talks to Adam on the actual dock before movement lessons begin.
+He offers water and shelter without demanding repayment, listens to Adam's worry
+for Arjun and Mei Ling, and suggests meeting the neighbours as a first step.
+The player advances the dialogue; original cute, airy anime-inspired artwork sits
+on the right. New Journey and interrupted Continue saves use this story handoff
+once; later nearby talks are short reminders under normal menu simulation rules.
+See `docs/DOCK_WELCOME.md` for the dialogue owner, art prompt and review route.
+
 ## Playable story
 
 New journeys start as Adam. The title's other hero cards preview his missing friends. The skippable illustrated opening shows their fishing trip, Arjun hooking the Kraken, the ship breaking into three parts, Mei Ling drifting ashore on the broken bow at a guarded ruin, both friends being captured, and the turtle rescuing Adam. The ruin already has sentries; they take the unfamiliar survivor alive because their ruler wants answers. The Kraken remains an independent sea king, not their commander or servant. Adam repays BESUT's villagers by defending their island while searching for his friends.

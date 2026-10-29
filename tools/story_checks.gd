@@ -113,6 +113,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	await OpeningRescueChecks.run(game, check)
 	await OpeningWelcomeChecks.run(game, check)
 	await OpeningWelcomeChecks.run_dock_arrivals(game, check)
+	await DockConversationChecks.run(game, check, capture)
 	game._clear_world()
 	var ocean := OceanJourney.new()
 	game.world = ocean

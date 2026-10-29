@@ -57,14 +57,14 @@ The realm uses its own twilight grade while the shared day/night clock continues
 
 Bramble Cat rests, sniffs and walks a small three-stop circuit beside scratched timber. Dusk Moth flutters between nearby perches and moonblooms. Pawprints and pale flowers mark their approaches. Both notice Adam and stop when he comes close, so neither requires chasing or waiting. Reduce Motion holds a stable home pose. Their patrol clocks and positions are temporary; map icons remain at the habitat anchors.
 
-Each habitat reserves an 8x7 staging area before decorative trees are placed. A challenge uses that fixed floor and restores the pet's actual previous patrol position afterward. Bringing the same species as the active companion replaces the wild double with a resting bond wreath; interacting there gives a peaceful caption rather than a self-duel. Other companions can still take a reward-free friendly spar.
+Each habitat reserves an 8x7 protected clearing before decorative trees are placed. Bringing the same species as the active companion replaces the wild double with a resting bond wreath; interacting there gives a peaceful caption rather than a self-duel. Other companions can still take a reward-free friendly spar.
 
-Approach and tap a wild pet, or use E, to challenge it in its habitat. Starter Ember can challenge either animal without clearing old tournament duels or buying levels. Adam watches while his companion faces the rival in the clearing; Attack, Shield and Special are manual choices. The rival replies after the player's action. There is no forced player timeout.
+Approach and tap a wild pet, or use E, to open the **existing PetBattlePanel**. The cat uses Bramble Court's arena background and the moth uses Moonlit Ring's; both reuse the original sprites, segmented HP bars, animations, hit effects, music and Attack/Shield/Special turn engine. Starter Ember can challenge either animal without clearing tournament duels or buying levels. The rival uses the existing ready-skill selection and replies after the player's action. There is no forced player timeout. No separate in-world battle overlay or duplicate duel engine remains.
 
-- **Bramble Cat:** 30 arena HP, 4 base damage; favors aggressive powers. As a companion it attacks more strongly and more often than the moth.
-- **Dusk Moth:** 42 arena HP, 5 base damage; favors maintaining its shield. As a companion it provides stronger, more frequent shielding than the cat.
+- **Bramble Cat:** 30 arena HP, 4 base damage. As a companion it attacks more strongly and more often than the moth.
+- **Dusk Moth:** 42 arena HP, 5 base damage. As a companion it provides stronger, more frequent shielding than the cat.
 
-The world and its combat timers suspend during an accepted challenge, including existing projectiles, hazards and automatic companion support. Settings suspends the duel timer as well. Closing, winning, losing and replacing the world restore camera, actors, controls and music ownership. Screen buttons and number keys 1/2/3 choose powers.
+The world and its combat timers suspend during an accepted challenge, including existing projectiles, hazards and automatic companion support. The battle's Settings button suspends replies, cooldowns and battle input. The map actors and camera stay in place throughout. Close or Return to the Wilds restores the world and controls; replacement cancels the owned session and music. Screen buttons and number keys 1/2/3 choose powers. The result screen remains protected until closed.
 
 A first win immediately commits the bond and companion/village-guardian ownership. The cat pays 25 Gold and 50 participant XP; the moth pays 35 Gold and 65 participant XP. Already-owned pets and friendly repeat spars pay no rewards or guaranteed levels. Rewards belong to the companion that entered the challenge. Losing or leaving changes no saved arena HP and grants no rewards. Normal first-win XP can still heal a companion through level-up. Later expedition defeat cannot erase a bonded pet.
 
@@ -106,7 +106,7 @@ This is the complete first exploration slice. The proposed three-dimension campa
 - `RealmGuard` / `RealmGuardAttack`: physical guard behavior, fixed warnings, swept collision and one-hit casts.
 - `RealmGuardRoutes` / `RealmCombatArt`: refuge-aware monster paths and reproducible profile/cover art.
 - `RealmInteractable`: nearby direct tap/E routes with current-world guards.
-- `PetDuel`: presentation-free manual rules; `WildPetChallenge`: protected world staging and screen controls.
+- `PetBattlePanel`: shared arena presentation and manual turns for tournament and habitat battles, with guarded habitat suspension/rewards/cleanup.
 - `GameState`: all durable progression and one-time token-guarded reward transactions.
 
 `tools/twilight_checks.gd` runs both inside the canonical isolated gameplay suite and via `tools/twilight_test.tscn`, including `tools/realm_life_checks.gd` for the first expansion and `tools/realm_combat_checks.gd` for the second. The focused scene accepts `-- --capture` under an isolated actual renderer and writes screenshots to `TIDESWORN_TEST_ROOT`. Tests must use the same environment isolation as the canonical wrapper. See the newest Twilight section in `ACCEPTANCE_TESTS.md` for recorded evidence; older reports are historical.

@@ -2,7 +2,7 @@ class_name PetBattlePanel
 extends ModalBase
 ## Three-skill 1v1 duels: player acts first, then the rival replies.
 ## Both pets wait for an explicit player choice, then resolve together.
-## A victory always grants a pet level.
+## Tournament victories grant a level; habitat bonds use their own one-time rewards.
 
 const SKILLS := {
 	"attack": {"name": "1. Attack", "description": "Basic attack. 2-second cooldown.", "cooldown": 2.0, "power": 1.0},
@@ -56,17 +56,32 @@ var _timer_bar: ProgressBar
 var _timer_label: Label
 var _skill_buttons: Array[Button] = []
 var _last_result: Dictionary = {}
+var _wild_realm: TwilightRealm
+var _wild_id := ""
+var _wild_token := 0
+var _wild_mode := Node.PROCESS_MODE_INHERIT
+var _wild_journey := 0
+var _wild_controls: Array[Dictionary] = []
+var _settings_button: Button
 
 
 func _ready() -> void:
 	_panel_size = Vector2(920, 640)
 	super._ready()
+	_settings_button = GameUI.button("Settings", Vector2(110,40))
+	_settings_button.visible = false
+	_close_button.get_parent().add_child(_settings_button)
+	_close_button.get_parent().move_child(_settings_button,1)
+	_settings_button.pressed.connect(func() -> void:
+		var game := get_tree().get_first_node_in_group("game") as Game
+		if is_instance_valid(game): game.open_settings())
 	GameState.data_changed.connect(func() -> void:
 		if visible and not _battle_active and not _result_visible:
 			_rebuild())
 
 
 func open_pet_battles() -> void:
+	if is_wild_challenge(): return
 	_panel_size = Vector2(920, 640)
 	_battle_active = false
 	_battle_resolved = false
@@ -77,6 +92,7 @@ func open_pet_battles() -> void:
 
 
 func _rebuild() -> void:
+	if is_wild_challenge(): return # Data signals must not replace the owned duel/result.
 	_clear_content()
 	var pet := GameState.get_active_pet()
 	if pet.is_empty():
@@ -145,6 +161,7 @@ func _add_level_card(level_id: String) -> void:
 
 
 func start_battle(level_id: String) -> bool:
+	if is_wild_challenge(): return false
 	var reason := GameState.pet_battle_clear_reason(level_id)
 	if not bool(reason.ok):
 		return false
@@ -152,6 +169,64 @@ func start_battle(level_id: String) -> bool:
 	var def := PetBattleDB.get_level(level_id)
 	if pet.is_empty() or def.is_empty():
 		return false
+	_start_battle(pet,def,level_id)
+	return true
+
+
+func is_wild_challenge() -> bool:
+	return _wild_token != 0
+
+
+func open_wild_challenge(owner_world: TwilightRealm, wild: RealmInteractable) -> bool:
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if visible or not is_instance_valid(game) or not is_instance_valid(owner_world) or not is_instance_valid(wild): return false
+	if game.world != owner_world or owner_world.is_queued_for_deletion() or game._transitioning or game._defeat_pending or game._story_active: return false
+	if wild.get_parent() != owner_world or wild.kind != "pet": return false
+	var token := GameState.begin_wild_encounter(wild.stable_id)
+	if token == 0: return false
+	_wild_realm = owner_world
+	_wild_id = wild.stable_id
+	_wild_token = token
+	_wild_journey = GameState.journey_serial
+	_wild_mode = owner_world.process_mode
+	owner_world.combat.cancel_all()
+	owner_world.process_mode = Node.PROCESS_MODE_DISABLED
+	game.hud.release_world_controls()
+	game._input_locked = true
+	game._apply_input_lock()
+	_wild_controls.clear()
+	var obscured: Array = game.hud._control_nodes.values()
+	obscured.append_array([game.hud._map_button,game.hud._clock_label.get_parent()])
+	for control in obscured:
+		_wild_controls.append({"node":control,"visible":control.visible})
+		control.visible = false
+	_title = "%s · Pet Battle" % PetDB.name_of(_wild_id)
+	header_label.text = _title
+	_settings_button.visible = true
+	visible = true
+	move_to_front()
+	var level_id := str(RealmDB.ENCOUNTERS[_wild_id].duel)
+	_start_battle(GameState.get_active_pet(),_battle_definition(),level_id)
+	return true
+
+
+func _wild_context_valid() -> bool:
+	if not is_instance_valid(_wild_realm) or _wild_realm.is_queued_for_deletion(): return false
+	var game := get_tree().get_first_node_in_group("game") as Game
+	return is_instance_valid(game) and game.world == _wild_realm and not game._transitioning and not game._defeat_pending and GameState.journey_serial == _wild_journey and bool(GameState.realm_progress().visit_active)
+
+
+func _battle_definition() -> Dictionary:
+	var def := PetBattleDB.get_level(str(RealmDB.ENCOUNTERS[_wild_id].duel) if is_wild_challenge() else _battle_level)
+	if is_wild_challenge():
+		var habitat: Dictionary = RealmDB.ENCOUNTERS[_wild_id]
+		def.hp = int(habitat.hp)
+		def.damage = int(habitat.damage)
+		def.name = str(habitat.name) + " habitat"
+	return def
+
+
+func _start_battle(pet: Dictionary, def: Dictionary, level_id: String) -> void:
 	selected = level_id
 	_battle_level = level_id
 	_battle_active = true
@@ -177,10 +252,18 @@ func start_battle(level_id: String) -> bool:
 	_render_battle()
 	Sfx.start_battle_music(level_id)
 	_begin_turn()
-	return true
 
 
 func _process(delta: float) -> void:
+	if visible and is_wild_challenge():
+		var game := get_tree().get_first_node_in_group("game") as Game
+		if not _wild_context_valid():
+			close_panel()
+			return
+		for item in _wild_controls:
+			if is_instance_valid(item.node): item.node.visible = false
+		game.hud._prompt_panel.visible = false
+		if game.hud.settings_panel.visible: return
 	if not visible or not _battle_active or _battle_resolved:
 		return
 	_arena_idle(delta)
@@ -207,7 +290,7 @@ func _arena_idle(delta: float) -> void:
 		if _player_sprite != null and is_instance_valid(_player_sprite):
 			_player_sprite.texture = PixelArt.pet_texture(_player_pet_id, _arena_frame)
 		if _enemy_sprite != null and is_instance_valid(_enemy_sprite):
-			var def := PetBattleDB.get_level(_battle_level)
+			var def := _battle_definition()
 			_enemy_sprite.texture = PixelArt.pet_texture(str(def.get("opponent_pet", "ember")), _arena_frame)
 
 
@@ -223,6 +306,9 @@ func _begin_turn() -> void:
 	_refresh_skill_buttons()
 
 func choose_skill(skill_id: String) -> void:
+	if is_wild_challenge():
+		var game := get_tree().get_first_node_in_group("game") as Game
+		if not _wild_context_valid() or game.hud.settings_panel.visible: return
 	if not _battle_active or _battle_resolved or not _turn_active or not _player_choice.is_empty() or not SKILLS.has(skill_id):
 		return
 	if float(_player_cooldowns.get(skill_id, 0)) > 0:
@@ -361,7 +447,7 @@ func _render_battle() -> void:
 	_result_visible = false
 	_panel_size = get_viewport_rect().size
 	_fit_panel()
-	var definition := PetBattleDB.get_level(_battle_level)
+	var definition := _battle_definition()
 	_arena_backdrop = TextureRect.new()
 	_arena_backdrop.name = "FullArenaBackground"
 	_arena_backdrop.texture = load(str(definition.get("background", ""))) as Texture2D
@@ -468,6 +554,10 @@ func _arena_label(text: String, size: int) -> Label:
 	return label
 
 func _clear_content() -> void:
+	for child in get_children():
+		if child is PetHitEffect:
+			child.visible = false
+			child.queue_free()
 	for backdrop in [_arena_backdrop, _arena_veil]:
 		if is_instance_valid(backdrop):
 			backdrop.queue_free()
@@ -538,11 +628,15 @@ func _forfeit() -> void:
 	_turn_active = false
 	_result_visible = true
 	_last_result = {"ok": false, "message": "You forfeit the duel."}
+	if is_wild_challenge(): GameState.cancel_wild_encounter(_wild_token)
 	_render_result()
 
 
 func _finish_battle(won: bool) -> void:
-	if _battle_resolved:
+	if not _battle_active or _battle_resolved:
+		return
+	if is_wild_challenge() and not _wild_context_valid():
+		close_panel()
 		return
 	_battle_resolved = true
 	_battle_active = false
@@ -552,8 +646,9 @@ func _finish_battle(won: bool) -> void:
 	_result_visible = true
 	if won:
 		Sfx.play("victory", -4.0)
-		_last_result = GameState.complete_pet_battle(_battle_level)
+		_last_result = GameState.complete_wild_encounter(_wild_token) if is_wild_challenge() else GameState.complete_pet_battle(_battle_level)
 	else:
+		if is_wild_challenge(): GameState.cancel_wild_encounter(_wild_token)
 		_last_result = {"ok": false, "message": "Your companion yields. Rest and try again."}
 	_render_result()
 
@@ -561,7 +656,7 @@ func _finish_battle(won: bool) -> void:
 func _render_result() -> void:
 	_clear_content()
 	_result_visible = true
-	var def := PetBattleDB.get_level(_battle_level)
+	var def := _battle_definition()
 	var won := bool(_last_result.get("ok", false))
 	add_section("DUEL COMPLETE", GameUI.GOLD if won else GameUI.RED)
 	# Fresh pose preview (the battle widgets were just cleared).
@@ -578,6 +673,14 @@ func _render_result() -> void:
 		bounce.tween_property(pose, "position:y", -8.0 if won else 2.0, 0.2).set_trans(Tween.TRANS_SINE)
 		bounce.tween_property(pose, "position:y", 0.0, 0.2).set_trans(Tween.TRANS_SINE)
 	add_body_text("%s  •  %s" % [str(def.get("name", "Pet Duel")), str(def.get("opponent_name", "Rival"))], GameUI.TEXT, 20)
+	if is_wild_challenge():
+		add_body_text(str(_last_result.get("message", "Challenge complete.")), GameUI.GREEN if won else GameUI.RED, 18)
+		if won and bool(_last_result.get("first", false)):
+			add_body_text("%s joins your companions and village guardians." % PetDB.name_of(_wild_id), GameUI.TEAL, 16)
+		var leave := GameUI.button("Return to the Wilds", Vector2(330,48))
+		leave.pressed.connect(close_panel)
+		content.add_child(leave)
+		return
 	if won:
 		var leveled := int(_last_result.get("pet_levels", 0)) > 0
 		add_body_text("Your companion wins the duel and gains a level." if leveled else "Your companion wins the duel at maximum level.", GameUI.GREEN, 18)
@@ -620,4 +723,35 @@ func close_panel() -> void:
 	_turn_active = false
 	_awaiting_next = false
 	_result_visible = false
+	_enemy_pending = false
+	if is_wild_challenge():
+		GameState.cancel_wild_encounter(_wild_token)
+		if is_instance_valid(_wild_realm) and not _wild_realm.is_queued_for_deletion(): _wild_realm.process_mode = _wild_mode
+		for item in _wild_controls:
+			if is_instance_valid(item.node): item.node.visible = bool(item.visible)
+		_wild_controls.clear()
+		_wild_token = 0
+		_wild_id = ""
+		_wild_realm = null
+		var game := get_tree().get_first_node_in_group("game") as Game
+		if is_instance_valid(game):
+			game.hud.release_world_controls()
+			game.hud._apply_touch_mode()
+	_settings_button.visible = false
 	super.close_panel()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not visible: return
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if is_instance_valid(game) and game.hud.settings_panel.visible: return
+	super._unhandled_input(event)
+	if visible and event is InputEventKey and event.pressed and not event.echo:
+		var ids := {KEY_1:"attack",KEY_2:"defend",KEY_3:"burst"}
+		if ids.has(event.physical_keycode):
+			choose_skill(ids[event.physical_keycode])
+			get_viewport().set_input_as_handled()
+
+
+func _exit_tree() -> void:
+	if is_wild_challenge(): close_panel()

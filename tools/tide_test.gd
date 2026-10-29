@@ -54,6 +54,12 @@ func _ready() -> void:
 		await get_tree().create_timer(0.05).timeout
 	await get_tree().process_frame
 	await get_tree().process_frame
+	var dock_welcome := game._dock_conversation as DockConversation
+	_check(dock_welcome != null and game._story_active and not game.hud.visible, "opening beats hand off to Pak Rahim's player-paced dock welcome before lessons")
+	if dock_welcome != null: dock_welcome.finish()
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	_check(bool(GameState.campaign().get("dock_welcome_seen", false)) and not game._story_active, "explicitly skipping the dock conversation saves completion and releases village simulation")
 	hud = game.get("hud")
 	_check(game.world is Lobby, "lobby loads after character select")
 	_check(game.call("player") != null, "player exists")
@@ -186,6 +192,7 @@ func _ready() -> void:
 	await preload("res://tools/control_ocean_checks.gd").run(game, _check)
 	# Includes fullness-based speed/death and the Kraken's moving combat AI.
 	await preload("res://tools/kraken_hunger_checks.gd").run(game, _check)
+	# Includes dock word pacing/reveal input, owned voices, layout and save migration.
 	await StoryChecks.run(game, _check)
 	await MapUnlockChecks.run(game, _check)
 	await preload("res://tools/elemental_checks.gd").run(game, _check)
@@ -625,11 +632,11 @@ func _test_pet_battle_portal() -> void:
 		if node is PortalEntrance and node.gate_kind == "pet":
 			pet_gate = node
 	_check(pet_gate == null, "wild challenges replace the village pet gate")
-	game.open_pet_battles() # Legacy battle engine remains covered for old save compatibility.
+	game.open_pet_battles() # The same battle engine also serves discovered wild habitats.
 	await get_tree().process_frame
 	await get_tree().process_frame
 	var panel := hud.pet_battle_panel as PetBattlePanel
-	_check(panel.visible, "legacy manual duel presentation remains available to compatibility tools")
+	_check(panel.visible and not panel.is_wild_challenge(), "shared manual duel presentation retains its tournament route")
 	var gold_before := GameState.gold()
 	var level_before := int(GameState.get_active_pet().get("level", 1))
 	_check(panel.start_battle("pet_duel_1"), "first duel starts")

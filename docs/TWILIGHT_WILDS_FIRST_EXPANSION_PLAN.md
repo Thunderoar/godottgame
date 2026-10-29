@@ -5,6 +5,10 @@ Parent design: [compact content expansion](TWILIGHT_WILDS_EXPANSION_PLAN.md).
 Implementation and final evidence: [Twilight Wilds](TWILIGHT_WILDS.md) and
 [acceptance tests](ACCEPTANCE_TESTS.md#living-twilight-wilds--first-expansion-2026-10-29).
 
+Presentation update, 2026-10-30: habitat challenges now reuse the pre-existing
+PetBattlePanel arena and turn engine. The staging/overlay implementation described
+below is historical; current ownership and behavior are in TWILIGHT_WILDS.md.
+
 ## 1. The exact milestone
 
 This specifies build-order item 1 from the expansion proposal: living cat/moth

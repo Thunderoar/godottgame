@@ -191,8 +191,8 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	game.hud.settings_panel.close_panel()
 	realm.player.position = realm.wildlife.bramble_cat.position+Vector2(0,2)
 	realm.wildlife.bramble_cat.interact(realm.player)
-	check.call(game.hud.wild_challenge.visible and action.finished and realm.process_mode == Node.PROCESS_MODE_DISABLED, "habitat challenge clears pursuing regular casts before protected staging")
-	game.hud.wild_challenge.close_panel()
+	check.call(game.hud.pet_battle_panel.visible and game.hud.pet_battle_panel.is_wild_challenge() and action.finished and realm.process_mode == Node.PROCESS_MODE_DISABLED, "existing pet battle clears pursuing regular casts before suspending the realm")
+	game.hud.pet_battle_panel.close_panel()
 	# Pause-safe quality fallbacks retain the actual warning geometry.
 	var quality := GameSettings.effects_quality()
 	var reduce := GameSettings.reduce_motion()

@@ -22,6 +22,7 @@ var loading_screen: LoadingScreen
 var _sailing := false
 var _return_to_harbour := false
 var _story_active := false
+var _dock_conversation: DockConversation
 var _arjun_returning := false
 var _arjun_walk: Tween
 
@@ -51,7 +52,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	if is_instance_valid(world) and not _game_over and not _story_active and not hud.wild_challenge.visible:
+	if is_instance_valid(world) and not _game_over and not _story_active and not hud.pet_battle_panel.is_wild_challenge():
 		GameState.advance_world_clock(delta)
 	if world is Dungeon and not world is TwilightRealm and GameState.expedition_active():
 		if not _emergency_triggered:
@@ -75,7 +76,6 @@ func _connect_hud() -> void:
 	hud.inventory_panel.closed.connect(_on_modal_closed)
 	hud.portal_panel.closed.connect(_on_modal_closed)
 	hud.pet_battle_panel.closed.connect(_on_modal_closed)
-	hud.wild_challenge.closed.connect(_on_modal_closed)
 	hud.sea_cleaning_panel.closed.connect(_on_modal_closed)
 	hud.house_panel.closed.connect(_on_modal_closed)
 	hud.victory_panel.closed.connect(_on_modal_closed)
@@ -109,6 +109,10 @@ func _on_character_selected(_character_id: String) -> void:
 	_game_over = false
 	await play_story("intro", true)
 	await _load_lobby(true, true)
+	var arrival_world := world
+	var arrival_serial := GameState.journey_serial
+	await play_dock_conversation(true)
+	if world != arrival_world or not is_instance_valid(arrival_world) or arrival_serial != GameState.journey_serial or not bool(GameState.campaign().get("dock_welcome_seen", false)): return
 	hud.start_tutorial()
 
 
@@ -120,20 +124,26 @@ func _on_continue_requested() -> void:
 			title_screen.show_continue_error()
 		return
 	var first_arrival := not bool(GameState.campaign().get("intro_seen", false))
+	var dock_pending := not bool(GameState.campaign().get("dock_welcome_seen", true))
 	if first_arrival:
 		await play_story("intro", true)
 	else:
 		_remove_title()
 	hud.visible = true
-	if GameState.completed_mission_count() < MissionDB.STEPS.size():
-		hud.start_tutorial()
 	if bool(GameState.realm_progress().visit_active):
 		await _load_dungeon(RealmDB.PORTAL, true)
 	elif GameState.expedition_active():
 		var portal_id := GameState.expedition_portal()
 		await _load_dungeon(portal_id, true)
 	else:
-		await _load_lobby(true, first_arrival)
+		await _load_lobby(true, first_arrival or dock_pending)
+		if first_arrival or dock_pending:
+			var arrival_world := world
+			var arrival_serial := GameState.journey_serial
+			await play_dock_conversation(true)
+			if world != arrival_world or not is_instance_valid(arrival_world) or arrival_serial != GameState.journey_serial or not bool(GameState.campaign().get("dock_welcome_seen", false)): return
+	if GameState.completed_mission_count() < MissionDB.STEPS.size():
+		hud.start_tutorial()
 
 
 func _remove_title() -> void:
@@ -153,7 +163,8 @@ func _remove_title_if_owner(expected: CanvasLayer) -> void:
 # ------------------------------------------------------------------ world switching
 
 func _clear_world() -> void:
-	hud.wild_challenge.close_panel()
+	if is_instance_valid(_dock_conversation): _dock_conversation.cancel()
+	if hud.pet_battle_panel.is_wild_challenge(): hud.pet_battle_panel.close_panel()
 	hud.release_world_controls()
 	if _arjun_walk and _arjun_walk.is_valid(): _arjun_walk.kill()
 	if world is Lobby: _arjun_returning = false
@@ -375,7 +386,7 @@ func show_victory(summary: Dictionary, portal_id: String) -> void:
 
 
 func _on_modal_closed() -> void:
-	if hud.any_modal_open() or _transitioning or _sailing or _story_active or world is OceanJourney:
+	if hud.any_modal_open() or _transitioning or _sailing or _story_active or is_instance_valid(_dock_conversation) or world is OceanJourney:
 		return
 	_input_locked = false
 	_apply_input_lock()
@@ -708,6 +719,40 @@ func finish_ship_return(boarding: ShipDeparture) -> void:
 	if _arjun_returning:
 		await _land_arjun(boarding)
 	_check_campaign_ending()
+
+
+func play_dock_conversation(introduction: bool = false) -> void:
+	if not world is Lobby or is_instance_valid(home_interior) or _transitioning or _story_active or _sailing or hud.any_modal_open() or is_instance_valid(_dock_conversation): return
+	if _game_over or _defeat_pending or world._settlement_editor.active or not is_instance_valid(player()) or player().dead or player().sleeping: return
+	if GameState.recovery_active() or (introduction and bool(GameState.campaign().get("dock_welcome_seen", false))): return
+	var dock_world := world as Lobby
+	var serial := GameState.journey_serial
+	var previous_mode := dock_world.process_mode
+	var was_visible := hud.visible
+	_input_locked = true
+	_apply_input_lock()
+	hud.release_world_controls()
+	# The opening is a story; later voluntary chats follow normal menu rules.
+	if introduction:
+		_story_active = true
+		dock_world.process_mode = Node.PROCESS_MODE_DISABLED
+	hud.visible = false
+	var conversation := DockConversation.new()
+	conversation.introduction = introduction
+	_dock_conversation = conversation
+	add_child(conversation)
+	await conversation.completed
+	var still_owned := is_instance_valid(dock_world) and world == dock_world and serial == GameState.journey_serial
+	if still_owned and introduction and not conversation.cancelled:
+		GameState.mark_story_seen("dock_welcome_seen")
+	if introduction and is_instance_valid(dock_world): dock_world.process_mode = previous_mode
+	if _dock_conversation != conversation: return
+	_dock_conversation = null
+	if introduction: _story_active = false
+	if still_owned:
+		hud.visible = was_visible
+		_input_locked = hud.any_modal_open() or _sailing or _transitioning
+		_apply_input_lock()
 
 
 func play_story(kind: String, from_title: bool = false) -> void:

@@ -360,11 +360,7 @@ func challenge_pet(encounter: RealmInteractable) -> void:
 		set_message(str(reason.reason))
 		return
 	close_reading()
-	combat.cancel_all()
-	game.hud.release_world_controls()
-	game._input_locked = true
-	game._apply_input_lock()
-	game.hud.wild_challenge.open_challenge(self, encounter)
+	if not game.hud.pet_battle_panel.open_wild_challenge(self, encounter): game._on_modal_closed()
 
 func open_shortcut() -> void:
 	GameState.open_realm_shortcut()

@@ -6,6 +6,10 @@ synced village/story/HUD work. Status: implemented; verification is recorded in
 This is **milestone 2, Combat expansion**, from the four-stage player-facing plan.
 The engineering work-order list in the parent document is a separate breakdown.
 
+Presentation update, 2026-10-30: habitat battles now use the existing PetBattlePanel
+arena and manual turns. The protected clearings and pre-duel cast cancellation
+remain, while the camera and map actors no longer move into in-world duel staging.
+
 ## 1. What this update should achieve
 
 Give the existing walk three distinct combat decisions: step aside from a rush,

@@ -66,8 +66,11 @@ static func run(game: Game, realm: TwilightRealm, check: Callable, capture: Call
 		await game.get_tree().process_frame
 		if capture.is_valid(): await capture.call("10_habitat_" + wild.stable_id)
 		await _touch(game, wild.get_global_transform_with_canvas() * Vector2(0,-0.65))
-		check.call(game.hud.wild_challenge.visible and wild.position == home + Vector2(2.2,0.7), "moving pet stages its duel on the fixed clear floor: " + wild.stable_id)
-		game.hud.wild_challenge.close_panel()
+		check.call(game.hud.pet_battle_panel.visible and game.hud.pet_battle_panel.is_wild_challenge() and wild.position == moving_at, "moving pet opens the existing arena without moving its habitat body: " + wild.stable_id)
+		var arena := game.hud.pet_battle_panel
+		var expected_background := "res://assets/authored/illustrated/pet-arena.png" if not VisualStyle.is_pixel() else str(PetBattleDB.get_level(str(RealmDB.ENCOUNTERS[wild.stable_id].duel)).background)
+		check.call(arena._arena_backdrop.texture.resource_path == expected_background and arena._opponent_max == int(RealmDB.ENCOUNTERS[wild.stable_id].hp), "habitat reuses the pre-existing arena art with its starter-friendly battle stats: " + wild.stable_id)
+		game.hud.pet_battle_panel.close_panel()
 		check.call(wild.position == moving_at, "cancel restores the exact pre-duel pet patrol position: " + wild.stable_id)
 		wild.position = home
 		wild._rest = 4
@@ -181,7 +184,7 @@ static func run(game: Game, realm: TwilightRealm, check: Callable, capture: Call
 	cat.refresh()
 	realm.player.position = cat._home + Vector2(0,2)
 	cat.interact(realm.player)
-	check.call(cat._companion_here and not game.hud.wild_challenge.visible and realm._reading_text.text.contains("companion settles"), "bringing the same companion home replaces its duplicate with a peaceful bond wreath")
+	check.call(cat._companion_here and not game.hud.pet_battle_panel.visible and realm._reading_text.text.contains("companion settles"), "bringing the same companion home replaces its duplicate with a peaceful bond wreath")
 	check.call(not bool(GameState.wild_encounter_reason("bramble_cat").ok), "self-duels are rejected by the transaction API as well as the habitat")
 	# Render the hollow with its discovery/reading state, then restore this fixture.
 	GameState.data = snapshot.duplicate(true)
