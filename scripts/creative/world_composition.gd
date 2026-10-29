@@ -73,38 +73,7 @@ static func texture(kind: String) -> Texture2D:
 	var imported := AssetRegistry.get_texture("village/" + kind)
 	if imported: return imported
 	if kind not in ["rope", "tools", "feed", "driftwood", "bench"]: return MonsoonArt.prop(kind)
-	return PixelArt.cached_texture("village/" + kind, func() -> Image:
-		var img := PixelArt.image(64, 48)
-		var wood := WorldPalette.color("wood")
-		var dark := WorldPalette.color("wood_shadow")
-		var cream := WorldPalette.color("cream")
-		PixelArt.ellipse(img, 32, 43, 25, 3, Color(0.2, 0.27, 0.37, 0.14))
-		match kind:
-			"rope":
-				for i in 4:
-					PixelArt.ellipse_outline(img, 31, 37 - i * 3, 16, 5, cream.darkened(0.2))
-				PixelArt.line(img, 45, 37, 56, 43, wood)
-			"tools":
-				PixelArt.rect(img, 10, 29, 44, 11, dark)
-				PixelArt.hline(img, 10, 29, 44, wood)
-				for x in [16, 37, 48]: PixelArt.line(img, x, 37, x - 6, 9, wood)
-				PixelArt.rect(img, 5, 7, 16, 6, WorldPalette.color("stone"))
-				PixelArt.rect(img, 28, 5, 7, 11, WorldPalette.color("sea_deep"))
-			"feed":
-				PixelArt.rect(img, 12, 23, 40, 17, dark)
-				PixelArt.rect(img, 15, 25, 34, 9, WorldPalette.color("grass_warm"))
-				for x in range(16, 48, 5): PixelArt.vline(img, x, 24, 6, cream.darkened(0.2))
-			"driftwood":
-				for i in 3:
-					PixelArt.line(img, 9, 37 + i * 2, 51, 29 + i * 2, dark if i == 2 else wood)
-				PixelArt.line(img, 30, 33, 36, 20, wood)
-			"bench":
-				for x in [13, 48]: PixelArt.rect(img, x, 27, 4, 15, dark)
-				PixelArt.rect(img, 9, 18, 47, 5, dark)
-				PixelArt.rect(img, 9, 19, 47, 2, wood)
-				PixelArt.rect(img, 9, 29, 47, 6, wood)
-				PixelArt.hline(img, 9, 35, 47, dark)
-		return img)
+	return PixelArt.cached_texture("village/" + kind, func() -> Image: return MonsoonArt.workspace(kind))
 
 
 static func refresh(lobby: Lobby, layout: WorldLayout) -> void:

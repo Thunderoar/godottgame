@@ -13,6 +13,18 @@ static func run(game: Game, check: Callable) -> void:
 	var palette := WorldPalette.current()
 	check.call(palette.title == "Monsoon Afterglow", "shipped village selects Monsoon Afterglow in runtime and authored map")
 	check.call(WorldPalette.color("leaf_mint").get_luminance() > WorldPalette.color("leaf").get_luminance() and WorldPalette.color("leaf").get_luminance() > WorldPalette.color("leaf_deep").get_luminance(), "foliage ramp separates upper leaves, leaf body and deep interior")
+	var work_props := ["fishing_net", "timber", "bucket", "lantern", "baskets", "planter", "rope", "tools", "feed", "driftwood", "bench"]
+	var prop_hashes := {}
+	for kind in work_props:
+		var texture := WorldComposition.texture(kind)
+		var image := texture.get_image()
+		var height := 48 if kind in ["rope", "tools", "feed", "driftwood", "bench"] else 64
+		check.call(image.get_size() == Vector2i(64, height), "workspace %s retains native frame and placement pivot" % kind)
+		check.call(texture == WorldComposition.texture(kind), "workspace %s reuses its existing cache route" % kind)
+		var bounds := image.get_used_rect()
+		check.call(bounds.position.x > 0 and bounds.position.y > 0 and bounds.end.x < 64 and bounds.end.y < height, "workspace %s has unclipped transparent clearance" % kind)
+		prop_hashes[image.get_data().hex_encode().sha256_text()] = true
+	check.call(prop_hashes.size() == work_props.size(), "eleven work props remain visually distinct")
 	var silhouettes := {}
 	for species in MonsoonArt.TREE_SIZES.size():
 		var full := MonsoonArt.tree_texture(species).get_image()
@@ -96,8 +108,10 @@ static func run(game: Game, check: Callable) -> void:
 	replacement.entries["authored_tree"] = catalog.entries["coastal/planter"].duplicate(true)
 	var legacy_upper := "res://assets/sprites/TX Plant__TX Tree T1 Upper.tres"
 	replacement.entries["foliage/" + legacy_upper] = catalog.entries["coastal/planter"].duplicate(true)
+	for kind in work_props: replacement.entries["village/" + kind] = catalog.entries["coastal/planter"].duplicate(true)
 	AssetRegistry.catalog = replacement
 	AssetRegistry.invalidate()
+	for kind in work_props: check.call(WorldComposition.texture(kind) == AssetRegistry.get_texture("village/" + kind), "workspace %s explicit imported override remains authoritative" % kind)
 	lobby._add_window_lights(lobby.house_sprite, 1)
 	lobby._refresh_shop_ground(potion_shop,"potion")
 	check.call(PixelArt.stall_texture("potion")==AssetRegistry.get_texture("stall_potion") and not yard.visible and not potion_shop.get_node("StallFront").visible,"explicit stall replacement owns its art, foreground and yard")

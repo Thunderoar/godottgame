@@ -392,65 +392,185 @@ static func cottage_ground() -> Image:
 
 
 static func prop(kind: String) -> Texture2D:
-	return PixelArt.cached_texture("monsoon/props/" + kind, func() -> Image:
-		var img := PixelArt.image(64, 64)
-		var wood := WorldPalette.color("wood")
-		var dark := WorldPalette.color("wood_shadow")
-		var cream := WorldPalette.color("cream")
-		var contact := WorldPalette.color("shadow")
-		contact.a = 0.20
-		PixelArt.ellipse(img, 33, 59, 24, 4, contact)
-		match kind:
-			"fishing_net":
-				for x in [9, 52]:
-					PixelArt.rect(img, x, 8, 3, 51, dark)
-					PixelArt.vline(img, x, 9, 49, wood)
-				PixelArt.rect(img, 8, 8, 48, 3, wood)
-				for x in range(12, 52, 6):
-					PixelArt.line(img, x, 14, mini(53, x + 12), 49, cream.darkened(0.2))
-					PixelArt.line(img, x, 14, maxi(11, x - 12), 49, dark)
-				PixelArt.hline(img, 12, 49, 40, cream.darkened(0.18))
-				PixelArt.ellipse(img, 31, 36, 6, 3, WorldPalette.color("sea_mid"))
-				PixelArt._fill_polygon(img, [Vector2i(35, 36), Vector2i(41, 32), Vector2i(41, 40)], WorldPalette.color("sea_deep"))
-			"timber":
-				for at in [Vector2i(13, 53), Vector2i(27, 54), Vector2i(42, 52), Vector2i(20, 42), Vector2i(36, 41)]:
-					PixelArt.rect(img, at.x - 5, at.y - 15, 12, 16, dark)
-					PixelArt.vline(img, at.x - 3, at.y - 13, 11, wood)
-					PixelArt.ellipse(img, at.x, at.y, 7, 5, wood)
-					PixelArt.ellipse_outline(img, at.x, at.y, 4, 3, dark)
-					PixelArt.hline(img, at.x - 1, at.y - 1, 3, cream.darkened(0.18))
-			"bucket":
-				PixelArt.ellipse_outline(img, 31, 35, 11, 17, dark)
-				PixelArt._fill_polygon(img, [Vector2i(18, 36), Vector2i(23, 59), Vector2i(42, 59), Vector2i(46, 36)], WorldPalette.color("sea_deep"))
-				PixelArt.rect(img, 23, 40, 3, 16, WorldPalette.color("sea_mid"))
-				PixelArt.ellipse(img, 32, 36, 14, 4, cream)
-				PixelArt.ellipse(img, 32, 36, 11, 3, WorldPalette.color("sea_shallow"))
-			"lantern":
-				PixelArt.rect(img, 29, 12, 5, 47, dark)
-				PixelArt.vline(img, 29, 14, 43, wood)
-				PixelArt.rect(img, 29, 9, 20, 4, wood)
-				PixelArt.vline(img, 46, 11, 8, dark)
-				PixelArt.rect(img, 40, 18, 13, 17, WorldPalette.color("outline"))
-				PixelArt.rect(img, 42, 20, 9, 12, WorldPalette.color("lantern"))
-				PixelArt.vline(img, 46, 20, 12, dark)
-				PixelArt.hline(img, 40, 33, 13, dark)
-			_: # Woven baskets and occupied porch planters.
-				PixelArt._fill_polygon(img, [Vector2i(13, 40), Vector2i(18, 59), Vector2i(46, 59), Vector2i(51, 40)], dark)
-				PixelArt.rect(img, 18, 43, 28, 13, wood)
-				for y in range(44, 57, 4):
-					PixelArt.hline(img, 19, y, 26, cream.darkened(0.23))
-				for x in range(20, 46, 6): PixelArt.vline(img, x, 42, 16, dark)
-				PixelArt.ellipse(img, 32, 40, 19, 4, cream.darkened(0.32))
-				if kind == "planter":
-					for at in [Vector2i(19, 31), Vector2i(32, 25), Vector2i(43, 32)]:
-						PixelArt.line(img, 32, 40, at.x, at.y, WorldPalette.color("leaf_deep"))
-						_leaf_cluster(img, at.x, at.y + 3, WorldPalette.color("leaf"), WorldPalette.color("leaf_deep"))
-						PixelArt.ellipse(img, at.x, at.y - 2, 4, 3, WorldPalette.color("coral"))
-						PixelArt.rect(img, at.x, at.y - 3, 2, 2, cream)
-				else:
-					for at in [Vector2i(22, 35), Vector2i(31, 33), Vector2i(41, 35)]:
-						PixelArt.ellipse(img, at.x, at.y, 5, 4, WorldPalette.color("grass_warm"))
-		return img)
+	return PixelArt.cached_texture("monsoon/props/" + kind, func() -> Image: return _work_prop(kind))
+
+
+# Shared material treatment; dimensions/cache ownership stay with existing callers.
+static func _work_prop(kind: String) -> Image:
+	var img := PixelArt.image(64, 64)
+	var wood := WorldPalette.color("wood").lerp(Color("b59666"), 0.42)
+	var dark := WorldPalette.color("wood_shadow").lerp(Color("304b45"), 0.30)
+	var light := wood.lerp(WorldPalette.color("cream"), 0.40)
+	var fibre := WorldPalette.color("cream").lerp(wood, 0.48)
+	var metal := WorldPalette.color("stone").lerp(Color("48746d"), 0.50).darkened(0.14)
+	PixelArt.ellipse(img, 32, 60, 23, 2, Color(WorldPalette.color("shadow"), 0.18))
+	match kind:
+		"fishing_net":
+			for x in [9, 51]:
+				PixelArt.rect(img, x, 10, 4, 49, dark)
+				PixelArt.vline(img, x + 1, 11, 46, wood)
+				PixelArt.rect(img, x - 1, 56, 6, 3, dark)
+			_prop_bin(img, 8, 10, 49, 4, 3, wood, dark, light)
+			# Sagging linen mesh, not a flat grid or a newly drawn animal.
+			for row in 7:
+				var previous := Vector2i(13, 16 + row * 5)
+				for step in range(1, 9):
+					var t := step / 8.0
+					var point := Vector2i(13 + step * 5, 16 + row * 5 + int(sin(t * PI) * 5.0))
+					PixelArt.line(img, previous.x, previous.y, point.x, point.y, fibre.darkened(0.12 if row % 2 else 0.22))
+					previous = point
+			for column in 8:
+				var x := 14 + column * 5
+				PixelArt.line(img, x, 16, x - 2, 48 + int(sin(column / 7.0 * PI) * 5.0), Color(fibre, 0.75))
+			for x in [15, 29, 43]:
+				PixelArt.ellipse(img, x, 16, 2, 2, wood.lightened(0.12))
+			for x in [14, 25, 37, 48]: PixelArt.rect(img, x, 51, 3, 3, metal)
+		"timber":
+			for at in [Vector2i(18, 53), Vector2i(31, 54), Vector2i(43, 52), Vector2i(25, 42), Vector2i(38, 41)]:
+				_house_poly(img, [[at.x-6,at.y],[at.x+4,at.y-19],[at.x+13,at.y-18],[at.x+6,at.y+1]], dark)
+				PixelArt.line(img, at.x-3, at.y-2, at.x+6, at.y-18, wood)
+				PixelArt.line(img, at.x, at.y-3, at.x+9, at.y-18, light.darkened(0.17))
+				PixelArt.ellipse(img, at.x, at.y, 6, 4, wood)
+				_prop_ring(img, at.x, at.y, 4, 2, dark.lightened(0.10))
+				PixelArt.hline(img, at.x-2, at.y-2, 4, light)
+				PixelArt.px(img, at.x, at.y, dark)
+		"bucket":
+			_prop_ring(img, 32, 32, 11, 16, dark)
+			PixelArt.line(img, 23, 23, 26, 19, metal.lightened(0.16))
+			_house_poly(img, [[18,36],[22,57],[28,59],[39,59],[44,56],[47,36]], dark)
+			_house_poly(img, [[20,37],[24,55],[29,57],[38,57],[42,55],[45,37]], wood)
+			for x in [25, 31, 37, 42]: PixelArt.vline(img, x, 40, 15, dark.lightened(0.08))
+			PixelArt.vline(img, 23, 41, 11, light.darkened(0.12))
+			PixelArt.hline(img, 23, 49, 20, metal)
+			PixelArt.hline(img, 24, 54, 18, metal.darkened(0.12))
+			PixelArt.ellipse(img, 32, 36, 15, 5, fibre)
+			PixelArt.ellipse(img, 32, 36, 12, 3, dark)
+			PixelArt.ellipse(img, 32, 37, 10, 2, WorldPalette.color("sea_shallow").lerp(metal, 0.60))
+			PixelArt.hline(img, 25, 36, 7, WorldPalette.color("cream").darkened(0.18))
+		"lantern":
+			PixelArt.rect(img, 26, 13, 5, 45, dark)
+			PixelArt.vline(img, 27, 14, 43, wood)
+			_prop_bin(img, 23, 57, 12, 3, 2, wood, dark, light)
+			PixelArt.line(img, 30, 22, 43, 12, dark)
+			_prop_bin(img, 27, 11, 24, 4, 3, wood, dark, light)
+			PixelArt.vline(img, 47, 14, 6, dark)
+			PixelArt.rect(img, 40, 23, 15, 19, dark)
+			PixelArt.rect(img, 42, 25, 11, 14, WorldPalette.color("lantern").lerp(wood, 0.18))
+			PixelArt.rect(img, 49, 25, 4, 14, WorldPalette.color("lantern").lerp(wood, 0.38))
+			PixelArt.vline(img, 47, 25, 14, dark)
+			PixelArt.vline(img, 43, 26, 9, WorldPalette.color("cream"))
+			_prop_bin(img, 38, 23, 19, 3, 4, metal, dark, metal.lightened(0.24))
+			_prop_bin(img, 39, 40, 17, 3, 2, metal, dark, metal.lightened(0.15))
+		_:
+			_woven_pot(img, 32, 40, 19, 19, wood, dark, fibre)
+			if kind == "planter":
+				PixelArt.ellipse(img, 32, 39, 15, 3, dark.darkened(0.20))
+				for at in [Vector2i(20, 29), Vector2i(32, 22), Vector2i(44, 30)]:
+					PixelArt.line(img, 32, 40, at.x, at.y, WorldPalette.color("leaf_deep"))
+					_leaf_cluster(img, at.x, at.y + 3, WorldPalette.color("leaf").lerp(WorldPalette.color("fern"),0.30), WorldPalette.color("leaf_deep"))
+					PixelArt.ellipse(img, at.x, at.y-1, 4, 3, WorldPalette.color("flower").darkened(0.10))
+					PixelArt.rect(img, at.x-1, at.y-2, 2, 2, WorldPalette.color("cream"))
+			else:
+				PixelArt.ellipse(img, 32, 39, 15, 3, dark)
+				for at in [Vector2i(23, 36), Vector2i(32, 33), Vector2i(40, 36)]:
+					PixelArt.ellipse(img, at.x, at.y, 5, 4, WorldPalette.color("grass_warm").lerp(wood,0.36))
+					PixelArt.hline(img, at.x-2, at.y-2, 3, fibre)
+	return img
+
+
+static func _prop_ring(img: Image, cx: int, cy: int, rx: int, ry: int, ink: Color) -> void:
+	var previous := Vector2i(cx+rx, cy)
+	for step in range(1,65):
+		var angle := TAU*step/64.0
+		var point := Vector2i(cx+roundi(cos(angle)*rx), cy+roundi(sin(angle)*ry))
+		PixelArt.line(img, previous.x, previous.y, point.x, point.y, ink)
+		previous=point
+
+
+static func _prop_bin(img: Image, x: int, y: int, width: int, height: int, depth: int, wood: Color, dark: Color, top: Color) -> void:
+	PixelArt.rect(img, x, y, width, height, dark)
+	PixelArt.rect(img, x+1, y+1, width-2, maxi(1,height-2), wood)
+	_house_poly(img, [[x,y],[x+4,y-depth],[x+width-4,y-depth],[x+width,y]], top)
+	PixelArt.hline(img, x+1, y, width-2, wood.lightened(0.16))
+	PixelArt.hline(img, x, y+height-1, width, dark)
+
+
+static func _woven_pot(img: Image, cx: int, rim_y: int, radius: int, height: int, wood: Color, dark: Color, fibre: Color) -> void:
+	_house_poly(img, [[cx-radius,rim_y],[cx-radius+5,rim_y+height-2],[cx-8,rim_y+height],[cx+8,rim_y+height],[cx+radius-5,rim_y+height-2],[cx+radius,rim_y]], dark)
+	_house_poly(img, [[cx-radius+2,rim_y+1],[cx-radius+7,rim_y+height-3],[cx+radius-7,rim_y+height-3],[cx+radius-2,rim_y+1]], wood)
+	for y in range(rim_y+3, rim_y+height-2, 3):
+		var inset := 3 + (y-rim_y)/5
+		PixelArt.hline(img, cx-radius+inset, y, (radius-inset)*2, fibre.darkened(0.13))
+		for x in range(cx-radius+inset+2, cx+radius-inset, 7): PixelArt.rect(img, x+(y%2), y, 2, 2, dark.lightened(0.12))
+	PixelArt.ellipse(img, cx, rim_y, radius, 4, dark)
+	_prop_ring(img, cx, rim_y-1, radius-1, 3, fibre)
+
+
+static func workspace(kind: String) -> Image:
+	var img := PixelArt.image(64, 48)
+	var wood := WorldPalette.color("wood").lerp(Color("b59666"), 0.42)
+	var dark := WorldPalette.color("wood_shadow").lerp(Color("304b45"), 0.30)
+	var light := wood.lerp(WorldPalette.color("cream"), 0.40)
+	var fibre := WorldPalette.color("cream").lerp(wood, 0.48)
+	var metal := WorldPalette.color("stone").lerp(Color("48746d"), 0.50)
+	PixelArt.ellipse(img, 32, 44, 24, 2, Color(WorldPalette.color("shadow"),0.17))
+	match kind:
+		"rope":
+			# A low oval coil on the ground, not a vertical stack of dotted rings.
+			PixelArt.ellipse(img, 30, 35, 20, 8, dark)
+			PixelArt.ellipse(img, 30, 32, 20, 8, fibre.darkened(0.16))
+			for ring in 4:
+				var radius := 18-ring*4
+				var depth := 6-ring
+				_prop_ring(img, 30, 31, radius, depth, dark.lightened(0.12))
+				_prop_ring(img, 30, 30, radius, depth, fibre)
+			PixelArt.ellipse(img, 30, 30, 3, 1, dark)
+			for x in [15, 22, 29, 36, 43]: PixelArt.line(img, x, 36, x+1, 39, wood)
+			for i in 3: PixelArt.line(img, 46, 35+i, 55, 40+i, wood)
+			PixelArt.line(img, 47, 35, 55, 40, fibre)
+		"tools":
+			_prop_bin(img, 10, 30, 44, 12, 5, wood, dark, light)
+			PixelArt.rect(img, 13, 28, 38, 3, dark)
+			for x in [18, 35, 46]:
+				PixelArt.line(img, x, 35, x-5, 12, dark)
+				PixelArt.line(img, x+1, 35, x-4, 12, light)
+			_prop_bin(img, 5, 11, 17, 5, 3, metal.darkened(0.12), dark, metal.lightened(0.20))
+			_house_poly(img, [[27,8],[34,8],[36,19],[31,24],[27,18]], metal)
+			PixelArt.hline(img, 28, 9, 5, WorldPalette.color("cream").darkened(0.20))
+			PixelArt.line(img, 40, 10, 46, 17, metal)
+			PixelArt.vline(img, 13, 33, 6, light)
+			PixelArt.vline(img, 49, 33, 6, dark)
+		"feed":
+			_prop_bin(img, 11, 29, 42, 13, 6, wood, dark, light)
+			_house_poly(img, [[15,28],[20,23],[44,23],[49,28],[46,32],[18,32]], WorldPalette.color("grass_warm").lerp(wood,0.32))
+			for x in range(18,47,5):
+				PixelArt.line(img, x, 29, x+2, 24, fibre)
+				PixelArt.px(img, x+1, 31, dark.lightened(0.10))
+			for x in [14, 24, 39, 49]: PixelArt.vline(img, x, 33, 7, dark)
+			PixelArt.hline(img, 14, 39, 35, light.darkened(0.15))
+		"driftwood":
+			for i in 3:
+				var y := 36+i*3
+				var weathered := wood.lerp(WorldPalette.color("stone"),0.35)
+				_house_poly(img, [[8,y],[47,y-9],[55,y-6],[14,y+3]], dark)
+				PixelArt.line(img, 12, y, 51, y-7, weathered)
+				PixelArt.line(img, 14, y-1, 49, y-8, light.lerp(weathered,0.4))
+				PixelArt.line(img, 14, y+1, 50, y-6, weathered.darkened(0.15))
+			PixelArt.line(img, 31, 30, 37, 17, dark)
+			PixelArt.line(img, 32, 29, 38, 17, wood)
+		"bench":
+			for x in [13, 48]:
+				PixelArt.rect(img, x, 21, 4, 22, dark)
+				PixelArt.vline(img, x+1, 23, 19, wood)
+			_prop_bin(img, 8, 18, 49, 7, 3, wood, dark, light)
+			PixelArt.hline(img, 11, 21, 43, dark.lightened(0.13))
+			_prop_bin(img, 8, 32, 49, 5, 7, wood, dark, light)
+			PixelArt.hline(img, 14, 29, 37, wood.darkened(0.12))
+			PixelArt.hline(img, 12, 31, 41, wood.darkened(0.10))
+			for x in [13, 48]:
+				PixelArt.px(img, x+1, 20, dark)
+				PixelArt.px(img, x+1, 34, dark)
+	return img
 
 
 # Companion frontage family: same elevated view and warm timber as the cottage.

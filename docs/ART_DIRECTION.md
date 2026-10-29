@@ -156,3 +156,21 @@ images through the same water/bounds helper as the cottage, rebuilt at placement
 changes. Imported stall overrides retain presentation ownership. The title reuses
 these cached foliage assets and adds one small matching harbour market frontage.
 Terrain topology, source bakes, light budgets, actor artwork and gameplay are unchanged.
+
+
+## Work-prop material family (2026-10-30)
+
+Eleven existing work props now share the approved elevated environment language:
+visible top surfaces, warm upper-left timber highlights, cool undersides, restrained
+linen/metal/water colours and static contact shadows. Fishing net, timber, bucket,
+lantern, baskets and planter keep 64×64 frames; rope, tools, feed, driftwood and
+bench keep 64×48 frames. MonsoonArt owns their image drawing through `_work_prop()`
+and `workspace()`; `WorldComposition.texture()` preserves the original cache keys
+and explicit `village/<kind>` override precedence. These are shared generated
+fallback props, not a new visual-style setting or replacements for imported art.
+
+Sprite pivots, source/saved scenery placements, visibility/parent ownership,
+collision, world RNG, light budgets and all interactions are unchanged. The lantern
+uses painted glass, not a new light node. Approved cottages, market stalls, foliage
+and actor artwork remain untouched. Larger compounds, fences, jetty/ship/crates and
+terrain/coast continuity are subsequent batches, not included in this pass.
