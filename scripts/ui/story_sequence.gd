@@ -11,11 +11,15 @@ const ARRIVAL_CAPTION := 0.22
 const LOADING_IN := 0.12
 const LOADING_READ := 0.55
 const LOADING_OUT := 0.18
+const INTRO_LANDFALL_PAGE := 3
+const INTRO_CAPTURE_PAGE := 4
+const INTRO_RESCUE_PAGE := 5
 const INTRO := [
 	"Adam, Arjun and Mei Ling went fishing together in a peaceful sea.",
 	"Arjun's hook caught the arm of an enormous Kraken. The sea king awoke in fury!",
 	"The Kraken smashed their ship into three pieces. The three friends were separated.",
-	"Arjun was dragged to the Kraken's island and locked in a prison. Monsters captured Mei Ling.",
+	"Clinging to the broken bow, Mei Ling washed ashore at a guarded ruin.",
+	"The Kraken imprisoned Arjun. The ruin's guards captured Mei Ling alive: \"Our ruler will want answers.\"",
 	"A brave turtle rescued Adam and brought him to the villagers of BESUT.",
 	"To repay their kindness, Adam protects BESUT and searches the sea for Arjun and the final portal for Mei Ling."
 ]
@@ -210,6 +214,8 @@ class StoryCanvas extends Control:
 	var _kraken: OpeningKrakenRenderer
 	var _wreck: OpeningWreckRenderer
 	var _capture: OpeningCaptureRenderer
+	var _landfall: OpeningLandfallRenderer
+	var _rescue: OpeningRescueRenderer
 	func _ready() -> void:
 		texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		if is_instance_valid(sequence) and sequence.kind == "intro":
@@ -228,17 +234,32 @@ class StoryCanvas extends Control:
 		return OpeningKrakenRenderer.sample(sequence._page_time, GameSettings.reduce_motion(), GameSettings.effects_quality())
 	func uses_wreck_shot() -> bool:
 		return is_instance_valid(sequence) and sequence.kind == "intro" and sequence.page == 2
+	func uses_landfall_shot() -> bool:
+		return is_instance_valid(sequence) and sequence.kind == "intro" and sequence.page == INTRO_LANDFALL_PAGE
+	func landfall_state() -> Dictionary:
+		return OpeningLandfallRenderer.sample(sequence._page_time, GameSettings.reduce_motion(), GameSettings.effects_quality())
 	func uses_capture_shot() -> bool:
-		return is_instance_valid(sequence) and sequence.kind == "intro" and sequence.page == 3
+		return is_instance_valid(sequence) and sequence.kind == "intro" and sequence.page == INTRO_CAPTURE_PAGE
 	func capture_state() -> Dictionary:
 		return OpeningCaptureRenderer.sample(sequence._page_time, GameSettings.reduce_motion(), GameSettings.effects_quality())
+	func uses_rescue_shot() -> bool:
+		return is_instance_valid(sequence) and sequence.kind == "intro" and sequence.page == INTRO_RESCUE_PAGE
+	func uses_rescue_epilogue() -> bool:
+		return is_instance_valid(sequence) and sequence.kind == "intro" and sequence.page == INTRO_RESCUE_PAGE + 1
+	func rescue_state() -> Dictionary:
+		var elapsed := 6.0 if uses_rescue_epilogue() else sequence._page_time
+		return OpeningRescueRenderer.sample(elapsed, GameSettings.reduce_motion(), GameSettings.effects_quality())
 	func prepare_page() -> void:
 		# Warm on entering this page, not in _draw or before the title curtain exists.
 		if uses_wreck_shot() and _wreck == null:
 			if _kraken == null: _kraken = OpeningKrakenRenderer.new()
 			_wreck = OpeningWreckRenderer.new(_kraken)
+		if uses_landfall_shot() and _landfall == null:
+			_landfall = OpeningLandfallRenderer.new()
 		if uses_capture_shot() and _capture == null:
 			_capture = OpeningCaptureRenderer.new()
+		if (uses_rescue_shot() or uses_rescue_epilogue()) and _rescue == null:
+			_rescue = OpeningRescueRenderer.new()
 	func wreck_state() -> Dictionary:
 		return OpeningWreckRenderer.sample(sequence._page_time, GameSettings.reduce_motion(), GameSettings.effects_quality())
 	func _draw() -> void:
@@ -264,12 +285,26 @@ class StoryCanvas extends Control:
 			if _wreck != null:
 				_wreck.draw(self, Rect2(Vector2.ZERO, Vector2(size.x, maxf(1, bottom))), wreck_state())
 			return
+		if uses_landfall_shot():
+			draw_rect(Rect2(Vector2.ZERO, size), Color("#102733"))
+			var bottom := size.y - 184.0
+			if is_instance_valid(sequence._caption_panel): bottom = sequence._caption_panel.position.y - 10.0
+			if _landfall != null:
+				_landfall.draw(self, Rect2(Vector2.ZERO, Vector2(size.x, maxf(1, bottom))), landfall_state())
+			return
 		if uses_capture_shot():
 			draw_rect(Rect2(Vector2.ZERO, size), Color("#102733"))
 			var bottom := size.y - 184.0
 			if is_instance_valid(sequence._caption_panel): bottom = sequence._caption_panel.position.y - 10.0
 			if _capture != null:
 				_capture.draw(self, Rect2(Vector2.ZERO, Vector2(size.x, maxf(1, bottom))), capture_state())
+			return
+		if uses_rescue_shot() or uses_rescue_epilogue():
+			draw_rect(Rect2(Vector2.ZERO, size), Color("#102733"))
+			var bottom := size.y - 184.0
+			if is_instance_valid(sequence._caption_panel): bottom = sequence._caption_panel.position.y - 10.0
+			if _rescue != null:
+				_rescue.draw(self, Rect2(Vector2.ZERO, Vector2(size.x, maxf(1, bottom))), rescue_state())
 			return
 		draw_set_transform(Vector2.ZERO, 0, size / Vector2(1280, 720))
 		draw_rect(Rect2(0, 0, 1280, 720), Color("#102b40"))

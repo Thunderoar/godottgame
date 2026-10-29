@@ -12,7 +12,7 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(locked.locked and locked.door == 1 and not locked.gripping, "the prison locks before the Kraken releases Arjun")
 	check.call(locked.mei == start.mei and locked.lead == start.lead and locked.rear == start.rear, "Mei Ling's scene waits until Arjun's capture has settled")
 	check.call(surrounded.lead.x > surrounded.mei.x and surrounded.rear.x < surrounded.mei.x, "two guards close both of Mei Ling's escape routes before escort")
-	check.call(end.mei.x > surrounded.mei.x + 60 and end.lead.x - end.mei.x == 36 and end.mei.x - end.rear.x == 36, "guards escort the visible Mei Ling into the ruined passage together")
+	check.call(end.mei.x > surrounded.mei.x + 40 and end.lead.x - end.mei.x == 36 and end.mei.x - end.rear.x == 36, "guards escort the visible Mei Ling into the ruined passage together")
 	check.call(end.phase == "hold" and OpeningCaptureRenderer.sample(4.65, false, "high") == OpeningCaptureRenderer.sample(6, false, "high").merged({"time": 4.65}, true), "the final 1.35 seconds hold both living captives without secondary motion")
 	check.call(OpeningCaptureRenderer.sample(0, true, "high") == OpeningCaptureRenderer.sample(6, true, "high"), "Reduce Motion presents one stable complete captivity tableau")
 	var previous := start
@@ -27,8 +27,9 @@ static func run(game: Game, check: Callable) -> void:
 		var in_frame := true
 		for key in ["arjun", "mei", "lead", "rear"]:
 			var at: Vector2 = state[key]
-			in_frame = in_frame and Rect2(19, 60, 442, 145).has_point(at)
+			in_frame = in_frame and Rect2(19, 60, 442, 154).has_point(at)
 		check.call(in_frame and state.lead.x - state.mei.x >= 35 and state.mei.x - state.rear.x >= 35, "capture %.2fs faces and silhouettes stay separated inside the stage" % t)
+		check.call(OpeningCaptureArt.on_right_landing(state.mei) and OpeningCaptureArt.on_right_landing(state.rear) and OpeningCaptureArt.on_right_landing(state.lead), "capture %.2fs friends and guards stand on the visible landing, not water" % t)
 		if state.gripping:
 			check.call(state.arm_tip == state.arjun + Vector2(10, -20), "capture %.2fs raster arm stays attached to its captive" % t)
 		if state.door > 0:
@@ -46,8 +47,10 @@ static func run(game: Game, check: Callable) -> void:
 	story.advance()
 	check.call(story._canvas._capture == null, "capture art is not warmed during the wreck")
 	story.advance()
-	check.call(story._canvas.uses_capture_shot() and story._canvas._capture != null and story._page_time == 0, "entering only intro page three warms the capture before drawing")
-	check.call(story._caption.text == StorySequence.INTRO[3] and story.lines().size() == 6, "capture keeps the original fourth caption and six-page story")
+	check.call(story._canvas._capture == null and story._canvas.uses_landfall_shot(), "landfall establishes the guarded shore before capture warms")
+	story.advance()
+	check.call(story._canvas.uses_capture_shot() and story._canvas._capture != null and story._page_time == 0, "entering only intro capture page warms the capture before drawing")
+	check.call(story._caption.text == StorySequence.INTRO[StorySequence.INTRO_CAPTURE_PAGE] and story.lines().size() == 7, "capture follows landfall and identifies the guards taking an outsider alive")
 	check.call(hull == OpeningFishingArt.hull().get_image().get_data() and friend == OpeningFishingArt.hero("mei_ling", 0).get_image().get_data(), "capture art leaves shared ship and character pixels unchanged")
 	var face_clear := true
 	var bars := OpeningCaptureArt.cage(true).get_image()
@@ -70,10 +73,10 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(PixelArt.CACHE.size() == cached, "capture sampling creates no cached textures")
 	story._page_time = 5.99
 	story._process(0.02)
-	check.call(story.page == 4 and story._page_time == 0 and not story._canvas.uses_capture_shot(), "six-second capture hands off to Adam's turtle rescue")
+	check.call(story.page == StorySequence.INTRO_RESCUE_PAGE and story._page_time == 0 and not story._canvas.uses_capture_shot(), "six-second capture hands off to Adam's turtle rescue")
 	for kind in ["arjun", "mei", "ending"]:
 		story.kind = kind
-		story.page = 3
+		story.page = StorySequence.INTRO_CAPTURE_PAGE
 		check.call(not story._canvas.uses_capture_shot(), "%s story cannot select the intro captivity renderer" % kind)
 	story.finish()
 	await game.get_tree().process_frame
@@ -81,10 +84,10 @@ static func run(game: Game, check: Callable) -> void:
 		var early := StorySequence.new()
 		game.add_child(early)
 		early.set_process(false)
-		for i in 3: early.advance()
+		for i in StorySequence.INTRO_CAPTURE_PAGE: early.advance()
 		early._page_time = t
 		early.advance()
-		check.call(early.page == 4 and early._page_time == 0, "Next at capture %.2fs immediately reaches Adam's rescue" % t)
+		check.call(early.page == StorySequence.INTRO_RESCUE_PAGE and early._page_time == 0, "Next at capture %.2fs immediately reaches Adam's rescue" % t)
 		var reference: WeakRef = weakref(early._canvas._capture)
 		var completions := [0]
 		early.completed.connect(func() -> void: completions[0] += 1)

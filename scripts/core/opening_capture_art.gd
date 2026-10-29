@@ -17,7 +17,7 @@ static func arm_tip(frame: int) -> Vector2:
 	return contact.lerp(Vector2(64, 174), release * release).round()
 
 static func backdrop(right: bool) -> Texture2D:
-	return PixelArt.cached_texture("opening/capture/backdrop/%s/v1" % right, func() -> Image:
+	return PixelArt.cached_texture("opening/capture/backdrop/%s/v2" % right, func() -> Image:
 		var img := PixelArt.image(232, 224)
 		var sky := ["#263d56", "#354f67", "#4c6a7b", "#6e8a92"] if not right else ["#302f4b", "#45405e", "#5d5572", "#7b7287"]
 		for i in 4: PixelArt.rect(img, 0, i * 23, 232, 23, Color(sky[i]))
@@ -25,7 +25,7 @@ static func backdrop(right: bool) -> Texture2D:
 		for i in 6:
 			var x := i * 45 - 8
 			PixelArt._fill_polygon(img, [Vector2i(x, 95), Vector2i(x + 12, 63 + posmod(i * 13, 19)), Vector2i(x + 25, 69), Vector2i(x + 46, 95)], Color("#344e61") if not right else Color("#49425e"))
-		for i in 4: PixelArt.rect(img, 0, 93 + i * 25, 232, 25, Color(["#467886", "#356575", "#295365", "#213f53"][i]))
+		for i in 6: PixelArt.rect(img, 0, 93 + i * 25, 232, 25, Color(["#467886", "#356575", "#295365", "#213f53", "#213f53", "#213f53"][i]))
 		for i in 40:
 			PixelArt.hline(img, posmod(i * 61, 223), 99 + posmod(i * 17, 115), 4 + i % 12, Color("#5b8d94") if i % 3 == 0 else Color("#3e6a79"))
 		var rock := Color("#35434f") if not right else Color("#454250")
@@ -44,7 +44,7 @@ static func backdrop(right: bool) -> Texture2D:
 		for i in 16:
 			PixelArt.rect(img, 43 + posmod(i * 31, 186), 205 + i % 6 * 2, 3, 2, Color("#6c8b85"))
 		if right:
-			# A recessed ruin, rather than an unestablished magical crossing.
+			# A recessed occupied outpost, not a new magical crossing.
 			PixelArt.rect(img, 154, 50, 68, 135, Color("#252638"))
 			PixelArt._fill_polygon(img, [Vector2i(152, 76), Vector2i(165, 46), Vector2i(208, 46), Vector2i(225, 76)], Color("#686174"))
 			PixelArt.rect(img, 164, 75, 49, 107, Color("#171f30"))
@@ -57,6 +57,11 @@ static func backdrop(right: bool) -> Texture2D:
 			for x in [156, 218]:
 				PixelArt.rect(img, x, 105, 3, 8, Color("#a18cae"))
 				PixelArt.px(img, x + 1, 107, Color("#d4c3d3"))
+			# A posted crown standard makes this a guarded place before the capture.
+			PixelArt.rect(img, 125, 87, 17, 31, Color("#30283e"))
+			PixelArt.rect(img, 126, 88, 15, 28, Color("#574362"))
+			PixelArt.hline(img, 129, 100, 9, Color("#c0abb0"))
+			for x in [129, 133, 137]: PixelArt.vline(img, x, 95 if x == 133 else 97, 5, Color("#c0abb0"))
 			PixelArt.line(img, 221, 59, 225, 85, Color("#384b4c"))
 			PixelArt.line(img, 225, 85, 218, 117, Color("#485f56"))
 		else:
@@ -66,6 +71,12 @@ static func backdrop(right: bool) -> Texture2D:
 				PixelArt.rect(img, 138 + i * 21, 46 + i % 2 * 5, 7, 9, Color("#4c6473"))
 				PixelArt.vline(img, 143 + i * 21, 69, 12, Color("#203646"))
 		return img)
+
+static func on_right_landing(at: Vector2) -> bool:
+	# Same visible top polygon as backdrop(true), in shared 480x224 shot coordinates.
+	return Geometry2D.is_point_in_polygon(at - Vector2(248, 0), PackedVector2Array([
+		Vector2(54, 184), Vector2(78, 161), Vector2(133, 145),
+		Vector2(231, 144), Vector2(231, 213), Vector2(25, 217)]))
 
 static func cage(front: bool) -> Texture2D:
 	return PixelArt.cached_texture("opening/capture/cage/%s/v1" % front, func() -> Image:

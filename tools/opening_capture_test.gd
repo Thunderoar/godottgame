@@ -40,7 +40,7 @@ func _ready() -> void:
 		await _capture(story, "capture_low_quality")
 		GameSettings.set_effects_quality("high", false)
 		await _pointer(story._next, true)
-		_check(story.page == 4 and not story._canvas.uses_capture_shot(), "real touch Next reaches the turtle rescue")
+		_check(story.page == StorySequence.INTRO_RESCUE_PAGE and not story._canvas.uses_capture_shot(), "real touch Next reaches the turtle rescue")
 		await _capture(story, "following_turtle_rescue")
 		story.finish()
 		await get_tree().process_frame
@@ -58,7 +58,7 @@ func _story(game: Game) -> StorySequence:
 	var story := StorySequence.new()
 	game.add_child(story)
 	story.set_process(false)
-	for i in 3: story.advance()
+	for i in StorySequence.INTRO_CAPTURE_PAGE: story.advance()
 	return story
 
 func _check(ok: bool, label: String) -> void:

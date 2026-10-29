@@ -4,7 +4,7 @@ Implemented 2026-10-25 for Godot 4.7.2.
 
 ## Playable story
 
-New journeys start as Adam. The title's other hero cards preview his missing friends. The skippable illustrated opening shows their fishing trip, Arjun hooking the Kraken, the ship breaking into three parts, both friends being captured, and the turtle rescuing Adam. Adam repays BESUT's villagers by defending their island while searching for his friends.
+New journeys start as Adam. The title's other hero cards preview his missing friends. The skippable illustrated opening shows their fishing trip, Arjun hooking the Kraken, the ship breaking into three parts, Mei Ling drifting ashore on the broken bow at a guarded ruin, both friends being captured, and the turtle rescuing Adam. The ruin already has sentries; they take the unfamiliar survivor alive because their ruler wants answers. The Kraken remains an independent sea king, not their commander or servant. Adam repays BESUT's villagers by defending their island while searching for his friends.
 
 The ship leads to three sea routes, each lasting 45 seconds. Completed routes persist as checkpoints. Route three leads to Kraken Island: defeat Vorath, who pursues Adam around the stone pillars, uses telegraphed melee attacks and alternates tentacle slams and dragging hooks; approach the prison and press Use to open it. The rescue scene shows Arjun leaving the cage and boarding the ship. Arjun stands visibly on the rear deck, away from Adam and the mast, with the same foot alignment and human scale as the player. He disembarks and follows village walking routes at the normal resident pace (0.9 world units/second), instead of finishing the trip in a fixed few seconds.
 

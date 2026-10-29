@@ -1,5 +1,10 @@
 # Opening beat four: two friends taken captive
 
+> Current sequence update (2026-10-29): a new Mei Ling landfall page now precedes
+> this captivity montage, which is intro page index 4 (the fifth beat). The
+> guarded-shore starting positions and caption are updated for the new handoff.
+> The original implementation record below is historical; see OPENING_LANDFALL.md.
+
 Implemented 2026-10-29. Target: `StorySequence`, intro page three (the fourth beat).
 The design record is `OPENING_CAPTURE_PLAN.md`.
 

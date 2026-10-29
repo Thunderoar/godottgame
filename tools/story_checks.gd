@@ -96,7 +96,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	game.play_story("intro")
 	await game.get_tree().process_frame
 	var intro := _story(game)
-	check.call(intro != null and intro.lines().size() == 6 and game.world.process_mode == Node.PROCESS_MODE_DISABLED, "animated six-beat introduction locks the village safely")
+	check.call(intro != null and intro.lines().size() == 7 and game.world.process_mode == Node.PROCESS_MODE_DISABLED, "animated seven-beat introduction locks the village safely")
 	if capture.is_valid():
 		intro.page = 2
 		intro._page_time = 1.5
@@ -108,7 +108,9 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	await OpeningFishingChecks.run(game, check)
 	await OpeningKrakenChecks.run(game, check)
 	await OpeningWreckChecks.run(game, check)
+	await OpeningLandfallChecks.run(game, check)
 	await OpeningCaptureChecks.run(game, check)
+	await OpeningRescueChecks.run(game, check)
 	game._clear_world()
 	var ocean := OceanJourney.new()
 	game.world = ocean

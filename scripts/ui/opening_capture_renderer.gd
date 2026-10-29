@@ -47,9 +47,9 @@ static func sample(elapsed: float, reduced: bool, quality: String) -> Dictionary
 	var arjun := OpeningCaptureArt.arjun_feet(arm_time)
 	var retreat := _ease(t, 2.65, ESCORT_START)
 	var escort := _ease(t, ESCORT_START, HOLD_START)
-	var mei := Vector2(335 + 15 * retreat + 73 * escort, 188 - 7 * escort).round()
-	var lead := Vector2(459 - 73 * _ease(t, 2.25, 2.65) + 73 * escort, 188 - 7 * escort).round()
-	var rear := Vector2(269 + 45 * retreat + 73 * escort, 188 - 7 * escort).round()
+	var mei := Vector2(360 + 15 * retreat + 48 * escort, 210 - 22 * retreat - 7 * escort).round()
+	var lead := Vector2(459 - 48 * _ease(t, 2.25, 2.65) + 48 * escort, 188 - 7 * escort).round()
+	var rear := Vector2(317 + 22 * retreat + 48 * escort, 202 - 14 * retreat - 7 * escort).round()
 	var walking := (t > 2.25 and t < 2.65) or (t > 2.65 and t < HOLD_START)
 	return {"time": t, "phase": "establish" if t < 0.45 else ("pull" if t < DOOR_START else ("lock" if t < 2.25 else ("surround" if t < ESCORT_START else ("escort" if t < HOLD_START else "hold")))),
 		"arjun": arjun, "arm_frame": frame, "arm_tip": OpeningCaptureArt.arm_tip(frame),

@@ -1067,3 +1067,77 @@ Current Windows Godot **4.7.2.stable.official.ed1daf0bf**, isolated user data:
 See `OPENING_CAPTURE_REDESIGN.md` for source ownership, staging, reproduction,
 evidence location and corrected intermediate attempts. No Android export or
 physical-phone testing was performed; player saves/settings were not used.
+
+
+## Mei Ling landfall bridge — 2026-10-29
+
+The introduction now has seven six-second pages. A dedicated landfall page sits
+between the three-piece wreck and the existing two-friend captivity montage.
+Mei Ling remains attached to her recognizable bow fragment until it grounds,
+climbs onto the same guarded ruin used by the next page, then is noticed by
+already-posted sentries. The final friend/guard/fragment anchors match the
+capture's right panel. Its caption explains that their ruler wants the stranger
+alive for answers; no Kraken allegiance or new magical crossing is introduced.
+The dimension revelation, rescue flags, loader, six-second page clock, Next/Skip
+and Adam's subsequent turtle rescue retain their existing ownership.
+
+`OpeningLandfallChecks` is integrated through `StoryChecks` into the canonical
+gate. It checks drift/ground/climb/notice ordering, owned wreckage, continuity,
+actor separation, transition anchors, live accessibility/quality, early exits,
+renderer cleanup and absence of sampling allocations. `opening_landfall_test.tscn`
+adds rendered phase captures and actual touch Next/mouse Skip. Review evidence
+and current measured results are recorded in the delivery's VERIFICATION.txt;
+historical six-page and previous tally entries above describe earlier revisions.
+
+Current final verification (Linux, Godot 4.7.2): canonical isolated gate
+**3,129 checks, PASS, exit 0**. Native Xvfb/software-rendered landfall review:
+**651 PASS** at both 1280×720 and 832×480; capture review: **675 PASS** at both
+sizes, all exit 0 with no `[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers.
+XIM and unsupported V-Sync warnings remain in native logs. Phase images were
+visually inspected; a first-pass floating-foot/guard-post issue was corrected
+and 242 visible-ground support assertions added before these final runs.
+No native Windows/Android or physical-phone validation is claimed.
+
+
+## Sixth intro beat: Adam's turtle rescue — 2026-10-29
+
+The existing seven-page opening now gives page index 5 a dedicated rescue
+renderer. Adam begins on his own stern fragment; the turtle approaches and waits
+for boarding, carries him to a palm/cottage shoreline, stops in the shallows and
+lets him step onto sand toward a water keeper's hand and a neighbour's cloth.
+The original caption and six-second clock remain unchanged; Mei Ling's landfall,
+captivity, the seventh promise caption and title/world/save ownership are preserved.
+The seventh page holds the completed welcome, rather than visually returning Adam
+to the turtle after he has reached land.
+
+`OpeningRescueChecks` is integrated through `StoryChecks`; `tools/tide_test.gd`
+also guards the literal sixth caption. Dense consecutive samples cover support,
+boarding-before-departure, stop-before-disembarkation, caption-safe bounds, live
+Reduce Motion/quality and early Next/Skip cleanup. Native
+`opening_rescue_test.tscn` captures timed phases and exercises real mouse/touch
+Next/Skip. See OPENING_RESCUE_REDESIGN.md and the existing external delivery's
+sixth-beat evidence/VERIFICATION.txt for final measured results and limitations.
+
+
+Pre-merge sixth-beat verification before concurrent portal changes (historical): **4,735 checks, PASS,
+exit 0** in the canonical isolated gate. Native Xvfb/software rendering: **1,701
+PASS** at 1280×720 including 73 consecutive 12 Hz phase captures; **1,628 PASS**
+at each of 832×480 and 1600×720. Actual mouse and touch Next/Skip were exercised.
+No final run contains `[FAIL]`, `SCRIPT ERROR` or `ERROR:`. XIM and unsupported
+V-Sync warnings remain in native stderr. Rendered frames were inspected for
+boarding/contact, shore support, face clearance, captions and the static promise
+handoff. These runs do not establish physical-phone input, native Windows/Android
+validation or hardware frame rate. Prior intermediate framing/clearance corrections
+and earlier results are preserved as draft evidence, not substituted for final PASS.
+
+
+Final sixth-beat verification (Linux/Godot 4.7.2): **4,626 checks, PASS,
+exit 0** in the canonical isolated gate. Native Xvfb/software rendering: **1,701
+PASS** at 1280×720 including 73 consecutive 12 Hz phase captures; **1,628 PASS**
+at each of 832×480 and 1600×720. Actual mouse and touch Next/Skip were exercised.
+No final run contains `[FAIL]`, `SCRIPT ERROR` or `ERROR:`. XIM and unsupported
+V-Sync warnings remain in native stderr. Rendered frames were inspected for
+boarding/contact, shore support, face clearance, captions and the static promise
+handoff. These runs do not establish physical-phone input, native Windows/Android
+validation or hardware frame rate. Prior intermediate framing/clearance corrections
+and earlier results are preserved as draft evidence, not substituted for final PASS.

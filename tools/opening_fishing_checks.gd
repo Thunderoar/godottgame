@@ -27,7 +27,7 @@ static func run(game: Game, check: Callable) -> void:
 	var story := StorySequence.new()
 	game.add_child(story)
 	story.set_process(false)
-	check.call(story._canvas.uses_fishing_shot() and story.lines().size() == 6, "only intro page zero uses the new six-beat opening renderer")
+	check.call(story._canvas.uses_fishing_shot() and story.lines().size() == 7, "only intro page zero uses the new seven-beat opening renderer")
 	var cache_size := PixelArt.CACHE.size()
 	for i in 100: OpeningFishingRenderer.sample(float(i) * 0.06, false, "high")
 	check.call(PixelArt.CACHE.size() == cache_size, "sampling fishing motion does not allocate or rebuild pixel textures")
@@ -41,7 +41,7 @@ static func run(game: Game, check: Callable) -> void:
 	story._page_time = 5.99
 	story._process(0.02)
 	check.call(story.page == 1 and story._page_time == 0.0 and story._canvas.uses_kraken_shot(), "six-second auto advance resets time and hands beat two to the pixel Kraken renderer")
-	for page in range(1, 6):
+	for page in range(1, StorySequence.INTRO.size()):
 		story.page = page
 		story._render()
 		check.call(not story._canvas.uses_fishing_shot(), "intro page %d does not inherit the peaceful first shot" % page)

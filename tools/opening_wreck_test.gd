@@ -26,7 +26,7 @@ func _ready() -> void:
 		await _capture(story, "wreck_low_quality")
 		GameSettings.set_effects_quality("high", false)
 		await _tap(story._next)
-		_check(story.page == 3, "real Next touch reaches the capture beat")
+		_check(story.page == 3, "real Next touch reaches the landfall beat")
 		story.finish()
 		await get_tree().process_frame
 		story = StorySequence.new()

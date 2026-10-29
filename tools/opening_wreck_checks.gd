@@ -40,7 +40,7 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(story._canvas._wreck == null and story._canvas.uses_kraken_shot(), "beat two retains its original awakening performance")
 	story.advance()
 	check.call(story._canvas._wreck != null and story._canvas.uses_wreck_shot() and story._page_time == 0, "Next prepares beat three before its first draw and resets the reading clock")
-	check.call(story._caption.text == StorySequence.INTRO[2] and story.lines().size() == 6, "the six-beat story and third caption remain unchanged")
+	check.call(story._caption.text == StorySequence.INTRO[2] and story.lines().size() == 7, "the seven-beat story and third caption remain unchanged")
 	var reduced := GameSettings.reduce_motion()
 	var quality := GameSettings.effects_quality()
 	story._page_time = 1.7
@@ -55,7 +55,7 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(PixelArt.CACHE.size() == cached, "wreck sampling allocates no textures, gameplay nodes or asynchronous animation chains")
 	story._page_time = 5.99
 	story._process(0.02)
-	check.call(story.page == 3 and story._page_time == 0 and not story._canvas.uses_wreck_shot() and story._canvas.uses_capture_shot(), "six seconds hands off safely to the two-friend capture beat")
+	check.call(story.page == 3 and story._page_time == 0 and not story._canvas.uses_wreck_shot() and story._canvas.uses_landfall_shot(), "six seconds hands off to Mei Ling drifting ashore before captivity")
 	for kind in ["arjun", "mei", "ending"]:
 		story.kind = kind
 		story.page = 2
