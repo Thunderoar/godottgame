@@ -6,6 +6,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	var ticking := game.is_processing()
 	game.set_process(false)
 	GameState.data = GameState._make_default("adam")
+	GameState.data.portal_origin.opened = true # Existing combat/UI fixture starts after waystone restoration.
 	GameState._emit_all()
 	game.hud.hide_modals()
 	await game._load_lobby(false)

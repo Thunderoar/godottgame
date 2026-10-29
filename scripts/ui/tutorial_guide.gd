@@ -95,7 +95,7 @@ func _render() -> void:
 		_next.disabled = false
 		return
 	_next.disabled = true
-	var entry: Dictionary = STEPS[_step]
+	var entry: Dictionary = MissionDB.step(_step)
 	var title := str(entry.get("title", "Mission"))
 	_title.text = title.substr(title.find(". ") + 2) if title.contains(". ") else title
 	_body.text = str(entry.text)

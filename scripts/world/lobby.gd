@@ -615,6 +615,21 @@ func _build_special_npc() -> void:
 
 func _build_portals() -> void:
 	NorthernBoundary.build_north_wall(self)
+	var site := PortalOriginSite.new()
+	site.name = "OldWaystone"
+	site.position = _layout.position_of("monster_portal", MONSTER_GATE)
+	add_child(site)
+	refresh_dimension_portal()
+
+
+func refresh_dimension_portal() -> void:
+	var previous := get_node_or_null("MonsterBattlePortal")
+	if not GameState.portal_opened():
+		if is_instance_valid(previous):
+			remove_child(previous)
+			previous.queue_free()
+		return
+	if is_instance_valid(previous): return
 	# One physical dimension entrance; retain the original anchor for old saves.
 	var first := PortalEntrance.new()
 	first.name = "MonsterBattlePortal"
@@ -623,7 +638,6 @@ func _build_portals() -> void:
 	first.gate_title = "Dimension Portal"
 	first.position = _layout.position_of("monster_portal", MONSTER_GATE)
 	add_child(first)
-	_markers.append({"position": first.position, "color": Color("#a47be0"), "size": 4.0, "shape": "arch"})
 
 
 
@@ -1390,6 +1404,7 @@ func _on_sleep_changed(active: bool, progress: float, label: String) -> void:
 func _on_data_changed() -> void:
 	if not is_node_ready() or GameState.game_over_active:
 		return
+	refresh_dimension_portal()
 	_build_water_keepers()
 	_sync_rescued_friends()
 	_reconcile_village_project()
@@ -1928,6 +1943,9 @@ func get_guidance_targets() -> Array:
 						destination = enemy.global_position
 			"portal", "boss":
 				destination = _layout.approach("monster_portal")
+				if not GameState.portal_opened() and bool(GameState.portal_origin().site_examined) and not bool(GameState.portal_origin().rahim_consulted):
+					var host := get_node_or_null("PakRahim") as DockHost
+					if is_instance_valid(host): destination = host.position
 			_:
 				return []
 		return [{"position": destination, "label": lesson.get("title", "Mission")}]
@@ -1936,6 +1954,11 @@ func get_guidance_targets() -> Array:
 		var raider := _emergency_monsters[0]
 		if is_instance_valid(raider):
 			targets.append({"label": "DEFEND", "position": raider.global_position, "color": Color("#e15b58")})
+	if targets.is_empty() and not GameState.portal_opened():
+		var origin := GameState.portal_origin()
+		var ask := bool(origin.site_examined) and not bool(origin.rahim_consulted)
+		var host := get_node_or_null("PakRahim") as DockHost
+		return [{"label": "ASK PAK RAHIM" if ask else ("LIGHT THE ROAD" if bool(origin.rahim_consulted) else "OLD WAYSTONE"), "position": host.position if ask and is_instance_valid(host) else _layout.approach("monster_portal"), "color": Color("#e8d69e")}]
 	var monster_pending := false
 	if targets.is_empty() and GameState.tracked_village_project() == VillageProjectDB.WORKSHOP and is_instance_valid(workshop) and str(GameState.project_status().state) != "complete":
 		return [{"label": "WEST WORKSHOP", "position": workshop.workpoint(), "color": Color("#f2c45a")}]

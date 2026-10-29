@@ -20,6 +20,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	game._clear_world()
 	await game.get_tree().process_frame
 	GameState.data = GameState._make_default("adam")
+	GameState.data.portal_origin.opened = true # Existing combat/UI fixture starts after waystone restoration.
 	GameState._emit_all()
 	await game._load_lobby(false)
 	game.world.process_mode = Node.PROCESS_MODE_DISABLED
@@ -134,6 +135,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	# Exercise context selection independently of an actor's temporary ready state.
 	var realm := TwilightRealm.new()
 	GameState.data = GameState._make_default("adam")
+	GameState.data.portal_origin.opened = true # Existing combat/UI fixture starts after waystone restoration.
 	check.call(ObjectiveTrackerData.entries(realm)[0].id == "explore", "realm arrival replaces village training with exploration without exposing an undiscovered ruler")
 	GameState.data.realm_progress.landmarks.append("approach")
 	var rows := ObjectiveTrackerData.entries(realm)
@@ -166,6 +168,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	game._clear_world()
 	await game.get_tree().process_frame
 	GameState.data = GameState._make_default("adam")
+	GameState.data.portal_origin.opened = true # Existing combat/UI fixture starts after waystone restoration.
 	GameState._emit_all()
 	GameState.start_expedition(RealmDB.PORTAL)
 	await game._load_dungeon(RealmDB.PORTAL, false)

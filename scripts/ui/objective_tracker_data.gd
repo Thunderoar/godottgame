@@ -42,9 +42,11 @@ static func _village(counts: Dictionary) -> Array[Dictionary]:
 	if not lesson.is_empty():
 		var title := str(lesson.get("title", "Learn to play"))
 		if title.contains(". "): title = title.substr(title.find(". ") + 2)
-		out.append(_entry("lesson_" + str(lesson.event), title, str(LESSON_HINTS.get(str(lesson.event), "Follow the village path markers.")), "NIGHT TRAINING" if GameState.is_night() else "DAY TRAINING"))
+		var hint := GameState.portal_origin_instruction() if str(lesson.event) == "portal" else str(LESSON_HINTS.get(str(lesson.event), "Follow the village path markers."))
+		out.append(_entry("lesson_" + str(lesson.event), title, hint, "NIGHT TRAINING" if GameState.is_night() else "DAY TRAINING"))
 	elif not GameState.tutorial_complete():
-		out.append(_entry("phase", "Prepare for dawn" if GameState.is_night() else "Prepare for night", "This phase's lessons are complete. Help the village and keep supplies ready.", "TRAINING"))
+		if not GameState.portal_opened(): out.append(_entry("waystone", "Find the old road", GameState.portal_origin_instruction(), "DISCOVERY"))
+		else: out.append(_entry("phase", "Prepare for dawn" if GameState.is_night() else "Prepare for night", "This phase's lessons are complete. Help the village and keep supplies ready.", "TRAINING"))
 	else:
 		var project := GameState.project_status()
 		if bool(project.get("eligible", false)) and str(project.state) != "complete":

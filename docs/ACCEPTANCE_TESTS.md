@@ -2193,3 +2193,54 @@ See `docs/FIRE_MONSTER_ARRIVAL.md` for runtime ownership and review commands.
   attackers; the day/night cleanup also captures its removed shore threats so a
   later fixture cannot resurrect them from an older snapshot. `git diff --check`
   passes; Git reports existing LF/CRLF conversion notices in other modified files.
+
+## The road remembers — portal awakening (2026-10-30)
+
+New journeys now begin with a fallen waystone instead of an already usable
+Dimension Portal. Nearby tap/E records its broken road and empty lantern socket;
+Rahim's contextual dock conversation lends a village lantern freely. Completing
+or explicitly skipping the exchange prepares a nearby repair interaction. A
+single eight-second, Game-owned reveal aligns the marker, lights its carving,
+shows an answering forest road and forms the portal. Opening leaves Adam in the
+village and does not start an expedition or award/spend currency, items or XP.
+
+- Origin state is owned by GameState and saved before the presentation. Old raw
+  saves without origin fields retain access. Active expeditions/realm presence
+  reconcile contradictory closed flags; future numeric schemas are rejected
+  without writing. Interrupted reveals leave the road usable with optional replay.
+- The actual dock welcome is unchanged. Later discovery/ready/open conversations
+  remain non-pausing; cancelled chats cannot grant the lantern. The reveal alone
+  suspends world/clock and owns camera, HUD, overhead-vital visibility and inputs.
+- Hidden gate/map pictures, discovered-waystone markers, daytime tutorial entry,
+  Missions/objectives, early guide text and Wisp's first recognition agree with
+  the player's discovery. E/main gate input enters after opening; optional replay
+  has a separate button. Local danger and arrival ownership cannot compete with
+  the reveal. No monster kill or quiet-night outcome gates this progression.
+- The existing Twilight combat, manual pet arena, checkpoint, loot/defeat rules,
+  peaceful restoration, later campaign arenas and both rescues remain covered.
+
+Final Windows verification with Godot 4.7.2:
+
+- Canonical isolated gameplay: **6,153 checks, PASS, exit 0**.
+- Focused headless origin: **36 checks, PASS, exit 0**.
+- Native rendered origin: **36 checks, PASS, exit 0** at each of **1280x720** and
+  **832x480**. Inspected broken stones, dock dialogue, lantern, answering road,
+  forming arch and completed gate. Native input covers real discovery taps and
+  the actual Skip button; both modes cover nearby E, saved intermediate stages,
+  cancellation, optional replay/world replacement and entry into Twilight Wilds.
+- Final full/focused stderr files are empty, with no FAIL, SCRIPT ERROR or ERROR
+  markers. Isolated import passes with the existing Android build-tools warning.
+  git diff --check passes; existing checkout line-ending notices are unchanged.
+  Player saves are isolated; no Android export or physical-device test is claimed.
+
+Evidence below C:/Users/ayiz/AppData/Local/Temp/:
+
+- Full gate: tidesworn-tests-cbfbbf2aad9f4db28c985aa2d731a2b3.
+- Headless origin: tidesworn-tests-0f588243e4b54cb1ada260340b870bc5.
+- Native 1280x720: tidesworn-tests-944f6fe6ad5e4d5f8725836a75bf7c70.
+- Native 832x480: tidesworn-tests-0bc8f0816295443eb1eefa6d930c9e5d.
+- Isolated import: tidesworn-tests-b8784c2b03504968bf6d601ba756c22f.
+
+Reproduce with tools/test_isolated.ps1 -Godot <console-executable>, or add
+-PortalOrigin for the focused scene and -Capture -Resolution 832x480 / 1280x720
+for native review. See docs/PORTAL_AWAKENING.md for the runtime contract.

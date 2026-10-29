@@ -10,6 +10,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	game.set_process(false)
 	game.hud.hide_modals()
 	GameState.data = GameState._make_default("adam")
+	GameState.data.portal_origin.opened = true # Existing combat/UI fixture starts after waystone restoration.
 	GameState.data.mission_step = MissionDB.STEPS.size()
 	await game._load_lobby(false)
 	var home := game.world as Lobby
@@ -58,6 +59,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(_total_xp() == emergency_xp+27 and GameState.gold() == emergency_gold+15,"raid kills also credit player XP and Gold immediately")
 	for character in ["adam","arjun","mei_ling"]:
 		GameState.data = GameState._make_default(character)
+		GameState.data.portal_origin.opened = true # Existing combat/UI fixture starts after waystone restoration.
 		# This catalog/upgrade fixture exercises post-workshop equipment access.
 		GameState.data.village_progression.projects[VillageProjectDB.WORKSHOP] = {"state": "complete", "remaining": 0.0}
 		GameState.data.portals["tidebound_grotto"].cleared = true
@@ -90,6 +92,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 			await capture.call("forge_choices_"+character)
 		game.hud.hide_modals()
 	GameState.data = GameState._make_default("adam")
+	GameState.data.portal_origin.opened = true # Existing combat/UI fixture starts after waystone restoration.
 	GameState.data.gold = 0
 	check.call(not bool(GameState.upgrade_weapon("rusty_sword").ok) and GameState.weapon_rank("rusty_sword") == 0,"an unaffordable upgrade leaves weapon rank unchanged")
 	check.call(not bool(GameState.upgrade_weapon("cloth_tunic").ok) and not bool(GameState.upgrade_weapon("monarch_slayer").ok),"non-weapons and unowned weapons cannot be upgraded")
@@ -102,9 +105,11 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	GameState._sanitize()
 	check.call(int(GameState.data.level) > 10 and int(GameState.data.xp_next) == GameState.xp_for_level(int(GameState.data.level)),"legacy exponential XP thresholds migrate without discarding earned XP")
 	GameState.data = GameState._make_default("adam")
+	GameState.data.portal_origin.opened = true # Existing combat/UI fixture starts after waystone restoration.
 	GameState.data.level = 99
 	GameState.data.xp_next = GameState.xp_for_level(99)
 	var seen_skills: Dictionary = {}
+	GameState.data.portal_origin.opened = true # All elemental arena fixtures have already restored the entrance.
 	var seen_art: Dictionary = {}
 	for portal_id in PortalDB.ordered_ids():
 		GameState.data.portals[portal_id].unlocked = true

@@ -9,6 +9,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	GameState.autosave_enabled = false
 	game.hud.hide_modals()
 	GameState.data = GameState._make_default("adam")
+	GameState.data.portal_origin.opened = true # Existing combat/UI fixture starts after waystone restoration.
 	GameState._emit_all()
 	await game._load_lobby(false)
 	await game.get_tree().process_frame
@@ -23,6 +24,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	GameState._sanitize()
 	check.call(int(GameState.campaign().get("ocean_stage")) == 3 and not bool(GameState.campaign().get("ending_seen")), "campaign sanitizer clamps stages and rejects premature endings")
 	GameState.data = GameState._make_default("adam")
+	GameState.data.portal_origin.opened = true # Existing combat/UI fixture starts after waystone restoration.
 	GameState._emit_all()
 	await game._load_lobby(false)
 	await game.get_tree().process_frame

@@ -23,6 +23,9 @@ var _sailing := false
 var _return_to_harbour := false
 var _story_active := false
 var _dock_conversation: DockConversation
+var _portal_awakening: PortalAwakening
+var _portal_world_mode := Node.PROCESS_MODE_INHERIT
+var _portal_hud_visible := true
 var _urchin_arrival: UrchinArrival
 var _urchin_world_mode := Node.PROCESS_MODE_INHERIT
 var _urchin_hud_visible := true
@@ -166,6 +169,7 @@ func _remove_title_if_owner(expected: CanvasLayer) -> void:
 # ------------------------------------------------------------------ world switching
 
 func _clear_world() -> void:
+	if is_instance_valid(_portal_awakening): _portal_awakening.cancel()
 	if is_instance_valid(_urchin_arrival): _urchin_arrival.cancel()
 	if is_instance_valid(_dock_conversation): _dock_conversation.cancel()
 	if hud.pet_battle_panel.is_wild_challenge(): hud.pet_battle_panel.close_panel()
@@ -771,6 +775,58 @@ func _on_urchin_introduction_completed(arrival: UrchinArrival) -> void:
 		_input_locked = hud.any_modal_open() or _sailing or _transitioning
 		_apply_input_lock()
 
+func awaken_portal(site: PortalOriginSite, replay: bool = false) -> bool:
+	if not is_instance_valid(site) or not site.valid_actor(player()) or not world is Lobby: return false
+	if is_instance_valid(_portal_awakening) or is_instance_valid(_urchin_arrival) or is_instance_valid(world._urchin_cue) or is_instance_valid(world._fire_cue) or is_instance_valid(_dock_conversation): return false
+	if GameState.recovery_active() or GameState.emergency_active():
+		site.set_message("Recover and protect BESUT before tending the waystone.")
+		return false
+	for pending in [GameState.pending_home_arrival(),GameState.pending_home_arrival(true)]:
+		for point in pending.get("points", [])+pending.get("fire_points", []):
+			if Vector2(float(point[0]),float(point[1])).distance_to(site.position) < 8.0:
+				site.set_message("Let the nearby arrival settle before tending the waystone.")
+				return false
+	for actor in world.get_children():
+		if actor is Enemy and not actor.dead and not actor.is_queued_for_deletion() and actor.global_position.distance_to(site.global_position) < 8.0:
+			site.set_message("Clear the nearby creatures before tending the waystone.")
+			return false
+	if replay:
+		if not GameState.portal_opened() or bool(GameState.portal_origin().reveal_seen): return false
+	elif not GameState.open_waystone(): return false
+	var home := world as Lobby
+	home.refresh_dimension_portal()
+	_portal_world_mode = home.process_mode
+	_portal_hud_visible = hud.visible
+	_story_active = true
+	_input_locked = true
+	hud.release_world_controls()
+	_apply_input_lock()
+	home.process_mode = Node.PROCESS_MODE_DISABLED
+	hud.visible = false
+	var reveal := PortalAwakening.new()
+	reveal.home = home
+	reveal.site = site
+	_portal_awakening = reveal
+	reveal.completed.connect(_on_portal_awakened.bind(reveal))
+	add_child(reveal)
+	return true
+
+
+func _on_portal_awakened(reveal: PortalAwakening) -> void:
+	if _portal_awakening != reveal: return
+	_portal_awakening = null
+	var owned := is_instance_valid(reveal.home) and world == reveal.home and reveal.serial == GameState.journey_serial
+	if is_instance_valid(reveal.home): reveal.home.process_mode = _portal_world_mode
+	_story_active = false
+	if not owned: return
+	if not reveal.cancelled and not _game_over and not _defeat_pending: GameState.finish_portal_reveal()
+	if is_instance_valid(reveal.site): reveal.site.refresh()
+	hud.release_world_controls()
+	hud.visible = _portal_hud_visible and not _game_over
+	_input_locked = hud.any_modal_open() or _sailing or _transitioning or _game_over or _defeat_pending
+	_apply_input_lock()
+
+
 func play_dock_conversation(introduction: bool = false) -> void:
 	if not world is Lobby or is_instance_valid(home_interior) or _transitioning or _story_active or _sailing or hud.any_modal_open() or is_instance_valid(_dock_conversation): return
 	if _game_over or _defeat_pending or world._settlement_editor.active or not is_instance_valid(player()) or player().dead or player().sleeping: return
@@ -789,12 +845,17 @@ func play_dock_conversation(introduction: bool = false) -> void:
 	hud.visible = false
 	var conversation := DockConversation.new()
 	conversation.introduction = introduction
+	conversation.waystone = not introduction and bool(GameState.portal_origin().site_examined) and not bool(GameState.portal_origin().rahim_consulted)
+	if not introduction:
+		conversation.road_reminder = "open" if GameState.portal_opened() else ("ready" if bool(GameState.portal_origin().rahim_consulted) else "")
 	_dock_conversation = conversation
 	add_child(conversation)
 	await conversation.completed
 	var still_owned := is_instance_valid(dock_world) and world == dock_world and serial == GameState.journey_serial
 	if still_owned and introduction and not conversation.cancelled:
 		GameState.mark_story_seen("dock_welcome_seen")
+	if still_owned and conversation.waystone and not conversation.cancelled and not _game_over and not _defeat_pending:
+		GameState.consult_waystone()
 	if introduction and is_instance_valid(dock_world): dock_world.process_mode = previous_mode
 	if _dock_conversation != conversation: return
 	_dock_conversation = null

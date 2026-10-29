@@ -45,6 +45,9 @@ static func entries(category: int) -> Array[Dictionary]:
 			{"name": "Twilight Wilds", "actor": "pet", "rows": [["portal", "path", "pet"], ["player", "boss:demon_chaos", "house"]], "description": "Enter the Dimension Portal directly. Follow old stones, pawprints and pool lights to explore. Challenge wild pets with Attack, Shield and Special; outside combat waits during the challenge, and losing is peaceful. First bonds persist even if a later expedition fails. The watchpost winch opens a shortcut. Rest at the citadel lantern to heal and save a checkpoint. The fiend awakens only after crossing the inner arch. Retreat to reset an unfinished fight. Victory restores the realm and opens onward passages. The arrival rift always banks carried loot and returns to BESUT. Wisp, the optional Waykeeper, notices your discoveries. Read three weathered stones to keep their memories in this Field Guide. A rootway hollow holds one small Gold gift: return safely to bank it."},
 		]
 		var lights: Array = []
+		if not GameState.portal_opened():
+			pages[3] = {"name": "Looking for Mei Ling", "actor": "hero:mei_ling", "rows": [["hero:adam","question","hero:mei_ling"]], "description": "Adam does not yet know where to search. Meet the villagers and examine the old stones in the northern clearing. Pak Rahim may recognize their markings."}
+			pages[4] = {"name": "The Old Waystone", "actor": "spark", "rows": [["question","path","spark"]], "description": GameState.portal_origin_instruction()}
 		for id in RealmContentDB.FRAGMENTS:
 			lights.append("spark" if id in GameState.realm_progress().get("read_fragments", []) else "question")
 		pages.append({"name": "Memories of Twilight", "actor": "portal", "rows": [lights], "memory_journal": true})

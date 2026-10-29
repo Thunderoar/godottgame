@@ -5,6 +5,7 @@ static func run(game: Game, check: Callable) -> void:
 	var ticking := game.is_processing()
 	game.set_process(false)
 	GameState.data = GameState._make_default("adam")
+	GameState.data.portal_origin.opened = true # Already discovered road; this suite covers boss/tutorial progression.
 	GameState._emit_all()
 	game.hud.start_tutorial()
 	check.call(not GameState.tutorial_complete() and game.hud.tutorial_guide.visible, "new journey begins with active tutorial")
@@ -34,6 +35,7 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(FieldGuideDB.entries(2).size() == 3, "the field guide contains only the three active portal bosses")
 	GameState.data = GameState._make_default("adam")
 	check.call(GameState.data.portals.size() == 3 and not bool(GameState.portal_state("drowned_throne").unlocked), "new journeys have three portal records with the finale initially sealed")
+	GameState.data.portal_origin.opened = true # Already restored road for campaign-level prerequisites below.
 	GameState.complete_portal("tidebound_grotto")
 	GameState.complete_portal("sunken_crypt")
 	check.call(bool(GameState.portal_state("drowned_throne").unlocked), "defeating the second boss unlocks Abyssal Throne directly")

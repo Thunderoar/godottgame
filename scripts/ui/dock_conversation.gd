@@ -31,6 +31,23 @@ const REMINDER := [
 ]
 
 var introduction := true
+var waystone := false
+var road_reminder := ""
+const WAYSTONE_READY := [
+	{"speaker": "Pak Rahim", "line": "The lantern's yours to borrow, Adam. Set the fallen waystone straight, then place the light in its socket. The carved line will show you where."},
+	{"speaker": "Pak Rahim", "line": "Take your time. Clear any creatures nearby before you work. You can look after yourself and keep searching for your friends."},
+]
+const WAYSTONE_OPEN := [
+	{"speaker": "Pak Rahim", "line": "So the old road answered. My father would have liked to see that lantern burning again."},
+	{"speaker": "Pak Rahim", "line": "I don't know what waits beyond it. Follow its light home when you need a rest. BESUT will be here."},
+]
+const WAYSTONE := [
+	{"speaker": "Adam", "expression": "concerned", "line": "There are road marks by the fallen stone. They stop at an empty lantern socket."},
+	{"speaker": "Pak Rahim", "line": "My father called it a waystone. Said there was a road into the woods, once. I thought it was only a story."},
+	{"speaker": "Adam", "expression": "resolved", "line": "If the road is still there, someone beyond it might have seen my friends."},
+	{"speaker": "Pak Rahim", "line": "Perhaps. I can't promise what you'll find. But we can set the marker straight. Take one of our lanterns. No need to buy anything."},
+	{"speaker": "Pak Rahim", "line": "Follow the carving, Adam. Set the fallen marker upright, then place the lantern in its socket. If a road answers, let its light guide you home."},
+]
 var page := 0
 var cancelled := false
 var _done := false
@@ -105,7 +122,7 @@ func _ready() -> void:
 	_root.add_child(_portrait)
 	_back = _button("Back", _previous)
 	_next = _button("Next", advance)
-	_skip = _button("Skip conversation" if introduction else "Leave", finish)
+	_skip = _button("Skip conversation" if introduction or waystone else "Leave", finish)
 	_skip.add_theme_font_size_override("font_size", 14)
 	_counter = GameUI.label("", 14, Color("#678580"))
 	_panel.add_child(_counter)
@@ -152,6 +169,9 @@ func _fit() -> void:
 	_skip.size = Vector2(162, 36)
 
 func entries() -> Array:
+	if waystone: return WAYSTONE
+	if not introduction and road_reminder == "ready": return WAYSTONE_READY
+	if not introduction and road_reminder == "open": return WAYSTONE_OPEN
 	return WELCOME if introduction else REMINDER
 
 func _render() -> void:
@@ -161,7 +181,7 @@ func _render() -> void:
 	_prepare_words(str(entry.line))
 	_portrait.texture = _adam_expressions.get(str(entry.get("expression", "concerned")), _adam_portrait) if entry.speaker == "Adam" else _rahim_portrait
 	_back.disabled = page == 0
-	_next.text = "Let's begin" if page == entries().size() - 1 else "Next"
+	_next.text = ("To the waystone" if waystone else "Let's begin") if page == entries().size() - 1 else "Next"
 	_counter.text = "%02d / %02d" % [page + 1, entries().size()]
 	_voice.stop()
 	_reveal_elapsed = 0.0
@@ -221,7 +241,7 @@ func reveal_line() -> void:
 	_revealing = false
 	for word in _words: word.modulate.a = 1.0
 	_voice.stop()
-	_next.text = "Let's begin" if page == entries().size() - 1 else "Next"
+	_next.text = ("To the waystone" if waystone else "Let's begin") if page == entries().size() - 1 else "Next"
 
 func _play_syllable() -> void:
 	if not _revealing or GameSettings.mute_all() or GameSettings.master_volume() <= 0 or GameSettings.effects_volume() <= 0: return

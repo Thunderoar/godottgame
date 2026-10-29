@@ -36,8 +36,9 @@ func interact(actor: Node) -> void:
 	GameState.discover_realm_content(stable_id)
 	match kind:
 		"waykeeper":
+			var words := RealmContentDB.waykeeper_words(GameState.realm_progress(), realm._boss_defeated)
 			GameState.meet_realm_waykeeper()
-			realm.show_reading(caption, RealmContentDB.waykeeper_words(GameState.realm_progress(), realm._boss_defeated), position)
+			realm.show_reading(caption, words, position)
 		"memory":
 			GameState.read_realm_fragment(stable_id)
 			var count: int = GameState.realm_progress().read_fragments.size()

@@ -22,7 +22,7 @@ const INTRO := [
 	"Clinging to the broken bow, Mei Ling washed ashore at a guarded ruin.",
 	"The Kraken imprisoned Arjun. The ruin's guards captured Mei Ling alive: \"Our ruler will want answers.\"",
 	"A brave turtle rescued Adam and brought him to the villagers of BESUT.",
-	"To repay their kindness, Adam protects BESUT and searches the sea for Arjun and the final portal for Mei Ling.",
+	"Among the villagers of BESUT, Adam finds shelter and new friends. He chooses to help protect their home while searching for Arjun and Mei Ling.",
 	"\"Welcome to BESUT, Adam. Come, rest and make yourself at home.\" The villagers lead him in from the shore."
 ]
 var kind := "intro"

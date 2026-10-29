@@ -1,5 +1,10 @@
 # Twilight Wilds — first explorable dimension
 
+**2026-10-30 portal awakening:** new journeys first discover the fallen village
+waystone, ask Pak Rahim about it, and restore its carved road with his borrowed
+lantern. The Dimension Portal appears through an owned reveal, then enters this
+realm normally. Existing saves retain their entrance. See `PORTAL_AWAKENING.md`.
+
 Implemented 2026-10-29. The first dimension replaces the two village battle entrances with one **Dimension Portal**, entering the world directly. The old `monster_portal` anchor remains authoritative for placement; the retired `pet_portal` anchor stays in layout data to preserve old layouts and original forest identity, but produces no entrance or map icon.
 
 ## The journey

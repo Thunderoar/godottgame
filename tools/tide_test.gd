@@ -132,6 +132,11 @@ func _ready() -> void:
 	await WorldChecks.run(game, _check)
 	await MonsoonChecks.run(game, _check)
 	await preload("res://tools/realistic_checks.gd").run(game, _check)
+	await preload("res://tools/portal_origin_checks.gd").run(game, _check)
+	# Subsequent combat/settlement fixtures represent an already discovered road.
+	GameState.data.portal_origin.opened = true
+	GameState.data.portal_origin.reveal_seen = true
+	GameState._emit_all()
 	await _test_day_night()
 	await _test_settlement_expansion()
 	var resident_count := 0

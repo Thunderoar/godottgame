@@ -2,7 +2,7 @@ class_name MissionDB
 extends RefCounted
 ## One action at a time. Events are accepted only for the current lesson.
 
-const DAY_STEPS := [0, 1, 2, 3, 5, 6, 7]
+const DAY_STEPS := [0, 1, 2, 3, 5, 6, 7, 8, 9]
 const NIGHT_STEPS := [4, 8, 9]
 
 const STEPS := [
@@ -20,7 +20,11 @@ const STEPS := [
 
 
 static func step(index: int) -> Dictionary:
-	return STEPS[index].duplicate(true) if index >= 0 and index < STEPS.size() else {}
+	var entry: Dictionary = STEPS[index].duplicate(true) if index >= 0 and index < STEPS.size() else {}
+	if index == 8:
+		entry.title = "9. Find the old road" if not GameState.portal_opened() else "9. Enter Twilight Wilds"
+		entry.text = GameState.portal_origin_instruction()
+	return entry
 
 
 static func phase_steps(night: bool) -> Array:

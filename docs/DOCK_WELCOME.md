@@ -1,5 +1,12 @@
 # The dock welcome — Pak Rahim
 
+**2026-10-30 waystone follow-up:** after Adam examines the old northern stones,
+Rahim's optional dock interaction offers a five-line conversation about his
+father's old travellers' road and a freely borrowed village lantern. Completion
+or explicit Skip prepares the repair; cancellation does not. Ready/open reminders
+then replace the ordinary reminder. These later chats do not pause the village;
+the original twelve-line welcome is unchanged. See `PORTAL_AWAKENING.md`.
+
 Added 2026-10-30. The eight opening beats now lead into a player-paced conversation on the actual village dock, before the movement tutorial.
 
 Pak Rahim is the water keeper who helped receive Adam on the shore. His first concern is Adam's immediate well-being. Adam asks about Arjun and Mei Ling; Rahim admits he has not seen them. He offers shelter without a debt and a practical first step: meet the neighbours and ask after the missing friends. Adam chooses to help the village rather than being assigned an obligation. Rahim does not know the captors or reveal a rescue destination.
