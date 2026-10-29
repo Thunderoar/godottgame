@@ -230,6 +230,11 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	hp = GameState.health()
 	action._physics_process(2)
 	check.call(action.finished and not realm.can_damage_actor(imp) and GameState.health() == hp, "queued guard removal immediately invalidates attack and reward eligibility before deletion")
+	await game.get_tree().process_frame
+	await game.get_tree().process_frame
+	realm.combat.tick(0.4)
+	realm._physics_process(0.016)
+	check.call(not is_instance_valid(imp) and realm.combat._living(str(RealmCombatDB.PAIRS[0].id)).all(func(guard) -> bool: return is_instance_valid(guard)), "realm physics and encounter scans survive a fully freed guard handle")
 	# A retiring world's token cannot damage its replacement.
 	action = _begin(realm,guards,keeper,target_points[2])
 	await game._load_lobby(false)

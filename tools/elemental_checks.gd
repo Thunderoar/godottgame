@@ -197,6 +197,18 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 			if str(skill.pattern) == "summon":
 				hit_tested = boss._summons.size() == 3
 				for summoned in boss._summons: summoned.set_physics_process(false)
+				# A later cast must inspect handles only after the previous bodies
+				# have really been freed, not just marked dead in this frame.
+				for summoned in boss._summons: summoned.queue_free()
+				await game.get_tree().process_frame
+				await game.get_tree().process_frame
+				boss._execute_skill(skill)
+				var living := 0
+				for summoned in boss._summons:
+					if is_instance_valid(summoned) and not summoned.is_queued_for_deletion():
+						living += 1
+						summoned.set_physics_process(false)
+				check.call(living == 3, "summon recasts replace actually freed minions without casting stale handles")
 			check.call(hit_tested,"%s executes real damaging magic or living summoned attackers" % skill.id)
 			boss._cast_time = 0
 			boss._pending = {}

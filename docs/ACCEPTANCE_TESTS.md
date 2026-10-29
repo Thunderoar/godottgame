@@ -1650,3 +1650,51 @@ Evidence under `C:/Users/ayiz/AppData/Local/Temp/`: full gate
 `tidesworn-tests-6bf52c258c7b4015a208245b9f3569bd` (verbose), final 832x480 review
 `tidesworn-tests-3a1651296b0840ecbec2aa0816243b7c`, and import
 `tidesworn-tests-588ff767c06a45f1949f95e599e247ef`.
+
+## Dimension stability investigation (2026-10-30)
+
+- Repeated elemental summons now prune freed, queued and dead references before
+  applying the existing three-living-minion cap. A regression reproduces actual
+  node deletion between casts, rather than checking only same-frame death flags.
+- The citadel threshold starts the inherited boss notification lifecycle, which
+  arms its authored special attacks. Threshold-only activation, retreat/reset and
+  peaceful cleared revisits retain their existing ownership rules.
+- Realm/director physics are explicitly stepped after a guard has been fully
+  freed, covering the stale-object casts observed in older Windows player logs.
+- `Game` owns flushed diagnostic session records independent of progression.
+  Samples contain world/boss context and memory/object counts; normal shutdown
+  writes an end record. Files rotate at 256 KiB and use separate process IDs.
+- `tools/test_isolated.ps1 -Godot <console-executable> -Stability` adds a repeatable
+  450-simulated-second run with 300 seconds of boss casting, corpse retirement,
+  retreat, victory and twelve realm/village replacement cycles. `-Realtime` uses
+  native rendering and wall-clock pacing at either supported `-Resolution`.
+  Headless acceleration does not certify real-time rendering or ordinary play.
+
+Verified on native Windows / Godot 4.7.2:
+
+- Canonical isolated gameplay: **5,844 checks, PASS, exit 0**.
+- Rendered Twilight at **832x480**: **182 checks, PASS, exit 0**.
+- Accelerated stability and final native **832x480** real-time stability:
+  **32 checks, PASS, exit 0** each. The native run lasted about 469 seconds
+  including construction/transitions; it completed five uninterrupted minutes
+  of boss casting and all twelve replacement cycles. The native error log is
+  empty. Guard and boss casts were counted, not inferred from elapsed time.
+- Additional accelerated **1280x720** rendered combat completed 360 simulated
+  seconds, **781 player attacks** with companion support and **86 boss powers**,
+  PASS/exit 0, with no error markers. A temporary fixture sustained the boss's HP.
+- In the final native run, warmed replacement-cycle node/object counts stayed
+  at 1,573/4,308, orphans at zero and video memory at 60.98 MiB. CPU allocations
+  changed from 117.43 to 117.44 MiB over cycles 3–11. Boss-phase CPU memory stayed
+  around 111.17 MiB; video buffers warmed and plateaued within the tested bound.
+- The headless accelerated soak intermittently emits a two-instance ObjectDB
+  shutdown warning; a separate verbose run identified WAV/audio-playback objects.
+  The final native soak, rendered Twilight review and canonical gate error logs
+  are empty. Isolated import retains the existing Android build-tools warning.
+- The reported immediately disappearing window was **not reproduced**. The
+  shared summon error is confirmed, but Chaos does not summon, so this alone
+  does not establish the cause of a first-realm native exit. No Android or
+  physical-device validation is claimed. Normal player saves were untouched.
+
+See `docs/CRASH_INVESTIGATION_2026-10-30.md` for the evidence paths, exact limits,
+diagnostic location and distinction between observed script errors and an
+unproven native process-crash cause.

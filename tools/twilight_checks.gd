@@ -182,6 +182,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	realm.player.position = RealmDB.BOSS_THRESHOLD
 	realm._physics_process(0.1)
 	check.call(realm._boss_arrived and realm.boss.active and Sfx.battle_track == RealmDB.PORTAL, "crossing the citadel threshold activates the boss and battle track")
+	check.call(realm.boss._boss_notified, "citadel threshold arms the boss special-attack lifecycle")
 	check.call(realm.camera.framing_bounds.has_area() and realm.camera.zoom.y <= game.get_viewport_rect().size.y / 23.0 + 0.01, "boss encounter frames the whole chamber and overhead warnings even at high preferred zoom")
 	realm.player.position = RealmDB.CAMP
 	realm._physics_process(0.1)

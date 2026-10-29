@@ -286,6 +286,7 @@ func _physics_process(delta: float) -> void:
 		boss.dungeon_alerted = true
 		boss._player = player
 		boss._target = player
+		boss._notify_boss_start()
 		boss._enter(Enemy.State.ALERT)
 		Sfx.start_battle_music(portal_id)
 		set_message("SHADOW & CHAOS FIEND · Watch the fan, dash and crossing flames.")

@@ -148,7 +148,12 @@ func _execute_skill(skill: Dictionary) -> void:
 					fade.tween_property(illusion,"modulate:a",0.0,0.65)
 					fade.tween_callback(illusion.queue_free)
 		"summon":
-			_summons = _summons.filter(func(enemy: Enemy) -> bool: return is_instance_valid(enemy) and not enemy.dead)
+			# Typed callback arguments are cast before their body runs. A freed
+			# Enemy therefore throws before an is_instance_valid check in a
+			# filter callback can protect it. Inspect stored handles directly.
+			for index in range(_summons.size() - 1, -1, -1):
+				if not is_instance_valid(_summons[index]) or _summons[index].is_queued_for_deletion() or _summons[index].dead:
+					_summons.remove_at(index)
 			for i in maxi(0,3-_summons.size()):
 				var minion := ElementalMinion.new()
 				minion.element = element

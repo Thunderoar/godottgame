@@ -31,6 +31,9 @@ const SETTLEMENT_DAMAGE_TICK := 5.0
 
 func _ready() -> void:
 	add_to_group("game")
+	var diagnostics := preload("res://scripts/core/runtime_diagnostics.gd").new()
+	diagnostics.name = "RuntimeDiagnostics"
+	add_child(diagnostics)
 	_world_holder = Node2D.new()
 	_world_holder.name = "WorldHolder"
 	add_child(_world_holder)
