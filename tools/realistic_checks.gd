@@ -7,7 +7,7 @@ static func run(_game: Game, check: Callable) -> void:
 		if VisualStyle.is_pixel():
 			check.call(texture == null, "%s permits original procedural pixels in Classic style" % key)
 		else:
-			check.call(texture!=null and texture.get_size()==Vector2(keys[key]) and texture.get_image().get_height()>keys[key].y,"%s retains its gameplay size with detailed imported pixels" % key)
+			check.call(texture!=null and texture.get_size()==Vector2(keys[key]) and texture.get_image().get_height()>keys[key].y and texture.get_meta("art_style","")=="illustrated_coast","%s retains its gameplay size with illustrated coastal art" % key)
 	var animation := RealisticArt.get_texture("character_adam_2_0")
 	check.call(animation==RealisticArt.get_texture("character_adam_2_3"),"moving hero reuses one bounded physical view instead of creating frame textures")
 	var homes := {}
@@ -22,7 +22,7 @@ static func run(_game: Game, check: Callable) -> void:
 	check.call(pets.size()==8,"all eight companion and opponent appearances remain distinct")
 	for kind in RealisticArt.SHOPS:
 		var modern := not VisualStyle.is_pixel()
-		check.call(PixelArt.stall_texture(kind).get_meta("realistic_art",false) == modern and PixelArt.shop_interior_texture(kind).get_meta("realistic_art",false) == modern,"%s shop has matching active-style exterior and interior" % kind)
+		check.call((PixelArt.stall_texture(kind).get_meta("art_style","")=="illustrated_coast") == modern and (PixelArt.shop_interior_texture(kind).get_meta("art_style","")=="illustrated_coast") == modern,"%s shop has matching active-style exterior and interior" % kind)
 	var kraken := KrakenKing.new()
 	_game.world.add_child(kraken)
 	kraken.set_physics_process(false)

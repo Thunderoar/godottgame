@@ -1,6 +1,6 @@
 # PB (Protect BESUT)
 
-A playable survival action-RPG vertical slice for **Godot 4.7.2**, with realistic prerendered 3D artwork over a 2D world and controls. Procedural pixel art remains the fallback.
+A playable survival action-RPG vertical slice for **Godot 4.7.2**, with selectable Classic Pixel (default) and Modern Illustrated artwork over a 2D world and controls. Modern uses clean illustrated 2.5D coastal art. Art-style changes apply after restarting the game. See [the illustrated art direction](docs/ILLUSTRATED_COAST.md).
 
 **Created by Qayyim, Farhan and Ayiz.**
 
@@ -369,4 +369,4 @@ Nearby fish automatically refill FULLNESS. Fullness drains while swimming; at ze
 
 Graphics/sea tutorial/night performance pass: see [REALM_GRAPHICS_AND_PERFORMANCE.md](docs/REALM_GRAPHICS_AND_PERFORMANCE.md) for current assets, native captures and measured limits.
 
-Realistic village, house tiers, five shops, characters, pets and ocean presentation: see [REALISTIC_WORLD.md](docs/REALISTIC_WORLD.md). The game keeps its 2D movement and collisions with imported prerendered 3D artwork.
+Modern Illustrated village, house tiers, five shops, characters, pets, ocean and realms use the [illustrated coastal presentation](docs/ILLUSTRATED_COAST.md). Classic Pixel retains procedural artwork. The earlier [realistic presentation report](docs/REALISTIC_WORLD.md) remains historical evidence. Movement and collisions stay in the existing 2D world.

@@ -168,10 +168,9 @@ func _build_background() -> void:
 	background.z_index = -1000
 	background.texture_filter = VisualStyle.texture_filter()
 	var terrain_override := AssetRegistry.get_texture("terrain_village_layout_%d_%d" % [WorldPalette.generation,_layout.signature()])
-	if not VisualStyle.is_pixel() and terrain_override == null and ResourceLoader.exists("res://assets/authored/realistic/surfaces.png"):
+	if not VisualStyle.is_pixel() and terrain_override == null:
 		var terrain_material := ShaderMaterial.new()
-		terrain_material.shader = preload("res://assets/shaders/realistic_terrain.gdshader")
-		terrain_material.set_shader_parameter("materials",load("res://assets/authored/realistic/surfaces.png"))
+		terrain_material.shader = preload("res://assets/shaders/illustrated_terrain.gdshader")
 		background.material = terrain_material
 	# Daylight grade. The old neon look was actually the PointLight2Ds being
 	# ~13x oversized (one 128px light covered the entire map); with correctly

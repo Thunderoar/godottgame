@@ -2,8 +2,8 @@ class_name RealmPresentation
 extends RefCounted
 ## Imported, shared game sprites plus one inexpensive quad per spell.
 const ORDER := ["chaos","wind","ice","earth","fire","lightning","forest","water","decay","dark"]
-# Authored rectangles account for transparent export trim. Never assume that
-# generated atlas cells divide the exported canvas into exact equal fractions.
+# Legacy photographic source rectangles remain available to authoring tools.
+# Runtime illustration regions come from RealisticArt.atlas_region metadata.
 const BOSS_RECTS := [Rect2(2,125,312,326),Rect2(317,125,331,332),Rect2(650,125,292,330),Rect2(950,140,330,312),Rect2(1290,120,329,335),Rect2(0,535,318,345),Rect2(327,531,306,348),Rect2(647,520,310,359),Rect2(978,528,278,351),Rect2(1260,530,359,347)]
 const MINION_RECTS := [Rect2(40,55,328,340),Rect2(458,45,304,355),Rect2(840,18,300,377),Rect2(1190,95,354,298),Rect2(1620,90,330,307),Rect2(15,420,344,360),Rect2(465,412,265,372),Rect2(832,408,304,373),Rect2(1206,410,320,370),Rect2(1550,421,420,355)]
 const PROP_RECTS := [Rect2(72,2,267,384),Rect2(476,2,269,381),Rect2(850,1,271,382),Rect2(1252,0,273,386),Rect2(1676,3,228,382),Rect2(70,387,261,402),Rect2(460,386,273,402),Rect2(850,384,273,401),Rect2(1251,384,266,397),Rect2(1652,388,282,399)]
@@ -17,14 +17,17 @@ static func actor_texture(element: String, boss: bool) -> Texture2D:
 	if index < 0: return null
 	var key := "%s/%s" % ["boss" if boss else "minion",element]
 	if _regions.has(key): return _regions[key]
-	var source := "res://assets/authored/realms/demon-bosses-v3.png" if boss else "res://assets/authored/realms/demon-minions-v3.png"
+	var sheet := "demon-bosses" if boss else "demon-minions"
+	var source := RealisticArt.ROOT+sheet+".png"
 	if not ResourceLoader.exists(source): return null
 	var atlas := load(source) as Texture2D
 	if atlas == null: return null
 	var region := AtlasTexture.new()
 	region.atlas = atlas
-	region.region = BOSS_RECTS[index] if boss else MINION_RECTS[index]
+	region.region = RealisticArt.atlas_region(sheet,index)
+	if not region.region.has_area() or not Rect2(Vector2.ZERO,atlas.get_size()).encloses(region.region): return null
 	region.filter_clip = true
+	region.set_meta("art_style","illustrated_coast")
 	_regions[key] = region
 	return region
 
@@ -42,13 +45,15 @@ static func prop_texture(element: String) -> Texture2D:
 	if index < 0: return null
 	var key := "prop/"+element
 	if _regions.has(key): return _regions[key]
-	var source := "res://assets/authored/realms/realm-props-v2.png"
+	var source := RealisticArt.ROOT+"realm-props.png"
 	if not ResourceLoader.exists(source): return null
 	var atlas := load(source) as Texture2D
 	var region := AtlasTexture.new()
 	region.atlas = atlas
-	region.region = PROP_RECTS[index]
+	region.region = RealisticArt.atlas_region("realm-props",index)
+	if not region.region.has_area() or not Rect2(Vector2.ZERO,atlas.get_size()).encloses(region.region): return null
 	region.filter_clip = true
+	region.set_meta("art_style","illustrated_coast")
 	_regions[key] = region
 	return region
 

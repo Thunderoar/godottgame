@@ -72,9 +72,9 @@ var _realistic_background: Sprite2D
 
 func _ready() -> void:
 	texture_filter = VisualStyle.texture_filter()
-	if not VisualStyle.is_pixel() and ResourceLoader.exists("res://assets/authored/realistic/ocean-background.png"):
+	if not VisualStyle.is_pixel() and ResourceLoader.exists("res://assets/authored/illustrated/ocean-background.png"):
 		_realistic_background=Sprite2D.new()
-		_realistic_background.texture=load("res://assets/authored/realistic/ocean-background.png") as Texture2D
+		_realistic_background.texture=load("res://assets/authored/illustrated/ocean-background.png") as Texture2D
 		_realistic_background.position=Vector2(20,11.25)
 		_realistic_background.scale=Vector2(48,27)/_realistic_background.texture.get_size()
 		_realistic_background.z_index=-100

@@ -6,13 +6,20 @@ var expanded := false
 var _clock := 0.0
 var _tick := 0.0
 var _pointer := -2
+var _background: TextureRect
 
 func _ready() -> void:
 	custom_minimum_size = Vector2(206, 144) if not expanded else custom_minimum_size.max(Vector2(280, 240))
 	mouse_filter = Control.MOUSE_FILTER_IGNORE if expanded else Control.MOUSE_FILTER_STOP
 	focus_mode = Control.FOCUS_NONE if expanded else Control.FOCUS_ALL
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if not expanded else Control.CURSOR_ARROW
-	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	texture_filter = VisualStyle.texture_filter()
+	_background=TextureRect.new()
+	_background.expand_mode=TextureRect.EXPAND_IGNORE_SIZE
+	_background.stretch_mode=TextureRect.STRETCH_SCALE
+	_background.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	_background.show_behind_parent=true
+	add_child(_background)
 
 func _gui_input(event: InputEvent) -> void:
 	if expanded: return
@@ -33,6 +40,7 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 
 func _process(delta: float) -> void:
+	if not is_visible_in_tree(): return
 	_clock += delta
 	_tick += delta
 	if _tick >= 0.15:
@@ -103,15 +111,20 @@ func _picture(icon: Dictionary, at: Vector2) -> void:
 	draw_texture_rect(texture, rect, false)
 
 func _draw() -> void:
-	draw_style_box(GameUI.style(Color("#122c32"), Color("#73928b"), 2, 0), Rect2(Vector2.ZERO, size))
+	draw_style_box(GameUI.style(Color.TRANSPARENT, Color("#73928b"), 2, 0), Rect2(Vector2.ZERO, size))
 	var game := get_tree().get_first_node_in_group("game") as Game
 	if not is_instance_valid(game) or not is_instance_valid(game.world): return
 	var world := game.world
 	var bounds: Rect2 = world.get_map_rect() if world.has_method("get_map_rect") else Rect2(0, 0, 64, 40)
 	var area := _area(bounds)
 	if world is Lobby or world is Dungeon or world is KrakenIsland:
-		draw_texture_rect(world.background.texture, area, false)
+		_background.texture=world.background.texture
+		_background.material=world.background.material if world is Lobby else null
+		_background.position=area.position
+		_background.size=area.size
+		_background.show()
 	else:
+		_background.hide()
 		draw_rect(area, Color("#285a77"))
 		if world is KrakenIsland:
 			draw_rect(Rect2(_map(Vector2(1, 3), bounds), Vector2(38, 21) / bounds.size * area.size), Color("#958968"))

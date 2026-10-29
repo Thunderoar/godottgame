@@ -365,8 +365,8 @@ func _render_battle() -> void:
 	_arena_backdrop = TextureRect.new()
 	_arena_backdrop.name = "FullArenaBackground"
 	_arena_backdrop.texture = load(str(definition.get("background", ""))) as Texture2D
-	if ResourceLoader.exists("res://assets/authored/realistic/pet-arena.png"):
-		_arena_backdrop.texture=load("res://assets/authored/realistic/pet-arena.png") as Texture2D
+	if not VisualStyle.is_pixel() and ResourceLoader.exists("res://assets/authored/illustrated/pet-arena.png"):
+		_arena_backdrop.texture=load("res://assets/authored/illustrated/pet-arena.png") as Texture2D
 	_arena_backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_arena_backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	_arena_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE

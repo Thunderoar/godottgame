@@ -45,7 +45,7 @@ func _process(delta: float) -> void:
 		s.texture = OceanArt.creature(str(actor.kind),int(clock*2)%2)
 	queue_redraw()
 func _draw() -> void:
-	if VisualStyle.is_pixel() or not ResourceLoader.exists("res://assets/authored/realistic/ocean-background.png"):
+	if VisualStyle.is_pixel() or not ResourceLoader.exists("res://assets/authored/illustrated/ocean-background.png"):
 		draw_colored_polygon(PackedVector2Array([Vector2(-20,21),Vector2(5,20.6),Vector2(20,21.1),Vector2(32,20.6),Vector2(65,21),Vector2(65,30),Vector2(-20,30)]),Color("#758e8b"))
 		for i in 75:
 			var x := fposmod(i*4.179,65)-10

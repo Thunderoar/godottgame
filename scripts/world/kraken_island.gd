@@ -85,7 +85,7 @@ func _build_arena() -> void:
 	if not VisualStyle.is_pixel():
 		var floor_art := Sprite2D.new()
 		floor_art.name="KrakenStoneFloor"
-		floor_art.texture=load("res://assets/authored/realms/basalt-floor-v2.png") as Texture2D
+		floor_art.texture=load("res://assets/authored/illustrated/stone-floor.png") as Texture2D
 		floor_art.position=Vector2(20,13)
 		floor_art.scale=Vector2(37,22)/floor_art.texture.get_size()
 		floor_art.z_as_relative=false

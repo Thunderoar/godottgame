@@ -1,5 +1,7 @@
 # Realistic coastal world presentation — 2026-10-28
 
+Historical pass. The 2026-10-29 user reference replaces this photographic treatment with [illustrated coastal art](ILLUSTRATED_COAST.md); the implementation keeps its compatibility API and logical-size contracts.
+
 The village reference directs a realistic coastal kampung presentation: timber houses with tile roofs, detailed market stalls, tropical plants, natural water and warm lamps. Imported prerendered 3D artwork runs in the existing 2D game. Camera rotation, polygonal 3D environments and a new physics engine are outside this presentation change.
 
 ## Coverage

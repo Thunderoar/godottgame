@@ -1,9 +1,9 @@
 @tool
 class_name RealisticArt
 extends RefCounted
-## Imported physical pixels retain old logical dimensions. Animation, feet,
-## collision and atlas-independent widget sizing keep one consistent contract.
-const ROOT := "res://assets/authored/realistic/"
+## Compatibility API for imported illustrated art. Physical pixels retain old
+## logical dimensions, animation feet, collisions and widget sizing contracts.
+const ROOT := "res://assets/authored/illustrated/"
 const SHOPS := ["potion","equipment","pet","house","services"]
 const PETS := ["ember","moss","luma","sparring_ember","bramble_cat","dusk_moth","storm_fox","tidecat_sovereign"]
 const TREE_SIZES := [Vector2i(104,128),Vector2i(116,120),Vector2i(84,144),Vector2i(96,116),Vector2i(112,144)]
@@ -12,6 +12,20 @@ static var _images: Dictionary = {}
 static var _textures: Dictionary = {}
 static var _loaded := false
 static var _generation := -1
+
+static func _ensure_regions() -> void:
+	if _loaded: return
+	_loaded=true
+	if not FileAccess.file_exists(ROOT+"regions.json"): return
+	var parsed: Variant=JSON.parse_string(FileAccess.get_file_as_string(ROOT+"regions.json"))
+	if parsed is Dictionary: _regions=parsed
+
+static func atlas_region(sheet: String, index: int) -> Rect2:
+	_ensure_regions()
+	var entries: Array=_regions.get(sheet,[])
+	if index<0 or index>=entries.size() or (entries[index] as Array).size()!=4: return Rect2()
+	var box: Array=entries[index]
+	return Rect2(float(box[0]),float(box[1]),float(box[2]),float(box[3]))
 
 static func _record(key: String) -> Array:
 	if key.begins_with("house_") and key.trim_prefix("house_").is_valid_int(): return ["buildings",clampi(int(key.trim_prefix("house_"))-1,0,4),Vector2i(224,176)]
@@ -109,11 +123,7 @@ static func get_texture(key: String) -> Texture2D:
 	if _generation != WorldPalette.generation:
 		_textures.clear()
 		_generation=WorldPalette.generation
-	if not _loaded:
-		_loaded=true
-		if not FileAccess.file_exists(ROOT+"regions.json"): return null
-		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(ROOT+"regions.json"))
-		if parsed is Dictionary: _regions=parsed
+	_ensure_regions()
 	var sheet := str(record[0])
 	var index := int(record[1])
 	var logical: Vector2i = record[2]
@@ -124,8 +134,8 @@ static func get_texture(key: String) -> Texture2D:
 	if index>=entries.size() or (entries[index] as Array).size()!=4: return null
 	if not _images.has(sheet):
 		var source_path := ROOT+sheet+".png"
-		if sheet == "fire-demon": source_path="res://assets/authored/realms/demon-minions-v3.png"
-		elif sheet == "stone-floor": source_path="res://assets/authored/realms/basalt-floor-v2.png"
+		if sheet == "fire-demon": source_path=ROOT+"demon-minions.png"
+		elif sheet == "stone-floor": source_path=ROOT+"stone-floor.png"
 		if not ResourceLoader.exists(source_path): return null
 		var imported := load(source_path) as Texture2D
 		if imported == null: return null
@@ -152,6 +162,7 @@ static func get_texture(key: String) -> Texture2D:
 	var texture := ImageTexture.create_from_image(canvas)
 	texture.set_size_override(logical)
 	texture.set_meta("realistic_art",true)
+	texture.set_meta("art_style","illustrated_coast")
 	texture.set_meta("realistic_sheet",sheet)
 	if _textures.size()>512: _textures.clear()
 	_textures[cache_key]=texture

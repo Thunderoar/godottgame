@@ -1,4 +1,10 @@
-# Monsoon Afterglow
+# Current direction: illustrated coastal village
+
+This direction applies to **Modern Illustrated** in Settings. **Classic Pixel** is the default; changing the art style requires a game restart.
+
+The 2026-10-29 reference selects clean shaded 2.5D illustration: flat olive grass, soft brown lanes, red tiled timber houses and readable outlined objects. The current library, prompts, integration and native evidence are documented in [ILLUSTRATED_COAST.md](ILLUSTRATED_COAST.md). Imported illustration uses linear sampling with stable logical sizes; the original pixel art and Monsoon palette remain compatible fallbacks. The earlier direction below is retained as historical authoring guidance.
+
+## Earlier Monsoon Afterglow direction
 
 A Malaysian seaside settlement after gentle rain: layered jade forest, mint
 leaf tips, turquoise shallows, creamy sand, warm timber and clay roofs. Golden

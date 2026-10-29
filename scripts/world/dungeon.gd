@@ -97,7 +97,7 @@ func _build_ground() -> void:
 	if not VisualStyle.is_pixel() and ElementDB.ELEMENTS.has(_theme()):
 		var floor_art := Sprite2D.new()
 		floor_art.name = "RealmStoneFloor"
-		floor_art.texture = load("res://assets/authored/realms/basalt-floor-v2.png") as Texture2D
+		floor_art.texture = load("res://assets/authored/illustrated/stone-floor.png") as Texture2D
 		floor_art.position = Vector2(24,16)
 		floor_art.scale = Vector2(45,28.4)/floor_art.texture.get_size()
 		floor_art.z_as_relative = false

@@ -1006,3 +1006,25 @@ the preceding keyframe. Encode and decode both pass; sampled 24 fps describes th
 preview, not a hardware-performance measurement. A supplemental comparison helper
 initially needed an explicit bool type for a dynamic method result and timed out
 (124); the corrected helper, not altered production assertions, passes both states.
+
+## Illustrated coastal reference (2026-10-29)
+
+The latest reference selects clean shaded 2.5D illustration across village houses/shops/props, characters, trees, pets, marine life, interiors, Kraken and elemental realms. The source library is `assets/authored/illustrated/`, with built-in image_gen prompts and alpha-derived region metadata. The compatibility-named RealisticArt API keeps original logical sizes and cache behavior while selecting the new art. Existing fixture/override/tree-pixel contracts remain authoritative. Elemental rectangles now come from authored metadata rather than the previous photographic atlas coordinates.
+
+The village uses quiet olive grass, brown paths, pale beach and smooth depth-tinted water over the existing terrain geometry. No photographed grass texture is sampled. VillageMinimap's background is a child behind its live markers and shares the same material when the expanded map is opened. The HUD retains the Map button and no always-visible minimap. Tests require illustrated style routing for all twenty elemental sprites and for the existing logical-size and five-shop checks; native review additionally checks the shared map material. Gameplay/state rules do not change in this pass. See [ILLUSTRATED_COAST.md](ILLUSTRATED_COAST.md) for scope, prompts and final validation.
+
+Final verification: **1,544 isolated gameplay checks PASS, exit 0**, **27 native illustrated-world checks PASS, exit 0** and **54 native realm/performance checks PASS, exit 0**. Final logs contain no FAIL/SCRIPT ERROR/ERROR entries. Evidence: `docs/evidence/illustrated-coast-2026-10-29/`. Atlas spacing corrections and reimport preceded the final runs; the existing forest/layout, logical-size and boss-pose regressions remain green.
+
+## Illustrated artwork and selectable styles integration (2026-10-29)
+
+The local illustrated coastal artwork is integrated with upstream `96c5fc3`, including the new title/opening sequences and restart-bound style selector. Classic Pixel remains the default; Modern Illustrated selects `assets/authored/illustrated/`. Modern terrain/floors/ocean/arena paths retain the style guards. The expanded map shares the active village material and uses the active family's texture filter. Both earlier acceptance histories above are preserved; their counts describe those earlier source states.
+
+Fresh Windows Godot 4.7.2 verification used temporary user-data directories, verified isolation, process timeouts, exit-code checks and scans of stdout/stderr for `[FAIL]`, `SCRIPT ERROR` and `ERROR:`:
+
+- Classic Pixel full gameplay gate: **1,837 checks, PASS**, exit 0.
+- Modern Illustrated full gameplay gate: **1,837 checks, PASS**, exit 0.
+- Native style/startup review: **32 checks, PASS** per style, exit 0, at 1280x720.
+- Native Modern Illustrated world/shop/map/duel review: **27 checks, PASS**, exit 0; includes an 832x480 sea-guide capture.
+- Final gameplay/native error scans and `git diff --check` are clean. Paired village captures and the modern expanded map/pet arena were visually inspected on the AMD Radeon Vega 3 Compatibility renderer.
+
+The isolated import completed with exit 0 and no error markers; it reported `Unable to open Android 'build-tools' directory.` No Android export or physical-device validation is claimed. Test logs/captures remain outside the repository, and normal player saves/settings were not changed. The original local changes, artwork and evidence were retained in a named Git stash as a backup before committing the integration.

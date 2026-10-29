@@ -53,6 +53,10 @@ func _ready() -> void:
 		await _capture("shop_"+kind)
 		panel.hide()
 		game._on_modal_closed()
+	game.open_map()
+	await _capture("map_expanded")
+	_check(game.hud.map_panel.map._background.material==home.background.material,"expanded map shares the illustrated village terrain material")
+	game.hud.map_panel.close_panel()
 	game.open_pet_battles()
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -92,7 +96,7 @@ func _ready() -> void:
 	island.boss.set_physics_process(false)
 	island.player.set_physics_process(false)
 	await _capture("kraken_island")
-	print("realistic review: %d checks, %s" % [_checks,"PASS" if _failures==0 else "FAIL"])
+	print("illustrated review: %d checks, %s" % [_checks,"PASS" if _failures==0 else "FAIL"])
 	get_tree().quit(0 if _failures==0 else 1)
 
 func _check(ok: bool, message: String) -> void:
