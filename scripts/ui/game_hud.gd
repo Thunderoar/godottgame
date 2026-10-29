@@ -41,6 +41,9 @@ var _gui_layout: Dictionary = {}
 var _root: Control
 var _gold_label: Label
 var _diamond_label: Label
+var _status_strip: HudStatusStrip
+var _tally_timer := 0.0
+const TALLY_REFRESH_SECONDS := 0.5
 var _identity_label: Label
 var _clock_label: Label
 var _minimap: VillageMinimap
@@ -142,36 +145,12 @@ func _build_menu_button() -> void:
 
 
 func _build_currency_panel() -> void:
-	var balances := GameUI.panel(Color(0.035, 0.08, 0.09, 0.9), Color("#3a565a"))
-	balances.name = "CurrencyPanel"
-	balances.offset_left = 22
-	balances.offset_right = 366
-	balances.offset_top = 18
-	balances.offset_bottom = 66
-	balances.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_root.add_child(balances)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 20)
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	balances.add_child(row)
-	for kind in ["gold", "diamond"]:
-		var amount := HBoxContainer.new()
-		amount.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		amount.add_theme_constant_override("separation", 7)
-		amount.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		row.add_child(amount)
-		var icon := GameUI.icon_rect(kind, 24)
-		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		amount.add_child(icon)
-		var label := GameUI.label("", 19, GameUI.GOLD if kind == "gold" else GameUI.DIAMOND)
-		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		label.clip_text = true
-		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		amount.add_child(label)
-		if kind == "gold":
-			_gold_label = label
-		else:
-			_diamond_label = label
+	_status_strip = HudStatusStrip.new()
+	_status_strip.name = "StatusStrip"
+	_root.add_child(_status_strip)
+	_status_strip.height_changed.connect(_schedule_gui_layout)
+	_gold_label = _status_strip.gold_label
+	_diamond_label = _status_strip.diamond_label
 	var clock := GameUI.panel(Color(0.035, 0.08, 0.09, 0.85), Color("#3a565a"))
 	clock.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	clock.offset_left = -110
@@ -304,7 +283,7 @@ func set_gui_scale(value: float, persist: bool = true) -> void:
 
 func _capture_gui_layout() -> void:
 	for child in _root.get_children():
-		if child is Control and not child is ModalBase and not child is TutorialSpotlight and child != tutorial_guide and child != _fade and child != _vignette:
+		if child is Control and not child is ModalBase and not child is TutorialSpotlight and child != tutorial_guide and child != _fade and child != _vignette and child != _status_strip:
 			_gui_layout[child] = {"left": child.offset_left, "top": child.offset_top, "size": child.size.max(child.get_combined_minimum_size())}
 
 
@@ -364,6 +343,18 @@ func _layout_gui() -> void:
 		var pack_right := _inventory_button.position.x + _inventory_button.size.x * _inventory_button.scale.x
 		var build_left := maxf(_build_button.position.x, pack_right + 8.0 / maxf(0.1, display_scale))
 		_build_button.position.x = build_left
+	if is_instance_valid(_status_strip):
+		_status_strip.position = Vector2(22, 18) * factor
+		var right := _root.size.x - 22 * factor
+		if _menu_button.position.y < 90 * factor:
+			right = minf(right, _menu_button.position.x - 10 * factor)
+		if right - _status_strip.position.x < 240 * factor:
+			_status_strip.position.y = maxf(_menu_button.position.y + _menu_button.size.y * _menu_button.scale.y, _map_button.position.y + _map_button.size.y * _map_button.scale.y) + 8 * factor
+			right = _root.size.x - 22 * factor
+		_status_strip.fit(right - _status_strip.position.x, factor, display_scale)
+		var below_strip := _status_strip.position.y + _status_strip.size.y * _status_strip.scale.y + 10 * factor
+		for panel in [_emergency_panel, _build_mode_panel]:
+			panel.position.y = maxf(panel.position.y, below_strip)
 
 
 func get_control_layout_current() -> Dictionary:
@@ -608,6 +599,10 @@ func _anchor_bottom_right(ctrl: Control, top_left_from_corner: Vector2, bottom_r
 func _process(delta: float) -> void:
 	if not visible:
 		return
+	_tally_timer += delta
+	if _tally_timer >= TALLY_REFRESH_SECONDS:
+		_tally_timer = 0.0
+		_status_strip.refresh_world(world)
 	var time_text := GameState.time_string()
 	if _clock_label.text != time_text:
 		_clock_label.text = time_text
@@ -657,6 +652,8 @@ func _use_quick_potion(item_id: String) -> void:
 
 func set_world(w: Node) -> void:
 	world = w
+	_tally_timer = 0.0
+	_status_strip.refresh_world(w)
 	_last_prompt = ""
 	if _interact_button:
 		_interact_button.set_contextual("Sprint", "sprint")
@@ -675,8 +672,7 @@ func set_world(w: Node) -> void:
 func refresh_all() -> void:
 	if _root == null:
 		return
-	_gold_label.text = str(GameState.gold())
-	_diamond_label.text = str(GameState.diamonds())
+	_status_strip.refresh_currency()
 	_refresh_objectives()
 	_refresh_loot()
 	if _attack_button:

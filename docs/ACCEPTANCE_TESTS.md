@@ -1225,3 +1225,52 @@ Evidence under
 `dock-gate.log`, `dock-import.log`, `welcome-1280x720-c7ce6573` and
 `welcome-832x480-45ac1b2c`. The isolated gate's full logs are in
 `C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-0aa1f0e71a13437cbc8e9bb90ff162e2`.
+
+## Compact currency and live NPC/world status strip — 2026-10-29
+
+The former 344×48 Gold/Diamond panel is replaced by two 34-pixel-high balance
+chips with a combined minimum width of 204 pixels plus a 6-pixel gap. A live strip
+beside them displays NPCs alive/total, living Monsters, Trees alive/total, burning
+mature trees (Fire), and intact registered Homes/total. The fresh village reports
+24/24 NPCs, 0 monsters, 64/64 trees, 0 fires and 8/12 homes. Shop tint targets have
+no persistent home IDs and are excluded from the denominator.
+
+The current world owns the census. Sheltered people stay alive, fallen trees
+remain in the total, protected saplings count as living, and dead/queued/retiring
+actors are excluded. Dungeons and Kraken Island show local Monsters beside
+balances; unavailable village statistics are hidden. Currency signals update the
+balances immediately; live tallies refresh at world changes and every 0.5 seconds
+while HUD is visible. The snapshot never writes GameState or changes game rules.
+
+The strip respects GUI scaling, retains at least a 12-pixel physical font size,
+wraps on narrow windows and reserves room for Menu/Map. Wrapped height moves the
+emergency/build banner below it. Large balances use K/M/B with exact hover text.
+Category hover descriptions explain specialist/sapling/enemy-kind subtotals.
+See HUD_STATUS_STRIP.md for precise definitions and ownership.
+
+Final verification, Windows / Godot 4.7.2.stable.official.ed1daf0bf:
+
+- Canonical isolated gameplay: **5,606 checks, PASS**, exit 0. No failure, script
+  error, error or engine-warning markers; stderr is empty.
+- Native `status_strip_test.tscn`: **100 checks, PASS**, exit 0, stderr empty.
+  Captures cover 1280×720, 832×480, 640×360 and 480×320, GUI 75/100/130%, day and
+  threat states, narrow wrapping, large balances, a custom Menu position, and
+  dungeon-only monster counts. Inspected the rendered standard desktop/compact
+  views, narrow wrapping and threat states.
+- The 26 integrated census checks exercise shelter/death, ignition/felling/
+  replanting, home loss/repair, live/dead enemies, foreign/retiring worlds,
+  data immutability, compact balances and world handoff/removal.
+- Isolated final class import passed without script errors. The existing Android
+  build-tools-directory diagnostic remains. No Android export or physical-phone
+  test was run.
+- `git diff --check` passed. Runtime data and captures stay outside the checkout;
+  normal player data, source layouts and the separate village-progression drafts
+  were not modified.
+
+Final evidence under
+`C:/Users/LUQMAN/.codex/visualizations/2026/10/29/01a1869c-c888-7723-b100-09df8dc6fb73/`:
+`status-final-gate-verified.log`, `status-final-import.log`, and
+`status-1280x720-70765fc7/` (stdout/stderr and shots). Full gate logs are in
+`C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-c25fa6408eea4d4b83d2f4684d925033`.
+Earlier draft runs retain a daytime-spawn fixture failure, a shop-inflated home
+count and fixture cleanup failures; they are superseded by the final evidence.
