@@ -73,52 +73,73 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(bool(GameState.wild_encounter_reason("bramble_cat").ok) and int(GameState.get_active_pet().level) == 1, "starter Ember can challenge the cat without tournament clears or paid levels")
 	var original_player := realm.player.position
 	var original_pet := realm.pet.position
+	var tournament_before: Dictionary = GameState.data.pet_battles.duplicate(true)
 	cat.interact(realm.player)
-	var panel := game.hud.wild_challenge
-	check.call(panel.visible and realm.process_mode == Node.PROCESS_MODE_DISABLED and game.player().controls_locked, "in-world challenge suspends all world combat and locks Adam")
-	check.call(realm.player.position.distance_to(cat.position) < 6 and not game.hud.pet_battle_panel.visible, "duel is staged in the discovered habitat without an arena backdrop")
-	check.call(not game.hud._map_button.visible and not realm.pet.get_node("PetHealth").visible, "challenge hides unrelated map and overhead health widgets")
+	var panel := game.hud.pet_battle_panel
+	check.call(panel.visible and panel.is_wild_challenge() and realm.process_mode == Node.PROCESS_MODE_DISABLED and game.player().controls_locked, "habitat opens the pre-existing PetBattlePanel and suspends world combat")
+	check.call(panel._arena_backdrop.texture != null and panel._battle_level == "pet_duel_2" and panel._enemy_sprite.texture != null, "cat uses the existing Bramble Court arena, sprites and battle widgets")
+	check.call(not panel.start_battle("pet_duel_1") and panel._battle_level == "pet_duel_2", "tournament entry cannot replace an owned habitat challenge")
+	check.call(not game.hud._map_button.visible and realm.player.position == original_player and realm.pet.position == original_pet, "arena hides world controls without moving either map participant")
 	await game.get_tree().process_frame
 	var viewport := game.get_viewport().get_visible_rect()
-	check.call(panel._buttons.values().all(func(button: Button) -> bool: return viewport.encloses(button.get_global_rect())), "all three challenge powers remain inside the viewport")
+	check.call(panel._skill_buttons.size() == 3 and panel._skill_buttons.all(func(button: Button) -> bool: return viewport.encloses(button.get_global_rect())), "all three existing arena powers remain inside the viewport")
 	game.open_settings()
 	await game.get_tree().process_frame
 	var original_touch := GameSettings.touch_controls()
 	GameSettings.set_touch_controls("always", false)
-	var paused_hp := panel.duel.rival_hp
+	var paused_hp := panel._opponent_hp
 	panel._process(30)
-	check.call(panel.duel.rival_hp == paused_hp and realm.process_mode == Node.PROCESS_MODE_DISABLED, "Settings preserves the protected challenge and its turn")
+	check.call(panel._opponent_hp == paused_hp and realm.process_mode == Node.PROCESS_MODE_DISABLED, "Settings preserves the protected challenge and its turn")
 	check.call(not game.hud._joystick.visible, "live touch-setting changes cannot expose world controls during a challenge")
 	GameSettings.set_touch_controls(original_touch, false)
 	game.hud.settings_panel.close_panel()
 	check.call(game.player().controls_locked, "closing Settings does not release the challenge lock")
 	var hp := GameState.health()
-	var arena_hp := panel.duel.player_hp
+	var arena_hp := panel._player_hp
 	panel._process(20)
-	check.call(panel.duel.player_hp == arena_hp and GameState.health() == hp and panel.duel.turn == "player", "manual challenge waits indefinitely without damaging saved player or pet")
+	check.call(panel._player_hp == arena_hp and GameState.health() == hp and panel._turn_active, "existing manual battle waits indefinitely without damaging saved player or pet")
 	if capture.is_valid():
 		realm.camera.force_update_scroll()
 		await capture.call("02_bramble_challenge")
-	var rival_hp := panel.duel.rival_hp
-	await _tap(game, panel._buttons.attack.get_global_rect().get_center())
-	check.call(panel.duel.rival_hp < rival_hp and panel.duel.player_hp == arena_hp, "player choice lands before the rival reply")
+	var rival_hp := panel._opponent_hp
+	var battle_sprite := panel._player_sprite
+	GameState.data_changed.emit()
+	check.call(panel._player_sprite == battle_sprite and panel._opponent_hp == rival_hp, "progress refresh preserves the active shared arena and its local HP")
+	panel._enemy_choice = "attack"
+	await _tap(game, panel._skill_buttons[0].get_global_rect().get_center())
+	check.call(panel._opponent_hp < rival_hp and panel._player_hp == arena_hp, "player choice lands before the rival reply")
+	game.open_settings()
+	await game.get_tree().process_frame
+	var reply_wait := panel._enemy_wait
+	var cooldowns := panel._player_cooldowns.duplicate()
+	var clock := float(GameState.data.world_time)
+	panel._process(30)
+	panel.choose_skill("burst")
+	game._process(3)
+	check.call(panel._enemy_pending and panel._enemy_wait == reply_wait and panel._player_cooldowns == cooldowns and float(GameState.data.world_time) == clock, "Settings suspends pending replies, cooldowns, input and the realm clock")
+	game.hud.settings_panel.close_panel()
 	panel._process(0.71)
-	check.call(panel.duel.player_hp < arena_hp and panel.duel.turn == "next", "wild rival replies after the explicit choice")
+	check.call(panel._player_hp < arena_hp and panel._awaiting_next, "wild rival uses the existing delayed reply after the explicit choice")
 	panel.close_panel()
+	panel._finish_battle(true)
 	check.call(not panel.visible and realm.process_mode != Node.PROCESS_MODE_DISABLED and not game.player().controls_locked, "cancel restores the world, controls and music")
 	check.call(realm.player.position == original_player and realm.pet.position == original_pet and Sfx.battle_track.is_empty(), "cancel restores participant positions without reward")
 	check.call(GameState.get_pet("bramble_cat").is_empty(), "unfinished challenge grants no recruit")
+	check.call(GameState.data.pet_battles == tournament_before, "late completion after cancel cannot award or clear a tournament duel")
 	cat.interact(realm.player)
-	panel.duel.rival_hp = 1
+	panel._opponent_hp = 1
 	var gold := GameState.gold()
 	panel.choose_skill("burst")
 	panel._process(0)
 	check.call(GameState.realm_pet_bonded("bramble_cat") and GameState.gold() == gold + 25, "winning commits a unique cat recruit and first reward")
-	var token := panel._token
+	check.call(not panel.get_children().any(func(child: Node) -> bool: return child is PetHitEffect and child.visible), "resolved arena clears old impact effects before showing the bond result")
+	check.call(GameState.data.pet_battles == tournament_before, "habitat win keeps its reward rules separate from tournament unlocks and guaranteed levels")
+	if capture.is_valid(): await capture.call("16_cat_bond_result")
+	var token := panel._wild_token
 	check.call(not bool(GameState.complete_wild_encounter(token).ok), "duplicate victory callback cannot pay a second reward")
 	panel.close_panel()
 	cat.interact(realm.player)
-	panel.duel.rival_hp = 1
+	panel._opponent_hp = 1
 	var pet_level := int(GameState.get_active_pet().level)
 	gold = GameState.gold()
 	panel.choose_skill("burst")
@@ -128,15 +149,17 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	var moth := realm.wildlife.dusk_moth as RealmInteractable
 	realm.player.position = moth.position + Vector2(0,2)
 	moth.interact(realm.player)
-	panel.duel.player_hp = 1
+	if capture.is_valid(): await capture.call("17_moth_arena")
+	panel._player_hp = 1
+	panel._enemy_choice = "defend"
 	panel.choose_skill("attack")
 	panel._process(0.71)
-	check.call(not panel._resolved, "moth's first reply shields rather than automatically winning")
-	panel.duel.rival_cooldowns.defend = 99
-	panel.duel.turn = "rival"
-	panel.duel.wait = 0
-	panel._process(0.1)
-	check.call(panel._resolved and panel.duel.result == "loss" and GameState.get_pet("dusk_moth").is_empty(), "losing peacefully grants no wild recruit")
+	check.call(not panel._battle_resolved and panel._enemy_guard, "habitat rival uses the existing shield action and turn engine")
+	panel._process(0.61)
+	panel._enemy_choice = "attack"
+	panel.choose_skill("burst")
+	panel._process(0.71)
+	check.call(panel._battle_resolved and not bool(panel._last_result.ok) and GameState.get_pet("dusk_moth").is_empty(), "losing peacefully grants no wild recruit")
 	panel.close_panel()
 	check.call(GameState.health() == hp and GameState.has_living_pet(), "wild challenge loss does not damage persistent health or companion readiness")
 	var blocked_path := routes.path(Vector2(12,32), RealmDB.CAMP, false)
@@ -218,8 +241,8 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	cat = realm.wildlife.bramble_cat
 	realm.player.position = cat.position + Vector2(0,2)
 	cat.interact(realm.player)
-	check.call(game.hud.wild_challenge.visible, "friendly habitats become available immediately after boss victory")
-	game.hud.wild_challenge.close_panel()
+	check.call(game.hud.pet_battle_panel.visible, "friendly habitats become available immediately after boss victory")
+	game.hud.pet_battle_panel.close_panel()
 	GameState.save_game()
 	check.call(GameState.load_game() and bool(GameState.realm_progress().visit_active), "safe post-boss presence survives reload")
 	await game._load_dungeon(RealmDB.PORTAL,false)
@@ -245,10 +268,10 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	cat = realm.wildlife.bramble_cat
 	realm.player.position = cat.position + Vector2(0,2)
 	cat.interact(realm.player)
-	check.call(game.hud.wild_challenge.visible, "a peaceful cleared realm still supports friendly challenges")
+	check.call(game.hud.pet_battle_panel.visible, "a peaceful cleared realm still supports friendly challenges")
 	await game._load_lobby(false)
 	await game.get_tree().process_frame
-	check.call(not game.hud.wild_challenge.visible and not game.player().controls_locked and Sfx.battle_track.is_empty(), "world replacement cancels a challenge and restores controls without leaking its music")
+	check.call(not game.hud.pet_battle_panel.visible and not game.player().controls_locked and Sfx.battle_track.is_empty(), "world replacement cancels a challenge and restores controls without leaking its music")
 	GameState.data.realm_progress = {"checkpoint":"invalid", "cells":["-1:2","0:0","0:0"], "landmarks":["bad"], "bonded":["missing"]}
 	GameState._sanitize()
 	check.call(GameState.realm_progress().checkpoint == "arrival" and GameState.realm_progress().cells == ["0:0"] and GameState.realm_progress().bonded.is_empty(), "malformed exploration records sanitize without invalid destinations or duplicate discoveries")

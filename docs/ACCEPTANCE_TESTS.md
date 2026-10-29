@@ -1784,3 +1784,158 @@ Evidence: `C:/Users/ayiz/AppData/Local/Temp/tidesworn-tests-823fa859e46c4f329d6e
 and `tidesworn-tests-79f33910930e4cc5aa5dcc3c2103e40b`. No native visual review was
 repeated for this merge. Existing local settings/import edits and player progress
 were preserved.
+
+## Habitat battles reuse the existing pet battle (2026-10-30)
+
+Habitat taps/E now open the existing `PetBattlePanel` directly. Bramble Cat reuses
+Bramble Court's background, and Dusk Moth reuses Moonlit Ring's background, with
+the existing art-style override. Both use the original sprites, segmented HP,
+animations, impact effects, music, three powers, cooldowns, ready-skill selection
+and player-first/reply turns. The separate WildPetChallenge overlay and PetDuel
+engine are removed. This supersedes older in-world duel-staging descriptions.
+
+- The realm and shared clock suspend until the battle/result is closed. Map
+  actors and camera keep their positions. Settings also suspends pending replies,
+  cooldowns and battle input, and live touch preferences cannot reveal land controls.
+- Habitat difficulty/rewards remain 30 HP/4 damage/25 Gold/50 XP for the cat and
+  42 HP/5 damage/35 Gold/65 XP for the moth. Starter Ember still has access without
+  tournament clears or purchased levels. Same-species companion visits remain peaceful.
+- GameState retains the captured participant and token-guarded one-time bond.
+  Habitat wins do not clear tournament levels or grant a guaranteed level. Repeat
+  spars pay nothing; defeat/cancel leaves saved health and recruitment untouched.
+- Shared data refresh cannot rebuild an active habitat arena or result. A late
+  completion after closing cannot fall through into tournament rewards. World
+  replacement cancels the session, pending reply, music and held controls.
+- Arena transitions clear old hit effects. Results offer Return to the Wilds;
+  the existing tournament route retains its level gates, rewards and result flow.
+
+`tools/twilight_checks.gd`, `realm_life_checks.gd` and `realm_combat_checks.gd` cover
+the shared arena, real touch buttons, both original backdrops, local HP, manual
+waiting, shield/reply ordering, Settings, rewards/replays, data refresh and world
+cleanup. `tools/tide_test.gd` retains direct tournament coverage as well.
+
+Verified on the current Windows working tree based on `a72a7e5`, Godot 4.7.2:
+
+- Canonical isolated gameplay: **5,763 checks, PASS, exit 0**.
+- Native rendered Twilight reviews: **183 checks, PASS, exit 0** at each of
+  **1280x720** and **832x480**. Inspected both original arena backgrounds, all
+  three powers, the clean bond result and Return to the Wilds.
+- The full/focused error logs are empty, with no FAIL, SCRIPT ERROR or ERROR
+  markers. Isolated import passes with the existing Android build-tools warning.
+  No Android export or physical-device validation is claimed.
+- `git diff --check` passes. Test saves/captures stay outside the repository.
+  Existing settings/import changes and concurrent dock/campaign work are preserved.
+
+Evidence under `C:/Users/ayiz/AppData/Local/Temp/`: full gate
+`tidesworn-tests-b65cc1e9b2234a7ebb1160fec6ddedfd`, native 1280x720 review
+`tidesworn-tests-7dddea68ecc24fb59ff6842588aae489`, native 832x480 review
+`tidesworn-tests-4348ca8ed3ae4e9481846081ebc0ba76`, and import
+`tidesworn-tests-e54716a974aa4dee86fa5a60ed19b6aa`.
+
+## Pak Rahim's dock welcome (2026-10-30)
+
+The eight opening beats now hand off to a 12-line conversation with Pak Rahim on
+the physical village dock, before movement tips begin. He offers water and a
+place to recover, hears Adam's concern for Arjun and Mei Ling, and suggests
+meeting the neighbours. He does not know the friends' locations or charge a debt
+for helping Adam. The final original portrait has a cute, airy anime-inspired
+design; a matching original pixel sprite stands beside Adam. Neither new asset
+uses the existing illustrated or realistic resident atlas.
+
+The cream dialogue box presents one complete line at a time, speaker names,
+Back/Next, explicit Skip, and the transparent character portrait on the right.
+There is no automatic reading timeout. E/Space/Enter and actual screen touch
+advance lines. Initial arrival suspends its world and clock as a story; later
+optional short chats retain normal running-simulation menu rules.
+
+`campaign.dock_welcome_seen` is defaulted, sanitised and written through GameState.
+Migration checks the raw saved campaign before merging defaults: existing saves
+that finished the intro keep normal arrivals. A new interrupted opening retains
+its explicit pending flag and resumes on the dock through Continue. Completion
+and Skip save once; cancellation on world replacement saves no completion and
+cannot restart the tutorial in another world.
+
+`tools/dock_conversation_checks.gd` joins StoryChecks in the canonical gate and
+has a focused `tools/dock_conversation_test.tscn` route. The full suite explicitly
+finishes the new welcome before running village simulation checks. The focused
+checks cover actual save/load migration, every line's layout, real touch/keyboard
+input, frozen reading time/positions, short repeat chats, cancellation, and the
+actual New Journey/Continue handoffs. Run Windows review with
+`tools/test_isolated.ps1 -Godot <absolute-console-executable> -Dock`; add
+`-Capture -Resolution 1280x720` or `-Capture -Resolution 832x480` for rendered shots.
+
+Native Windows rendered reviews passed **49 checks, exit 0** at each resolution;
+all four first/final-line captures were inspected. Final focused 1280x720 evidence:
+`C:/Users/ayiz/AppData/Local/Temp/tidesworn-tests-c40ddf093aff4629adc4a76308c3aa5f`;
+832x480 evidence: `C:/Users/ayiz/AppData/Local/Temp/tidesworn-tests-328226361e734d82bd67958099f61931`.
+Both focused error logs are empty. Isolated import passes with the existing
+Android build-tools warning. No export or physical-device validation is claimed.
+See `docs/DOCK_WELCOME.md` for art provenance and the exact final imagegen prompt.
+
+Final canonical isolated gameplay on this working tree: **5,814 checks, PASS,
+exit 0**, with an empty error log and no FAIL/SCRIPT ERROR/ERROR markers.
+Evidence: `C:/Users/ayiz/AppData/Local/Temp/tidesworn-tests-167680ae272644ecba9a702cbfa503d4`.
+The dock checks also verify that the final E press is consumed before player
+physics can immediately reopen the conversation, and that cancelling the actual
+Continue handoff cannot enable lessons in its replacement world. `git diff --check`
+passes. Saves and rendered captures remain outside the repository; existing user
+changes are preserved and nothing was pushed.
+
+### Dock dialogue fade and talking sounds (2026-10-30)
+
+Each complete dialogue line now eases from zero to full opacity over 0.85 seconds.
+During the fade Next reads Reveal; tap/E/Space/Enter first reveals the whole line,
+then advances on a later press. Back restarts the prior line. Skip/Leave closes
+immediately. Reduce Motion uses a 0.18-second fade and resolves an in-flight fade
+immediately when enabled. Pages still never advance on a timer.
+
+An owned AudioStreamPlayer plays quiet varied vowel murmurs only while the line
+appears. Sfx caches three procedural syllables for Rahim's lower voice and three
+for Adam's lighter reply. Soft PCM attack/release avoids clicks. Reveal, natural
+fade completion, close and world cancellation stop the voice. Effects/master
+volume and mute apply live; slow frames never queue overlapping syllables.
+No saved fields, shared combat sounds or dialogue artwork changed.
+
+Focused native Windows reviews passed **69 checks, PASS, exit 0** at both
+1280x720 and 832x480, with empty error logs. Inspected matching captures at zero,
+half and full opacity. Coverage includes first-tap reveal, second-tap advance,
+distinct cached voices, unclipped non-silent PCM with soft edges, indefinite
+silent reading, live volume/mute/Reduce Motion and stopping mid-fade.
+Evidence: `C:/Users/ayiz/AppData/Local/Temp/tidesworn-tests-78759cf12e254a0a96b363a1ccd4f2a0`
+(1280x720) and `C:/Users/ayiz/AppData/Local/Temp/tidesworn-tests-dc2bc47c7aa7476baede103585c0b74b`
+(832x480). Native renders use the Dummy audio driver; PCM/routing/lifecycle checks
+do not claim a physical speaker or phone listening test.
+
+Canonical isolated gameplay after the fade/voice change: **5,834 checks, PASS,
+exit 0**, with an empty error log and no failure/error markers. Evidence:
+`C:/Users/ayiz/AppData/Local/Temp/tidesworn-tests-27057e590d284cbf94befb5ccf353723`.
+`git diff --check` passes; test user data and captures remain isolated externally.
+
+### Individual word fades and speech pacing (2026-10-30)
+
+Dialogue now reveals whole words in order. Each word fades in over 0.16 seconds;
+preceding words stay opaque and future words stay invisible. Speaking intervals
+scale with word length, with progressively longer pauses at commas, sentence
+endings and ellipses. The complete word layout is reserved up front, keeping
+wrapping and positions fixed while opacity changes. The existing Reveal/Next,
+Back, Skip, live settings and completion/cancellation ownership remain covered.
+
+Voice syllables now follow new words. Punctuation pauses do not trigger repeated
+sounds, and a slow frame only speaks its current word without a backlog. Reduce
+Motion compresses the sequence to 0.18 seconds, avoiding rapid repeated audio.
+
+Native Windows focused reviews: **74 checks, PASS, exit 0** at 1280x720 and
+832x480, with empty error logs. Captures show the first word half-faded, the first
+word fully readable while the second fades, and the completed sentence. Checks
+also verify unchanged word positions through successive rendered frames, timing
+differences for punctuation/word length, current-word-only audio after a slow
+frame, all lines' layout, real keyboard/touch reveal and the existing save flow.
+Evidence: `C:/Users/ayiz/AppData/Local/Temp/tidesworn-tests-804f3bd8b448425f82f15db8c3005053`
+(1280x720) and `C:/Users/ayiz/AppData/Local/Temp/tidesworn-tests-b4095a05abdc4586b04aaf8a5a5a3214`
+(832x480). Audio uses the Dummy driver in these reviews; no physical listening
+or phone validation is claimed.
+
+Canonical isolated gameplay after individual word pacing: **5,839 checks, PASS,
+exit 0**, with an empty error log and no failure/error markers. Evidence:
+`C:/Users/ayiz/AppData/Local/Temp/tidesworn-tests-f8803641f50b4741bb8398b7916fa234`.
+`git diff --check` passes. No player saves, exported builds or source art were changed.

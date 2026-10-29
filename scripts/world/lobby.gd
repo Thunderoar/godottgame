@@ -847,6 +847,10 @@ func _build_dock_and_ship() -> void:
 	boarding.position = _layout.approach("jetty_deck")
 	ship_boarding = boarding
 	add_child(boarding)
+	var host := DockHost.new()
+	host.name = "PakRahim"
+	host.position = _layout.approach("jetty_deck") + Vector2(1.7, -0.65)
+	add_child(host)
 	# Lamps on the jetty.
 	for x in [-5.6, 4.5]:
 		var lamp := PointLight2D.new()

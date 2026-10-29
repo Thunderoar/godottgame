@@ -80,7 +80,7 @@ func _make_default(character_id: String) -> Dictionary:
 	return {
 		"version": SAVE_VERSION,
 		"village_progression": VillageProjectDB.default_progression(),
-		"campaign": {"intro_seen": false, "ocean_stage": 1, "arjun_rescued": false, "mei_ling_rescued": false, "ending_seen": false},
+		"campaign": {"intro_seen": false, "dock_welcome_seen": false, "ocean_stage": 1, "arjun_rescued": false, "mei_ling_rescued": false, "ending_seen": false},
 		"character_id": str(character.id),
 		"character_name": str(character.name),
 		"character_title": str(character.title),
@@ -1628,6 +1628,11 @@ func load_game() -> bool:
 		loaded_id = DEFAULT_CHARACTER
 	var fallback := _make_default(loaded_id)
 	data = _merge(fallback, loaded)
+	# Existing journeys have already arrived; a new interrupted opening retains
+	# its explicit false flag and resumes the dock conversation on Continue.
+	var saved_campaign: Variant = loaded.get("campaign", {})
+	if saved_campaign is Dictionary and not saved_campaign.has("dock_welcome_seen"):
+		data.campaign.dock_welcome_seen = bool(saved_campaign.get("intro_seen", false))
 	if not loaded.has("village_progression"):
 		data.village_progression = VillageProjectDB.default_progression(true)
 	_project_work_frames.clear()
@@ -2107,12 +2112,12 @@ func campaign() -> Dictionary:
 func _sanitize_campaign() -> void:
 	var raw: Variant = data.get("campaign", {})
 	var clean: Dictionary = raw if raw is Dictionary else {}
-	data.campaign = {"intro_seen": bool(clean.get("intro_seen", false)), "ocean_stage": clampi(int(clean.get("ocean_stage", 1)), 1, OCEAN_STAGES), "arjun_rescued": bool(clean.get("arjun_rescued", false)), "mei_ling_rescued": bool(clean.get("mei_ling_rescued", false)), "ending_seen": bool(clean.get("ending_seen", false))}
+	data.campaign = {"intro_seen": bool(clean.get("intro_seen", false)), "dock_welcome_seen": bool(clean.get("dock_welcome_seen", clean.get("intro_seen", false))), "ocean_stage": clampi(int(clean.get("ocean_stage", 1)), 1, OCEAN_STAGES), "arjun_rescued": bool(clean.get("arjun_rescued", false)), "mei_ling_rescued": bool(clean.get("mei_ling_rescued", false)), "ending_seen": bool(clean.get("ending_seen", false))}
 	if not bool(data.campaign.arjun_rescued) or not bool(data.campaign.mei_ling_rescued):
 		data.campaign.ending_seen = false
 
 func mark_story_seen(which: String) -> void:
-	if which not in ["intro_seen", "ending_seen"]:
+	if which not in ["intro_seen", "dock_welcome_seen", "ending_seen"]:
 		return
 	if which == "ending_seen" and not friends_reunited():
 		return

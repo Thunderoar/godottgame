@@ -36,7 +36,7 @@ RealmDB currently defines seven landmarks, two tameable pets, six regular enemie
 an arrival rift, checkpoint, shortcut and nine physical onward passages. Terrain and
 collision use the compact bounds; saved discoveries use normalized six-by-six cells.
 
-Milestone 1 now gives the pets home routines and fixed duel stages, adds Wisp the
+Milestone 1 now gives the pets home routines and protected clearings, adds Wisp the
 Waykeeper, saves three memories in a journal, and exposes the one-time rootway
 hollow cache. Realm interactions also cover return, winch, rest and onward travel.
 Milestone 2 organizes six guards into three local pairs: four Darkfire Imps, one
@@ -44,6 +44,10 @@ Ember Watcher and one Rune Keeper. It adds stationary rush warnings, a fixed fan
 a short ground cross, physical cover and dependable retreat with one owned attack
 at a time. Restoration activities and environmental puzzles remain proposed.
 Post-clear changes restore terrain/light and remove hostiles.
+
+The 2026-10-30 presentation update reuses the existing PetBattlePanel for habitat
+duels. Earlier in-world staging descriptions are historical; the protected areas,
+manual choices, world suspension and one-time bond rewards remain in effect.
 
 Use the existing landscape and lifecycle as the foundation, and introduce content
 definitions instead of adding another independent world or global quest system.

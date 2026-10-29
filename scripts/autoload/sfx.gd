@@ -56,6 +56,45 @@ func has_sound(kind: String) -> bool:
 	return _get_stream(kind) != null
 
 
+func dialogue_voice(speaker: String, syllable: int = 0) -> AudioStreamWAV:
+	# Finite, reusable vowel sounds. The dialogue owns its player so interrupting
+	# a line stops its voice without touching combat sounds in the global pool.
+	var low := speaker == "Pak Rahim"
+	var vowel := posmod(syllable, 3)
+	var key := "dialogue/%s/%d" % ["rahim" if low else "adam", vowel]
+	if _cache.has(key): return _cache[key] as AudioStreamWAV
+	var duration := 0.095 + float(vowel) * 0.009
+	var count := int(MIX_RATE * duration)
+	var bytes := PackedByteArray()
+	bytes.resize(count * 2)
+	var phase := 0.0
+	var pitch := 172.0 if low else 218.0
+	var formants: Vector2 = [Vector2(440, 1050), Vector2(620, 1350), Vector2(380, 900)][vowel]
+	for i in count:
+		var t := float(i) / MIX_RATE
+		var progress := t / duration
+		var frequency := pitch + 12.0 * sin(progress * PI) - progress * 15.0
+		phase += TAU * frequency / MIX_RATE
+		var sample := 0.0
+		for harmonic in range(1, 15):
+			var hz := frequency * harmonic
+			var weight := 0.26 / pow(float(harmonic), 1.5)
+			weight += 0.30 * exp(-pow((hz - formants.x) / 160.0, 2))
+			weight += 0.12 * exp(-pow((hz - formants.y) / 220.0, 2))
+			sample += sin(phase * harmonic) * weight
+		# Soft attacks and releases avoid a click on each tiny syllable.
+		var envelope := smoothstep(0.0, 0.012, t) * (1.0 - smoothstep(duration - 0.035, duration, t))
+		var value := int(clampf(sample * envelope * 0.55, -0.95, 0.95) * 32767.0)
+		bytes.encode_s16(i * 2, value)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = MIX_RATE
+	stream.stereo = false
+	stream.data = bytes
+	_cache[key] = stream
+	return stream
+
+
 func _get_stream(kind: String) -> AudioStreamWAV:
 	if _cache.has(kind):
 		return _cache[kind] as AudioStreamWAV
