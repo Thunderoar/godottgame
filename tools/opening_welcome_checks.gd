@@ -61,6 +61,7 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(story._done and completed[0] == 1, "only after the eighth beat's six seconds does the intro complete")
 	story.finish()
 	await game.get_tree().process_frame
+
 	check.call(completed[0] == 1 and GameState.campaign() == campaign and float(GameState.data.get("world_time", 0)) == world_time, "standalone welcome completes once without changing campaign or village time")
 	for t in [0.0, 1.6, 2.5, 3.7, 5.5]:
 		var early := StorySequence.new()
@@ -81,3 +82,31 @@ static func run(game: Game, check: Callable) -> void:
 		check.call(not other._canvas.uses_welcome_shot(), "%s story does not inherit the intro's village welcome" % kind)
 		other.finish()
 	await game.get_tree().process_frame
+
+static func run_dock_arrivals(game: Game, check: Callable) -> void:
+	var snapshot := GameState.data.duplicate(true)
+	var autosave := GameState.autosave_enabled
+	GameState.autosave_enabled = false
+	GameState.data = GameState._make_default("adam")
+	GameState._emit_all()
+	await game._load_lobby(false, true)
+	await game.get_tree().physics_frame
+	await game.get_tree().physics_frame
+	var lobby := game.world as Lobby
+	var deck := lobby._layout.world_footprint("jetty_deck")
+	var planner := ResidentRoutes.new(lobby)
+	check.call(lobby.player.position == lobby._layout.approach("jetty_deck") and lobby._mission_walk_origin == lobby.player.position, "first arrival places Adam and the movement-lesson origin at the resolved dock")
+	check.call(deck.grow(-0.26).has_point(lobby.player.position) and deck.grow(-0.18).has_point(lobby.pet.position), "first-arrival player and companion bodies fit inside the physical deck")
+	check.call(planner.point_clear(lobby.player.position) and planner.point_clear(lobby.pet.position) and planner.segment_clear(lobby.player.position, lobby._layout.approach("jetty_landing")), "dock arrival has clear actor-sized space and an unblocked route ashore")
+	check.call(lobby.get_spawn_position() == lobby._house_position + Vector2(0, 2.9) and lobby._recovery_center == lobby._house_position + Vector2(0, 2.3), "dock first arrival leaves home, defender and recovery anchors owned by the cottage")
+	check.call(lobby.camera.target == lobby.player and GameState.mission_step() == 0, "dock camera follows the correct player while the first lesson waits for input")
+	await game._load_lobby(false)
+	check.call(not game.world.arrive_at_dock and game.player().position == game.world.get_spawn_position(), "an ordinary village return restores the normal home arrival instead of repeating first landfall")
+	GameState.data.recovery_active = true
+	GameState.data.hp = 1
+	await game._load_lobby(false, true)
+	check.call(game.player().position == game.world.get_spawn_position() and game.player().position.distance_to(game.world._recovery_center) < Lobby.RECOVERY_RADIUS, "active recovery keeps Adam at the cottage even if a dock arrival was requested")
+	GameState.data = snapshot
+	GameState._emit_all()
+	await game._load_lobby(false)
+	GameState.autosave_enabled = autosave

@@ -31,6 +31,7 @@ var devastation_progress := 0.0
 var _devastation_started := false
 
 var zone_name := "Seaside Home"
+var arrive_at_dock := false
 var player: Player
 var pet: Pet
 var camera: FollowCamera
@@ -1126,15 +1127,18 @@ func _build_grass_fields(grass_paths: Array) -> void:
 # ------------------------------------------------------------------ actors
 
 func _build_player_and_pet() -> void:
-	_mission_walk_origin = _player_spawn
+	# Only the story's first landfall uses the dock. Home anchors still own
+	# recovery, defenders and subsequent returns, including authored spawn markers.
+	var start := _layout.approach("jetty_deck") if arrive_at_dock and not GameState.recovery_active() else _player_spawn
+	_mission_walk_origin = start
 	player = Player.new()
 	player.name = "Player"
-	player.position = _player_spawn
+	player.position = start
 	add_child(player)
 	pet = Pet.new()
 	pet.name = "Pet"
 	pet.player = player
-	pet.position = _player_spawn + Vector2(-1.2, 0.5)
+	pet.position = start + Vector2(-1.2, 0.5)
 	add_child(pet)
 	player.sleep_changed.connect(_on_sleep_changed)
 	player.hurt_flash.connect(func() -> void:

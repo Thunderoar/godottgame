@@ -68,8 +68,52 @@ func _test_gameplay_handoff(game: Game) -> void:
 		await get_tree().create_timer(0.05).timeout
 	_check(game.world is Lobby and bool(GameState.campaign().get("intro_seen")) and not game._story_active, "touch Continue hands the completed welcome into the real village")
 	_check(game.hud.visible and game.hud.tutorial_guide.visible and game.player() != null and not game.player().controls_locked, "village handoff restores movement and starts its existing tutorial")
+	var lobby := game.world as Lobby
+	var deck := lobby._layout.world_footprint("jetty_deck")
+	_check(lobby.arrive_at_dock and game.player().position.distance_to(lobby._layout.approach("jetty_deck")) < 0.05, "touch Continue starts playable Adam at the actual dock anchor")
+	_check(deck.grow(-0.26).has_point(game.player().position) and deck.grow(-0.18).has_point(lobby.pet.position), "player and companion bodies fit safely within the dock planks")
+	_check(lobby.camera.target == game.player() and lobby.camera.position.distance_to(game.player().position + Vector2(0, -1)) < 1.3, "the first gameplay camera is already following Adam at the dock")
+	_check(GameState.mission_step() == 0, "arriving at the dock never falsely completes Learn to move")
+	var planner := ResidentRoutes.new(lobby)
+	_check(planner.point_clear(game.player().position) and planner.segment_clear(game.player().position, lobby._layout.approach("jetty_landing")), "the first player-sized dock position and route ashore are physically clear")
 	await RenderingServer.frame_post_draw
 	_capture_view("village_handoff")
+	var previous := game.player().position
+	Input.action_press("move_right")
+	var continuous := true
+	for i in 65:
+		await get_tree().physics_frame
+		var current := game.player().position
+		continuous = continuous and current.x >= previous.x - 0.01 and current.distance_to(previous) < 0.3
+		previous = current
+		if i in [0, 20, 40, 64]:
+			await RenderingServer.frame_post_draw
+			_capture_view("dock_walk_%02d" % i)
+	Input.action_release("move_right")
+	_check(continuous and game.player().position.x > lobby._layout.approach("jetty_deck").x + 3.0, "held movement walks continuously off the starting dock toward the village")
+	_check(GameState.mission_step() > 0, "the first lesson completes through actual movement from the dock")
+	# An interrupted introduction takes the same first-arrival route on Continue.
+	GameState.data.campaign.intro_seen = false
+	GameState.save_game()
+	game._clear_world()
+	game._on_continue_requested()
+	await get_tree().process_frame
+	var resumed: StorySequence
+	for node in game.get_children():
+		if node is StorySequence and not node.is_queued_for_deletion(): resumed = node
+	_check(resumed != null, "Continue replays an interrupted introduction before first arrival")
+	if resumed != null: resumed.finish()
+	for i in 160:
+		if game.world is Lobby and not game._transitioning: break
+		await get_tree().create_timer(0.05).timeout
+	_check(game.world is Lobby and game.world.arrive_at_dock and game.player().position.distance_to(game.world._layout.approach("jetty_deck")) < 0.05, "Continue after an unfinished intro also places Adam on the dock")
+	GameState.save_game()
+	game._clear_world()
+	game._on_continue_requested()
+	for i in 160:
+		if game.world is Lobby and not game._transitioning: break
+		await get_tree().create_timer(0.05).timeout
+	_check(game.world is Lobby and not game.world.arrive_at_dock and game.player().position.distance_to(game.world.get_spawn_position()) < 0.05, "Continue after a completed intro keeps the existing saved-journey home arrival")
 
 func _story(game: Game) -> StorySequence:
 	var story := StorySequence.new()

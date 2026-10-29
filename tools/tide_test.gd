@@ -56,6 +56,9 @@ func _ready() -> void:
 	_check(game.call("player") != null, "player exists")
 	_check(get_tree().get_first_node_in_group("pet") != null, "starter pet exists")
 	var village_layout: WorldLayout = game.world._layout
+	_check(game.world.arrive_at_dock and game.player().position.distance_to(village_layout.approach("jetty_deck")) < 0.05, "skipping the new-journey opening starts Adam on the village dock")
+	_check(village_layout.world_footprint("jetty_deck").grow(-0.18).has_point(game.world.pet.position), "the starter companion arrives alongside Adam on the walkable deck")
+	_check(GameState.mission_step() == 0 and game.world._mission_walk_origin == village_layout.approach("jetty_deck"), "dock placement does not complete the first movement lesson before the player moves")
 	var monster_gate := village_layout.position_of("monster_portal")
 	var pet_gate := village_layout.position_of("pet_portal")
 	_check(monster_gate.is_equal_approx(Vector2(34.8, 6.3)) and pet_gate.is_equal_approx(Vector2(41.2, 6.3)), "both portals stand side by side at the northern map edge")

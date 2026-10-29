@@ -1186,3 +1186,42 @@ The final gate's isolated root is
 `C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-0df4d09019f24de3ae988d8c763b3f8b`.
 The earlier 1280 review with the planter's temporary tray-shaped empty pose is
 superseded by these final captures; it is not the final visual evidence.
+
+## First playable village arrival on the dock — 2026-10-29
+
+Game now requests a dock arrival after a new journey's introduction, including
+Skip and Continue of an unfinished intro. Lobby creates Adam at the resolved
+`jetty_deck` approach; the starter companion fits beside him on the planks and the
+camera begins following that player immediately. The world loader identifies the
+destination as "Besut Village · Dock". Movement-lesson distance starts at the
+actual arrival point, so loading into the dock does not count as walking.
+
+The setup flag is not saved. Normal cottage/authored spawn and recovery anchors,
+defender home positions, completed-intro Continue, ordinary world returns and
+ship return ownership keep their existing behavior. Recovery takes precedence
+even if a caller requests the dock. The eight illustrated story pages are unchanged.
+
+Final verification on Windows / Godot 4.7.2.stable.official.ed1daf0bf:
+
+- Canonical isolated gameplay gate: **5,580 checks, PASS**, exit 0. No failure,
+  script-error, error or engine-warning markers; stderr is empty.
+- Native welcome/dock review: **870 checks, PASS**, exit 0, at both **1280×720**
+  and **832×480**. Both stderr files are empty. Actual touch Continue reaches the
+  dock, both actors fit within its footprint, and actor-sized physics probes
+  confirm a clear deck and route to `jetty_landing`.
+- Inspected initial dock framing and successive held-input walking captures.
+  Movement is continuous and the first lesson advances through actual walking.
+- Native Continue checks cover both an unfinished intro (dock arrival after
+  replay) and a completed intro (normal saved-journey arrival). Canonical checks
+  additionally cover ordinary returns, cottage/defender anchor preservation and
+  recovery precedence over a requested dock start.
+- Isolated import completed without script errors; its existing missing Android
+  build-tools diagnostic remains. No Android export or physical-phone test ran.
+- `git diff --check` passed. No normal player data or source maps were changed;
+  logs and captures are external to the checkout.
+
+Evidence under
+`C:/Users/LUQMAN/.codex/visualizations/2026/10/29/01a1869c-c888-7723-b100-09df8dc6fb73/`:
+`dock-gate.log`, `dock-import.log`, `welcome-1280x720-c7ce6573` and
+`welcome-832x480-45ac1b2c`. The isolated gate's full logs are in
+`C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-0aa1f0e71a13437cbc8e9bb90ff162e2`.

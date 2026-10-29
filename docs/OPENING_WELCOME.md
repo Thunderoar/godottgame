@@ -55,3 +55,24 @@ optional 73-frame `-- --sequence` review, mouse/touch Next/Continue/Skip and the
 real Game intro → Lobby → tutorial handoff. Use the Windows isolation wrapper
 and external evidence directories; never launch destructive tests with normal
 player data. Current measured results are recorded in `ACCEPTANCE_TESTS.md`.
+
+## First playable arrival: village dock
+
+After the introduction, Game loads the village with `arrive_at_dock` enabled.
+Adam starts at the resolved `jetty_deck` approach with his companion on the
+planks and the camera already following him. The transition destination reads
+"Besut Village · Dock". Completing the eighth page, automatic advance and Skip
+all use this same first-arrival path. Continue with an unfinished introduction
+also takes this path after replaying the introduction.
+
+This is a one-time world setup option, not saved progression or a change to the
+developer layout. The normal cottage/authored spawn remains the home anchor for
+later village returns and completed-intro Continue. Recovery takes precedence
+over a requested dock arrival. Defender home positions stay cottage-relative.
+The movement lesson begins measuring from Adam's actual dock position, so placing
+him there does not count as player movement; its existing arrows lead ashore.
+
+The canonical gate checks new-journey Skip, deck clearance for both actors,
+the route ashore, ordinary returns and recovery. The focused native fixture
+additionally walks off the dock using held input and captures successive frames,
+then exercises Continue for both unfinished and completed introductions.
