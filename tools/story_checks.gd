@@ -247,9 +247,9 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	friend._physics_process(1.2)
 	check.call(foe.hp < foe.max_hp, "rescued Arjun deals real damage defending BESUT")
 	foe.queue_free()
-	GameState.data.level = 30
+	GameState.data.level = 5
 	GameState.data.portals["drowned_throne"].unlocked = true
-	GameState.start_expedition("drowned_throne")
+	check.call(GameState.start_expedition("drowned_throne"), "the shortened campaign final boss is enterable at level five")
 	await game._load_dungeon("drowned_throne", false)
 	var dungeon := game.world as Dungeon
 	dungeon.boss.take_damage(dungeon.boss.max_hp, Vector2.ZERO, dungeon.player)

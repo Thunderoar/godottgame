@@ -365,6 +365,7 @@ func _build_house() -> void:
 	house_sprite.z_index = 8
 	house.add_child(house_sprite)
 	_add_window_lights(house_sprite, GameState.house_level())
+	_refresh_cottage_ground(house)
 	house_glow = PointLight2D.new()
 	house_glow.texture = PixelArt.light_texture()
 	house_glow.texture_scale = 0.052
@@ -407,7 +408,39 @@ func _build_house() -> void:
 	_markers.append({"position": Vector2(38, 15), "color": Color("#8ac36b"), "size": 3.0, "shape": "disc"})
 
 
+func _refresh_cottage_ground(house: Node2D) -> void:
+	var ground := house.get_node_or_null("CottageGround") as Sprite2D
+	# Imported overrides own their footprint; do not force the procedural yard
+	# beneath a replacement, or route Classic Pixel details into Modern art.
+	if not VisualStyle.is_pixel() or AssetRegistry.get_texture("house_%d" % GameState.house_level()) != null:
+		if ground: ground.visible = false
+		return
+	if ground == null:
+		ground = Sprite2D.new()
+		ground.name = "CottageGround"
+		ground.centered = false
+		ground.offset = Vector2(-192, -96)
+		ground.scale = Vector2.ONE * PixelArt.PX
+		ground.z_as_relative = false
+		ground.z_index = -997
+		house.add_child(ground)
+	var source := PixelArt.cached_texture("monsoon/cottage_ground/v1", MonsoonArt.cottage_ground).get_image()
+	var image := source.duplicate() as Image
+	# Clip a COPY to real water/bounds. Moving a saved house rebuilds this once
+	# on drag completion, never per frame and never by changing source terrain.
+	for y in image.get_height():
+		for x in image.get_width():
+			if is_zero_approx(image.get_pixel(x, y).a): continue
+			var at := house.position + (Vector2(x, y) + ground.offset) * PixelArt.PX
+			if not MAP_RECT.has_point(at) or WorldTerrain.is_sea(at) or (_authored_map and _authored_map.water_cell(Vector2i(at.floor()))):
+				image.set_pixel(x, y, Color.TRANSPARENT)
+	ground.texture = ImageTexture.create_from_image(image)
+	ground.visible = true
+
+
 func _add_window_lights(art: Sprite2D, level: int) -> void:
+	if art.get_parent().has_node("CottageGround"):
+		_refresh_cottage_ground(art.get_parent())
 	var windows := art.get_node_or_null("WarmWindows") as Sprite2D
 	# Independent house replacements retain their own pixels and window layout.
 	if AssetRegistry.get_texture("house_%d" % level) != null:
@@ -1828,6 +1861,7 @@ func refresh_spatial_layout() -> void:
 	for placeable in _placeables:
 		if placeable.placeable_id == "house":
 			_house_position = placeable.position
+			_refresh_cottage_ground(placeable)
 			_recovery_center = _house_position + Vector2(0, 2.3)
 			_player_spawn = _house_position + Vector2(0, 2.9)
 			if is_instance_valid(_recovery_ward): _recovery_ward.position = _recovery_center

@@ -130,3 +130,10 @@ herb, drain-cover, animal-yard and paired sanctuary artwork. Every kind supports
 an explicit `village/<kind>` AssetRegistry override. It uses the existing semantic
 palette, carries no physics bodies or particles, and remains present on Low and
 Reduce Motion. Context and source references: [KAMPUNG_REDESIGN.md](KAMPUNG_REDESIGN.md).
+
+
+## Approved cottage perspective and material pass (2026-10-29)
+
+Classic Pixel cottages now follow the user-approved front-gable reference: the ridge runs away in screen Y, both roof slopes are visible, and thick front eaves frame a recessed entrance. Do not replace this with a flat front-facing trapezoid roof or an extended right wall. The five visual material grades retain the 224×176 frame, existing scale, centered doorway/steps, collision and saved anchors. Character artwork is unchanged.
+
+`MonsoonArt.house()` owns clustered clay tiles, weathered timber, projected roof glazing, front window details and matching night emission. `MonsoonArt.cottage_ground()` supplies a static soil/stone/planting layer through Lobby's `CottageGround`, clipped on a copied image to water/map bounds and rebuilt only at construction/layout changes. Explicit house overrides and Modern Illustrated do not receive this procedural yard. No terrain bake, map topology, ecology RNG, light budget or game rule is changed. The title backdrop reuses the same cached cottage art.

@@ -20,7 +20,10 @@ func _ready() -> void:
 	await get_tree().process_frame
 	_check(game.title_screen != null, "title screen exists")
 	_check(GameState.has_existing_save == false, "clean save state")
-	_check(_has_label(game.title_screen, "PB (Protect BESUT)"), "title reads PB (Protect BESUT)")
+	_check(game.title_screen._home_title.text == "BESUT" and game.title_screen._home_wordmark.text == "P R O T E C T", "main menu keeps the PROTECT BESUT wordmark")
+	for removed_text in ["01  /  THE SHORE WE CALL HOME", "Every great journey\nbegins with a little hope.", "PB (Protect BESUT)", "A HOME WORTH FIGHTING FOR", "Between the forest and the sea, a village is counting on you.", "Build a home. Find a companion. Defend your shore.", "Your first chapter is waiting. Start a new journey."]:
+		_check(not _has_label(game.title_screen, removed_text), "main menu omits removed copy: %s" % removed_text)
+	_check(not game.title_screen._save_summary.visible, "fresh main menu hides the empty save summary")
 	_check(_has_label(game.title_screen, "Created by Qayyim, Farhan & Ayiz"), "creator credit is present")
 	_check(not game.title_screen._heroes.is_visible_in_tree(), "Choose Your Road stays hidden until Start Game")
 	_check(CharacterDB.ids() == ["adam", "arjun", "mei_ling"], "Adam, Arjun and Mei Ling are defined")
@@ -111,7 +114,7 @@ func _ready() -> void:
 	_check(defender_count >= 2, "capable residents are available for defence (%d)" % defender_count)
 
 	var portal_ids := PortalDB.ordered_ids()
-	_check(portal_ids.size() >= 10, "portal campaign has at least ten levels")
+	_check(portal_ids.size() == 3, "portal campaign has exactly three boss levels")
 	var abilities := {}
 	for portal_id in portal_ids:
 		var def := PortalDB.get_portal(portal_id)
@@ -119,7 +122,7 @@ func _ready() -> void:
 		_check(str(def.get("boss_ability", "")) != "", "%s defines a boss ability" % portal_id)
 		_check(PixelArt.enemy_texture(str(def.get("boss_id", "")), true) != null, "%s boss art generates" % portal_id)
 		abilities[str(def.get("boss_ability", ""))] = true
-	_check(abilities.size() >= 4, "boss abilities cover punches, projectiles, charges and area attacks")
+	_check(abilities.size() == 3, "the three campaign bosses have distinct elemental power sets")
 	_check(ItemDB.get_item("pet_food").shop == "pet" and int(ItemDB.get_item("pet_food").price) > 0, "Pet Food is sold in the Pet Shop for Gold")
 	# Keep the periodic rubbish spawner quiet until the dedicated rubbish test.
 	var system := get_tree().get_first_node_in_group("rubbish_system") as RubbishSystem
@@ -417,7 +420,7 @@ func _test_visual_overhaul_contracts() -> void:
 		themes[theme] = true
 		_check(PixelArt.portal_frame_texture(theme, false) != null and PixelArt.portal_frame_texture(theme, true) != null, "%s frame art generates (live and sealed)" % theme)
 		_check(PixelArt.portal_swirl_texture(theme, 0) != null and PixelArt.portal_swirl_texture(theme, 7) != null, "%s swirl frames generate" % theme)
-	_check(themes.size() >= 10, "all ten portal themes are distinct (%d)" % themes.size())
+	_check(themes.size() == 3, "all three active portal themes are distinct (%d)" % themes.size())
 	# 3A: upgrade price has a single source of truth.
 	_check(GameState.pet_upgrade_cost(1) == 80 and GameState.pet_upgrade_cost(3) == 150 and GameState.pet_upgrade_cost(5) == 220, "pet upgrade price comes from GameState.pet_upgrade_cost")
 	# Quality settings sanitise on write.

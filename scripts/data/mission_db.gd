@@ -15,7 +15,7 @@ const STEPS := [
 	{"event": "house", "title": "7. Learn village repairs", "text": "Visit Bram's Construction Shop. Houses shelter residents from sea urchins. Orange builders repair damaged houses and fences by day, working for 10 seconds after arrival. Preview Levels 1-5 and upgrade the main house with diamonds. Its level raises workers, fences and purchased rooftop guns. Buy tower defenses at the Equipment Shop.", "target": "house"},
 	{"event": "feed", "title": "8. Feed your companion", "text": "Buy Pet Food at Nia's Pet Shop, then feed it from the pet shop or Pack. Your pet helps you fight and heal.", "target": "pet"},
 	{"event": "portal", "title": "9. Enter your first dungeon", "text": "Follow the arrows to the Dimension Portal. Enter Twilight Wilds, explore its paths and approach wild pets to challenge them. The arrival rift always leads home.", "target": "portal"},
-	{"event": "boss", "title": "10. Defeat the first boss", "text": "Follow the old stones toward Chaos Citadel. Rest at its lantern to save a checkpoint. Cross the arch to face Shadow & Chaos Fiend; defeating him completes training and opens the onward passages.", "target": "boss"},
+	{"event": "boss", "title": "10. Defeat the first boss", "text": "Follow the old stones toward Chaos Citadel. Rest at its lantern to save a checkpoint. Cross the arch to face Shadow & Chaos Fiend; defeating him completes training and opens the onward passages. The remaining two stages continue Mei Ling's rescue story.", "target": "boss"},
 ]
 
 

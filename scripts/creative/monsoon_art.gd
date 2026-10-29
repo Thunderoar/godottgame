@@ -169,120 +169,225 @@ static func undergrowth(variant: int) -> Image:
 
 static func house(level: int, lights_only: bool = false) -> Image:
 	var img := PixelArt.image(224, 176)
-	var lvl := clampi(level, 1, 5)
-	var width := 102 + (lvl - 1) * 15
-	var wall_h := 55 + (lvl - 1) * 6
-	var left := 112 - width / 2
-	var right := left + width
-	var base := 151
-	var top := base - wall_h
-	var roof_h := 38 + (lvl - 1) * 4
-	var ridge := top - roof_h
-	var wood := WorldPalette.color("wood").darkened(0.12 if lvl == 1 else 0.0)
-	var dark := WorldPalette.color("wood_shadow")
-	var outline := WorldPalette.color("outline")
-	var cream := WorldPalette.color("cream")
-	var roof := WorldPalette.color("roof").darkened(0.14 if lvl == 1 else 0.0)
-	var shutter := WorldPalette.color("sea_deep").lerp(WorldPalette.color("leaf_mint"), 0.28)
-	var window_y := top + 20
-	if lights_only:
-		for wx: int in [left + 17, right - 30]:
-			PixelArt.rect(img, wx + 2, window_y + 2, 9, 12, WorldPalette.color("lantern"))
-			PixelArt.vline(img, wx + 6, window_y + 2, 12, dark)
-			PixelArt.hline(img, wx + 2, window_y + 8, 9, dark)
-		return img
-	var contact := WorldPalette.color("shadow")
-	contact.a = 0.24
-	PixelArt.ellipse(img, 113, base + 6, width / 2 + 12, 9, contact)
-	# Short structural stilts, raised deck, weathered siding and upright beams.
-	for x: int in [left + 4, left + 21, right - 25, right - 8]:
-		PixelArt.rect(img, x, base - 1, 6, 9, dark)
-		PixelArt.rect(img, x, base - 1, 2, 8, wood)
-	PixelArt.rect(img, left, top, width, wall_h - 2, outline)
-	PixelArt.rect(img, left + 2, top + 2, width - 4, wall_h - 6, wood)
-	for row in range(top + 5, base - 12, 7):
-		PixelArt.hline(img, left + 4, row + 5, width - 8, dark)
-		PixelArt.hline(img, left + 4, row, width - 8, wood.lightened(0.12))
-		for x in range(left + 12, right - 8, 26):
-			PixelArt.hline(img, x + posmod(row, 8), row + 3, 9, wood.darkened(0.09))
-	for x: int in [left + 2, right - 7]:
-		PixelArt.rect(img, x, top + 4, 5, wall_h - 8, dark)
-		PixelArt.vline(img, x, top + 5, wall_h - 10, wood.lightened(0.16))
-	# Long ridge with flared end slopes and lapped clay tiles. Never white stripes.
-	for row in roof_h:
-		var t := row / float(roof_h)
-		var span := int(lerpf(width * 0.57, width + 24.0, t))
-		var start := 112 - span / 2
-		PixelArt.hline(img, start, ridge + row, span, outline)
-		if row > 1:
-			PixelArt.hline(img, start + 2, ridge + row, span - 4, roof)
-			for x in range(start + 4, start + span - 4):
-				var tile := posmod(x + (row / 6 % 2) * 5, 11)
-				if row % 6 == 5:
-					PixelArt.px(img, x, ridge + row, roof.darkened(0.17))
-				elif tile < 2:
-					PixelArt.px(img, x, ridge + row, roof.lightened(0.12))
-	PixelArt.rect(img, 112 - int(width * 0.3), ridge, int(width * 0.6), 3, dark)
-	PixelArt.hline(img, 112 - int(width * 0.3) + 2, ridge, int(width * 0.6) - 4, WorldPalette.color("sunlight"))
-	PixelArt.rect(img, left - 12, top - 3, width + 24, 5, dark)
-	PixelArt.hline(img, left - 10, top - 3, width + 20, wood.lightened(0.2))
-	# Deep eave shadow and understated carved ventilation openings.
-	PixelArt.rect(img, left + 6, top + 2, width - 12, 6, dark)
-	for x in range(left + 10, right - 8, 7):
-		PixelArt.rect(img, x, top + 3, 3, 3, outline)
-	# Door stays centred on its original interaction and recovery footprint.
-	PixelArt.rect(img, 101, base - 41, 22, 34, dark)
-	PixelArt.rect(img, 104, base - 38, 16, 29, wood.darkened(0.28))
-	PixelArt.vline(img, 112, base - 36, 25, dark)
-	PixelArt.rect(img, 116, base - 25, 2, 2, cream)
-	for wx: int in [left + 17, right - 30]:
-		PixelArt.rect(img, wx, window_y, 13, 17, outline)
-		PixelArt.rect(img, wx + 2, window_y + 2, 9, 12, WorldPalette.color("sea_deep"))
-		PixelArt.rect(img, wx + 3, window_y + 2, 3, 4, WorldPalette.color("sea_shallow").darkened(0.12))
-		PixelArt.vline(img, wx + 6, window_y + 2, 12, dark)
-		PixelArt.hline(img, wx + 2, window_y + 8, 9, dark)
-		for sx: int in [wx - 6, wx + 14]:
-			PixelArt.rect(img, sx, window_y, 5, 15, shutter)
-			for yy in range(window_y + 3, window_y + 14, 4): PixelArt.hline(img, sx + 1, yy, 3, WorldPalette.color("leaf_mint"))
-		PixelArt.rect(img, wx - 2, window_y + 17, 17, 3, dark)
-		if lvl >= 3:
-			for fx in [wx + 1, wx + 7, wx + 12]:
-				PixelArt.rect(img, fx, window_y + 14, 3, 4, WorldPalette.color("leaf_deep"))
-				PixelArt.rect(img, fx - 1, window_y + 12, 4, 3, WorldPalette.color("flower"))
-	# Sheltered veranda, paired posts, deck and central steps.
-	PixelArt.rect(img, left - 3, base - 9, width + 6, 6, dark)
-	PixelArt.hline(img, left - 3, base - 9, width + 6, wood.lightened(0.28))
-	for x in range(left + 2, right, 9): PixelArt.vline(img, x, base - 8, 4, wood)
-	PixelArt.rect(img, 99, base - 2, 26, 4, wood)
-	PixelArt.rect(img, 96, base + 2, 32, 4, dark)
-	PixelArt.hline(img, 97, base + 2, 30, wood.lightened(0.3))
-	if lvl >= 2:
-		for x: int in [left + 9, right - 14]:
-			PixelArt.rect(img, x, top + 11, 4, wall_h - 17, dark)
-			PixelArt.vline(img, x, top + 12, wall_h - 18, wood.lightened(0.26))
-		PixelArt.rect(img, left + 5, top + 10, width - 10, 3, roof.darkened(0.24))
-		for x: int in [left + 7, right - 33]:
-			PixelArt.rect(img, x, base - 18, 25, 3, wood.lightened(0.16))
-			for rail in range(x, x + 25, 6): PixelArt.rect(img, rail, base - 15, 2, 7, dark)
-	if lvl == 1:
-		PixelArt.rect(img, left + 23, top - 15, 13, 6, roof.darkened(0.27))
-		PixelArt.line(img, left + 8, base - 29, left + 21, base - 20, dark)
-	if lvl >= 3:
-		# Small cooking flue, aligned with the existing high-quality smoke emitter.
-		PixelArt.rect(img, right - 19, ridge - 2, 8, 18, dark)
-		PixelArt.rect(img, right - 18, ridge - 2, 3, 16, WorldPalette.color("stone"))
-		PixelArt.rect(img, right - 21, ridge - 4, 12, 3, outline)
-	if lvl >= 4:
-		for x: int in [left - 7, right + 2]:
-			PixelArt.rect(img, x, base - 8, 7, 9, roof.darkened(0.2))
-			PixelArt.ellipse(img, x + 3, base - 11, 8, 5, WorldPalette.color("leaf_deep"))
-			PixelArt.ellipse(img, x + 1, base - 13, 6, 3, WorldPalette.color("leaf_mint"))
-	if lvl == 5:
-		for x: int in [left + 13, right - 17]:
-			PixelArt.vline(img, x, top + 5, 8, dark)
-			PixelArt.rect(img, x - 3, top + 11, 7, 10, outline)
-			PixelArt.rect(img, x - 2, top + 12, 5, 7, WorldPalette.color("lantern"))
+	if not lights_only:
+		# Gable-end front: the ridge runs into the scene, not across the facade.
+		for x in [49, 76, 144, 171]:
+			PixelArt.rect(img, x, 147, 5, 12, Color("34434a"))
+			PixelArt.rect(img, x + 1, 147, 2, 11, Color("99714e"))
+		_house_poly(img, [[44,120],[112,91],[180,120],[180,149],[44,149]], Color("34434a"))
+		_house_poly(img, [[48,120],[112,95],[176,120],[176,145],[48,145]], Color("99714e"))
+		for y in [123,132,141]:
+			PixelArt.rect(img, 49, y, 126, 1, Color("725d48"))
+		# A thick lintel and shaded gable give the doorway real recess.
+		_house_poly(img, [[50,120],[112,95],[174,120],[170,124],[112,101],[54,124]], Color("b88b58"))
+		PixelArt.rect(img, 99, 109, 27, 36, Color("35413c"))
+		PixelArt.rect(img, 102, 113, 21, 31, Color("454a3e"))
+		PixelArt.rect(img, 103, 114, 4, 29, Color("303b36"))
+		PixelArt.rect(img, 123, 113, 3, 31, Color("c79a61"))
+		PixelArt.rect(img, 99, 109, 27, 4, Color("cd9c62"))
+		# Low front windows stay below the projected eaves, not on a side wall.
+		for x in [63, 146]:
+			PixelArt.rect(img, x-2, 124, 20, 18, Color("34434a"))
+			PixelArt.rect(img, x, 126, 16, 13, Color("49736b"))
+			PixelArt.rect(img, x+7, 126, 2, 13, Color("34434a"))
+			PixelArt.rect(img, x, 132, 16, 2, Color("34434a"))
+		# Roof planes reproduce the supplied projection, not the reference pixels.
+		_house_poly(img, [[36,56],[112,21],[188,56],[188,126],[112,94],[36,126]], Color("34434a"))
+		_house_poly(img, [[40,59],[108,27],[108,91],[40,122]], Color("bd7e52"))
+		_house_poly(img, [[116,27],[184,59],[184,122],[116,91]], Color("98634e"))
+		# Parallel courses travel along the same projected roof directions.
+		for y in [42,55,68,81]:
+			_house_poly(img, [[42,y+31],[106,y+1],[106,y+5],[42,y+35]], Color("d0925e"))
+			_house_poly(img, [[118,y+1],[182,y+31],[182,y+35],[118,y+5]], Color("ad7654"))
+		# Longitudinal seams read as a pitched volume even without fine texture.
+		for x in [57,75,93]:
+			var yy := 59 - int((x-40)*32.0/68.0)
+			PixelArt.rect(img,x,yy,1,60,Color("9d654b"))
+		for x in [132,150,168]:
+			var yy := 27 + int((x-116)*32.0/68.0)
+			PixelArt.rect(img,x,yy,1,60,Color("805344"))
+		# Paired inset roof panels follow each roof plane, not a front rectangle.
+		_house_poly(img, [[57,64],[84,51],[84,74],[57,87]], Color("8b614c"))
+		_house_poly(img, [[60,65],[81,55],[81,72],[60,82]], Color("c99468"))
+		_house_poly(img, [[140,51],[167,64],[167,87],[140,74]], Color("704f43"))
+		_house_poly(img, [[143,55],[164,65],[164,82],[143,72]], Color("ab7959"))
+		# Ridge spine recedes in screen Y. Front eaves reveal their thickness.
+		PixelArt.rect(img, 108, 24, 8, 69, Color("80523f"))
+		PixelArt.rect(img, 109, 25, 3, 66, Color("e4b47a"))
+		PixelArt.rect(img, 113, 26, 2, 65, Color("b8774d"))
+		_house_poly(img, [[37,122],[109,90],[112,95],[40,128]], Color("694d3e"))
+		_house_poly(img, [[112,95],[115,90],[187,122],[184,128]], Color("5a4a3e"))
+		_house_poly(img, [[40,122],[109,91],[110,94],[41,125]], Color("e1ad72"))
+		_house_poly(img, [[114,94],[115,91],[184,122],[183,125]], Color("c98d5e"))
+		# Shallow porch top / centered steps; no projecting side return.
+		PixelArt.rect(img, 42, 147, 140, 6, Color("c09a68"))
+		PixelArt.rect(img, 42, 153, 140, 5, Color("665943"))
+		PixelArt.rect(img, 44, 152, 136, 2, Color("d0ad77"))
+		PixelArt.rect(img, 100, 154, 26, 4, Color("99714e"))
+		PixelArt.rect(img, 97, 158, 32, 4, Color("c09a68"))
+		PixelArt.rect(img, 94, 162, 38, 3, Color("71674d"))
+		_finish_house(img, level)
+	else:
+		for x in [63,146]:
+			PixelArt.rect(img, x+1, 127, 6, 5, Color("f0c57d"))
+			PixelArt.rect(img, x+9, 127, 6, 5, Color("f0c57d"))
+			PixelArt.rect(img, x+1, 134, 6, 4, Color("d9aa68"))
+			PixelArt.rect(img, x+9, 134, 6, 4, Color("d9aa68"))
+		_house_poly(img, [[62,66],[79,58],[79,72],[62,80]], Color("d9b979"))
+		_house_poly(img, [[145,58],[162,66],[162,80],[145,72]], Color("c8a268"))
+		_house_poly(img, [[62,72],[79,64],[79,66],[62,74]], Color.TRANSPARENT)
+		_house_poly(img, [[145,64],[162,72],[162,74],[145,66]], Color.TRANSPARENT)
+		PixelArt.vline(img, 70, 62, 14, Color.TRANSPARENT)
+		PixelArt.vline(img, 153, 64, 12, Color.TRANSPARENT)
 	return img
+
+# Geometry is locked to the user-approved reference-led cottage proof.
+static func _house_poly(img: Image, points: Array, ink: Color) -> void:
+	var vertices: Array = []
+	for point in points:
+		vertices.append(Vector2i(point[0], point[1]))
+	PixelArt._fill_polygon(img, vertices, ink)
+
+static func _finish_house(img: Image, level: int) -> void:
+	var tier := clampi(level, 1, 5)
+	var clay := WorldPalette.color("roof").lerp(Color("b87850"), 0.48)
+	var timber := WorldPalette.color("wood").lerp(Color("ac8959"), 0.42)
+	var timber_dark := WorldPalette.color("wood_shadow").lerp(Color("49584b"), 0.30)
+	# Two roof planes, each textured in its own projected material coordinates.
+	# This is discrete clustered colour, not image noise or a gradient overlay.
+	for side in 2:
+		for x in range(40, 185):
+			var u := float(x - 40) / 68.0 if side == 0 else float(184 - x) / 68.0
+			if u < 0.0 or u >= 1.0: continue
+			var back := 59.0 - u * 32.0
+			for y in range(27, 123):
+				var v := float(y) - back
+				if v < 0.0 or v >= 63.0: continue
+				var row := int(v) / 8
+				var seam := posmod(int((1.0 - u) * 68.0) + (row % 2) * 4, 9)
+				var along := posmod(int(v), 8)
+				var tile := int((1.0 - u) * 68.0 + (row % 2) * 4) / 9
+				var variation := float(posmod(tile * 13 + row * 7 + tier, 5) - 2) * 0.024
+				var ink := clay.lightened(variation + 0.03) if side == 0 else clay.darkened(0.19 - variation)
+				if along == 7: ink = ink.darkened(0.20)
+				elif along == 0 and seam > 1: ink = ink.lightened(0.12)
+				elif seam == 0: ink = ink.darkened(0.12)
+				elif seam == 1 and along < 6: ink = ink.lightened(0.05)
+				# Occasional coherent edge wear, not all-over pixel confetti.
+				if posmod(tile + row * 3, 13) == 0 and along == 1 and seam in [4, 5]: ink = ink.lightened(0.13)
+				PixelArt.px(img, x, y, ink)
+	# Warm varied timber stays under the roof. Existing openings remain dark.
+	for y in range(96, 147):
+		for x in range(48, 177):
+			var original := img.get_pixel(x, y)
+			if original != Color("99714e") and original != Color("725d48"): continue
+			var row := posmod(y - 97, 7)
+			var board := (y - 97) / 7
+			var ink := timber.lightened(float(posmod(board, 3) - 1) * 0.035)
+			if row == 6: ink = timber_dark
+			elif row == 0: ink = ink.lightened(0.15)
+			elif row == 3 and posmod(x + board * 11, 29) < 7: ink = ink.darkened(0.10)
+			if posmod(x + (board % 2) * 14, 38) == 0: ink = ink.darkened(0.16)
+			PixelArt.px(img, x, y, ink)
+	# Real roof glazing: inset frames follow the SAME slopes as their tiles.
+	_house_poly(img, [[56,63],[85,49],[85,76],[56,89]], timber_dark)
+	_house_poly(img, [[59,64],[82,53],[82,74],[59,85]], timber.lightened(0.21))
+	_house_poly(img, [[62,66],[79,58],[79,72],[62,80]], Color("3c6663"))
+	_house_poly(img, [[64,66],[68,64],[68,77],[64,79]], Color("79a99a"))
+	PixelArt.vline(img, 70, 62, 14, timber_dark)
+	_house_poly(img, [[62,72],[79,64],[79,66],[62,74]], timber_dark)
+	_house_poly(img, [[139,49],[168,63],[168,89],[139,76]], timber_dark)
+	_house_poly(img, [[142,53],[165,64],[165,85],[142,74]], timber)
+	_house_poly(img, [[145,58],[162,66],[162,80],[145,72]], Color("385d5c"))
+	_house_poly(img, [[147,60],[151,62],[151,74],[147,72]], Color("6d9484"))
+	PixelArt.vline(img, 153, 64, 12, timber_dark)
+	_house_poly(img, [[145,64],[162,72],[162,74],[145,66]], timber_dark)
+	# Ridge caps and thick front eaves; neither changes the approved contour.
+	for y in range(27, 88, 8):
+		PixelArt.rect(img, 109, y, 6, 1, clay.darkened(0.36))
+		PixelArt.rect(img, 109, y + 1, 3, 2, clay.lerp(WorldPalette.color("sunlight"), 0.65))
+	for x in [48, 173]:
+		PixelArt.vline(img, x, 125, 21, timber_dark)
+		PixelArt.vline(img, x + 1, 126, 19, timber.lightened(0.17))
+	# Door jamb, inner recess, threshold and selective hardware highlights.
+	PixelArt.rect(img, 100, 112, 2, 31, timber_dark)
+	PixelArt.rect(img, 124, 114, 2, 29, timber.lightened(0.20))
+	PixelArt.rect(img, 103, 141, 20, 3, timber_dark.darkened(0.25))
+	PixelArt.hline(img, 102, 144, 23, timber.lightened(0.22))
+	for wx in [63, 146]:
+		PixelArt.rect(img, wx + 1, 127, 3, 3, Color("88b8a4"))
+		PixelArt.hline(img, wx - 2, 141, 20, timber_dark)
+		PixelArt.hline(img, wx - 1, 142, 18, timber.lightened(0.18))
+	# Porch boards, risers and wear are aligned to the horizontal front.
+	for x in range(46, 180, 8):
+		PixelArt.vline(img, x, 148, 4, timber_dark.lightened(0.15))
+		PixelArt.vline(img, x + 1, 148, 3, timber.lightened(0.20))
+	for y in [154, 158, 162]:
+		var width: int = 26 + ((y - 154) / 4) * 6
+		PixelArt.hline(img, 113 - width / 2, y, width, timber.lightened(0.25))
+	# Useful threshold props stay inside the existing building silhouette.
+	PixelArt.rect(img, 84, 143, 10, 9, timber_dark)
+	PixelArt.rect(img, 85, 144, 8, 7, Color("a28b58"))
+	for y in [145, 148, 151]: PixelArt.hline(img, 85, y, 8, Color("786841"))
+	for x in [87, 91]: PixelArt.vline(img, x, 144, 7, Color("c0a46b"))
+	PixelArt.rect(img, 158, 144, 8, 8, clay.darkened(0.20))
+	PixelArt.hline(img, 157, 143, 10, clay.lightened(0.13))
+	PixelArt.ellipse(img, 161, 141, 5, 3, WorldPalette.color("leaf_deep"))
+	PixelArt.ellipse(img, 160, 139, 3, 2, WorldPalette.color("leaf"))
+	if tier >= 2:
+		for x in [56, 167]:
+			PixelArt.hline(img, x, 134, 6, timber.lightened(0.24))
+	if tier >= 3:
+		for x in [66, 151]:
+			PixelArt.rect(img, x - 3, 143, 12, 3, timber_dark)
+			PixelArt.hline(img, x - 2, 142, 10, WorldPalette.color("leaf_deep"))
+			for fx in [x, x + 4]: PixelArt.rect(img, fx, 140, 2, 2, WorldPalette.color("flower"))
+	if tier >= 4:
+		PixelArt.hline(img, 102, 110, 23, WorldPalette.color("gold").darkened(0.12))
+	if tier == 5:
+		for x in [97, 126]:
+			PixelArt.vline(img, x, 115, 8, timber_dark)
+			PixelArt.rect(img, x - 1, 120, 4, 6, Color("b28b58"))
+
+static func cottage_ground() -> Image:
+	var img := PixelArt.image(384, 256)
+	var soil := WorldPalette.color("path_edge").lerp(WorldPalette.color("wood_shadow"), 0.22)
+	var rim := soil
+	rim.a = 0.12
+	# Interlocking soil masses: broken organic margins rather than a solid polygon.
+	for patch in [[192,83,118,30],[148,102,63,30],[231,111,58,31],[192,136,39,53]]:
+		PixelArt.ellipse(img, patch[0],patch[1],patch[2],patch[3],rim)
+	var worn := soil.lightened(0.16)
+	worn.a = 0.25
+	for patch in [[192,84,105,22],[190,114,28,40],[183,163,27,28]]:
+		PixelArt.ellipse(img,patch[0],patch[1],patch[2],patch[3],worn)
+	var shadow := WorldPalette.color("shadow")
+	shadow.a = 0.18
+	PixelArt.ellipse(img,192,66,98,10,shadow)
+	var stone := WorldPalette.color("stone").lerp(WorldPalette.color("path"), 0.43)
+	stone.a = 0.72
+	for p in [Vector2i(190,91),Vector2i(194,114),Vector2i(187,139),Vector2i(183,162)]:
+		_house_poly(img, [[p.x-12,p.y],[p.x-8,p.y-4],[p.x+9,p.y-3],[p.x+13,p.y+2],[p.x+7,p.y+5],[p.x-11,p.y+4]], stone)
+		PixelArt.hline(img,p.x-7,p.y-3,15,Color(stone,0.80).lightened(0.09))
+		PixelArt.hline(img,p.x-8,p.y+4,15,Color(stone,0.50).darkened(0.15))
+	# Independently seeded decorative clusters; zero gameplay RNG consumption.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 40173
+	for bed in [Vector2i(89,103),Vector2i(280,97),Vector2i(123,132),Vector2i(253,137)]:
+		for sprig in 6:
+			var x: int = int(bed.x) + rng.randi_range(-13,13)
+			var y: int = int(bed.y) + rng.randi_range(-7,7)
+			var leaf := WorldPalette.color("leaf").lerp(WorldPalette.color("grass_shadow"),0.4)
+			leaf.a = 0.68
+			_house_poly(img,[[x-4,y],[x-3,y-5],[x,y-2],[x+2,y-7],[x+5,y],[x+1,y+2]],leaf)
+			PixelArt.hline(img,x,y-2,3,Color(WorldPalette.color("leaf_sun"),0.65))
+			if sprig == 2:
+				PixelArt.rect(img,x,y-3,2,2,Color(WorldPalette.color("flower"),0.78))
+	for p in [Vector2i(123,94),Vector2i(271,116),Vector2i(151,151)]:
+		PixelArt.rect(img,p.x,p.y,7,2,Color(soil,0.45))
+		PixelArt.rect(img,p.x+2,p.y-1,3,1,Color(soil,0.35))
+	return img
+
 
 static func prop(kind: String) -> Texture2D:
 	return PixelArt.cached_texture("monsoon/props/" + kind, func() -> Image:

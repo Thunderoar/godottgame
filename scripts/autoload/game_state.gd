@@ -1660,6 +1660,44 @@ func _merge(base: Dictionary, incoming: Dictionary) -> Dictionary:
 	return out
 
 
+func _sanitize_portals() -> void:
+	# Preserve historical records, but expose only the three active campaign gates.
+	var states: Dictionary = data.get("portals", {})
+	var ids := PortalDB.ordered_ids()
+	for id in ids:
+		var raw: Variant = states.get(id, {})
+		var state: Dictionary = raw if raw is Dictionary else {}
+		states[id] = {
+			"unlocked": id == ids.front() or bool(state.get("unlocked", false)),
+			"cleared": bool(state.get("cleared", false)),
+			"attempts": maxi(0, int(state.get("attempts", 0))),
+		}
+	for id in ids:
+		if bool(states[id].cleared):
+			states[id].unlocked = true
+			var next_id := str(PortalDB.get_portal(id).get("unlocks", ""))
+			if next_id != "":
+				states[next_id].unlocked = true
+	var final_id: String = ids.back()
+	for id in PortalDB.RETIRED_IDS:
+		var old: Variant = states.get(id, {})
+		if old is Dictionary and (bool(old.get("unlocked", false)) or bool(old.get("cleared", false))):
+			states[final_id].unlocked = true
+	# An in-flight retired realm resumes at the final gate without losing its bag.
+	var expedition: Variant = data.get("expedition", {})
+	if expedition is Dictionary and bool(expedition.get("active", false)):
+		var portal_id := str(expedition.get("portal_id", ""))
+		if portal_id in PortalDB.RETIRED_IDS:
+			expedition.portal_id = final_id
+			states[final_id].unlocked = true
+			data.expedition = expedition
+		elif PortalDB.get_portal(portal_id).is_empty():
+			_clear_expedition()
+	else:
+		_clear_expedition()
+	data.portals = states
+
+
 func _sanitize() -> void:
 	_sanitize_realm_progress()
 	_sanitize_campaign()
@@ -1711,6 +1749,7 @@ func _sanitize() -> void:
 		data.pets = {}
 	if not (data.get("portals", {}) is Dictionary):
 		data.portals = {}
+	_sanitize_portals()
 	if not (data.get("settlement_layout", {}) is Dictionary):
 		data.settlement_layout = {}
 	if not (data.get("pet_battles", {}) is Dictionary):
