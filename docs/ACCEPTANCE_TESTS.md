@@ -2127,3 +2127,69 @@ Evidence:
 (successful import). `docs/SEA_URCHIN_ARRIVAL.md` records runtime ownership and
 the isolated `-Urchin -Capture` review route. The optional GIF preview assembles
 eight rendered storyboard samples; it is not a continuous gameplay recording.
+
+## Individual fire portals and coordinated shore/forest reveal (2026-10-30)
+
+Every newly allocated village fire monster, including emergency additions, now
+has its own small ember portal at a separately validated land position. Cached
+pixel poses show ember, opening seam, core, narrow crossing, low reformation and
+tree attention. Portals seal behind their individual occupants. Saved survivors
+restore directly without replaying an entrance. Fire combat and burning remain
+silent, with existing stats, targeting, collision, damage timing and rewards.
+
+Game coordinates one first-arrival presentation: shore-only remains eight seconds,
+fire-only lasts 10.5 seconds, and both first introductions share 14.5 seconds with
+a covered shore-to-forest cut, one Skip control and one return to Adam. Both species
+stay cosmetic until the final delivery. All shore followers finish landing before
+handoff; fire feet, facing, rest textures and opacity match their real bodies.
+Later arrivals and reinforcements use an eight-world-second environmental warning
+without taking controls or camera. Mixed captions show separate species bearings
+and reserve space clear of the objectives.
+
+GameState owns independent seen flags, stable pending batch identities, fixed
+numeric fire points and warning origins. The ordinary wave and emergency fire
+reservations save independently. Exact-batch delivery captures survivors and
+completion in one synchronous transaction. Legacy saves/pending waves migrate;
+blocked points, duplicate callbacks, dawn and replaced worlds cannot duplicate
+enemies or mark unsuccessful introductions seen. The historical 64-tree forest
+fixture and construction RNG remain unchanged. Variable night profiles are still
+a separate proposal.
+
+The canonical gate now includes `tools/fire_arrival_checks.gd`. The Windows
+`-Fire` review runs both the existing sea-urchin suite and new fire/combined checks;
+`-Capture -Resolution 832x480` / `1280x720` produce consecutive storyboard samples,
+the bridge, follower reveal, repeat warning, low effects and live Reduce Motion.
+Coverage includes one/three/eight/24 fires, six reinforcements, Skip across both
+chapters, actual file save/load, legacy/malformed records, pending reinforcement
+restoration, blocked handoff, world replacement, dawn, one real ignition, continued
+burning after the attacker dies, watering and exactly one death payment.
+
+Verification results for the completed implementation are recorded below.
+See `docs/FIRE_MONSTER_ARRIVAL.md` for runtime ownership and review commands.
+
+- Canonical isolated gameplay on the combined checkout completed **6,153 checks,
+  PASS, exit 0**, with an empty error log and no failure/error markers. Evidence:
+  `C:/Users/ayiz/AppData/Local/Temp/tidesworn-tests-03533bc05371478294e5ca8eae39bd5f`.
+  This includes the concurrent Dimension Portal origin work as well as both
+  sea-urchin and fire/combined arrival suites.
+- Native Windows Godot 4.7.2 Compatibility/OpenGL captures at **832x480** and
+  **1280x720** each completed **111 checks, PASS, exit 0**, with empty error logs.
+  Consecutive samples were inspected for the crossing, sealed lead portal,
+  individually staggered followers, camera return, low/Reduce Motion and the
+  nonoverlapping, separately directed repeat warning.
+- Focused evidence: `C:/Users/ayiz/AppData/Local/Temp/tidesworn-tests-891d42ea69084154a181d8f114f2a09f`
+  (832x480), `C:/Users/ayiz/AppData/Local/Temp/tidesworn-tests-3ead33ce2853457eafd5c28267f04c64`
+  (1280x720). These runs include the final all-shore-followers-landed handoff check.
+- An isolated import completed with exit 0. The existing Android build-tools
+  directory diagnostic remains; no release export or physical-phone validation
+  is claimed. Reviews use Dummy audio; no listening-quality claim is made.
+- Initial focused attempts exposed a test type-inference error, overly exact JSON
+  float comparison and an injected collider removed by suspended-parent ownership.
+  Those fixtures were corrected and rerun. Render inspection also corrected the
+  lead canopy overlap, warning placement/bearings and completed shore-group pose.
+- Earlier full-suite runs overlapped unfinished Dimension Portal changes. After
+  their compile/fixture corrections, the final run above passed. Existing village
+  combat fixtures explicitly complete the new warning before examining live
+  attackers; the day/night cleanup also captures its removed shore threats so a
+  later fixture cannot resurrect them from an older snapshot. `git diff --check`
+  passes; Git reports existing LF/CRLF conversion notices in other modified files.

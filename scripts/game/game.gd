@@ -725,14 +725,20 @@ func finish_ship_return(boarding: ShipDeparture) -> void:
 	_check_campaign_ending()
 
 
-func try_urchin_introduction(home: Lobby, fire_count: int, points: PackedVector2Array) -> bool:
+func try_urchin_introduction(home: Lobby, fire_count: int, points: PackedVector2Array, fire_points: PackedVector2Array = PackedVector2Array()) -> bool:
 	if world != home or _transitioning or _story_active or _sailing or _game_over or _defeat_pending or _input_locked or hud.any_modal_open() or is_instance_valid(home_interior): return false
-	if is_instance_valid(_urchin_arrival) or is_instance_valid(_dock_conversation) or home._settlement_editor.active or GameState.recovery_active() or GameState.emergency_active(): return false
-	if not bool(GameState.campaign().get("dock_welcome_seen", false)) or bool(GameState.campaign().get("urchin_intro_seen", false)): return false
-	if points.is_empty() or not GameState.is_night() or not is_instance_valid(player()) or player().dead or player().sleeping: return false
+	if is_instance_valid(_urchin_arrival) or is_instance_valid(home._fire_cue) or is_instance_valid(_dock_conversation) or home._settlement_editor.active or GameState.recovery_active() or GameState.emergency_active(): return false
+	if not bool(GameState.campaign().get("dock_welcome_seen", false)): return false
+	var shore_intro := not points.is_empty() and not bool(GameState.campaign().get("urchin_intro_seen", false))
+	var fire_intro := fire_count > 0 and not bool(GameState.campaign().get("fire_intro_seen", false))
+	if not shore_intro and not fire_intro: return false
+	if not GameState.is_night() or not is_instance_valid(player()) or player().dead or player().sleeping: return false
 	# A cinematic must not hide urgent damage elsewhere in the village.
 	if not home.capture_monsters().is_empty() or home._forest_trees.any(func(tree: ForestTree) -> bool: return is_instance_valid(tree) and tree.burning): return false
-	GameState.stage_home_arrival(fire_count, points)
+	if fire_count > 0 and fire_points.is_empty(): fire_points = home.fire_entry_points(fire_count)
+	if points.is_empty() and fire_points.is_empty(): return false
+	var pending := GameState.stage_home_arrival(fire_count, points, false, fire_points)
+	if pending.is_empty(): return false
 	_urchin_world_mode = home.process_mode
 	_urchin_hud_visible = hud.visible
 	_story_active = true
@@ -743,10 +749,9 @@ func try_urchin_introduction(home: Lobby, fire_count: int, points: PackedVector2
 	hud.visible = false
 	var arrival := UrchinArrival.new()
 	arrival.home = home
-	arrival.points = points
-	arrival.fires = fire_count
-	arrival.night = GameState.night_number()
-	arrival.serial = GameState.journey_serial
+	arrival.configure(pending)
+	arrival.introduce_shore = shore_intro
+	arrival.introduce_fire = fire_intro and not arrival.fire_points.is_empty()
 	arrival.full_intro = true
 	_urchin_arrival = arrival
 	arrival.completed.connect(_on_urchin_introduction_completed.bind(arrival))
