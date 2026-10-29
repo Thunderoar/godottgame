@@ -77,8 +77,8 @@ rg -q '^--- opening fishing: [0-9]+ checks, PASS ---$' "$review/review.log"
 
 Inspect the captures under the printed external test root; exit zero alone does not
 prove visual quality. Timed captures use exact `_page_time` values, not variable
-wall-clock screenshots. The earlier plain illustration in beat two is intentionally
-unchanged; its more schematic style is still visible at the cut.
+wall-clock screenshots. Beat two was subsequently rebuilt in the same classic
+pixel direction; see [OPENING_KRAKEN_REDESIGN.md](OPENING_KRAKEN_REDESIGN.md).
 
 ## Evidence and limits
 

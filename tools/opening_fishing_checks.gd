@@ -40,11 +40,11 @@ static func run(game: Game, check: Callable) -> void:
 	GameSettings.set_effects_quality(quality, false)
 	story._page_time = 5.99
 	story._process(0.02)
-	check.call(story.page == 1 and story._page_time == 0.0 and not story._canvas.uses_fishing_shot(), "six-second auto advance resets time and hands beat two to the unchanged renderer")
+	check.call(story.page == 1 and story._page_time == 0.0 and story._canvas.uses_kraken_shot(), "six-second auto advance resets time and hands beat two to the pixel Kraken renderer")
 	for page in range(1, 6):
 		story.page = page
 		story._render()
-		check.call(not story._canvas.uses_fishing_shot(), "intro page %d retains its existing rendering path" % page)
+		check.call(not story._canvas.uses_fishing_shot(), "intro page %d does not inherit the peaceful first shot" % page)
 	for kind in ["arjun", "mei", "ending"]:
 		story.kind = kind
 		story.page = 0

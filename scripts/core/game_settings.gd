@@ -17,7 +17,7 @@ extends Node
 ##   screen_shake             bool                     default true
 ##   auto_pause_on_focus_loss bool                     default true
 ##   reduce_motion            bool                     default false
-##   visual_style             String modern|pixel     default "modern" (restart)
+##   visual_style             String modern|pixel     default "pixel" (restart)
 ##   effects_quality          String low|med|high     default "high"
 ##
 ## This node applies what it owns: the Master bus (volume + mute) and the window
@@ -59,7 +59,7 @@ const DEFAULTS := {
         "auto_pause_on_focus_loss": true,
         "reduce_motion": false,
         "effects_quality": "high",
-        "visual_style": "modern",
+        "visual_style": "pixel",
 }
 
 ## Override before `load_settings()` to redirect persistence (tests do this).
@@ -67,7 +67,7 @@ var config_path := CONFIG_PATH
 
 var _values: Dictionary = DEFAULTS.duplicate(true)
 # Latch once at startup: never mix art families or rebuild a running world.
-var _active_visual_style := "modern"
+var _active_visual_style := "pixel"
 
 
 func _ready() -> void:
@@ -303,7 +303,7 @@ func set_camera_zoom(value: float, persist: bool = true) -> void:
 
 
 func visual_style() -> String:
-        return str(_values.get("visual_style", "modern"))
+        return str(_values.get("visual_style", DEFAULTS["visual_style"]))
 
 
 func set_visual_style(value: String, persist: bool = true) -> void:

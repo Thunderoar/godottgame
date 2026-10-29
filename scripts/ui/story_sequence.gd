@@ -185,6 +185,7 @@ func _process(delta: float) -> void:
 		advance()
 
 func _render() -> void:
+	_canvas.prepare_page()
 	_caption.text = str(lines()[page])
 	_next.text = "Continue" if page == lines().size() - 1 else "Next"
 
@@ -206,10 +207,13 @@ func finish() -> void:
 class StoryCanvas extends Control:
 	var sequence: StorySequence
 	var _fishing: OpeningFishingRenderer
+	var _kraken: OpeningKrakenRenderer
+	var _wreck: OpeningWreckRenderer
 	func _ready() -> void:
 		texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		if is_instance_valid(sequence) and sequence.kind == "intro":
 			_fishing = OpeningFishingRenderer.new()
+			_kraken = OpeningKrakenRenderer.new()
 		GameSettings.changed.connect(_on_presentation_changed)
 	func _on_presentation_changed(key: String) -> void:
 		if key in ["reduce_motion", "effects_quality"]: queue_redraw()
@@ -217,6 +221,19 @@ class StoryCanvas extends Control:
 		return is_instance_valid(sequence) and sequence.kind == "intro" and sequence.page == 0
 	func fishing_state() -> Dictionary:
 		return OpeningFishingRenderer.sample(sequence._page_time, GameSettings.reduce_motion(), GameSettings.effects_quality())
+	func uses_kraken_shot() -> bool:
+		return is_instance_valid(sequence) and sequence.kind == "intro" and sequence.page == 1
+	func kraken_state() -> Dictionary:
+		return OpeningKrakenRenderer.sample(sequence._page_time, GameSettings.reduce_motion(), GameSettings.effects_quality())
+	func uses_wreck_shot() -> bool:
+		return is_instance_valid(sequence) and sequence.kind == "intro" and sequence.page == 2
+	func prepare_page() -> void:
+		# Warm on entering this page, not in _draw or before the title curtain exists.
+		if uses_wreck_shot() and _wreck == null:
+			if _kraken == null: _kraken = OpeningKrakenRenderer.new()
+			_wreck = OpeningWreckRenderer.new(_kraken)
+	func wreck_state() -> Dictionary:
+		return OpeningWreckRenderer.sample(sequence._page_time, GameSettings.reduce_motion(), GameSettings.effects_quality())
 	func _draw() -> void:
 		if not is_instance_valid(sequence): return
 		if uses_fishing_shot():
@@ -225,6 +242,20 @@ class StoryCanvas extends Control:
 			if is_instance_valid(sequence._caption_panel): bottom = sequence._caption_panel.position.y - 10.0
 			if _fishing != null:
 				_fishing.draw(self, Rect2(Vector2.ZERO, Vector2(size.x, maxf(1, bottom))), fishing_state())
+			return
+		if uses_kraken_shot():
+			draw_rect(Rect2(Vector2.ZERO, size), Color("#102733"))
+			var bottom := size.y - 184.0
+			if is_instance_valid(sequence._caption_panel): bottom = sequence._caption_panel.position.y - 10.0
+			if _kraken != null:
+				_kraken.draw(self, Rect2(Vector2.ZERO, Vector2(size.x, maxf(1, bottom))), kraken_state())
+			return
+		if uses_wreck_shot():
+			draw_rect(Rect2(Vector2.ZERO, size), Color("#102733"))
+			var bottom := size.y - 184.0
+			if is_instance_valid(sequence._caption_panel): bottom = sequence._caption_panel.position.y - 10.0
+			if _wreck != null:
+				_wreck.draw(self, Rect2(Vector2.ZERO, Vector2(size.x, maxf(1, bottom))), wreck_state())
 			return
 		draw_set_transform(Vector2.ZERO, 0, size / Vector2(1280, 720))
 		draw_rect(Rect2(0, 0, 1280, 720), Color("#102b40"))

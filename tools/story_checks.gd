@@ -106,6 +106,8 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	await game.get_tree().process_frame
 	check.call(bool(GameState.campaign().get("intro_seen")) and game.world.process_mode == mode and not game._story_active, "skipping an introduction finishes once and restores world processing")
 	await OpeningFishingChecks.run(game, check)
+	await OpeningKrakenChecks.run(game, check)
+	await OpeningWreckChecks.run(game, check)
 	game._clear_world()
 	var ocean := OceanJourney.new()
 	game.world = ocean

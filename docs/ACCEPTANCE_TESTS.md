@@ -910,3 +910,99 @@ done
 Require `--- visual style: N checks, PASS; active=STYLE ---`, exit 0, and no
 `[FAIL]`, `SCRIPT ERROR`, or `ERROR:`. Rendered tests cover artwork and layout,
 not physical touchscreen input or Android GPU performance. No source bake writes.
+
+## Classic-pixel second opening beat — 2026-10-29
+
+Intro page one now stages the caught hook before the Kraken awakens: rod tension,
+a hooked pixel arm, emerging crowned mantle, opening amber eyes and a final fury
+hold. Original UNISZA boat layers and unarmed friends link it to beat one. Shared
+anchors keep hands/rod/line/hook/arm connected. The ship stays intact until page
+two. Captions, six-second page timing, loading prelude, Next/Skip and progression
+contracts are unchanged. See `OPENING_KRAKEN_REDESIGN.md` for the timeline and
+safe reproduction commands.
+
+Classic Pixel is now the device-settings default, including missing/invalid
+style preferences. The existing explicit Modern Illustrated option is preserved
+and remains restart-bound. The local device already selected `pixel`; normal
+user settings and journey files were not rewritten.
+
+Fresh full isolated gameplay: **1,743 checks, PASS**, exit 0. Native second-beat
+review: **87 checks, PASS**, exit 0 at each of **1280x720, 832x480 and 1600x720**.
+Seven timed captures plus Reduce Motion and low quality were produced at each
+size; desktop/compact captures were inspected. Coverage includes ordered catch/
+emergence/waking, line endpoints, deck anchors, fitting above captions, texture
+reuse, live accessibility/quality, early Next/Skip and real screen-touch input.
+Final runs have no `[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers. Xvfb reports its
+known input-method and unsupported V-Sync warnings. This is Linux llvmpipe,
+not a physical phone, Windows export or hardware-performance certification.
+
+The first native review failed only its new Skip touch fixture: the newly built
+caption had not completed a layout frame before hit testing. Waiting for layout
+and using the viewport's final input transform corrected the fixture; production
+input/Skip code was not changed to mask it. That failed run is retained in the
+external ledger, separately from the final three passing native runs.
+
+Matched default-style baseline/modified/rollback probes observe **modern + legacy
+static Kraken / pixel + staged hook awakening / modern + legacy static Kraken**,
+respectively. Each exits 0, advances page one after six seconds, completes exactly
+once and leaves the world unchanged. All 17 baseline file states restore exactly;
+the four baseline sampled PNGs match rollback byte-for-byte. The changed patch
+reapplies cleanly afterward. A separate fixed-Classic-Pixel comparison captures
+all 13 story panels: **only intro page one differs; the other 12 are identical**.
+
+Fresh isolated style/restart routes pass **25 checks each** for default Pixel and
+explicit Modern opt-in. Both retain the existing fixture's **two ObjectDB instance
+cleanup warnings** at exit; they are not described as warning-free. The canonical
+full gate has no warnings. An initial supplemental panel-control run encountered
+stale global-class metadata after restoring/reapplying the sandbox sources and
+timed out (124). Reimporting each source state fixed that fixture command; no
+production code was changed to conceal the error. Final panel controls exit 0.
+A 72-frame, six-second 1280x720 native preview was encoded at 12 sampled fps and
+decoded successfully; its rate is a preview format, not a performance benchmark.
+
+## Classic-pixel third opening beat — 2026-10-29
+
+Intro page two now carries beat two's final fury composition into a readable arm
+wind-up, a local hull strike, three jagged pieces of the actual yellow UNISZA ship,
+and three separately carried friends. The mast/nameplate remains on Arjun's centre
+piece; Adam and Mei Ling retain their own stern/bow fragments. Actor feet share
+each fragment's pivot and bounded rotation. Reaching/clinging unarmed poses replace
+independent combat walks. Local foam/chips/currents support the action without
+fullscreen flashes, camera shake or introducing later rescue/capture events.
+
+Fresh full isolated gameplay: **1,837 checks, PASS**, exit 0. Native focused review:
+**108 checks, PASS**, exit 0 at each of **1280x720, 832x480 and 1600x720**. Captures
+of the preceding keyframe, wind-up, contact, fragment spread, reaching hold and
+stable aftermath were produced; desktop and compact composition were inspected.
+Reduce Motion holds the complete aftermath, and low quality removes only optional
+chips/current marks. Real touch Next/Skip, same-frame cleanup, finite texture reuse,
+unchanged captions and six-second auto advance are covered. Final gate/native logs
+have no `[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers. Xvfb input-method/V-Sync
+warnings remain; this is Linux software rendering, not device/export certification.
+
+An initial pixel-fragment builder had a missing indentation level. A direct syntax
+check identified it; the parser was fixed before the passing tests, without changing
+any assertions. Its failed import/review logs and the explicitly stopped failed
+review's status are retained separately. The isolated import's unrelated Android
+daemon diagnostic is also retained. All prior pending beat-two work is preserved.
+See `OPENING_WRECK_REDESIGN.md` for staging, source ownership and safe review commands.
+
+Paired story controls capture all 13 panels at the same Classic Pixel settings:
+**only intro page two changes; the other 12 remain pixel-identical**. The art region
+at the preceding beat's final keyframe and the new beat's time zero is also
+**pixel-identical**, excluding the intentionally different caption.
+
+Matched baseline/modified/rollback runs at intro page two and times
+0/0.8/1.45/2.2/3.5/5.8 seconds observe **legacy floating rectangles / staged pixel
+strike and three real fragments / legacy floating rectangles**, all with exit 0,
+six-second advance and exactly one completion. The six baseline PNGs restore
+byte-for-byte. All 16 baseline file states and every one of the 17 pre-existing
+pending beat-two files restore exactly; the patch is reapplied afterward.
+
+Fresh native compact regressions also pass the preserved first-beat/loading flow
+(**138 checks**) and second-beat awakening (**87 checks**), exit 0. The motion
+preview contains 162 native frames at 1280x720 over 6.75 encoded seconds, including
+the preceding keyframe. Encode and decode both pass; sampled 24 fps describes the
+preview, not a hardware-performance measurement. A supplemental comparison helper
+initially needed an explicit bool type for a dynamic method result and timed out
+(124); the corrected helper, not altered production assertions, passes both states.
