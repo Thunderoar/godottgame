@@ -112,6 +112,8 @@ func _current_signature() -> String:
 				parts.append(item_id)
 		"equipment":
 			parts.append(GameState.character_weapon_style())
+			parts.append(str(GameState.project_status().state))
+			parts.append(str(GameState.village_legacy_access()))
 			parts.append(JSON.stringify(GameState.data.get("roof_guns", {})))
 			parts.append(str(GameState.house_level()))
 			for item_id in ItemDB.equipment_for_style(GameState.character_weapon_style()):
@@ -171,6 +173,10 @@ func _rebuild() -> void:
 			_add_stock_grid(ItemDB.stock_for("potion"))
 			add_body_text("Carry up to nine health potions. At 25% HP or below, hits automatically use one to heal you.", GameUI.MUTED, 13)
 		"equipment":
+			var project_card := VillageProjectCard.new()
+			project_card.allow_commission = false
+			project_card.compact = true
+			content.add_child(project_card)
 			_add_roof_gun_shop()
 			add_section("EQUIPMENT  •  %s discipline" % GameState.character_weapon_style().capitalize(), GameUI.GOLD)
 			_add_stock_grid(_equipment_stock(), true)
@@ -614,6 +620,10 @@ func _show_detail(item_id: String) -> void:
 		owned_line = "  •  You carry x%d." % GameState.item_count(item_id)
 	_detail_hint.text = "%s%s" % ["You can afford this." if afford else "Not enough gold yet.", owned_line]
 	_detail_hint.add_theme_color_override("font_color", GameUI.MUTED if afford else GameUI.RED)
+	var access := GameState.item_purchase_status(item_id)
+	if not bool(access.ok):
+		_detail_hint.text = str(access.message)
+		_detail_hint.add_theme_color_override("font_color", GameUI.GOLD)
 
 
 func _keeper_react(mood: String, emote: String) -> void:

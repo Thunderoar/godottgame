@@ -14,6 +14,7 @@ const LOADING_OUT := 0.18
 const INTRO_LANDFALL_PAGE := 3
 const INTRO_CAPTURE_PAGE := 4
 const INTRO_RESCUE_PAGE := 5
+const INTRO_WELCOME_PAGE := 7
 const INTRO := [
 	"Adam, Arjun and Mei Ling went fishing together in a peaceful sea.",
 	"Arjun's hook caught the arm of an enormous Kraken. The sea king awoke in fury!",
@@ -21,7 +22,8 @@ const INTRO := [
 	"Clinging to the broken bow, Mei Ling washed ashore at a guarded ruin.",
 	"The Kraken imprisoned Arjun. The ruin's guards captured Mei Ling alive: \"Our ruler will want answers.\"",
 	"A brave turtle rescued Adam and brought him to the villagers of BESUT.",
-	"To repay their kindness, Adam protects BESUT and searches the sea for Arjun and the final portal for Mei Ling."
+	"To repay their kindness, Adam protects BESUT and searches the sea for Arjun and the final portal for Mei Ling.",
+	"\"Welcome to BESUT, Adam. Come, rest and make yourself at home.\" The villagers lead him in from the shore."
 ]
 var kind := "intro"
 var page := 0
@@ -216,6 +218,7 @@ class StoryCanvas extends Control:
 	var _capture: OpeningCaptureRenderer
 	var _landfall: OpeningLandfallRenderer
 	var _rescue: OpeningRescueRenderer
+	var _welcome: OpeningWelcomeRenderer
 	func _ready() -> void:
 		texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		if is_instance_valid(sequence) and sequence.kind == "intro":
@@ -249,6 +252,10 @@ class StoryCanvas extends Control:
 	func rescue_state() -> Dictionary:
 		var elapsed := 6.0 if uses_rescue_epilogue() else sequence._page_time
 		return OpeningRescueRenderer.sample(elapsed, GameSettings.reduce_motion(), GameSettings.effects_quality())
+	func uses_welcome_shot() -> bool:
+		return is_instance_valid(sequence) and sequence.kind == "intro" and sequence.page == INTRO_WELCOME_PAGE
+	func welcome_state() -> Dictionary:
+		return OpeningWelcomeRenderer.sample(sequence._page_time, GameSettings.reduce_motion(), GameSettings.effects_quality())
 	func prepare_page() -> void:
 		# Warm on entering this page, not in _draw or before the title curtain exists.
 		if uses_wreck_shot() and _wreck == null:
@@ -260,10 +267,20 @@ class StoryCanvas extends Control:
 			_capture = OpeningCaptureRenderer.new()
 		if (uses_rescue_shot() or uses_rescue_epilogue()) and _rescue == null:
 			_rescue = OpeningRescueRenderer.new()
+		if uses_welcome_shot() and _welcome == null:
+			if _rescue == null: _rescue = OpeningRescueRenderer.new()
+			_welcome = OpeningWelcomeRenderer.new(_rescue)
 	func wreck_state() -> Dictionary:
 		return OpeningWreckRenderer.sample(sequence._page_time, GameSettings.reduce_motion(), GameSettings.effects_quality())
 	func _draw() -> void:
 		if not is_instance_valid(sequence): return
+		if uses_welcome_shot():
+			draw_rect(Rect2(Vector2.ZERO, size), Color("#102733"))
+			var bottom := size.y - 184.0
+			if is_instance_valid(sequence._caption_panel): bottom = sequence._caption_panel.position.y - 10.0
+			if _welcome != null:
+				_welcome.draw(self, Rect2(Vector2.ZERO, Vector2(size.x, maxf(1, bottom))), welcome_state())
+			return
 		if uses_fishing_shot():
 			draw_rect(Rect2(Vector2.ZERO, size), Color("#102733"))
 			var bottom := size.y - 184.0

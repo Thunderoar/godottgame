@@ -50,7 +50,7 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(story._canvas._capture == null and story._canvas.uses_landfall_shot(), "landfall establishes the guarded shore before capture warms")
 	story.advance()
 	check.call(story._canvas.uses_capture_shot() and story._canvas._capture != null and story._page_time == 0, "entering only intro capture page warms the capture before drawing")
-	check.call(story._caption.text == StorySequence.INTRO[StorySequence.INTRO_CAPTURE_PAGE] and story.lines().size() == 7, "capture follows landfall and identifies the guards taking an outsider alive")
+	check.call(story._caption.text == StorySequence.INTRO[StorySequence.INTRO_CAPTURE_PAGE] and story.lines().size() == 8, "capture follows landfall and identifies the guards taking an outsider alive")
 	check.call(hull == OpeningFishingArt.hull().get_image().get_data() and friend == OpeningFishingArt.hero("mei_ling", 0).get_image().get_data(), "capture art leaves shared ship and character pixels unchanged")
 	var face_clear := true
 	var bars := OpeningCaptureArt.cage(true).get_image()

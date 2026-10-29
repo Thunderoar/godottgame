@@ -37,7 +37,8 @@ func _ready() -> void:
 	for scene in game.get_children():
 		if scene is StorySequence: opening_story = scene
 	_check(opening_story != null and opening_story._arrival_active and game.title_screen != null, "Adam handoff keeps the title until a covered transition replaces it")
-	_check(opening_story != null and opening_story.lines().size() == 7 and opening_story.lines()[StorySequence.INTRO_LANDFALL_PAGE].contains("washed ashore"), "opening establishes Mei Ling reaching a guarded shore between wreck and capture")
+	_check(opening_story != null and opening_story.lines().size() == 8 and opening_story.lines()[StorySequence.INTRO_LANDFALL_PAGE].contains("washed ashore"), "opening establishes Mei Ling reaching a guarded shore between wreck and capture")
+	_check(opening_story != null and opening_story.lines()[StorySequence.INTRO_WELCOME_PAGE].contains("Welcome to BESUT, Adam"), "the eighth opening beat explicitly welcomes Adam into village life before gameplay")
 	_check(opening_story != null and opening_story.lines()[StorySequence.INTRO_RESCUE_PAGE] == "A brave turtle rescued Adam and brought him to the villagers of BESUT.", "sixth-beat rescue keeps its original story promise after the landfall insertion")
 	_check(opening_story != null and opening_story._page_time == 0 and not game.hud.visible, "opening arrival hides HUD and preserves the first beat's reading time")
 	_check(opening_story != null and opening_story.include_loading_screen and opening_story.opening_loader() != game.loading_screen, "Adam opening owns the existing loading-screen UI independently of world transitions")
@@ -55,6 +56,9 @@ func _ready() -> void:
 	_check(game.call("player") != null, "player exists")
 	_check(get_tree().get_first_node_in_group("pet") != null, "starter pet exists")
 	var village_layout: WorldLayout = game.world._layout
+	_check(game.world.arrive_at_dock and game.player().position.distance_to(village_layout.approach("jetty_deck")) < 0.05, "skipping the new-journey opening starts Adam on the village dock")
+	_check(village_layout.world_footprint("jetty_deck").grow(-0.18).has_point(game.world.pet.position), "the starter companion arrives alongside Adam on the walkable deck")
+	_check(GameState.mission_step() == 0 and game.world._mission_walk_origin == village_layout.approach("jetty_deck"), "dock placement does not complete the first movement lesson before the player moves")
 	var monster_gate := village_layout.position_of("monster_portal")
 	var pet_gate := village_layout.position_of("pet_portal")
 	_check(monster_gate.is_equal_approx(Vector2(34.8, 6.3)) and pet_gate.is_equal_approx(Vector2(41.2, 6.3)), "legacy northern anchors remain stable for layout and forest compatibility")
@@ -159,6 +163,8 @@ func _ready() -> void:
 	await preload("res://tools/elemental_checks.gd").run(game, _check)
 	# Includes authored-size combat poses and interrupted tween regression checks.
 	await preload("res://tools/presentation_checks.gd").run(game, _check)
+	await StatusStripChecks.run(game, _check)
+	await VillageProjectChecks.run(game, _check)
 	# Compact realm coverage includes living habitats, Waykeeper, memories and cache transactions.
 	await preload("res://tools/twilight_checks.gd").run(game, _check)
 	await _test_forest_game_over()

@@ -162,6 +162,13 @@ func refresh() -> void:
 			_state_label.add_theme_color_override("font_color", GameUI.MUTED)
 		else:
 			_state_label.text = ""
+	var access := GameState.item_purchase_status(item_id)
+	_action_button.tooltip_text = str(access.message)
+	if not bool(access.ok) and GameState.item_count(item_id) <= 0:
+		_action_button.text = "Workshop locked"
+		_action_button.disabled = true
+		_state_label.text = "Restore with Bram"
+		_state_label.add_theme_color_override("font_color", GameUI.GOLD)
 	if not afford and GameState.item_count(item_id) <= 0:
 		_price_label.add_theme_color_override("font_color", GameUI.RED)
 	else:

@@ -31,6 +31,7 @@ var devastation_progress := 0.0
 var _devastation_started := false
 
 var zone_name := "Seaside Home"
+var arrive_at_dock := false
 var player: Player
 var pet: Pet
 var camera: FollowCamera
@@ -58,6 +59,7 @@ var _rubbish_system: RubbishSystem
 var _coastal_guard: CoastalGuard
 var _residents: Array[Resident] = []
 var _resident_routes: ResidentRoutes
+var workshop: VillageProjectSite
 var _emergency_monsters: Array[Enemy] = []
 var _forest_monsters: Array[Enemy] = []
 var _shop_stalls: Array[Sprite2D] = []
@@ -91,6 +93,7 @@ func _ready() -> void:
 	var authored := AuthoredMapRenderer.selected_map()
 	_authored_map = authored
 	_layout = authored.resolved_layout(GameState.data.get("settlement_layout", {})) if authored else WorldLayout.village().resolved([], GameState.data.get("settlement_layout", {}))
+	_prepare_village_project_layout()
 	WorldPalette.select_for_map(authored.palette if authored else null)
 	_build_background()
 	_build_bounds()
@@ -121,6 +124,7 @@ func _ready() -> void:
 			if marker.get("kind", "") == "spawn" and marker.get("metadata", {}).get("primary", false) and not GameState.recovery_active():
 				_player_spawn = marker.get("position", SPAWN)
 	_build_player_and_pet()
+	_reconcile_village_project()
 	_sync_village_pets()
 	_sync_rescued_friends()
 	GameState.pet_changed.connect(_sync_village_pets)
@@ -1118,15 +1122,18 @@ func _build_grass_fields(grass_paths: Array) -> void:
 # ------------------------------------------------------------------ actors
 
 func _build_player_and_pet() -> void:
-	_mission_walk_origin = _player_spawn
+	# Only the story's first landfall uses the dock. Home anchors still own
+	# recovery, defenders and subsequent returns, including authored spawn markers.
+	var start := _layout.approach("jetty_deck") if arrive_at_dock and not GameState.recovery_active() else _player_spawn
+	_mission_walk_origin = start
 	player = Player.new()
 	player.name = "Player"
-	player.position = _player_spawn
+	player.position = start
 	add_child(player)
 	pet = Pet.new()
 	pet.name = "Pet"
 	pet.player = player
-	pet.position = _player_spawn + Vector2(-1.2, 0.5)
+	pet.position = start + Vector2(-1.2, 0.5)
 	add_child(pet)
 	player.sleep_changed.connect(_on_sleep_changed)
 	player.hurt_flash.connect(func() -> void:
@@ -1157,6 +1164,7 @@ func _on_data_changed() -> void:
 		return
 	_build_water_keepers()
 	_sync_rescued_friends()
+	_reconcile_village_project()
 
 
 func _on_pet_changed() -> void:
@@ -1230,6 +1238,13 @@ func _add_resident_house(house_name: String, at: Vector2, level: int, ruined: bo
 	shape.position = Vector2(0, -0.55)
 	body.add_child(shape)
 	holder.add_child(body)
+	if house_name == VillageProjectDB.WORKSHOP_ANCHOR:
+		workshop = VillageProjectSite.new()
+		workshop.name = "WorkshopProject"
+		workshop.target = target
+		# Leave the original forest_15 palm at (5, 12.8) untouched and accessible.
+		workshop.position = Vector2(-1.4, 1.4)
+		holder.add_child(workshop)
 	_markers.append({"position": at, "color": Color("#e4c571"), "size": 3.5, "shape": "square"})
 
 
@@ -1694,6 +1709,8 @@ func get_guidance_targets() -> Array:
 		if is_instance_valid(raider):
 			targets.append({"label": "DEFEND", "position": raider.global_position, "color": Color("#e15b58")})
 	var monster_pending := false
+	if targets.is_empty() and GameState.tracked_village_project() == VillageProjectDB.WORKSHOP and is_instance_valid(workshop) and str(GameState.project_status().state) != "complete":
+		return [{"label": "WEST WORKSHOP", "position": workshop.workpoint(), "color": Color("#f2c45a")}]
 	for portal_id in PortalDB.ordered_ids():
 		if not bool(GameState.portal_state(portal_id).get("cleared", false)):
 			monster_pending = true
@@ -1807,6 +1824,7 @@ func refresh_spatial_layout() -> void:
 	# Called on drag completion, never per frame. Source map stays immutable.
 	var saved: Dictionary = GameState.data.get("settlement_layout", {})
 	_layout = _authored_map.resolved_layout(saved) if _authored_map else WorldLayout.village().resolved([], saved)
+	_prepare_village_project_layout()
 	for placeable in _placeables:
 		if placeable.placeable_id == "house":
 			_house_position = placeable.position
@@ -1822,8 +1840,46 @@ func refresh_spatial_layout() -> void:
 		if is_instance_valid(resident) and resident.has_meta("activity_id"):
 			resident.waypoints = _layout.activity_points(_layout.activity(str(resident.get_meta("activity_id"))))
 	background.texture = WorldTerrain._make_terrain_texture(_layout)
+	_reconcile_village_project(true)
 	invalidate_resident_routes()
 	call_deferred("_resolve_custom_routes")
+
+
+func _reconcile_village_project(force: bool = false) -> void:
+	if not is_instance_valid(workshop) or str(GameState.project_status().state) != "complete": return
+	var user: Resident
+	for resident in _residents:
+		if is_instance_valid(resident) and not resident.dead and resident.resident_name == "Rami": user = resident
+	if not is_instance_valid(user):
+		for resident in _residents:
+			if is_instance_valid(resident) and not resident.dead and resident.worker_role == "builder": user = resident; break
+	if is_instance_valid(user) and (force or not user.has_meta("workshop_activity")):
+		user._end_visit()
+		user._index = 0
+		user._wait = 0
+		user.waypoints = [workshop.workpoint() + Vector2(-0.9, 0.3), workshop.workpoint() + Vector2(0.9, 0.3)]
+		user.activity = "Working at the West Workshop"
+		user.set_meta("workshop_activity", true)
+		user._path_goal = Vector2(INF, INF)
+
+
+func _prepare_village_project_layout() -> void:
+	# These are runtime copies. Footprint/yard reserves future art and work access
+	# without moving an anchor, changing the terrain bake, or touching forest RNG.
+	var anchor := _layout.anchor(VillageProjectDB.WORKSHOP_ANCHOR)
+	if anchor.is_empty(): return
+	anchor.footprint = Rect2(-2.8, -4.3, 5.6, 4.3)
+	anchor.yard = Rect2(-2.8, -4.3, 5.6, 6.6)
+	_layout._prepared = false
+
+
+func project_placement_allowed(placeable: SettlementPlaceable, at: Vector2) -> bool:
+	if not is_instance_valid(workshop): return true
+	var footprint := _layout.world_footprint(placeable.placeable_id)
+	if footprint.size == Vector2.ZERO:
+		footprint = Rect2(placeable.global_position - placeable.selection_size * 0.5, placeable.selection_size)
+	footprint.position += at - placeable.global_position
+	return not footprint.intersects(workshop.reservation())
 
 
 var _resolving_routes := false

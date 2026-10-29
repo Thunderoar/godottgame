@@ -1142,6 +1142,250 @@ handoff. These runs do not establish physical-phone input, native Windows/Androi
 validation or hardware frame rate. Prior intermediate framing/clearance corrections
 and earlier results are preserved as draft evidence, not substituted for final PASS.
 
+## Eighth intro beat: welcome to BESUT — 2026-10-29
+
+The intro has eight pages. Its first seven captions and renderers stay in order;
+the seventh promise now offers Next into the new welcome. The eighth page starts
+on the exact completed shore tableau, passes the planter's cloth into Adam's
+hands, gives the water keeper space to invite him inland, and pans across a
+continuous extended shore to an open cottage and a waiting villager's greeting.
+Adam keeps the cloth as he walks. The turtle remains visibly safe at the shore.
+The last second holds the welcome before Continue/automatic advance hands off to
+the existing village and tutorial. No inventory item or house reward is granted.
+
+See [OPENING_WELCOME.md](OPENING_WELCOME.md) for staging and source ownership.
+`OpeningWelcomeChecks` joins `StoryChecks`; `tools/tide_test.gd` checks the new
+caption at the real title/new-journey entry. Earlier seven-page verification
+entries above remain historical records.
+
+Final verification on native Windows, Godot **4.7.2.stable.official.ed1daf0bf**:
+
+- Canonical `tools/test_isolated.ps1`: **5,570 checks, PASS**, exit 0, no `[FAIL]`,
+  `SCRIPT ERROR`, `ERROR:` or engine warnings in the final gameplay logs.
+- Native `opening_welcome_test.tscn`: **929 PASS** at actual **1280×720**, including
+  73 consecutive exact-time frames; **856 PASS** at actual **832×480** and
+  **1600×720**. All exit 0; native stderr files are empty.
+- Inspected the cloth transfer, successive walking/pan frames, final village
+  tableau, caption clearance, accessibility variants and actual Lobby handoff.
+- Synthetic mouse/touch Next, Continue and Skip exercise the real story buttons.
+  Continuing marks the intro seen, restores player controls and shows the existing
+  village tutorial. Physical-phone input and Android export were not tested.
+- The preceding promise's rendered art and welcome frame zero are pixel-identical
+  above the caption (1280×536 crop SHA-256, Base64:
+  `FJgT30fDR0hqMbG8WGBqzYdfsXgerTT6ndJBbdNNq84=`).
+- Isolated class import passed without script/error markers. Import still reports
+  `Unable to open Android 'build-tools' directory.`; Android tooling was not changed.
+- `git diff --check` passed. Captures and runtime data remain outside the repository;
+  normal player data was not used. No commit or push was performed.
+
+External visual evidence:
+`C:/Users/LUQMAN/.codex/visualizations/2026/10/29/01a1869c-c888-7723-b100-09df8dc6fb73/`:
+`welcome-1280x720-799712a4`, `welcome-832x480-acd7cf4e`,
+`welcome-1600x720-55d869f1`, and `final-gate.log`.
+The final gate's isolated root is
+`C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-0df4d09019f24de3ae988d8c763b3f8b`.
+The earlier 1280 review with the planter's temporary tray-shaped empty pose is
+superseded by these final captures; it is not the final visual evidence.
+
+## First playable village arrival on the dock — 2026-10-29
+
+Game now requests a dock arrival after a new journey's introduction, including
+Skip and Continue of an unfinished intro. Lobby creates Adam at the resolved
+`jetty_deck` approach; the starter companion fits beside him on the planks and the
+camera begins following that player immediately. The world loader identifies the
+destination as "Besut Village · Dock". Movement-lesson distance starts at the
+actual arrival point, so loading into the dock does not count as walking.
+
+The setup flag is not saved. Normal cottage/authored spawn and recovery anchors,
+defender home positions, completed-intro Continue, ordinary world returns and
+ship return ownership keep their existing behavior. Recovery takes precedence
+even if a caller requests the dock. The eight illustrated story pages are unchanged.
+
+Final verification on Windows / Godot 4.7.2.stable.official.ed1daf0bf:
+
+- Canonical isolated gameplay gate: **5,580 checks, PASS**, exit 0. No failure,
+  script-error, error or engine-warning markers; stderr is empty.
+- Native welcome/dock review: **870 checks, PASS**, exit 0, at both **1280×720**
+  and **832×480**. Both stderr files are empty. Actual touch Continue reaches the
+  dock, both actors fit within its footprint, and actor-sized physics probes
+  confirm a clear deck and route to `jetty_landing`.
+- Inspected initial dock framing and successive held-input walking captures.
+  Movement is continuous and the first lesson advances through actual walking.
+- Native Continue checks cover both an unfinished intro (dock arrival after
+  replay) and a completed intro (normal saved-journey arrival). Canonical checks
+  additionally cover ordinary returns, cottage/defender anchor preservation and
+  recovery precedence over a requested dock start.
+- Isolated import completed without script errors; its existing missing Android
+  build-tools diagnostic remains. No Android export or physical-phone test ran.
+- `git diff --check` passed. No normal player data or source maps were changed;
+  logs and captures are external to the checkout.
+
+Evidence under
+`C:/Users/LUQMAN/.codex/visualizations/2026/10/29/01a1869c-c888-7723-b100-09df8dc6fb73/`:
+`dock-gate.log`, `dock-import.log`, `welcome-1280x720-c7ce6573` and
+`welcome-832x480-45ac1b2c`. The isolated gate's full logs are in
+`C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-0aa1f0e71a13437cbc8e9bb90ff162e2`.
+
+## Compact currency and live NPC/world status strip — 2026-10-29
+
+The former 344×48 Gold/Diamond panel is replaced by two 34-pixel-high balance
+chips with a combined minimum width of 204 pixels plus a 6-pixel gap. A live strip
+beside them displays NPCs alive/total, living Monsters, Trees alive/total, burning
+mature trees (Fire), and intact registered Homes/total. The fresh village reports
+24/24 NPCs, 0 monsters, 64/64 trees, 0 fires and 8/12 homes. Shop tint targets have
+no persistent home IDs and are excluded from the denominator.
+
+The current world owns the census. Sheltered people stay alive, fallen trees
+remain in the total, protected saplings count as living, and dead/queued/retiring
+actors are excluded. Dungeons and Kraken Island show local Monsters beside
+balances; unavailable village statistics are hidden. Currency signals update the
+balances immediately; live tallies refresh at world changes and every 0.5 seconds
+while HUD is visible. The snapshot never writes GameState or changes game rules.
+
+The strip respects GUI scaling, retains at least a 12-pixel physical font size,
+wraps on narrow windows and reserves room for Menu/Map. Wrapped height moves the
+emergency/build banner below it. Large balances use K/M/B with exact hover text.
+Category hover descriptions explain specialist/sapling/enemy-kind subtotals.
+See HUD_STATUS_STRIP.md for precise definitions and ownership.
+
+Final verification, Windows / Godot 4.7.2.stable.official.ed1daf0bf:
+
+- Canonical isolated gameplay: **5,606 checks, PASS**, exit 0. No failure, script
+  error, error or engine-warning markers; stderr is empty.
+- Native `status_strip_test.tscn`: **100 checks, PASS**, exit 0, stderr empty.
+  Captures cover 1280×720, 832×480, 640×360 and 480×320, GUI 75/100/130%, day and
+  threat states, narrow wrapping, large balances, a custom Menu position, and
+  dungeon-only monster counts. Inspected the rendered standard desktop/compact
+  views, narrow wrapping and threat states.
+- The 26 integrated census checks exercise shelter/death, ignition/felling/
+  replanting, home loss/repair, live/dead enemies, foreign/retiring worlds,
+  data immutability, compact balances and world handoff/removal.
+- Isolated final class import passed without script errors. The existing Android
+  build-tools-directory diagnostic remains. No Android export or physical-phone
+  test was run.
+- `git diff --check` passed. Runtime data and captures stay outside the checkout;
+  normal player data, source layouts and the separate village-progression drafts
+  were not modified.
+
+Final evidence under
+`C:/Users/LUQMAN/.codex/visualizations/2026/10/29/01a1869c-c888-7723-b100-09df8dc6fb73/`:
+`status-final-gate-verified.log`, `status-final-import.log`, and
+`status-1280x720-70765fc7/` (stdout/stderr and shots). Full gate logs are in
+`C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-c25fa6408eea4d4b83d2f4684d925033`.
+Earlier draft runs retain a daytime-spawn fixture failure, a shop-inflated home
+count and fixture cleanup failures; they are superseded by the final evidence.
+
+## West Workshop story progression (2026-10-29)
+
+The audited first village project is implemented. On a new journey, clearing
+Chaos Citadel makes Bram's free **A Roof for the Workshop** commission eligible.
+The existing western ruin becomes a working cottage through ten seconds of
+on-site daytime labor. A builder walks to it, or the player can help by direct
+tap/E. Movement, attack, damage, modal opening and focus loss cancel player
+labor; night, danger and world departure suspend it without discarding accepted
+work. Multiple actors/repeated submissions cannot accelerate a physics tick.
+Construction does not advance during travel or offline time.
+
+Pending project structures cannot be built through ordinary repair APIs or offer
+shelter/gun installation. Completion waits for safe collision activation, restores
+the cottage once, retains ordinary house/shelter/optional-gun semantics, and
+licenses the entire advanced sword family at Garrick's. Weapons still cost their
+catalog price. Later damage repairs normally and never revokes the license.
+House upgrade eligibility, worker baselines, original forest identities and both
+independent rescue branches remain unchanged. Later district projects are deferred.
+
+The construction shop, mission journal, compact forge card, stock action states,
+Rami's dialogue/routine and picture map share saved project state. Activity
+overrides survive layout refresh. Runtime footprint reservations and player drag
+validation preserve work access without modifying source maps or the terrain bake.
+The workbench is clear of the original `forest_15` palm. One touch plus its emulated
+mouse press is handled as one gesture.
+
+Raw saves without the new schema retain legacy stock access and existing restored
+houses, HP, shelter and bought guns. Their fit-out is optional. Current project
+records sanitize without inventing completion; future schemas are rejected before
+rewriting the file. Work ownership is runtime-only and never revives on reload.
+
+`VillageProjectChecks` runs in the canonical tide gate and the isolated focused
+`res://tools/village_project_test.tscn`. Native mode additionally captures desktop
+and compact interfaces, a real touch-driven ten-second build without builders,
+successive craftsman positions, map/stock completion and live low-quality/Reduce
+Motion feedback. See `VILLAGE_WORKSHOP.md` for the player flow and ownership model.
+
+Final verification, Windows / Godot `4.7.2.stable.official.ed1daf0bf`:
+
+- Canonical isolated gate: **5,661 checks, PASS**, exit 0; no `[FAIL]`,
+  `SCRIPT ERROR` or `ERROR:` markers; stderr empty.
+- Native Classic Pixel: **71 checks, PASS**, exit 0; stderr empty.
+- Native Modern Illustrated: **71 checks, PASS**, exit 0; stderr empty.
+- The 55 integrated project checks cover transaction gates, free/idempotent
+  commissioning, actual builder movement before labor, capped single-tick work,
+  interruptions, world handoff, occupied-site activation, live stock updates,
+  permanent licensing after damage, ordinary repair, activity/map reconciliation,
+  partial/completed JSON reload, legacy entitlements and malformed/future schemas.
+- Each native style adds eleven captures and actual touch-driven player labor,
+  ten-second completion without builders, consecutive craftsman movement,
+  compact Close placement and accessible completion feedback. Inspected the
+  rendered commission, work, completion, map and forge states at 1280×720 and
+  832×480 in both styles. Final sign text stays within its plaque and updates
+  immediately on completion.
+- Isolated import passed. It retained the existing Android build-tools-directory
+  diagnostic. No authored map/bake, live player progress, Android export or
+  physical-phone test was changed/performed. `git diff --check` passed.
+
+Preserved final evidence:
+`C:/Users/LUQMAN/.codex/visualizations/2026/10/29/01a186d6-db12-71a2-815d-2f832d7e3d18/workshop-implementation/`.
+The directory contains canonical/import logs and `classic-pixel/` plus
+`modern-illustrated/` logs and shots. Canonical raw artifacts are under
+`C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-d6ce6d634e324d92a6c13e8fe9afab53`.
+Earlier implementation drafts exposed a malformed-flag type error, a touch's
+emulated mouse toggling work off, a stale-lease fixture which allowed the fresh
+crew to claim work before freezing, and a sign background alignment issue. Those
+draft results are superseded by the final gate and native evidence above.
+
+## Two combined HUD sections — 2026-10-29
+
+Gold and Diamonds now share one `CurrencySection` frame. NPCs, Monsters, Trees,
+Fire and Homes share a separate `StatsSection` frame beside it. The individual
+values use padding with no individual boxes. On narrow windows the whole stats
+section moves below currency; its contents can wrap within that shared frame.
+The width reservation includes both Menu and the wider Map button. Census data,
+currency formatting, the half-second refresh and control-layout IDs are unchanged.
+
+Verification on Windows / Godot 4.7.2.stable.official.ed1daf0bf:
+
+- Native status-strip review in the shared working tree: **136 checks, PASS**,
+  exit 0, stderr empty. This includes both shared-frame membership and full-panel
+  clearance, day/threat states, GUI 75/100/130%, large balances, custom Menu,
+  dungeon scope, and 1280×720, 832×480, 640×360 and 480×320 views. Inspected the
+  desktop/compact panels and narrow stacked stats panel after the Map-clearance fix.
+- A full shared-tree gameplay run reported **5,661 checks, 1 failure** in the
+  concurrently edited village-project checks: "return rebuilds the project from
+  saved work without reviving a stale lease". The grouping update does not edit
+  that implementation or its tests; this is not presented as a shared-tree PASS.
+- Canonical gameplay in a disposable copy of committed `b2bb16c` plus only the
+  four HUD-related changed files: **5,606 checks, PASS**, exit 0. Its three code
+  files matched the working files byte for byte. No failure/script-error/error
+  or engine-warning markers; stderr empty. This verifies the HUD update apart
+  from the concurrent village-project work without resetting that work.
+- Shared-source import passed. The clean-copy import initially exceeded its
+  bootstrap timeout; after reusing the imported texture/audio cache, independent
+  script metadata import completed. The existing missing Android build-tools
+  diagnostic remains. No Android export or physical-device test was performed.
+- Scoped `git diff --check` passed. No normal player data, construction source or
+  source maps were modified by this update.
+
+Evidence under
+`C:/Users/LUQMAN/.codex/visualizations/2026/10/29/01a1869c-c888-7723-b100-09df8dc6fb73/`:
+`status-1280x720-46ebb2cf/` (final native logs/shots), `grouped-status-import.log`,
+`grouped-status-gate.log` (shared-tree result), `grouped-status.patch`, and
+`grouped-source-c7ebe6bb/import-cached.log` plus `grouped-source-c7ebe6bb/gate.log`
+(scoped PASS). The scoped gate's full logs are in
+`C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-e4ed12c164dc4de9b04826336a2f37c0`.
+Earlier native grouped-panel captures with Map overlap are superseded by the
+final 136-check review. The redundant source ZIP was removed after validation;
+the disposable source, patch and logs remain outside the checkout.
+
 ## Twilight Wilds — unified entrance and first exploration dimension (2026-10-29)
 
 This supersedes the earlier two-village-portal rules and the first stage's immediate
@@ -1281,3 +1525,62 @@ legibility, hollow, discovered map, challenge controls and full citadel framing.
 `git diff --check` passed. The isolated import retains the existing Android
 build-tools-directory warning; no Android export or physical-phone validation is
 claimed. These results supersede the earlier compact-realm counts above.
+
+## Sync integration: local village/HUD work + Twilight Wilds — 2026-10-29
+
+Merged upstream `928b913` (including `0d93b16`) with the five local commits through
+`78e3e38`. Both histories and their dated evidence are retained above. The HUD's
+layout capture excludes both the owned status strip and the full-screen wild-pet
+challenge. The canonical runner executes the status-strip, village-project and
+Twilight suites together. The eighth opening beat, first-arrival dock and grouped
+currency/status sections remain present alongside the unified exploration portal.
+
+Final merged-tree verification on Windows / Godot 4.7.2:
+
+- Canonical isolated gameplay: **5,729 checks, PASS**, exit 0, stderr empty.
+- Native Twilight review at **832×480**: **68 checks, PASS**, exit 0, stderr empty;
+  inspected the wild companion challenge and its full-size controls with the
+  grouped currency/local-monster panels still correctly positioned.
+- Native status-strip review: **136 checks, PASS**, exit 0, stderr empty, covering
+  day/threat views, GUI scaling, narrow shared panels and dungeon scope.
+- Isolated import passed; its existing Android build-tools-directory diagnostic
+  remains. No Android export or physical-phone claim is made.
+- Merge conflict markers and unmerged index entries are cleared, and staged
+  `git diff --check` passed. Normal player data was not used by these tests.
+
+This is a current combined-tree PASS; earlier branch-specific counts and the
+previous concurrent village-project draft failure remain historical records.
+Evidence: `sync-import.log`, `sync-gate.log`, `sync-twilight.log` and
+`status-1280x720-076ad725/` under
+`C:/Users/LUQMAN/.codex/visualizations/2026/10/29/01a1869c-c888-7723-b100-09df8dc6fb73/`.
+The full isolated gate logs are in
+`C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-85b0628541874320a9cd4e1400d4635b`;
+Twilight captures/logs are in
+`C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-b8870d4c68a14c35a2238ad462df8ff9`.
+
+## Sync integration: living Twilight Wilds + latest village/HUD source — 2026-10-29
+
+Merged `1d9716e` with upstream `577e2af`, preserving both histories. This combines
+the living habitats, Waykeeper, memories and hollow with the eight-beat welcome,
+dock arrival, workshop restoration and shared HUD panels. The test runner keeps
+both the status-strip/village-project suites and the expanded Twilight checks;
+both branches' historical verification notes remain above.
+
+Current merged-tree verification on native Windows / Godot 4.7.2:
+
+- Canonical isolated gameplay: **5,784 checks, PASS, exit 0**.
+- Native Twilight reviews: **123 checks, PASS, exit 0** at each of **1280x720**
+  and **832x480**, with captures inspected for HUD/caption clearance, protected
+  pet challenges, journal readability, hollow and complete citadel framing.
+- All three gameplay/review error logs are empty, with no FAIL, SCRIPT ERROR or
+  ERROR markers. The isolated import passed with the existing Android build-tools
+  directory warning; no Android export or physical-phone validation is claimed.
+- Merge conflicts are resolved and the staged whitespace check passes. All 97
+  pre-existing local settings/import files retain their exact pre-pull hashes;
+  normal player progress was isolated from the tests.
+
+Evidence under `C:/Users/ayiz/AppData/Local/Temp/`: full gate
+`tidesworn-tests-9ca1b9f1347a4050b5e0749d648ff0a2`, 832x480 review
+`tidesworn-tests-79f390442ef94c4bb718c549ebc3bf3b`, 1280x720 review
+`tidesworn-tests-435fdb229b564d06bf4e852a3c48aeaa`, and import
+`tidesworn-tests-0c710d0d027047a58f507898f2778530`.

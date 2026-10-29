@@ -58,6 +58,9 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(_total_xp() == emergency_xp+27 and GameState.gold() == emergency_gold+15,"raid kills also credit player XP and Gold immediately")
 	for character in ["adam","arjun","mei_ling"]:
 		GameState.data = GameState._make_default(character)
+		# This catalog/upgrade fixture exercises post-workshop equipment access.
+		GameState.data.village_progression.projects[VillageProjectDB.WORKSHOP] = {"state": "complete", "remaining": 0.0}
+		GameState.data.portals["tidebound_grotto"].cleared = true
 		GameState.add_gold(100000)
 		var stock := ItemDB.equipment_for_style(GameState.character_weapon_style())
 		var weapons: Array[String] = []

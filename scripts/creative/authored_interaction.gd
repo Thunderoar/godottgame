@@ -6,4 +6,5 @@ var lines: Array = []
 func interact(_player: Node) -> void:
 	var game := get_tree().get_first_node_in_group("game")
 	if game and game.has_method("open_dialogue"):
-		game.call("open_dialogue", speaker, lines)
+		var project_lines := GameState.village_npc_lines(speaker)
+		game.call("open_dialogue", speaker, project_lines if not project_lines.is_empty() else lines)

@@ -37,7 +37,7 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(story._canvas._landfall == null, "landfall textures are not warmed on the title/fishing beat")
 	for i in StorySequence.INTRO_LANDFALL_PAGE: story.advance()
 	check.call(story._canvas.uses_landfall_shot() and story._canvas._landfall != null and story._canvas._capture == null, "only the inserted intro page warms the landfall renderer")
-	check.call(story._caption.text.contains("washed ashore") and story.lines().size() == 7, "new caption explains how the separated friend reaches the occupied shore")
+	check.call(story._caption.text.contains("washed ashore") and story.lines().size() == 8, "new caption explains how the separated friend reaches the occupied shore")
 	check.call(source == OpeningWreckArt.piece("hull", 2).get_image().get_data(), "landfall cropping leaves shared bow-fragment pixels untouched")
 	var settings := [GameSettings.reduce_motion(), GameSettings.effects_quality()]
 	story._page_time = 2.0

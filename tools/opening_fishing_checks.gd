@@ -27,7 +27,7 @@ static func run(game: Game, check: Callable) -> void:
 	var story := StorySequence.new()
 	game.add_child(story)
 	story.set_process(false)
-	check.call(story._canvas.uses_fishing_shot() and story.lines().size() == 7, "only intro page zero uses the new seven-beat opening renderer")
+	check.call(story._canvas.uses_fishing_shot() and story.lines().size() == 8, "only intro page zero uses the new eight-beat opening renderer")
 	var cache_size := PixelArt.CACHE.size()
 	for i in 100: OpeningFishingRenderer.sample(float(i) * 0.06, false, "high")
 	check.call(PixelArt.CACHE.size() == cache_size, "sampling fishing motion does not allocate or rebuild pixel textures")

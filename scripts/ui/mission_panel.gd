@@ -4,12 +4,16 @@ extends ModalBase
 func _ready() -> void:
 	_panel_size = Vector2(620, 480)
 	super._ready()
+	GameState.data_changed.connect(func() -> void:
+		if visible: _rebuild())
 
 func open_missions() -> void:
 	open_panel("Missions - BESUT Guide")
 
 func _rebuild() -> void:
 	_clear_content()
+	add_section("GROWING BESUT", GameUI.GOLD)
+	content.add_child(VillageProjectCard.new())
 	add_section("RESCUE YOUR FRIENDS", GameUI.GOLD)
 	add_body_text(GameState.campaign_objective(), GameUI.TEXT, 16)
 	var lesson := MissionDB.step(GameState.mission_step())

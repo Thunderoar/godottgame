@@ -105,7 +105,7 @@ func _on_character_selected(_character_id: String) -> void:
 	hud.visible = true
 	_game_over = false
 	await play_story("intro", true)
-	await _load_lobby(true)
+	await _load_lobby(true, true)
 	hud.start_tutorial()
 
 
@@ -116,7 +116,8 @@ func _on_continue_requested() -> void:
 		if is_instance_valid(title_screen):
 			title_screen.show_continue_error()
 		return
-	if not bool(GameState.campaign().get("intro_seen", false)):
+	var first_arrival := not bool(GameState.campaign().get("intro_seen", false))
+	if first_arrival:
 		await play_story("intro", true)
 	else:
 		_remove_title()
@@ -129,7 +130,7 @@ func _on_continue_requested() -> void:
 		var portal_id := GameState.expedition_portal()
 		await _load_dungeon(portal_id, true)
 	else:
-		await _load_lobby(true)
+		await _load_lobby(true, first_arrival)
 
 
 func _remove_title() -> void:
@@ -167,18 +168,19 @@ func _clear_world() -> void:
 	hud.set_world(null)
 
 
-func _load_lobby(transition: bool = true) -> void:
+func _load_lobby(transition: bool = true, arrive_at_dock: bool = false) -> void:
 	if _transitioning:
 		return
 	_transitioning = true
 	_input_locked = true
 	_apply_input_lock()
 	if transition:
-		await loading_screen.begin("Besut Village")
+		await loading_screen.begin("Besut Village · Dock" if arrive_at_dock else "Besut Village")
 	_clear_world()
 	hud.set_build_mode(false)
 	var lobby := Lobby.new()
 	lobby.name = "Lobby"
+	lobby.arrive_at_dock = arrive_at_dock
 	world = lobby
 	_world_holder.add_child(lobby)
 	hud.set_world(lobby)

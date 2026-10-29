@@ -51,6 +51,9 @@ func _rebuild() -> void:
 		row.add_child(info)
 		content.add_child(row)
 	if first:
+		if _portal_id == "tidebound_grotto" and str(GameState.project_status().state) != "complete":
+			add_section("A NEW PLACE FOR BESUT", GameUI.GOLD)
+			add_body_text("Bram can now restore the West Workshop for free. Visit his Construction Shop or open Missions when you return home. Completion licenses Garrick's advanced swords.", GameUI.TEXT, 15)
 		var next_id := str(def.get("unlocks", ""))
 		if next_id != "":
 			add_section("PORTAL UNLOCKED", GameUI.PURPLE)
