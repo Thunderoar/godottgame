@@ -87,7 +87,32 @@ func _ready() -> void:
 	_check(game.world.capture_monsters().is_empty(), "no home monsters spawn on the first day")
 	_check(hud.tutorial_guide.visible, "New Journey tutorial starts on a new game")
 	_check(hud.tutorial_guide.get("STEPS").size() == 10, "New Journey teaches ten sequential actions")
+	var tutorial_path: MissionPath
+	for child in game.world.get_children():
+		if child is MissionPath:
+			tutorial_path = child
+	_check(tutorial_path != null, "tutorial has a world guidance trail")
+	if tutorial_path != null:
+		tutorial_path._clock = 0.0
+		tutorial_path._process(0.0)
+		_check(tutorial_path._points.size() > 1, "shown tutorial draws its guidance trail")
+	var lessons_before_hide := GameState.completed_mission_count()
 	hud.tutorial_guide.call("_skip")
+	_check(not hud.tutorial_guide.visible, "Hide tips hides the tutorial panel")
+	if tutorial_path != null:
+		tutorial_path._process(0.001)
+		_check(tutorial_path._points.is_empty(), "Hide tips clears cached tutorial arrows before the next route refresh")
+		tutorial_path._process(0.6)
+		_check(tutorial_path._points.is_empty(), "hidden tutorial arrows stay absent after route refresh")
+		hud.tutorial_guide._on_mission_changed()
+		tutorial_path._process(0.6)
+		_check(not hud.tutorial_guide.visible and tutorial_path._points.is_empty(), "mission updates do not restore hidden tips or arrows")
+		hud.start_tutorial()
+		tutorial_path._process(0.001)
+		_check(hud.tutorial_guide.visible and tutorial_path._points.size() > 1, "showing tutorial tips restores their guidance trail")
+		hud.tutorial_guide.call("_skip")
+		tutorial_path._process(0.001)
+	_check(GameState.completed_mission_count() == lessons_before_hide and not GameState.tutorial_complete(), "hiding or restoring tips does not complete lessons")
 	var interactables := get_tree().get_nodes_in_group("interactable")
 	_check(interactables.size() >= 10, "lobby interactions present (%d)" % interactables.size())
 	_check(hud.get("_toast_box") == null, "in-game pop-up notifications are removed")

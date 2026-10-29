@@ -1784,3 +1784,16 @@ Evidence: `C:/Users/ayiz/AppData/Local/Temp/tidesworn-tests-823fa859e46c4f329d6e
 and `tidesworn-tests-79f33910930e4cc5aa5dcc3c2103e40b`. No native visual review was
 repeated for this merge. Existing local settings/import edits and player progress
 were preserved.
+
+
+## Hide tutorial tips and trail together (2026-10-30)
+
+While training is unfinished, **Hide tips** hides both the tutorial panel and its
+world-space dashed guidance arrows. Cached arrows clear on the next process frame,
+without waiting for the half-second route refresh, and stay absent across mission
+and day/night updates or world changes. **Show tutorial tips** restores guidance
+for the current lesson. Hiding tips never completes lessons or changes progression.
+After training completes, separate campaign/project navigation remains unchanged;
+Twilight Wilds retains its landmark-based exploration with no guidance trail.
+`tools/tide_test.gd` checks cached-arrow removal, refresh/update suppression,
+restoration and unchanged mission completion.

@@ -13,13 +13,21 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	var game := get_tree().get_first_node_in_group("game") as Game
+	# Hide the tutorial trail with its tips, including cached arrows between refreshes.
+	# Completed training keeps the separate campaign/project navigation unchanged.
+	if is_instance_valid(game) and not GameState.tutorial_complete() and is_instance_valid(game.hud) and is_instance_valid(game.hud.tutorial_guide) and not game.hud.tutorial_guide.visible:
+		if not _points.is_empty():
+			_points.clear()
+			queue_redraw()
+		_clock = 0.0
+		return
 	_clock -= delta
 	if _clock > 0.0:
 		return
 	_clock = 0.5
 	_points.clear()
 	var world := get_parent()
-	var game := get_tree().get_first_node_in_group("game") as Game
 	if game == null or game.world != world or GameState.game_over_active:
 		queue_redraw()
 		return
