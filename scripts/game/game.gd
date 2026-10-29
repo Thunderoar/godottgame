@@ -23,6 +23,9 @@ var _sailing := false
 var _return_to_harbour := false
 var _story_active := false
 var _dock_conversation: DockConversation
+var _urchin_arrival: UrchinArrival
+var _urchin_world_mode := Node.PROCESS_MODE_INHERIT
+var _urchin_hud_visible := true
 var _arjun_returning := false
 var _arjun_walk: Tween
 
@@ -163,6 +166,7 @@ func _remove_title_if_owner(expected: CanvasLayer) -> void:
 # ------------------------------------------------------------------ world switching
 
 func _clear_world() -> void:
+	if is_instance_valid(_urchin_arrival): _urchin_arrival.cancel()
 	if is_instance_valid(_dock_conversation): _dock_conversation.cancel()
 	if hud.pet_battle_panel.is_wild_challenge(): hud.pet_battle_panel.close_panel()
 	hud.release_world_controls()
@@ -720,6 +724,47 @@ func finish_ship_return(boarding: ShipDeparture) -> void:
 		await _land_arjun(boarding)
 	_check_campaign_ending()
 
+
+func try_urchin_introduction(home: Lobby, fire_count: int, points: PackedVector2Array) -> bool:
+	if world != home or _transitioning or _story_active or _sailing or _game_over or _defeat_pending or _input_locked or hud.any_modal_open() or is_instance_valid(home_interior): return false
+	if is_instance_valid(_urchin_arrival) or is_instance_valid(_dock_conversation) or home._settlement_editor.active or GameState.recovery_active() or GameState.emergency_active(): return false
+	if not bool(GameState.campaign().get("dock_welcome_seen", false)) or bool(GameState.campaign().get("urchin_intro_seen", false)): return false
+	if points.is_empty() or not GameState.is_night() or not is_instance_valid(player()) or player().dead or player().sleeping: return false
+	# A cinematic must not hide urgent damage elsewhere in the village.
+	if not home.capture_monsters().is_empty() or home._forest_trees.any(func(tree: ForestTree) -> bool: return is_instance_valid(tree) and tree.burning): return false
+	GameState.stage_home_arrival(fire_count, points)
+	_urchin_world_mode = home.process_mode
+	_urchin_hud_visible = hud.visible
+	_story_active = true
+	_input_locked = true
+	hud.release_world_controls()
+	_apply_input_lock()
+	home.process_mode = Node.PROCESS_MODE_DISABLED
+	hud.visible = false
+	var arrival := UrchinArrival.new()
+	arrival.home = home
+	arrival.points = points
+	arrival.fires = fire_count
+	arrival.night = GameState.night_number()
+	arrival.serial = GameState.journey_serial
+	arrival.full_intro = true
+	_urchin_arrival = arrival
+	arrival.completed.connect(_on_urchin_introduction_completed.bind(arrival))
+	add_child(arrival)
+	return true
+
+func _on_urchin_introduction_completed(arrival: UrchinArrival) -> void:
+	if _urchin_arrival != arrival: return
+	_urchin_arrival = null
+	var owned := is_instance_valid(arrival.home) and world == arrival.home and arrival.serial == GameState.journey_serial
+	if owned:
+		if not arrival.cancelled and not _transitioning: arrival.home.finish_urchin_arrival(arrival)
+		arrival.home.process_mode = _urchin_world_mode
+	_story_active = false
+	if owned:
+		hud.visible = _urchin_hud_visible
+		_input_locked = hud.any_modal_open() or _sailing or _transitioning
+		_apply_input_lock()
 
 func play_dock_conversation(introduction: bool = false) -> void:
 	if not world is Lobby or is_instance_valid(home_interior) or _transitioning or _story_active or _sailing or hud.any_modal_open() or is_instance_valid(_dock_conversation): return

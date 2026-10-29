@@ -61,6 +61,7 @@ var _recovery_panel: PanelContainer
 var _recovery_label: Label
 var _recovery_bar: SegmentedBar
 var _objective_panel: PanelContainer
+var objective_tracker: ObjectiveTracker
 var _mission_panel: PanelContainer
 var _mission_arrows: Array[MissionArrow] = []
 var _mission_timer := 0.0
@@ -168,7 +169,9 @@ func _build_currency_panel() -> void:
 	clock.add_child(_clock_label)
 
 func _build_objectives() -> void:
-	pass
+	objective_tracker = ObjectiveTracker.new()
+	_root.add_child(objective_tracker)
+	_objective_panel = objective_tracker
 
 func _build_progression_notice() -> void:
 	_progression_notice = GameUI.panel(Color("#142b2f"), GameUI.GOLD)
@@ -215,6 +218,12 @@ func _layout_progression_notice() -> void:
 	_progression_notice.scale = Vector2.ONE * factor
 	_progression_notice.size.x = minf(500.0, (_root.size.x - 32.0) / factor)
 	_progression_notice.position = Vector2((_root.size.x - _progression_notice.size.x * factor) * 0.5, maxf(64.0, 76.0 * fit))
+	if is_instance_valid(objective_tracker) and objective_tracker.visible:
+		var left := objective_tracker.position.x + objective_tracker.size.x * objective_tracker.scale.x + 12.0 * fit
+		var right := minf(_root.size.x - 16, minf(_menu_button.position.x, _map_button.position.x) - 10.0 * fit)
+		if right - left >= 314.0 * factor:
+			_progression_notice.position.x = left
+			_progression_notice.size.x = minf(500.0, (right - left) / factor)
 	var display_scale := 1.0
 	if DisplayServer.get_name() != "headless": display_scale = float(get_window().size.y) / maxf(1.0, _root.size.y)
 	for button in [_progression_plan, _progression_dismiss]: button.custom_minimum_size.y = maxf(44.0, 44.0 / maxf(0.1, factor * display_scale))
@@ -346,7 +355,7 @@ func set_gui_scale(value: float, persist: bool = true) -> void:
 
 func _capture_gui_layout() -> void:
 	for child in _root.get_children():
-		if child is Control and not child is ModalBase and not child is TutorialSpotlight and child != tutorial_guide and child != _fade and child != _vignette and child != _status_strip and child != _progression_notice:
+		if child is Control and not child is ModalBase and not child is TutorialSpotlight and child != tutorial_guide and child != _fade and child != _vignette and child != _status_strip and child != _progression_notice and child != objective_tracker:
 			_gui_layout[child] = {"left": child.offset_left, "top": child.offset_top, "size": child.size.max(child.get_combined_minimum_size())}
 
 
@@ -381,11 +390,7 @@ func _layout_gui() -> void:
 		if control_id != null and GameState.control_layout().has(control_id):
 			left = float(base.left)
 			top = float(base.top)
-		# Fit center journal and mission guide between edge controls at large scales.
-		if node == _objective_panel:
-			var available_width := maxf(230.0, _root.size.x - 2.0 * 330.0 * factor)
-			element_factor = minf(factor, available_width / base_size.x)
-			left = -base_size.x * element_factor * 0.5
+		# Fit the legacy mission guide between edge controls at large scales.
 		if node == _mission_panel:
 			element_factor = minf(factor, maxf(240.0, _root.size.x - 2.0 * 250.0 * factor) / base_size.x)
 			left = -base_size.x * element_factor * 0.5
@@ -419,6 +424,44 @@ func _layout_gui() -> void:
 		var below_strip := _status_strip.position.y + _status_strip.size.y * _status_strip.scale.y + 10 * factor
 		for panel in [_emergency_panel, _build_mode_panel]:
 			panel.position.y = maxf(panel.position.y, below_strip)
+	_layout_objectives()
+
+
+func _layout_objectives() -> void:
+	if not is_instance_valid(objective_tracker) or _root.size.x < 1: return
+	var fit := minf(1.0, minf(_root.size.x / 1280.0, _root.size.y / 720.0))
+	var display_scale := 1.0
+	if DisplayServer.get_name() != "headless":
+		display_scale = minf(float(get_window().size.x) / maxf(1, _root.size.x), float(get_window().size.y) / maxf(1, _root.size.y))
+	var zoom := maxf(get_gui_scale() * fit, 12.0 / (ObjectiveTracker.BODY_FONT * maxf(0.1, display_scale)))
+	var gap := 10.0 * fit
+	var left := _status_strip.position.x
+	var width := minf(320.0 * zoom, _root.size.x * 0.38)
+	var top := _status_strip.position.y + _status_strip.size.y * _status_strip.scale.y + gap
+	var bottom := _root.size.y - gap
+	# Find a free vertical interval in the left column, including customized controls.
+	var blockers: Array[Rect2] = []
+	for control: Control in _control_nodes.values():
+		if not control.visible: continue
+		var rect := Rect2(control.position, control.size * control.scale)
+		if rect.end.x > left and rect.position.x < left + width and rect.end.y > top:
+			blockers.append(rect.grow(gap))
+	blockers.sort_custom(func(a: Rect2, b: Rect2) -> bool: return a.position.y < b.position.y)
+	var best_top := top
+	var best_height := 0.0
+	var cursor := top
+	for rect in blockers:
+		var available := maxf(0, rect.position.y - cursor)
+		if available > best_height:
+			best_top = cursor
+			best_height = available
+		cursor = maxf(cursor, rect.end.y)
+	if bottom - cursor > best_height:
+		best_top = cursor
+		best_height = bottom - cursor
+	objective_tracker.position = Vector2(left, best_top)
+	objective_tracker.fit(width, minf(330 * zoom, best_height), zoom, display_scale)
+	_layout_progression_notice()
 
 
 func get_control_layout_current() -> Dictionary:
@@ -663,6 +706,7 @@ func _anchor_bottom_right(ctrl: Control, top_left_from_corner: Vector2, bottom_r
 func _process(delta: float) -> void:
 	if not visible:
 		return
+	_update_objective_visibility()
 	_tally_timer += delta
 	if _tally_timer >= TALLY_REFRESH_SECONDS:
 		_tally_timer = 0.0
@@ -687,6 +731,7 @@ func _process(delta: float) -> void:
 		_mission_timer = 0.0
 		_update_mission_guide()
 		_refresh_progression_notice()
+		_refresh_objectives()
 	_refresh_recovery()
 	_update_prompt()
 	if any_modal_open() or _sleep_panel.visible:
@@ -749,7 +794,20 @@ func _refresh_pet() -> void:
 	pass
 
 func _refresh_objectives() -> void:
-	pass
+	if not is_instance_valid(objective_tracker): return
+	objective_tracker.set_entries(ObjectiveTrackerData.entries(world, _status_strip.counts))
+	_update_objective_visibility()
+
+
+func _update_objective_visibility() -> void:
+	if not is_instance_valid(objective_tracker): return
+	var game := get_tree().get_first_node_in_group("game") as Game
+	var active := is_instance_valid(game) and is_instance_valid(world) and game.world == world and not world.is_queued_for_deletion()
+	if active:
+		active = not (game._transitioning or game._story_active or game._sailing or game._input_locked or game._game_over or game._defeat_pending or any_modal_open())
+		active = active and is_instance_valid(game.player()) and not game.player().dead
+		if world is Lobby and world._settlement_editor.active: active = false
+	objective_tracker.visible = active and not objective_tracker._entries.is_empty()
 
 func _refresh_loot() -> void:
 	if is_instance_valid(_loot_label):
@@ -848,6 +906,7 @@ func _apply_touch_mode() -> void:
 		if button == null:
 			continue
 		button.set_key_hint(_key_for_action(pair[0]) if hints else "")
+	_schedule_gui_layout()
 
 
 func _on_setting_changed(key: String) -> void:

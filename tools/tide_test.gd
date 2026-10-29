@@ -199,10 +199,12 @@ func _ready() -> void:
 	# Includes authored-size combat poses and interrupted tween regression checks.
 	await preload("res://tools/presentation_checks.gd").run(game, _check)
 	await StatusStripChecks.run(game, _check)
+	await preload("res://tools/objective_tracker_checks.gd").run(game, _check)
 	# Includes blocked repair recovery and the real Twilight -> village reward handoff.
 	await VillageProjectChecks.run(game, _check)
 	# Compact realm: living habitats, memories/cache transactions and three owned combat encounters.
 	await preload("res://tools/twilight_checks.gd").run(game, _check)
+	await preload("res://tools/urchin_arrival_checks.gd").run(game, _check)
 	await _test_forest_game_over()
 
 	GameState.delete_save()
@@ -237,6 +239,10 @@ func _test_day_night() -> void:
 	_check(lobby.spawn_sea_urchin(Vector2(17, 29)) == null and lobby.capture_monsters().is_empty(), "all fire, beach and emergency spawn paths reject daytime")
 	GameState.advance_world_clock(1.0)
 	_check(GameState.is_night() and GameState.time_string() == "NIGHT 3:00", "night begins exactly at three minutes")
+	# Arrival timing/Skip are covered by the focused checks; this fixture owns
+	# dusk population, dawn persistence and the one-wave-per-night contract.
+	if is_instance_valid(game._urchin_arrival): game._urchin_arrival.finish()
+	if is_instance_valid(lobby._urchin_cue): lobby._urchin_cue.finish()
 	_check(lobby._forest_monsters.size() == Lobby.FIRE_MONSTER_COUNT, "night spawns twenty-four fire monsters")
 	_check(lobby.capture_monsters().size() == Lobby.FIRE_MONSTER_COUNT + Lobby.NIGHT_URCHIN_COUNT, "night also spawns sea urchins at the beach")
 	for enemy in lobby.get_children():
@@ -1086,8 +1092,10 @@ func _test_forest_game_over() -> void:
 	if not game.world is Lobby:
 		game.call("_load_lobby", false)
 		await get_tree().create_timer(0.35).timeout
-	var trees := get_tree().get_nodes_in_group("forest_tree")
 	var lobby := game.world as Lobby
+	# Queued retiring worlds may coexist briefly; the last-stand sapling must
+	# belong to the same village whose all-trees-lost rule is being exercised.
+	var trees := lobby._forest_trees
 	for gun in game.get_tree().get_nodes_in_group("house_defenses"):
 		gun.set_process(false)
 	for resident in lobby._residents:

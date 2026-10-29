@@ -94,6 +94,9 @@ func dialogue_voice(speaker: String, syllable: int = 0) -> AudioStreamWAV:
 	_cache[key] = stream
 	return stream
 
+func urchin_arrival_sound(beat: String) -> AudioStreamWAV:
+	return _get_stream("urchin_" + (beat if beat in ["surf", "sand", "rattle"] else "sand"))
+
 
 func _get_stream(kind: String) -> AudioStreamWAV:
 	if _cache.has(kind):
@@ -111,6 +114,21 @@ func _build_stream(kind: String) -> AudioStreamWAV:
 	var end_freq := 140.0
 	var noise_amount := 0.35
 	match kind:
+		"urchin_surf":
+			duration = 0.42
+			start_freq = 210.0
+			end_freq = 90.0
+			noise_amount = 0.8
+		"urchin_sand":
+			duration = 0.09
+			start_freq = 145.0
+			end_freq = 100.0
+			noise_amount = 0.7
+		"urchin_rattle":
+			duration = 0.13
+			start_freq = 710.0
+			end_freq = 395.0
+			noise_amount = 0.35
 		"tree_hit":
 			duration = 0.13
 			start_freq = 150.0

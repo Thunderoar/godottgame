@@ -1,0 +1,28 @@
+extends Node
+var checks := 0
+var fails := 0
+
+func _ready() -> void:
+	if not TestEnvironment.require_isolation(): get_tree().quit(1); return
+	GameState.autosave_enabled = false
+	var game := load("res://scenes/game.tscn").instantiate() as Game
+	add_child(game)
+	await get_tree().process_frame
+	game._remove_title()
+	await preload("res://tools/objective_tracker_checks.gd").run(game, _check, _capture if "--capture" in OS.get_cmdline_user_args() else Callable())
+	game.queue_free()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	print("--- objective tracker: %d checks, %s ---" % [checks, "PASS" if fails == 0 else "FAIL"])
+	get_tree().quit(0 if fails == 0 else 1)
+
+func _check(ok: bool, message: String) -> void:
+	checks += 1
+	if not ok: fails += 1
+	print("[OK] " if ok else "[FAIL] ", message)
+
+func _capture(label: String) -> void:
+	await get_tree().create_timer(0.2).timeout
+	await RenderingServer.frame_post_draw
+	var directory := OS.get_environment("TIDESWORN_TEST_ROOT")
+	get_viewport().get_texture().get_image().save_png(directory.path_join("objectives_" + label + ".png"))

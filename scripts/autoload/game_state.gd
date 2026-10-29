@@ -80,7 +80,7 @@ func _make_default(character_id: String) -> Dictionary:
 	return {
 		"version": SAVE_VERSION,
 		"village_progression": VillageProjectDB.default_progression(),
-		"campaign": {"intro_seen": false, "dock_welcome_seen": false, "ocean_stage": 1, "arjun_rescued": false, "mei_ling_rescued": false, "ending_seen": false},
+		"campaign": {"intro_seen": false, "dock_welcome_seen": false, "urchin_intro_seen": false, "ocean_stage": 1, "arjun_rescued": false, "mei_ling_rescued": false, "ending_seen": false},
 		"character_id": str(character.id),
 		"character_name": str(character.name),
 		"character_title": str(character.title),
@@ -149,6 +149,7 @@ func _make_default(character_id: String) -> Dictionary:
 		"play_time": 0.0,
 		"world_time": 0.0,
 		"home_wave": -1,
+		"home_arrival": {},
 		"home_monsters": [],
 		"tutorial_seen": false,
 	}
@@ -1552,6 +1553,31 @@ func advance_world_clock(delta: float) -> void:
 func mark_home_wave() -> void:
 	data.home_wave = night_number()
 
+func complete_home_arrival(expected_night: int, monsters: Array, introduced: bool = false) -> bool:
+	if not is_night() or expected_night != night_number() or game_over_active: return false
+	data.home_wave = expected_night
+	data.home_arrival = {}
+	store_home_monsters(monsters)
+	if introduced: data.campaign.urchin_intro_seen = true
+	_save_if_needed()
+	data_changed.emit()
+	return true
+
+func pending_home_arrival() -> Dictionary:
+	var pending: Dictionary = data.get("home_arrival", {})
+	return pending.duplicate(true) if is_night() and int(pending.get("night", -1)) == night_number() else {}
+
+func stage_home_arrival(fires: int, points: PackedVector2Array, forest_delivered: bool = false) -> Dictionary:
+	if not is_night() or game_over_active: return {}
+	var pending := pending_home_arrival()
+	if not pending.is_empty(): return pending
+	var saved_points: Array = []
+	for point in points: saved_points.append([point.x, point.y])
+	data.home_arrival = {"night": night_number(), "fires": clampi(fires, 0, 24), "points": saved_points, "started": float(data.world_time)}
+	if forest_delivered: data.home_wave = night_number()
+	_save_if_needed()
+	return pending_home_arrival()
+
 
 func store_home_monsters(monsters: Array) -> void:
 	data.home_monsters = monsters.duplicate(true)
@@ -1734,6 +1760,26 @@ func _sanitize() -> void:
 	data.completed_missions = completed
 	data.world_time = maxf(0.0, float(data.get("world_time", 0.0)))
 	data.home_wave = clampi(int(data.get("home_wave", -1)), -1, night_number())
+	var pending: Variant = data.get("home_arrival", {})
+	data.home_arrival = {}
+	var pending_night: Variant = pending.get("night", -1) if pending is Dictionary else -1
+	if pending is Dictionary and (pending_night is int or pending_night is float) and is_finite(float(pending_night)) and is_night() and int(pending_night) == night_number():
+		var points: Array = []
+		var raw_points: Variant = pending.get("points", [])
+		if raw_points is Array:
+			for point in raw_points.slice(0, 6):
+				if not point is Array or point.size() != 2: continue
+				if not (point[0] is float or point[0] is int) or not (point[1] is float or point[1] is int): continue
+				if not is_finite(float(point[0])) or not is_finite(float(point[1])): continue
+				var clean_point := [clampf(float(point[0]), 1, 63), clampf(float(point[1]), 1, 39)]
+				if clean_point not in points: points.append(clean_point)
+		var started_raw: Variant = pending.get("started", data.world_time)
+		var started := float(started_raw) if started_raw is float or started_raw is int else float(data.world_time)
+		if not is_finite(started): started = float(data.world_time)
+		if not points.is_empty():
+			var raw_fires: Variant = pending.get("fires", 0)
+			var fires := clampi(int(raw_fires), 0, 24) if (raw_fires is int or raw_fires is float) and is_finite(float(raw_fires)) else 0
+			data.home_arrival = {"night": night_number(), "fires": fires, "points": points, "started": clampf(started, float(night_number()) * DAY_PHASE_SECONDS * 2 + DAY_PHASE_SECONDS, float(data.world_time))}
 	var monsters: Array = []
 	if data.get("home_monsters", []) is Array:
 		for record in data.get("home_monsters", []):
@@ -2151,6 +2197,7 @@ func _sanitize_campaign() -> void:
 	var raw: Variant = data.get("campaign", {})
 	var clean: Dictionary = raw if raw is Dictionary else {}
 	data.campaign = {"intro_seen": bool(clean.get("intro_seen", false)), "dock_welcome_seen": bool(clean.get("dock_welcome_seen", clean.get("intro_seen", false))), "ocean_stage": clampi(int(clean.get("ocean_stage", 1)), 1, OCEAN_STAGES), "arjun_rescued": bool(clean.get("arjun_rescued", false)), "mei_ling_rescued": bool(clean.get("mei_ling_rescued", false)), "ending_seen": bool(clean.get("ending_seen", false))}
+	data.campaign.urchin_intro_seen = clean.get("urchin_intro_seen", false) is bool and clean.get("urchin_intro_seen", false) == true
 	if not bool(data.campaign.arjun_rescued) or not bool(data.campaign.mei_ling_rescued):
 		data.campaign.ending_seen = false
 

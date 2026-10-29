@@ -76,6 +76,7 @@ var _ruin_positions: Array[Vector2] = []
 var _tree_serial := 0
 var _emergency_fire: Sprite2D
 var _emergency_wall_toast := 0.0
+var _urchin_cue: UrchinArrival
 
 const RECOVERY_CENTER := Vector2(34.0, 23.7)
 const RECOVERY_RADIUS := 4.3
@@ -732,8 +733,12 @@ func _on_day_phase_changed(night: bool, _immediate: bool = false) -> void:
 		return
 	_update_daylight()
 	# Dawn changes only the light. Living enemies keep their HP, targets and AI.
-	if not night or int(GameState.data.get("home_wave", -1)) >= GameState.night_number():
+	var pending := GameState.pending_home_arrival()
+	if not night or not GameState.is_night() or (int(GameState.data.get("home_wave", -1)) >= GameState.night_number() and pending.is_empty()):
 		return
+	if is_instance_valid(_urchin_cue): return
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if is_instance_valid(game) and is_instance_valid(game._urchin_arrival): return
 	var fires := 0
 	var urchins := 0
 	for record in capture_monsters():
@@ -741,16 +746,75 @@ func _on_day_phase_changed(night: bool, _immediate: bool = false) -> void:
 			fires += 1
 		else:
 			urchins += 1
-	_spawn_forest_monsters(maxi(0, FIRE_MONSTER_COUNT - fires))
-	for i in maxi(0, NIGHT_URCHIN_COUNT - urchins):
-		spawn_sea_urchin(Vector2(15.0 + i * 1.2, 27.0 + (i % 3) * 1.5))
-	GameState.mark_home_wave()
-	if GameState.emergency_active():
-		_spawn_emergency_monsters(GameState.emergency_monsters())
-	GameState.store_home_monsters(capture_monsters())
+	var fire_count := maxi(0, FIRE_MONSTER_COUNT - fires)
+	var points := urchin_entry_points(maxi(0, NIGHT_URCHIN_COUNT - urchins))
+	if not pending.is_empty():
+		fire_count = int(pending.fires)
+		points.clear()
+		for point in pending.points: points.append(Vector2(float(point[0]), float(point[1])))
+	if not points.is_empty() and is_instance_valid(game) and game.try_urchin_introduction(self, fire_count, points): return
+	if pending.is_empty(): _spawn_forest_monsters(fire_count)
+	if points.is_empty():
+		GameState.complete_home_arrival(GameState.night_number(), capture_monsters())
+		return
+	if pending.is_empty(): pending = GameState.stage_home_arrival(0, points, true)
+	_urchin_cue = UrchinArrival.new()
+	_urchin_cue.home = self
+	_urchin_cue.points = points
+	_urchin_cue.night = GameState.night_number()
+	_urchin_cue.serial = journey_serial
+	_urchin_cue.fires = int(pending.fires)
+	_urchin_cue.warning_started = float(pending.started)
+	_urchin_cue.completed.connect(_on_urchin_cue_completed.bind(_urchin_cue))
+	add_child(_urchin_cue)
+
+func urchin_entry_clear(at: Vector2) -> bool:
+	if WorldTerrain.is_sea(at) or not MAP_RECT.grow(-0.6).has_point(at): return false
+	if _authored_map and (_authored_map.water_cell(Vector2i(at.floor())) or not _authored_map.cell("Collision", Vector2i(at.floor())).is_empty()): return false
+	var query := PhysicsShapeQueryParameters2D.new()
+	var circle := CircleShape2D.new()
+	circle.radius = 0.55
+	query.shape = circle
+	query.collision_mask = 1
+	query.transform = Transform2D(0, to_global(at) + Vector2(0, -0.21))
+	return get_world_2d().direct_space_state.intersect_shape(query, 1).is_empty()
+
+func urchin_entry_points(count: int) -> PackedVector2Array:
+	var result := PackedVector2Array()
+	for i in 32:
+		if result.size() >= count: break
+		var x := 10.0 + float(i) * 0.4
+		var at := Vector2(x, WorldTerrain.shore_y(x) - 1.25)
+		if _layout.world_footprint("jetty_deck").grow(1.4).has_point(at): continue
+		if at.distance_to(_layout.position_of("beach_turtle")) < 2.0: continue
+		if is_instance_valid(player) and at.distance_to(player.position) < 2.5: continue
+		var spaced := true
+		for point in result:
+			if point.distance_to(at) < 1.05: spaced = false; break
+		if not urchin_entry_clear(at) or not spaced: continue
+		if resident_path(to_global(at), to_global(at + Vector2(0, -2)), false).is_empty(): continue
+		result.append(at)
+	return result
+
+func _on_urchin_cue_completed(cue: UrchinArrival) -> void:
+	if _urchin_cue != cue: return
+	_urchin_cue = null
+	if not cue.cancelled: finish_urchin_arrival(cue)
+
+func finish_urchin_arrival(arrival: UrchinArrival) -> bool:
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if not is_instance_valid(game) or game.world != self or is_queued_for_deletion() or arrival.serial != journey_serial or journey_serial != GameState.journey_serial: return false
+	if not GameState.is_night() or arrival.night != GameState.night_number() or GameState.pending_home_arrival().is_empty(): return false
+	_spawn_forest_monsters(arrival.fires)
+	var delivered := 0
+	for point in arrival.points:
+		if urchin_entry_clear(point) and is_instance_valid(spawn_sea_urchin(point, false, false, true, arrival.full_intro)): delivered += 1
+	if GameState.emergency_active(): _spawn_emergency_monsters(GameState.emergency_monsters())
+	GameState.complete_home_arrival(arrival.night, capture_monsters(), arrival.full_intro and delivered > 0)
+	return delivered > 0
 
 
-func spawn_sea_urchin(at: Vector2, raid: bool = false, restoring: bool = false) -> Enemy:
+func spawn_sea_urchin(at: Vector2, raid: bool = false, restoring: bool = false, validated_entry: bool = false, revealed: bool = false) -> Enemy:
 	if not restoring:
 		if not GameState.is_night() or GameState.game_over_active:
 			return null
@@ -762,6 +826,7 @@ func spawn_sea_urchin(at: Vector2, raid: bool = false, restoring: bool = false) 
 			return null
 	var monster := Enemy.new()
 	monster.kind = "urchin"
+	monster.arrival_revealed = revealed
 	monster.settlement_mode = raid
 	monster.max_hp = 60 if raid else 30
 	monster.damage = 9 if raid else 6
@@ -770,7 +835,7 @@ func spawn_sea_urchin(at: Vector2, raid: bool = false, restoring: bool = false) 
 	monster.gold_reward = 12 if raid else 7
 	monster.diamond_chance = 0.0
 	monster.body_radius = 0.42
-	monster.position = at if restoring else safe_spawn(at, monster.body_radius)
+	monster.position = at if restoring or validated_entry else safe_spawn(at, monster.body_radius)
 	add_child(monster)
 	if raid:
 		_emergency_monsters.append(monster)

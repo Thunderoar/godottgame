@@ -2040,3 +2040,90 @@ PASS, exit 0**, with an empty error log and no `[FAIL]`, `SCRIPT ERROR` or `ERRO
 markers. Evidence:
 `C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-be4ca5d585294c6db091581728cb714b`.
 `git diff --check` passes. Player saves were isolated; no exported build was made.
+
+## Collapsible gameplay objectives (2026-10-30)
+
+The gameplay HUD has a left-side objective tracker below the status strip. Its
+header collapses to the current goal and remembers the choice in device settings.
+It remains non-modal, leaves held movement intact, and updates progress without
+reopening. World-specific guidance covers village lessons, danger, workshop work,
+Twilight discoveries/checkpoint/boss/peaceful revisits, later arenas and the separate
+Kraken-victory/prison-rescue steps. Selection reads existing progression only.
+
+`tools/objective_tracker_checks.gd` is included in the full gameplay gate. The
+focused Windows route is `tools/test_isolated.ps1 -Godot <console-executable>
+-Objectives`, with optional `-Capture`. It covers raw multi-touch, mouse/keyboard,
+gesture cancellation, settings persistence/defaults, read-only updates, retiring
+goals, context changes, modal/story suppression, 1280x720 and 832x480 at three UI
+scales, relocated controls and first-clear-reminder clearance. See
+`docs/OBJECTIVE_TRACKER.md` for ownership and behavior.
+
+Native Windows Godot 4.7.2 focused verification: **58 checks, PASS, exit 0**, with
+an empty error log and no failure/script/error markers. Expanded/collapsed village
+captures at both resolutions and the realm-exploration capture were inspected;
+the compact first-clear reminder no longer overlaps the tracker. Evidence:
+`C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-51d409039d5a4d999b7cff2025efb617`.
+This is native Windows renderer and synthetic-input evidence, not a physical-phone
+test or a rebuilt APK. Isolated import exited 0 with the existing Android
+build-tools-directory warning and no script/error markers.
+
+The canonical isolated gameplay gate reported **6,008 checks, PASS, exit 0** with
+an empty error log and no failure/script/error markers. Evidence:
+`C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-80bf6ce829e84e688b46c0c5ddece8ec`.
+This run compiled gameplay before concurrent urchin-arrival edits. The final native
+review used a disposable source copy of `b2b3b104` plus the objectives changes at
+`C:/Users/LUQMAN/AppData/Local/Temp/objectives-source-5e81ee9b57a74d758a92667ac75301ad/project`.
+Tracker, selector, HUD, settings and focused-test sources matched the working copy
+by SHA-256. These results validate objectives on that baseline; the ongoing combined
+urchin changes require their own gate. The cold copy exceeded the wrapper's first
+90-second import budget; completing its cache under a bounded 300-second import
+finished successfully before the native review. Existing player saves and settings
+were isolated throughout. No exported build was produced.
+
+## Sea urchin shoreline animatic and poses (2026-10-30)
+
+Implemented an original pixel-art shoreline introduction: foam, spines, land
+contact, brief wobble/rattle, inland glance, allocated followers and matched
+handoff. Game suspends its current Lobby/clock and releases controls for the
+first safe introduction; touch Skip and keyboard Skip restore its camera/HUD.
+Later shore groups use a running-world eight-second warning. Pending arrival
+positions and absolute warning time persist, with defaults/sanitization and
+one completion transaction. Cancelled/world-replaced previews never mark the
+intro seen or become live enemies. Landing points are checked against geometry
+and routes, then revalidated before delivery.
+
+Urchin-specific cached poses cover movement, windup, active, recovery and death
+over the existing Enemy FSM. Stats, attack/cooldown timing, target rules, world
+collision, one-hit claims and one-payment rewards remain intact. Low effects,
+live Reduce Motion and mute have focused coverage. This implements arrival
+presentation on the existing dusk wave; randomized quiet/forest/shore/mixed
+night profiles remain a separate plan, not shipped behavior.
+
+Verification on native Windows / Godot 4.7.2:
+
+- Canonical isolated gameplay: **6,058 checks, PASS, exit 0**, empty error log.
+  This includes the concurrent objective tracker and sea-urchin checks.
+- Native Compatibility/OpenGL rendered reviews at **1280x720** and **832x480**:
+  **51 checks, PASS, exit 0** each, with empty error logs. Inspected storyboard
+  samples, compact group framing, low/Reduce Motion and combat pose captures.
+- Focused checks cover one/two/three-member batches, Skip at all eight storyboard
+  sample times, actual touch Skip, saved survivors, reconstruction of a partially
+  elapsed warning, duplicate phase/completion callbacks, blocked landings,
+  malformed saved fields, world replacement and one actual hit/reward.
+- The first full run exposed the final forest fixture selecting a sapling from
+  a retiring world. The arrival checks now wait for retiring worlds to leave;
+  the last-stand test explicitly uses its active Lobby's trees. The final run
+  verifies both protected sapling survival and the actual all-trees-lost ending.
+- Isolated import passed after repairing an initial parse error; the existing
+  Android build-tools-directory diagnostic remains. `git diff --check` passes.
+  Reviews used Dummy audio; listening quality and physical-phone operation are
+  not claimed. No exported build was made.
+
+Evidence:
+`C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-eebfbba9a83c48af9a2b87b0edc8e641`
+(full gate), `C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-171771c313a3455a8d0668079a856e35`
+(1280x720), `C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-89d587ff8dcf4e939a06adf4f71e3058`
+(832x480), `C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-f5f180c862c9487686c5a57edb3d83ec`
+(successful import). `docs/SEA_URCHIN_ARRIVAL.md` records runtime ownership and
+the isolated `-Urchin -Capture` review route. The optional GIF preview assembles
+eight rendered storyboard samples; it is not a continuous gameplay recording.

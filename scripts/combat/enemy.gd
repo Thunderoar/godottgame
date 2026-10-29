@@ -47,6 +47,7 @@ var hp := 42
 var dead := false
 var active := false
 var spawning := true
+var arrival_revealed := false
 var sprite: Sprite2D
 var _state := State.SPAWN
 var _state_time := 0.35
@@ -86,6 +87,7 @@ var _route_index := 0
 var _target_clock := 0.0
 var _pose_tween: Tween
 var _separation_push := Vector2.ZERO
+var _urchin_stride := 0.0
 
 
 func _ready() -> void:
@@ -111,9 +113,10 @@ func _ready() -> void:
 	_route_clock = float(get_instance_id()%23)*0.025
 	_build()
 	# A short spawn-in shimmer so monsters do not pop into the dark.
-	modulate.a = 0.0
-	var tween := create_tween()
-	tween.tween_property(self, "modulate:a", 1.0, 0.35)
+	if not (kind == "urchin" and arrival_revealed):
+		modulate.a = 0.0
+		var tween := create_tween()
+		tween.tween_property(self, "modulate:a", 1.0, 0.35)
 	spawning = false
 
 
@@ -144,7 +147,7 @@ func _build() -> void:
 
 	sprite = Sprite2D.new()
 	sprite.name = "Sprite"
-	sprite.texture = PixelArt.enemy_texture(kind, is_boss, 0)
+	sprite.texture = UrchinArt.texture() if kind == "urchin" else PixelArt.enemy_texture(kind, is_boss, 0)
 	sprite.scale = _sprite_rest_scale()
 	sprite.position = _sprite_rest_position()
 	sprite.z_index = 0
@@ -193,9 +196,9 @@ func _physics_process(delta: float) -> void:
 	if _frame_timer >= 0.35:
 		_frame_timer -= 0.35
 		_frame = 1 - _frame
-		if sprite and _state not in [State.WINDUP, State.STAGGER]:
+		if sprite and kind != "urchin" and _state not in [State.WINDUP, State.STAGGER]:
 			sprite.texture = PixelArt.enemy_texture(kind, is_boss, _frame)
-	if sprite and _state not in [State.WINDUP]:
+	if sprite and kind != "urchin" and _state not in [State.WINDUP]:
 		if _pose_tween == null or not _pose_tween.is_running():
 			sprite.position.y = _sprite_rest_position().y + (sin(_bob * 4.0) * (0.022 if get_real_velocity().length() > 0.1 else 0.008) if not GameSettings.reduce_motion() else 0.0)
 	if _hit_flash > 0.0:
@@ -222,6 +225,7 @@ func _physics_process(delta: float) -> void:
 		velocity = _knockback
 		_knockback = _knockback.move_toward(Vector2.ZERO, delta * 18.0)
 		move_and_slide()
+		_update_urchin_pose(animation_delta)
 		return
 
 	if not is_instance_valid(_player) or _player.get_parent() != get_parent():
@@ -272,6 +276,26 @@ func _physics_process(delta: float) -> void:
 			move_and_slide()
 			if _state_time <= 0.0:
 				_enter(State.CHASE)
+	_update_urchin_pose(animation_delta)
+
+func _update_urchin_pose(delta: float) -> void:
+	if kind != "urchin" or sprite == null or dead: return
+	_urchin_stride += get_real_velocity().length() * delta
+	var walking := get_real_velocity().length() > 0.1
+	var pose := "walk" if walking else "idle"
+	match _state:
+		State.WINDUP: pose = "windup"
+		State.ATTACK: pose = "attack"
+		State.RECOVER: pose = "recover"
+		State.STAGGER: pose = "wobble"
+		State.ALERT: pose = "notice"
+	var frame := int(_urchin_stride * 4) if walking else int(_bob * 0.6)
+	if _state == State.RECOVER: frame = clampi(int((0.5 - _state_time) * 8), 0, 3)
+	if _state == State.STAGGER: frame = clampi(int((0.2 - _state_time) * 16), 0, 3)
+	sprite.texture = UrchinArt.texture(pose, frame)
+	sprite.rotation = sin(_urchin_stride * TAU * 2) * 0.055 if walking and pose == "walk" and not GameSettings.reduce_motion() else 0.0
+	if pose in ["idle", "walk"] and (_pose_tween == null or not _pose_tween.is_running()):
+		sprite.position = _sprite_rest_position() + Vector2(0, absf(sin(_urchin_stride * TAU * 2)) * -PixelArt.PX if walking and not GameSettings.reduce_motion() else 0.0)
 
 
 func _target_is_usable() -> bool:
@@ -328,6 +352,7 @@ func _enter(next: State) -> void:
 func _clear_windup_pose() -> void:
 	_stop_pose_tween()
 	if sprite:
+		if kind == "urchin": sprite.rotation = 0
 		sprite.scale = _sprite_rest_scale()
 		sprite.position = _sprite_rest_position()
 
@@ -812,6 +837,7 @@ func _die() -> void:
 	if dead:
 		return
 	dead = true
+	if kind == "urchin": sprite.texture = UrchinArt.texture("dead")
 	_clear_windup_pose()
 	if get_parent() is Lobby:
 		get_parent().forget_monster(self)
@@ -839,6 +865,8 @@ func _die() -> void:
 	# Death presentation: pop, burst of motes and a knock-slide, then fade.
 	var death_color := Color("#e8b46b")
 	match kind:
+		"urchin":
+			death_color = Color("#998ab3")
 		"bogling":
 			death_color = Color("#8fbf5d")
 		"drowned":
@@ -855,7 +883,7 @@ func _die() -> void:
 	collision_layer = 0
 	var tween := create_tween().set_parallel(true)
 	tween.tween_property(self, "modulate:a", 0.0, 0.9)
-	tween.tween_property(self, "scale", Vector2(1.15, 0.8), 0.9)
+	tween.tween_property(self, "scale", Vector2(1.04, 0.92) if kind == "urchin" else Vector2(1.15, 0.8), 0.9)
 	tween.tween_property(self, "global_position", global_position + _knockback.limit_length(1.2) * 0.2, 0.9)
 	tween.chain().tween_callback(queue_free)
 

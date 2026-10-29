@@ -19,6 +19,7 @@ extends Node
 ##   reduce_motion            bool                     default false
 ##   visual_style             String modern|pixel     default "pixel" (restart)
 ##   effects_quality          String low|med|high     default "high"
+##   objectives_collapsed     bool                     default false
 ##
 ## This node applies what it owns: the Master bus (volume + mute) and the window
 ## mode. The SFX bus belongs to `Sfx`, which reads `effects_volume()`/`mute_all()`
@@ -60,6 +61,7 @@ const DEFAULTS := {
         "reduce_motion": false,
         "effects_quality": "high",
         "visual_style": "pixel",
+        "objectives_collapsed": false,
 }
 
 ## Override before `load_settings()` to redirect persistence (tests do this).
@@ -153,7 +155,7 @@ func _sanitize_value(key: String, value: Variant) -> Variant:
                 "effects_quality":
                         var quality := str(value).to_lower()
                         return quality if EFFECT_QUALITIES.has(quality) else str(DEFAULTS["effects_quality"])
-                "mute_all", "fullscreen", "screen_shake", "auto_pause_on_focus_loss", "reduce_motion":
+                "mute_all", "fullscreen", "screen_shake", "auto_pause_on_focus_loss", "reduce_motion", "objectives_collapsed":
                         return _as_bool(value, bool(DEFAULTS[key]))
         return DEFAULTS.get(key, value)
 
