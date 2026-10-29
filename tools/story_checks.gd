@@ -108,6 +108,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	await OpeningFishingChecks.run(game, check)
 	await OpeningKrakenChecks.run(game, check)
 	await OpeningWreckChecks.run(game, check)
+	await OpeningCaptureChecks.run(game, check)
 	game._clear_world()
 	var ocean := OceanJourney.new()
 	game.world = ocean

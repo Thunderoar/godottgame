@@ -1028,3 +1028,42 @@ Fresh Windows Godot 4.7.2 verification used temporary user-data directories, ver
 - Final gameplay/native error scans and `git diff --check` are clean. Paired village captures and the modern expanded map/pet arena were visually inspected on the AMD Radeon Vega 3 Compatibility renderer.
 
 The isolated import completed with exit 0 and no error markers; it reported `Unable to open Android 'build-tools' directory.` No Android export or physical-device validation is claimed. Test logs/captures remain outside the repository, and normal player saves/settings were not changed. The original local changes, artwork and evidence were retained in a named Git stash as a backup before committing the integration.
+
+## Fourth opening beat: two friends captured (2026-10-29)
+
+Intro page three now stages Arjun's imprisonment and Mei Ling's capture in two
+separate pixel-art shore panels. The Kraken pulls Arjun across the open cage
+threshold before the portcullis closes; the lock settles and the arm releases.
+Attention then transfers to Mei Ling: two guards close her escape routes and
+escort her to a ruined passage. Both living friends remain visible during the
+final 1.35-second hold. Original captions, six-second timing, Next/Skip, story
+completion and save rules are preserved. Adam's turtle rescue follows as before.
+
+`OpeningCaptureChecks`, integrated through `StoryChecks`, covers ordered capture
+events, cage clearance, shared arm/body contact, consecutive actor positions,
+guard spacing, face visibility, uniform layout, low-quality geometry, live Reduce
+Motion, page-clock preservation, early Next and idempotent Skip/cleanup. The
+previous wreck assertion now verifies the new capture handoff. The focused
+`opening_capture_test.tscn` adds native phase captures and actual engine-injected
+touch Next / mouse Skip events. `-- --sequence` captures exact page times;
+`-- --wide-review` requests and verifies a borderless 1600x720 review viewport.
+
+Current Windows Godot **4.7.2.stable.official.ed1daf0bf**, isolated user data:
+
+- Canonical `tools/test_isolated.ps1`: **2,370 checks, PASS**, exit 0.
+- Native 1280x720: **553 checks, PASS**, exit 0.
+- Native 832x480: **626 checks, PASS**, exit 0, including 73 sampled motion frames.
+- Native verified 1600x720: **554 checks, PASS**, exit 0.
+- Final gameplay/native logs contain no `[FAIL]`, `SCRIPT ERROR`, `ERROR:` or
+  warning markers. The isolated import exits 0 without error markers, retaining
+  the existing missing Android build-tools notice.
+- All **12 non-target story panels** match baseline rendered pixels exactly at
+  fixed page/time/viewport/settings. The fourth intro panel changes as intended.
+- Rendered capture phases, accessibility/low-quality variants, compact and wide
+  framing, motion contact sheet and following turtle rescue were inspected on the
+  AMD Radeon Vega 3 Compatibility renderer. A six-second sampled GIF was encoded,
+  decoded and duration-checked; it does not establish hardware frame rate.
+
+See `OPENING_CAPTURE_REDESIGN.md` for source ownership, staging, reproduction,
+evidence location and corrected intermediate attempts. No Android export or
+physical-phone testing was performed; player saves/settings were not used.

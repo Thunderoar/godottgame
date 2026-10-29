@@ -55,7 +55,7 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(PixelArt.CACHE.size() == cached, "wreck sampling allocates no textures, gameplay nodes or asynchronous animation chains")
 	story._page_time = 5.99
 	story._process(0.02)
-	check.call(story.page == 3 and story._page_time == 0 and not story._canvas.uses_wreck_shot(), "six seconds hands off safely to the existing capture beat")
+	check.call(story.page == 3 and story._page_time == 0 and not story._canvas.uses_wreck_shot() and story._canvas.uses_capture_shot(), "six seconds hands off safely to the two-friend capture beat")
 	for kind in ["arjun", "mei", "ending"]:
 		story.kind = kind
 		story.page = 2
