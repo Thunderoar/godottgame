@@ -23,6 +23,14 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	realm.player.set_physics_process(false)
 	realm.pet.set_physics_process(false)
 	check.call(realm.player.position.is_equal_approx(RealmDB.ARRIVAL), "new visitors arrive beside the return rift")
+	check.call(realm.map_rect.size == Vector2(56,52) and RealmDB.SIZE.x * RealmDB.SIZE.y < 72 * 72 * 0.57, "compact realm removes over 43 percent of the original map area")
+	check.call(RealmDB.BOSS_ARENA.size == Vector2(20,20), "compaction preserves full-size boss movement and dodge space")
+	var content_inside := RealmDB.ENCOUNTERS.values().all(func(def: Dictionary) -> bool: return realm.map_rect.grow(-2).has_point(def.at))
+	for place in realm.get_children():
+		if place is RealmInteractable: content_inside = content_inside and realm.map_rect.grow(-1).has_point(place.position)
+	check.call(content_inside, "both pet habitats, checkpoint, exits and all onward passages fit inside the compact boundary")
+	var main_route := PackedVector2Array(RealmDB.PATHS[0])
+	check.call(_length(main_route) < 52, "authored main road is shorter than 52 units instead of the original roughly 66-unit walk")
 	check.call(not realm._boss_arrived and not realm.boss.active, "citadel boss remains dormant at arrival")
 	var boss_hp := realm.boss.hp
 	realm.boss.take_damage(9999,Vector2.ZERO,realm.pet)
@@ -51,9 +59,13 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 		realm.camera.force_update_scroll()
 		await capture.call("01_arrival")
 	var routes := ResidentRoutes.new(realm, realm.map_rect)
-	for destination in [Vector2(17,43), Vector2(57,29), RealmDB.CAMP]:
+	for destination in [RealmDB.ENCOUNTERS.bramble_cat.at, RealmDB.ENCOUNTERS.dusk_moth.at, RealmDB.CAMP]:
 		var path := routes.path(RealmDB.ARRIVAL, destination, false)
 		check.call(not path.is_empty() and path[-1].distance_to(destination) < 0.1, "arrival has a complete collision-clear route to %s" % destination)
+	for place in realm.get_children():
+		if place is RealmInteractable and place.kind == "passage":
+			var path := routes.path(RealmDB.CAMP,place.position,false)
+			check.call(not path.is_empty() and path[-1].distance_to(place.position) < 0.1, "compact layout preserves a complete route to %s" % place.caption)
 	var cat := realm.wildlife.bramble_cat as RealmInteractable
 	realm.player.position = cat.position + Vector2(0,2)
 	realm.survey()
@@ -126,14 +138,14 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(panel._resolved and panel.duel.result == "loss" and GameState.get_pet("dusk_moth").is_empty(), "losing peacefully grants no wild recruit")
 	panel.close_panel()
 	check.call(GameState.health() == hp and GameState.has_living_pet(), "wild challenge loss does not damage persistent health or companion readiness")
-	var blocked_path := routes.path(Vector2(18,35), RealmDB.CAMP, false)
+	var blocked_path := routes.path(Vector2(12,32), RealmDB.CAMP, false)
 	var blocked_length := _length(blocked_path)
 	realm.open_shortcut()
 	await game.get_tree().process_frame
 	await game.get_tree().physics_frame
 	check.call(bool(GameState.realm_progress().shortcut) and not is_instance_valid(realm._shortcut_body), "watchpost winch opens and persists the rootway")
 	routes.invalidate()
-	var opened_path := routes.path(Vector2(18,35), RealmDB.CAMP, false)
+	var opened_path := routes.path(Vector2(12,32), RealmDB.CAMP, false)
 	check.call(not opened_path.is_empty() and _length(opened_path) < blocked_length, "the opened rootway creates a physically shorter collision-clear return path")
 	if capture.is_valid():
 		game.open_map()
@@ -148,6 +160,9 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	GameState.save_game()
 	check.call(GameState.load_game() and GameState.realm_pet_bonded("bramble_cat") and bool(GameState.realm_progress().shortcut), "bonded pets, shortcut and discoveries survive save/load")
 	var saved_progress := GameState.realm_progress()
+	GameState.data.realm_progress.cells = ["0:0","3:4","5:5"]
+	GameState._sanitize()
+	check.call(GameState.realm_progress().cells == ["0:0","3:4","5:5"] and GameState.realm_progress().checkpoint == "camp" and GameState.realm_pet_bonded("bramble_cat"), "old six-by-six discovery IDs, checkpoint and bonds survive map compaction")
 	GameState.data.erase("realm_progress")
 	GameState._sanitize()
 	check.call(bool(GameState.realm_progress().visit_active) and GameState.realm_progress().checkpoint == "arrival", "old active first-portal saves migrate to a safe realm arrival")
@@ -159,7 +174,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	realm.player.set_physics_process(false)
 	realm.pet.set_physics_process(false)
 	check.call(realm.player.position.distance_to(RealmDB.CAMP) < 0.1 and not realm._boss_arrived, "Continue reconstruction uses the safe checkpoint and resets unfinished boss")
-	realm.player.position = Vector2(36,16)
+	realm.player.position = RealmDB.BOSS_THRESHOLD
 	realm._physics_process(0.1)
 	check.call(realm._boss_arrived and realm.boss.active and Sfx.battle_track == RealmDB.PORTAL, "crossing the citadel threshold activates the boss and battle track")
 	check.call(realm.camera.framing_bounds.has_area() and realm.camera.zoom.y <= game.get_viewport_rect().size.y / 23.0 + 0.01, "boss encounter frames the whole chamber and overhead warnings even at high preferred zoom")
@@ -167,12 +182,12 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	realm._physics_process(0.1)
 	check.call(not realm._boss_arrived and realm.boss.hp == realm.boss.max_hp and Sfx.battle_track.is_empty(), "retreat resets the unfinished boss without moving through walls")
 	check.call(not realm.camera.framing_bounds.has_area(), "retreat releases encounter framing back to the exploration camera")
-	realm.player.position = Vector2(36,16)
+	realm.player.position = RealmDB.BOSS_THRESHOLD
 	realm._physics_process(0.1)
-	realm.player.position = Vector2(47,15)
+	realm.player.position = (RealmDB.BOSS_ARENA.position + Vector2(21,14))
 	realm._physics_process(0.1)
 	check.call(not realm._boss_arrived and not realm.camera.framing_bounds.has_area(), "retreat through the eastern passage also releases the boss and camera leash")
-	realm.player.position = Vector2(36,16)
+	realm.player.position = RealmDB.BOSS_THRESHOLD
 	realm._physics_process(0.1)
 	if capture.is_valid():
 		realm.camera.position = realm.camera.framing_bounds.get_center()
@@ -194,7 +209,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	realm.survey()
 	check.call(realm._hint_label.text.contains("peaceful"), "restored landmarks describe the peaceful realm rather than a living fiend")
 	if capture.is_valid():
-		realm.camera.position = Vector2(36,14)
+		realm.camera.position = (RealmDB.BOSS + Vector2(0,4))
 		realm.camera.force_update_scroll()
 		await capture.call("04_restored")
 	realm.exit_to_lobby(true)

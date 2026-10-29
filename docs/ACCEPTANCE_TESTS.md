@@ -1206,3 +1206,28 @@ Reproduce with `tools/test_isolated.ps1 -Godot <Godot-console-executable>`; add
 `-Twilight` for the focused suite, or `-Twilight -Capture -Resolution 1280x720`
 (and `832x480`) for isolated rendered captures. The wrapper prints its external
 artifact directory and requires the exact corresponding final PASS summary.
+
+## Compact Twilight Wilds (2026-10-29)
+
+- The realm footprint is 56x52 instead of 72x72: 43.8% less area. The main authored
+  road measures 49.55 units instead of 65.73 (24.6% shorter). This is a geometry
+  measurement, not a timed player-session or performance claim.
+- Arrival/return, both habitats, watchpost winch, checkpoint, enemy homes, boundary
+  collision, terrain bridge/pool and the citadel move together. Characters, movement
+  speeds, path widths and the 20x20 boss arena retain their original scale.
+- All nine onward passages have physics-verified complete routes. Their courtyard
+  paths exclude decorative tree collisions at the entrances. The rootway remains
+  a real, persistent shortcut with a shorter valid route after opening.
+- The six-by-six discovery grid now uses normalized cells over the new bounds.
+  Existing discovery IDs, saved checkpoint IDs, bonds, shortcuts and campaign flags
+  survive; players resume at the relocated safe checkpoint. No village layout or
+  forest RNG/fixture associations were changed.
+
+Final Windows / Godot 4.7.2 verification: canonical isolated gameplay **4,803 checks,
+PASS, exit 0**; actual-renderer focused reviews **68 checks, PASS, exit 0** at each
+of **1280x720** and **832x480**. All final gameplay/review logs contain no FAIL,
+SCRIPT ERROR or ERROR markers and their error logs are empty. Arrival, compact
+exploration map and full citadel framing were inspected in rendered captures.
+The import still reports the existing Android build-tools-directory warning;
+no Android export or physical-device performance claim is made. `git diff --check`
+passed. These results supersede the pre-compaction verification count above.

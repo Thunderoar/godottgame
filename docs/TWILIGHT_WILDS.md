@@ -4,6 +4,13 @@ Implemented 2026-10-29. The first dimension replaces the two village battle entr
 
 ## The journey
 
+The compact layout is **56×52 world units**, reduced from the original 72×72
+(about 44% less area). Landmarks and optional loops sit closer together; character
+scale, path widths, combat speeds and the 20×20 boss arena remain unchanged. The
+main authored road is about 25% shorter. Terrain, boundaries, shortcut, habitats,
+onward passages and discovery mapping all use the compact footprint. Existing
+six-by-six discovery IDs and stable checkpoint/bond IDs remain compatible.
+
 Follow the stone road from Arrival Glade across Rootbound Crossing toward Broken Watchpost and the Ashen Approach. Bramble Grove branches west; Moonpool Hollow loops east. At the watchpost, the rootway winch opens a permanent shortcut through the escarpment. The citadel lantern provides a two-second rest and a saved return checkpoint.
 
 Six local Darkfire Imp encounters activate near their home areas and disengage when the player retreats. Arrival, pet habitats and the lantern are safe from those pursuing packs. Shadow & Chaos Fiend waits beyond the citadel's inner threshold. Dormant enemies cannot be damaged by weapons or companion attacks. Retreating to the lantern resets the unfinished boss, its spells and attack sequence.
@@ -23,7 +30,7 @@ A first win immediately commits the bond and companion/village-guardian ownershi
 
 ## Saves and outcomes
 
-`GameState.realm_progress` owns discovered 12-unit map cells, landmarks, shortcut status, a stable checkpoint ID, bonded encounter IDs and saved realm presence. Unknown destinations sanitize to Arrival Glade. Old saves with an active first-portal expedition migrate to the new realm safely. Existing owned pets and cleared duel recruits remain owned.
+`GameState.realm_progress` owns discovered cells on a normalized 6x6 map grid, landmarks, shortcut status, a stable checkpoint ID, bonded encounter IDs and saved realm presence. Unknown destinations sanitize to Arrival Glade. Old saves with an active first-portal expedition migrate to the new realm safely. Existing owned pets and cleared duel recruits remain owned.
 
 Continue resumes an active realm visit at its last safe checkpoint; unfinished enemies and bosses reset. Defeat retains the existing home recovery flow, discards ordinary unbanked expedition loot, and preserves the realm checkpoint/discoveries/bonds. Returning through a rift banks expedition loot and ends the visit.
 

@@ -728,7 +728,7 @@ func _sanitize_realm_progress() -> void:
 
 func discover_realm_at(at: Vector2) -> void:
 	var changed := false
-	var center := Vector2i(floori(at.x / 12), floori(at.y / 12))
+	var center := Vector2i(floori(at.x / RealmDB.CELL_SIZE.x), floori(at.y / RealmDB.CELL_SIZE.y))
 	for x in range(maxi(0,center.x-1), mini(6,center.x+2)):
 		for y in range(maxi(0,center.y-1), mini(6,center.y+2)):
 			var id := "%d:%d" % [x,y]

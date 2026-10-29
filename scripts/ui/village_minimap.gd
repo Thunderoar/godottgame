@@ -87,7 +87,7 @@ func map_icons(world: Node2D) -> Array[Dictionary]:
 		if is_instance_valid(world.ship_boarding) and is_instance_valid(world.ship_boarding.ship):
 			icons.append({"id": "ship", "position": world.ship_boarding.ship.global_position, "texture": PixelArt.ship_texture(), "priority": 3, "theme": ""})
 	elif world is TwilightRealm:
-		icons.append({"id": "exit", "position": Vector2(36,66), "texture": PixelArt.portal_texture(RealmDB.PORTAL), "priority": 3, "theme": ""})
+		icons.append({"id": "exit", "position": RealmDB.RETURN_RIFT, "texture": PixelArt.portal_texture(RealmDB.PORTAL), "priority": 3, "theme": ""})
 		var progress := GameState.realm_progress()
 		for id in RealmDB.ENCOUNTERS:
 			var at: Vector2 = RealmDB.ENCOUNTERS[id].at
@@ -145,8 +145,8 @@ func _draw() -> void:
 		for x in 6:
 			for y in 6:
 				if "%d:%d" % [x,y] not in discovered:
-					var start := _map(Vector2(x * 12,y * 12),bounds)
-					var finish := _map(Vector2((x+1)*12,(y+1)*12),bounds)
+					var start := _map((Vector2(x,y) * RealmDB.CELL_SIZE),bounds)
+					var finish := _map((Vector2(x+1,y+1) * RealmDB.CELL_SIZE),bounds)
 					draw_rect(Rect2(start,finish-start+Vector2.ONE),Color("#18202c"))
 	for icon in map_icons(world): _picture(icon, _map(icon.position, bounds))
 	if int(_clock * 4) % 2 == 0:

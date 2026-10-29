@@ -871,7 +871,7 @@ func _test_boss_and_progression() -> void:
 	_check(boss != null, "boss instance exists")
 	if boss == null:
 		return
-	game.player().position = Vector2(36,16)
+	game.player().position = RealmDB.BOSS_THRESHOLD
 	game.world._physics_process(0.1)
 	boss.call("take_damage", 999999, Vector2.ZERO, game.call("player"))
 	await get_tree().create_timer(0.8).timeout

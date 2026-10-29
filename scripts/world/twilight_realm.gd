@@ -54,28 +54,28 @@ func _build_realm_bounds() -> void:
 	var walls := StaticBody2D.new()
 	walls.collision_layer = 1
 	add_child(walls)
-	_add_box(walls, Vector2(36, 0), Vector2(72, 2))
-	_add_box(walls, Vector2(36, 72), Vector2(72, 2))
-	_add_box(walls, Vector2(0, 36), Vector2(2, 72))
-	_add_box(walls, Vector2(72, 36), Vector2(2, 72))
+	_add_box(walls, Vector2(RealmDB.SIZE.x / 2, 0), Vector2(RealmDB.SIZE.x, 2))
+	_add_box(walls, Vector2(RealmDB.SIZE.x / 2, RealmDB.SIZE.y), Vector2(RealmDB.SIZE.x, 2))
+	_add_box(walls, Vector2(0, RealmDB.SIZE.y / 2), Vector2(2, RealmDB.SIZE.y))
+	_add_box(walls, Vector2(RealmDB.SIZE.x, RealmDB.SIZE.y / 2), Vector2(2, RealmDB.SIZE.y))
 	# Chamber walls create a deliberate south entrance and an eastern passage.
-	_add_box(walls, Vector2(27, 9), Vector2(1.2, 15))
-	_add_box(walls, Vector2(45, 7), Vector2(1.2, 9))
-	_add_box(walls, Vector2(29.5, 18), Vector2(6, 1.0))
-	_add_box(walls, Vector2(42.5, 18), Vector2(6, 1.0))
+	_add_box(walls, Vector2(17, 9), Vector2(1.2, 15))
+	_add_box(walls, Vector2(35, 7), Vector2(1.2, 9))
+	_add_box(walls, Vector2(19.5, 18), Vector2(6, 1.0))
+	_add_box(walls, Vector2(32.5, 18), Vector2(6, 1.0))
 	# Root escarpment makes the locked grove route a real shortcut, not a small
 	# obstacle the player can simply sidestep. The main eastern road stays open.
-	_add_box(walls, Vector2(10,31), Vector2(20,1.6))
-	_add_box(walls, Vector2(29,31), Vector2(6,1.6))
-	for edge in [Rect2(1,30.2,19,1.6),Rect2(26,30.2,6,1.6)]:
+	_add_box(walls, Vector2(7,29), Vector2(14,1.6))
+	_add_box(walls, Vector2(21,29), Vector2(2,1.6))
+	for edge in [Rect2(1,28.2,13,1.6),Rect2(20,28.2,2,1.6)]:
 		var ridge := Polygon2D.new()
 		ridge.polygon = PackedVector2Array([edge.position,edge.position+Vector2(edge.size.x,0),edge.end,edge.position+Vector2(0,edge.size.y)])
 		ridge.color = Color("#51404f")
 		add_child(ridge)
-	for p in [Vector2(28,18),Vector2(44,18),Vector2(29,5),Vector2(43,5)]: _add_pillar(p)
+	for p in [Vector2(18,18),Vector2(34,18),Vector2(19,5),Vector2(33,5)]: _add_pillar(p)
 	_shortcut_body = StaticBody2D.new()
 	_shortcut_body.name = "RootwayBarrier"
-	_shortcut_body.position = Vector2(23, 31)
+	_shortcut_body.position = RealmDB.ROOTWAY
 	_shortcut_body.collision_layer = 1
 	add_child(_shortcut_body)
 	_add_box(_shortcut_body, Vector2.ZERO, Vector2(6.5, 1.6))
@@ -95,8 +95,8 @@ func _place(kind: String, id: String, at: Vector2, title: String) -> RealmIntera
 	return item
 
 func _build_places() -> void:
-	_place("exit", "arrival", Vector2(36, 66), "Return to BESUT\nBank carried loot")
-	_place("shortcut", "rootway", Vector2(48, 36), "Rootway winch")
+	_place("exit", "arrival", RealmDB.RETURN_RIFT, "Return to BESUT\nBank carried loot")
+	_place("shortcut", "rootway", RealmDB.WINCH, "Rootway winch")
 	_camp = _place("camp", "camp", RealmDB.CAMP, "Citadel lantern\nRest & set checkpoint")
 	for id in RealmDB.ENCOUNTERS:
 		var def: Dictionary = RealmDB.ENCOUNTERS[id]
@@ -104,12 +104,12 @@ func _build_places() -> void:
 	# Physical legacy echoes preserve existing progression until later realms are authored.
 	var ids := PortalDB.ordered_ids()
 	for i in range(1, ids.size()):
-		var at := Vector2(51 + ((i - 1) % 3) * 6, 8 + ((i - 1) / 3) * 7)
+		var at := Vector2(41 + ((i - 1) % 3) * 6, 8 + ((i - 1) / 3) * 7)
 		_place("passage", ids[i], at, str(PortalDB.get_portal(ids[i]).name))
-	if _boss_defeated: _place("exit", "citadel", Vector2(36, 10), "The citadel is restored\nReturn to BESUT")
+	if _boss_defeated: _place("exit", "citadel", RealmDB.BOSS, "The citadel is restored\nReturn to BESUT")
 
 func _build_encounters() -> void:
-	var spots := [Vector2(41,43),Vector2(47,40),Vector2(46,33),Vector2(42,30),Vector2(33,28),Vector2(38,28)]
+	var spots := RealmDB.MINIONS
 	for i in spots.size():
 		var enemy := ElementalMinion.new()
 		enemy.disable_mode = CollisionObject2D.DISABLE_MODE_KEEP_ACTIVE
@@ -211,7 +211,7 @@ func _physics_process(delta: float) -> void:
 		if not is_instance_valid(enemy) or enemy.dead: continue
 		var home: Vector2 = pack.home
 		var near := player.position.distance_to(home) < 6.5
-		var safe := player.position.distance_to(RealmDB.CAMP) < 3.5 or player.position.distance_to(Vector2(17,43)) < 4 or player.position.distance_to(Vector2(57,29)) < 4
+		var safe := player.position.distance_to(RealmDB.CAMP) < 3.5 or player.position.distance_to(RealmDB.ENCOUNTERS.bramble_cat.at) < 4 or player.position.distance_to(RealmDB.ENCOUNTERS.dusk_moth.at) < 4
 		if bool(pack.active) and (player.position.distance_to(home) > 11 or safe):
 			pack.active = false
 			enemy.process_mode = Node.PROCESS_MODE_DISABLED
@@ -224,9 +224,9 @@ func _physics_process(delta: float) -> void:
 			enemy._player = player
 			enemy._target = player
 			enemy._enter(Enemy.State.CHASE)
-	if not _boss_arrived and player.position.y < 17 and player.position.x > 28 and player.position.x < 44:
+	if not _boss_arrived and RealmDB.BOSS_TRIGGER.has_point(player.position):
 		_boss_arrived = true
-		camera.framing_bounds = Rect2(25,0,22,21)
+		camera.framing_bounds = RealmDB.BOSS_FRAME
 		camera.position = camera.framing_bounds.get_center()
 		camera.zoom = Vector2.ONE * minf(GameSettings.camera_zoom(),get_viewport_rect().size.y / 23.0)
 		GameState.discover_realm_landmark("citadel")
@@ -238,7 +238,7 @@ func _physics_process(delta: float) -> void:
 		boss._enter(Enemy.State.ALERT)
 		Sfx.start_battle_music(portal_id)
 		set_message("SHADOW & CHAOS FIEND · Watch the fan, dash and crossing flames.")
-	if _boss_arrived and is_instance_valid(boss) and not boss.dead and not Rect2(26,1,20,20).has_point(player.position):
+	if _boss_arrived and is_instance_valid(boss) and not boss.dead and not RealmDB.BOSS_ARENA.has_point(player.position):
 		reset_boss()
 
 func reset_boss() -> void:
