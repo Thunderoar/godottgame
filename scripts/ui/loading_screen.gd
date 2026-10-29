@@ -66,11 +66,20 @@ func _process(delta: float) -> void:
 			actor.position.y = 20.0 - (0.0 if GameSettings.reduce_motion() else absf(sin(_clock * 6.0 + i * 0.8)) * 18.0)
 	dots.text = ["●  ·  ·", "·  ●  ·", "·  ·  ●"][int(_clock * 4) % 3]
 
-func begin(place: String) -> void:
+## The opening owns a local instance and drives its opacity without a tween.
+## World transitions keep using begin/finish on Game's separate instance.
+func present(place: String, opacity: float = 1.0) -> void:
 	active = true
 	destination.text = place
 	cover.show()
-	cover.modulate.a = 0
+	cover.modulate.a = clampf(opacity, 0.0, 1.0)
+
+func dismiss() -> void:
+	cover.hide()
+	active = false
+
+func begin(place: String) -> void:
+	present(place, 0.0)
 	if _tween:
 		_tween.kill()
 	_tween = create_tween()

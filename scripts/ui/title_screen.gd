@@ -1,12 +1,16 @@
 class_name TitleScreen
 extends Control
 ## Boot menu -> deliberate hero selection -> one guarded journey handoff.
-## Browsing never writes player data. Device settings belong to GameSettings.
+## Both pages ride one clipped horizontal track: the menu leaves to the left
+## while the road arrives from the right. State changes are immediate; only
+## the pixels travel. Browsing never writes player data.
 
 signal character_selected(character_id: String)
 signal continue_requested
 
 enum Page { HOME, HEROES }
+const PAGE_SLIDE_SECONDS := 0.36
+const PAGE_SLIDE_MIN_SECONDS := 0.12
 const INK := Color("#0d2029")
 const CREAM := Color("#f4ebd8")
 const GOLD := Color("#e4bc78")
@@ -57,7 +61,11 @@ var _overlay_actions: HBoxContainer
 var _overlay_close: Button
 var _overlay_focus: Control
 var _footer_hint: Label
-var _transition_tween: Tween
+var _body: Control
+var _slide_tween: Tween
+var _page_p := 0.0
+var _page_input_defaults: Dictionary = {}
+var _fit_pending := false
 var _compact := false
 
 
@@ -97,11 +105,17 @@ func _build() -> void:
 		header.add_child(quit)
 	shell.add_child(header)
 	shell.add_child(GameUI.divider(Color(0.65, 0.74, 0.70, 0.22)))
-	var body := Control.new()
-	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	shell.add_child(body)
-	_build_home(body)
-	_build_heroes(body)
+	_body = Control.new()
+	_body.name = "PageStage"
+	# The two pages share one horizontal track; the stage is the window they
+	# travel across. Drawing clips to it; input is gated while they move.
+	_body.clip_contents = true
+	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_body.resized.connect(_on_page_stage_resized)
+	shell.add_child(_body)
+	_build_home(_body)
+	_build_heroes(_body)
+	_capture_page_inputs()
 	var footer := HBoxContainer.new()
 	footer.add_child(_label("Created by Qayyim, Farhan & Ayiz", 12, MUTED))
 	_footer_hint = _label("MOUSE / TOUCH   ·   ARROWS + ENTER", 11, MUTED)
@@ -179,6 +193,10 @@ func _build_heroes(parent: Control) -> void:
 	parent.add_child(_heroes)
 	var heading := HBoxContainer.new()
 	heading.add_theme_constant_override("separation", 20)
+	# The focus ring expands past the button; leave it room inside the clip.
+	var ring_room := Control.new()
+	ring_room.custom_minimum_size = Vector2(4, 0)
+	heading.add_child(ring_room)
 	_back_button = _button("← Back", func() -> void: _show_page(Page.HOME))
 	_back_button.custom_minimum_size = Vector2(110, 44)
 	heading.add_child(_back_button)
@@ -206,6 +224,8 @@ func _build_heroes(parent: Control) -> void:
 	confirmation.add_child(row)
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Keep the campaign line readable beside the Begin action when space is tight.
+	info.custom_minimum_size.x = 240
 	_hero_summary = _paragraph("", 18, CREAM)
 	info.add_child(_hero_summary)
 	info.add_child(_paragraph("A new beginning in Besut Village, with Ember by your side.", 13, MUTED))
@@ -291,23 +311,142 @@ func _open_heroes() -> void:
 func _show_page(page: Page, animate: bool = true) -> void:
 	if _departing:
 		return
+	if _slide_tween:
+		_slide_tween.kill()
+		_slide_tween = null
 	current_page = page
-	_home.visible = page == Page.HOME
-	_heroes.visible = page == Page.HEROES
+	# State changes this frame; only the pixels travel. Both pages stay visible
+	# for the journey and the arrival frame retires the old one.
+	_home.visible = true
+	_heroes.visible = true
+	_schedule_page_fit()
 	if not _hero_available(selected_character_id): selected_character_id = "adam"
 	_select_character(selected_character_id)
-	var target: Control = _start_button if page == Page.HOME else _card_buttons[CharacterDB.ids().find(selected_character_id)]
-	target.grab_focus()
 	_footer_hint.text = "MOUSE / TOUCH   ·   ARROWS + ENTER" if page == Page.HOME else "ARROWS + ENTER TO SELECT   ·   TAB TO BEGIN   ·   ESC TO GO BACK"
-	if _transition_tween:
-		_transition_tween.kill()
-	_home.modulate.a = 1.0
-	_heroes.modulate.a = 1.0
-	if animate and not GameSettings.reduce_motion():
-		var content: Control = _home if page == Page.HOME else _heroes
-		content.modulate.a = 0.35
-		_transition_tween = create_tween()
-		_transition_tween.tween_property(content, "modulate:a", 1.0, 0.18)
+	var target := 1.0 if page == Page.HEROES else 0.0
+	if not animate or GameSettings.reduce_motion():
+		_settle_pages()
+		return
+	var span := absf(target - _page_p)
+	if span < 0.001:
+		_settle_pages()
+		return
+	_set_pages_inert()
+	_apply_page_progress(_page_p)
+	var slide := create_tween()
+	_slide_tween = slide
+	slide.tween_method(_apply_page_progress, _page_p, target, maxf(PAGE_SLIDE_MIN_SECONDS, PAGE_SLIDE_SECONDS * span)).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	slide.finished.connect(_on_page_slide_finished.bind(slide, page), CONNECT_ONE_SHOT)
+
+
+func _apply_page_progress(progress: float) -> void:
+	_page_p = clampf(progress, 0.0, 1.0)
+	var width := _body.size.x
+	if width <= 0.0:
+		return
+	# Adjacent pages always tile the stage exactly: no seam mid-slide.
+	_home.position = Vector2(-width * _page_p, 0.0)
+	_heroes.position = Vector2(width * (1.0 - _page_p), 0.0)
+
+
+func _settle_pages() -> void:
+	_apply_page_progress(1.0 if current_page == Page.HEROES else 0.0)
+	_home.visible = current_page == Page.HOME
+	_heroes.visible = current_page == Page.HEROES
+	_schedule_page_fit()
+	_set_page_inert(_heroes if current_page == Page.HOME else _home)
+	_restore_page_input(_home if current_page == Page.HOME else _heroes)
+	if _departing or _overlay.visible:
+		return
+	_set_page_focus(true)
+	_focus_page(current_page)
+
+
+func _focus_page(page: Page) -> void:
+	var target: Control = _start_button
+	if page == Page.HEROES:
+		var index := CharacterDB.ids().find(selected_character_id)
+		if index >= 0 and index < _card_buttons.size():
+			target = _card_buttons[index]
+	if is_instance_valid(target) and target.is_visible_in_tree():
+		target.grab_focus()
+
+
+func _on_page_slide_finished(slide: Tween, page: Page) -> void:
+	if slide != _slide_tween:
+		return
+	_slide_tween = null
+	if _departing or current_page != page:
+		return
+	_settle_pages()
+
+
+func _on_page_stage_resized() -> void:
+	# Re-derive travel from the stored progress so a resize never strands a
+	# page half off-screen or opens a gap between them.
+	_apply_page_progress(_page_p)
+	_schedule_page_fit()
+
+
+func _fit_pages_to_stage() -> void:
+	_fit_pending = false
+	# A page hidden while its autowrap labels have no width can clamp to a
+	# minimum thousands of pixels tall. Once it has been laid out at the real
+	# width, re-anchor it so the stage owns the size again.
+	for page in [_home, _heroes]:
+		page.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_apply_page_progress(_page_p)
+
+
+func _schedule_page_fit() -> void:
+	if _fit_pending or not is_inside_tree():
+		return
+	_fit_pending = true
+	await get_tree().process_frame
+	if not is_inside_tree():
+		return
+	_fit_pages_to_stage()
+
+
+func is_sliding() -> bool:
+	return _slide_tween != null and _slide_tween.is_running()
+
+
+func _capture_page_inputs() -> void:
+	_page_input_defaults.clear()
+	for root in [_home, _heroes]:
+		_capture_input_filters(root)
+
+
+func _capture_input_filters(node: Node) -> void:
+	if node is Control:
+		_page_input_defaults[node] = (node as Control).mouse_filter
+	for child in node.get_children():
+		_capture_input_filters(child)
+
+
+func _set_pages_inert() -> void:
+	_set_page_inert(_home)
+	_set_page_inert(_heroes)
+	_set_page_focus(false)
+
+
+func _set_page_inert(root: Control) -> void:
+	for key in _page_input_defaults:
+		var node := key as Control
+		if not is_instance_valid(node):
+			continue
+		if node == root or root.is_ancestor_of(node):
+			node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
+func _restore_page_input(root: Control) -> void:
+	for key in _page_input_defaults:
+		var node := key as Control
+		if not is_instance_valid(node):
+			continue
+		if node == root or root.is_ancestor_of(node):
+			node.mouse_filter = int(_page_input_defaults[key])
 
 
 func _select_character(character_id: String) -> void:
@@ -378,6 +517,10 @@ func _begin_journey() -> void:
 	if _departing or current_page != Page.HEROES:
 		return
 	_departing = true
+	if _slide_tween:
+		_slide_tween.kill()
+		_slide_tween = null
+		_settle_pages()
 	_set_page_focus(false)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	character_selected.emit("adam")
@@ -387,6 +530,10 @@ func _request_continue() -> void:
 	if _departing or not save_available or current_page != Page.HOME or _overlay.visible:
 		return
 	_departing = true
+	if _slide_tween:
+		_slide_tween.kill()
+		_slide_tween = null
+		_settle_pages()
 	_set_page_focus(false)
 	continue_requested.emit()
 
@@ -543,10 +690,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 
 func _on_settings_changed(_key: String) -> void:
-	if GameSettings.reduce_motion() and _transition_tween:
-		_transition_tween.kill()
-		_home.modulate.a = 1.0
-		_heroes.modulate.a = 1.0
+	if GameSettings.reduce_motion() and is_sliding():
+		_slide_tween.kill()
+		_slide_tween = null
+		_settle_pages()
 
 
 func _set_page_focus(enabled: bool) -> void:
@@ -576,8 +723,15 @@ func _layout() -> void:
 		portrait.custom_minimum_size.y = 48 if _compact else 64
 	for detail in _card_details:
 		detail.visible = not _compact
+	for unlock_text in _card_unlock_text:
+		# The rescue route stays in the lock overlay; the compact card keeps
+		# only portrait, name, weapon, vitals and lock state.
+		unlock_text.visible = not _compact
 	for hero_name in _card_names:
 		hero_name.add_theme_font_size_override("font_size", 24 if _compact else 28)
+	# The campaign line must stay one line on compact width; a second wrapped
+	# line steals the height the three cards need.
+	_hero_summary.add_theme_font_size_override("font_size", 15 if _compact else 18)
 	for card in _card_buttons:
 		card.custom_minimum_size.y = 176 if _compact else 385
 	_footer_hint.visible = size.x >= 1000

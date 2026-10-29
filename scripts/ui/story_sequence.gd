@@ -2,6 +2,15 @@ class_name StorySequence
 extends CanvasLayer
 ## Illustrated, skippable story beats; one signal owns completion and cleanup.
 signal completed
+signal departure_covered
+## Only the title handoff uses this prelude. Reading time starts after the reveal.
+const ARRIVAL_OUT := 0.28
+const ARRIVAL_HOLD := 0.06
+const ARRIVAL_REVEAL := 0.64
+const ARRIVAL_CAPTION := 0.22
+const LOADING_IN := 0.12
+const LOADING_READ := 0.55
+const LOADING_OUT := 0.18
 const INTRO := [
 	"Adam, Arjun and Mei Ling went fishing together in a peaceful sea.",
 	"Arjun's hook caught the arm of an enormous Kraken. The sea king awoke in fury!",
@@ -18,6 +27,16 @@ var _caption: Label
 var _canvas: StoryCanvas
 var _next: Button
 var _done := false
+var _caption_panel: PanelContainer
+var arrive_from_title := false
+var include_loading_screen := false
+var _opening_loading: LoadingScreen
+var _arrival_active := false
+var _arrival_time := 0.0
+var _arrival_reduced := false
+var _departure_emitted := false
+var _curtain: ColorRect
+var _skip: Button
 
 func _ready() -> void:
 	layer = 350
@@ -30,6 +49,7 @@ func _ready() -> void:
 	_canvas.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.add_child(_canvas)
 	var panel := GameUI.panel(Color("#102733"), Color("#bc9c61"))
+	_caption_panel = panel
 	panel.anchor_top = 1
 	panel.anchor_bottom = 1
 	panel.anchor_right = 1
@@ -47,6 +67,7 @@ func _ready() -> void:
 	var row := HBoxContainer.new()
 	box.add_child(row)
 	var skip := GameUI.button("Skip scene", Vector2(150, 42))
+	_skip = skip
 	skip.pressed.connect(finish)
 	row.add_child(skip)
 	var space := Control.new()
@@ -56,6 +77,92 @@ func _ready() -> void:
 	_next.pressed.connect(advance)
 	row.add_child(_next)
 	_render()
+	if arrive_from_title and kind == "intro":
+		_arrival_active = true
+		_arrival_reduced = GameSettings.reduce_motion()
+		_curtain = ColorRect.new()
+		_curtain.color = Color("#102733")
+		_curtain.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_curtain.mouse_filter = Control.MOUSE_FILTER_STOP
+		root.add_child(_curtain)
+		if include_loading_screen:
+			_opening_loading = LoadingScreen.new()
+			add_child(_opening_loading)
+			_opening_loading.present("Adam's Journey", 0.0)
+		GameSettings.changed.connect(_on_arrival_setting_changed)
+		_apply_arrival()
+
+static func sample_arrival(elapsed: float, reduced: bool, with_loading: bool = false) -> Dictionary:
+	var fade_out := 0.12 if reduced else ARRIVAL_OUT
+	var hold := 0.0 if reduced else ARRIVAL_HOLD
+	var reveal := 0.16 if reduced else ARRIVAL_REVEAL
+	var caption := 0.08 if reduced else ARRIVAL_CAPTION
+	if with_loading:
+		hold = LOADING_IN + LOADING_READ
+		reveal = maxf(reveal, LOADING_OUT)
+	var total := fade_out + hold + reveal
+	var t := maxf(0.0, elapsed)
+	var covered := t >= fade_out
+	var reveal_progress := clampf((t - fade_out - hold) / reveal, 0.0, 1.0)
+	var out_progress := clampf(t / fade_out, 0.0, 1.0)
+	var veil := out_progress * out_progress * (3.0 - 2.0 * out_progress)
+	if covered: veil = 1.0 - reveal_progress * reveal_progress * (3.0 - 2.0 * reveal_progress)
+	var words := clampf((t - total + caption) / caption, 0.0, 1.0)
+	var loading_alpha := 0.0
+	if with_loading and covered:
+		var loading_in := clampf((t - fade_out) / LOADING_IN, 0.0, 1.0)
+		var loading_out := clampf((t - fade_out - hold) / LOADING_OUT, 0.0, 1.0)
+		loading_alpha = loading_in * loading_in * (3.0 - 2.0 * loading_in)
+		if loading_out > 0: loading_alpha = 1.0 - loading_out * loading_out * (3.0 - 2.0 * loading_out)
+	return {"cover_alpha": veil, "art_alpha": 1.0 if covered else 0.0,
+		"caption_alpha": words * words * (3.0 - 2.0 * words),
+		"covered": covered, "ready": t + 0.000001 >= total, "duration": total,
+		"loading_alpha": loading_alpha}
+
+func arrival_state() -> Dictionary:
+	return sample_arrival(_arrival_time, _arrival_reduced, include_loading_screen)
+
+func opening_loader() -> LoadingScreen:
+	return _opening_loading
+
+func _apply_arrival() -> void:
+	var state := arrival_state()
+	_canvas.modulate.a = state.art_alpha
+	_caption_panel.modulate.a = state.caption_alpha
+	_curtain.modulate.a = state.cover_alpha
+	if is_instance_valid(_opening_loading):
+		_opening_loading.cover.modulate.a = state.loading_alpha
+	_next.disabled = true
+	_skip.disabled = true
+	if state.covered and not _departure_emitted:
+		_departure_emitted = true
+		departure_covered.emit()
+	if not _done and state.ready: _finish_arrival()
+
+func _finish_arrival() -> void:
+	if not _arrival_active: return
+	_arrival_active = false
+	if not _departure_emitted:
+		_departure_emitted = true
+		departure_covered.emit()
+	_canvas.modulate.a = 1.0
+	_caption_panel.modulate.a = 1.0
+	_next.disabled = false
+	_skip.disabled = false
+	_curtain.hide()
+	if is_instance_valid(_opening_loading):
+		_opening_loading.dismiss()
+		_opening_loading.queue_free()
+		_opening_loading = null
+
+func _on_arrival_setting_changed(key: String) -> void:
+	if _arrival_active and key == "reduce_motion" and GameSettings.reduce_motion():
+		# Shorten an in-flight dissolve, but never rewind it if the setting flips back.
+		_arrival_reduced = true
+		if not _departure_emitted and _arrival_time >= 0.12:
+			# Still retire the title under a fully opaque frame when shortening mid-fade.
+			_arrival_time = 0.12
+		_apply_arrival()
 
 func lines() -> Array:
 	match kind:
@@ -65,6 +172,12 @@ func lines() -> Array:
 	return INTRO
 
 func _process(delta: float) -> void:
+	if _done: return
+	if _arrival_active:
+		_arrival_time += maxf(0.0, delta)
+		_apply_arrival()
+		_canvas.queue_redraw()
+		return
 	clock += delta
 	_page_time += delta
 	_canvas.queue_redraw()
@@ -77,6 +190,7 @@ func _render() -> void:
 
 func advance() -> void:
 	if _done: return
+	_finish_arrival()
 	page += 1
 	_page_time = 0
 	if page >= lines().size(): finish()
@@ -84,14 +198,34 @@ func advance() -> void:
 
 func finish() -> void:
 	if _done: return
+	_finish_arrival()
 	_done = true
 	completed.emit()
 	queue_free()
 
 class StoryCanvas extends Control:
 	var sequence: StorySequence
+	var _fishing: OpeningFishingRenderer
+	func _ready() -> void:
+		texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		if is_instance_valid(sequence) and sequence.kind == "intro":
+			_fishing = OpeningFishingRenderer.new()
+		GameSettings.changed.connect(_on_presentation_changed)
+	func _on_presentation_changed(key: String) -> void:
+		if key in ["reduce_motion", "effects_quality"]: queue_redraw()
+	func uses_fishing_shot() -> bool:
+		return is_instance_valid(sequence) and sequence.kind == "intro" and sequence.page == 0
+	func fishing_state() -> Dictionary:
+		return OpeningFishingRenderer.sample(sequence._page_time, GameSettings.reduce_motion(), GameSettings.effects_quality())
 	func _draw() -> void:
 		if not is_instance_valid(sequence): return
+		if uses_fishing_shot():
+			draw_rect(Rect2(Vector2.ZERO, size), Color("#102733"))
+			var bottom := size.y - 184.0
+			if is_instance_valid(sequence._caption_panel): bottom = sequence._caption_panel.position.y - 10.0
+			if _fishing != null:
+				_fishing.draw(self, Rect2(Vector2.ZERO, Vector2(size.x, maxf(1, bottom))), fishing_state())
+			return
 		draw_set_transform(Vector2.ZERO, 0, size / Vector2(1280, 720))
 		draw_rect(Rect2(0, 0, 1280, 720), Color("#102b40"))
 		var t := sequence._page_time

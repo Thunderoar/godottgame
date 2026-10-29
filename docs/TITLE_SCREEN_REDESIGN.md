@@ -1,6 +1,8 @@
 # PB title and journey flow
 
-Implemented and verified on 2026-10-24 with Godot 4.7.2 on Linux.
+Boot menu implemented and verified on 2026-10-24 with Godot 4.7.2 on Linux.
+The horizontal page track and current Adam-only, lock-aware flow were verified
+on 2026-10-28.
 
 ![Boot menu](screenshots/tide_title.png)
 
@@ -11,14 +13,30 @@ and restrained water/boat motion. It owns no gameplay nodes, placement RNG or
 world clock. Low effects quality and Reduce Motion preserve the complete static
 scene and stop its animation immediately.
 
+## Page transition
+
+Start Game does not cross-fade. Both pages share one clipped horizontal track
+inside the page body: the menu leaves to the left and **CHOOSE YOUR ROAD**
+arrives from the right over 0.36 s (cubic ease in/out). Back and Escape play the
+reverse. A reversal mid-slide continues from the stored progress with a
+proportionally shorter duration instead of restarting, and a window resize
+re-derives travel from that progress so the pages never separate.
+
+The transition is presentation only: `current_page`, page visibility, footer
+hint and the save-guard state change on the click frame, so handoff and input
+guards never wait for animation. Both pages are text-inert while travelling;
+the destination page restores pointer and keyboard focus on arrival (an open
+overlay keeps its own focus). Reduce Motion swaps pages instantly with no
+travel and no fade.
+
 ## Journey flow
 
 | Screen | Action | Result |
 | --- | --- | --- |
-| Boot menu | Start Game | Open Choose Your Road; keep any save intact |
+| Boot menu | Start Game | Slide the Choose Your Road page in from the right; keep any save intact |
 | Choose Your Road | Click/touch a hero card | Preview that hero and weapon |
 | Choose Your Road | Back / Escape | Return to menu; remember the pending choice |
-| Choose Your Road, no save | Begin Journey | Start the chosen hero in Kampung Besut |
+| Choose Your Road, no save | Begin Journey | Start Adam's story in Besut Village |
 | Choose Your Road, existing save | Begin Journey | Show saved journey and replacement warning |
 | Replacement warning | Keep Saved Journey / Escape | Cancel without changing save bytes |
 | Replacement warning | Replace Save & Begin | Start exactly one new journey |
@@ -41,24 +59,31 @@ restore it on close and support Escape. Replacement defaults focus to the safe
 Keep Saved Journey action. Begin/Continue reject duplicate handoffs.
 
 The compact landscape menu places the introduction beside the actions. Compact
-hero cards retain portraits, names, weapons, vitals and selection state; the
-longer tactical copy is omitted. Narrow layouts stack cards in a scrolling
-region with a persistent Begin Journey strip and Back action.
+hero cards retain portraits, names, weapons, vitals and lock state; the longer
+tactical copy and the rescue paragraph are omitted (tapping a locked card still
+shows its full rescue route). Narrow layouts stack cards in a scrolling region
+with a persistent Begin Journey strip and Back action. A page fit pass keeps the
+stage-sized confirmation strip visible at every window size.
 
 ## Verification
 
-- `./tools/test_isolated.sh`: **920 checks, PASS**, exit 0; no `[FAIL]`,
-  `SCRIPT ERROR` or `ERROR:` output. The gate includes 22 title state/save
-  regressions and starts its first real journey through Begin Journey.
-- `./tools/review_title.sh /absolute/output`: **50 checks, 0 failures**, exit 0.
-  Uses actual mouse, screen-touch and keyboard events with the GL renderer,
-  plus 13 captures. It verifies fresh/saved startup, all hero choices,
-  keyboard overlay focus, live Reduce Motion, replacement cancellation and
-  confirmation, direct village/dungeon Continue and an actual failed Continue.
+- 2026-10-28: `./tools/test_isolated.sh`: **1,326 checks, PASS**, exit 0; no
+  `[FAIL]`, `SCRIPT ERROR` or `ERROR:` output. The gate includes the title
+  state/save regressions and six new page-track checks (travel starts, settles
+  flush, never fades, Back returns flush, Reduce Motion swaps and restores
+  instantly).
+- 2026-10-28: `./tools/review_title.sh /absolute/output`: **54 checks, 0
+  failures**, exit 0, including a mid-slide capture. It drives the intro story's
+  real Skip action before expecting the village.
+- 2026-10-28: `res://tools/opening_fishing_test.tscn` at 832x480: **138 checks,
+  PASS**, exit 0; the handoff fixture waits for the page track before tapping
+  Begin.
+- Earlier dated run: 920 checks and 50 title-review checks on the pre-lock,
+  pre-story flow. That log is historical; current counts above supersede it.
 - Inspected full-resolution captures at 1280x720, 832x480 and 600x900. Complete
-  cards fit both landscape fixtures; narrow cards scroll with journey actions
-  retained. Initial scrollbar/wrapping and compact-card clipping issues were
-  corrected before the passing review.
+  cards fit both landscape fixtures; narrow cards stack with journey actions
+  retained. The mid-slide frame shows both pages tiled inside the clip with no
+  seam or gutter bleed.
 - Final editor import and `git diff --check` pass. Every harness uses verified
   temporary user data. Live progress is never restored from a test fixture.
 
@@ -67,7 +92,8 @@ VSync warnings are host limitations; there are no script/error markers or
 message-queue failures. These fixtures verify desktop rendering and synthetic
 touch delivery, not physical Android/Windows devices or hardware performance.
 
-Evidence: [native log](evidence/title-screen/native-review.log),
+Earlier evidence (pre-page-track):
+[native log](evidence/title-screen/native-review.log),
 [acceptance log](evidence/title-screen/acceptance.log),
 [compact menu](evidence/title-screen/compact-menu.png),
 [compact heroes](evidence/title-screen/compact-heroes.png),
@@ -75,6 +101,8 @@ Evidence: [native log](evidence/title-screen/native-review.log),
 [settings](evidence/title-screen/settings.png),
 [replacement](evidence/title-screen/replace-save.png),
 [failed Continue](evidence/title-screen/continue-error.png).
+The 2026-10-28 runs write their captures to the external output directory
+printed by `review_title.sh`; they are not committed to the repository.
 
 Runtime ownership: `scripts/ui/title_screen.gd` builds the menu, page state and
 title overlays; `scripts/ui/title_backdrop.gd` draws its harbour; Game receives

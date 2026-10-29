@@ -237,7 +237,10 @@ over their respective heads and use `GameState.data.xp_next` and
 - Living home enemies are captured as primitive kind/position/HP/raid records in `home_monsters` before saves and world transitions. Lobby restores these even during daylight. Saved `home_wave` prevents duplicate night refills. New journeys reset both clock and enemies.
 - `TitleScreen` boots to the **PB (Protect BESUT)** main menu with Start Game,
   Continue Journey, How to Play, Settings and Credits. Start Game opens the
-  separate **CHOOSE YOUR ROAD** page. Cards preview a hero; Begin Journey emits
+  separate **CHOOSE YOUR ROAD** page on a clipped horizontal track: the menu
+  leaves to the left while the road arrives from the right, Back reverses it,
+  and Reduce Motion swaps pages instantly. Page state changes in the click
+  frame; only the pixels travel. Cards preview a hero; Begin Journey emits
   the selected hero only after a separate confirmation if a save exists.
   Browsing and Back do not save or construct a world. Continue loads the saved
   village/expedition directly, and a failed load leaves inline feedback on the

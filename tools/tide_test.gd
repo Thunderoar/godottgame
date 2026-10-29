@@ -33,6 +33,12 @@ func _ready() -> void:
 
 	await TitleChecks.run(game, _check)
 	game.title_screen._begin_button.pressed.emit()
+	var opening_story: StorySequence
+	for scene in game.get_children():
+		if scene is StorySequence: opening_story = scene
+	_check(opening_story != null and opening_story._arrival_active and game.title_screen != null, "Adam handoff keeps the title until a covered transition replaces it")
+	_check(opening_story != null and opening_story._page_time == 0 and not game.hud.visible, "opening arrival hides HUD and preserves the first beat's reading time")
+	_check(opening_story != null and opening_story.include_loading_screen and opening_story.opening_loader() != game.loading_screen, "Adam opening owns the existing loading-screen UI independently of world transitions")
 	await get_tree().process_frame
 	for scene in game.get_children():
 		if scene is StorySequence: scene.finish()

@@ -488,7 +488,10 @@ powershell -File tools/test_pb_isolated.ps1 -Godot <console-exe> -Native -Scene 
 ```
 
 - PB (Protect BESUT) replaces the title; the creator credit is permanent at the bottom. The old Permanent daytime footer is absent.
-- The boot menu hides hero selection until **Start Game**. Hero cards only
+- The boot menu hides hero selection until **Start Game**. The road then slides
+  in from the right while the menu leaves to the left; Back/Escape reverses the
+  travel and Reduce Motion swaps instantly. The transition changes state on the
+  click frame and never fades. Hero cards only
   preview a choice; **Begin Journey** starts it. Back/Escape preserves the
   pending choice without creating a world or changing saved progress.
 - **Continue Journey** shows the saved hero, level and destination and resumes
@@ -502,7 +505,9 @@ powershell -File tools/test_pb_isolated.ps1 -Godot <console-exe> -Native -Scene 
   settings persist through GameSettings without requiring a player save.
 - At 1280x720 and 832x480 every complete hero card and both journey actions fit
   on screen. Narrow layouts stack hero cards inside a scrollable region while
-  retaining Back/Begin. Low/Reduce Motion retains the complete static harbour.
+  retaining Back/Begin; compact cards keep lock state and drop the long rescue
+  paragraph (the lock overlay still explains it). Low/Reduce Motion retains the
+  complete static harbour.
 
 The title regressions are included through `TitleChecks` in the isolated game
 gate. For real-renderer input and screenshot verification, run:
@@ -665,3 +670,113 @@ Full isolated gameplay: 1,191 checks PASS, exit 0, clean script/error logs. Nati
 ## Kraken fortress, fullness and compulsory rubbish (1.3.0)
 
 Full isolated gameplay: 1,217 checks PASS, exit 0, clean script/error logs. Native 832x480 focused review: 25 checks PASS, exit 0; inspected captures show the portal-style floor, stone pillars/runes, complete Kraken and held cage, grappling tentacle, and separate fullness/life meters. Coverage includes fish-only satiety, heart-only healing, fullness cap/drain/starvation/recovery, one penalty per missed rubbish including concurrent misses and blink immunity, no penalties for avoided hazards/fish, fatal route-end prevention, safe late spawns, physical pillar collision, dodged versus caught hooks, real pull motion blocked by a wall, and boss-gated prison release. Full story checks also verify the returning Arjun sprite retains human world scale.
+
+## First-beat fishing illustration — 2026-10-28
+
+Presentation-only overhaul of `StorySequence` introduction page zero. A layered
+UNISZA boat, deck-grounded unarmed friends, connected rod/line/float, stepped
+morning sea/sky and deterministic character/environment motion replace the flat
+ship and armed walk loop. Story text, six-second timing, Next/Skip, campaign/save
+rules, global ship/character art and later story drawing branches are unchanged.
+See [OPENING_FISHING_REDESIGN.md](OPENING_FISHING_REDESIGN.md) for ownership and
+safe reproduction commands.
+
+Final complete isolated gameplay gate: **1,277 checks, PASS, exit 0**, with no
+`[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers. `OpeningFishingChecks` contributes
+60 integrated checks: shared boat/actor anchors over six times, fishing geometry,
+purpose-built pose progression, uniform aspect fitting, texture-cache stability,
+live Reduce Motion/quality, timer handoff, non-first story isolation, Next/Skip
+at 0/0.5/3/5.9 seconds and complete renderer release after Skip.
+
+Final native focused review: **70 checks, PASS, exit 0 at each of 1280x720,
+832x480 and 1600x720**. Captures at 0.5/2/3.5/5.5 seconds, Reduce Motion, low
+quality and the second-beat cut were inspected. Real screen touches activate Next
+and Skip and leave no held attack/sprint action. A separate actual new-journey
+flow run passes **12 checks, exit 0**, observing all six automatic beats, stopped
+world time during the opening, saved completion, unlocked Lobby with Ember and
+the movement tutorial, and Continue bypassing an already finished introduction.
+
+Matched baseline/modified/rollback native inputs (`intro`, page 0, 3.2 seconds,
+1280x720) show the new first-beat image only in the modified run. Rollback restores
+the original source SHA-256 and exact rendered pixels. All **12 other story
+panels** (later intro pages, both rescues, reunion ending) are pixel-identical
+across the three runs. The implementation remains applied afterward.
+
+An expanded cleanup test initially inferred `weakref()` as Variant under strict
+warning settings; it was corrected to an explicit `WeakRef` type before the final
+passing runs. That failed run is retained in the external evidence ledger and is
+not counted as validation. Native runs have X11 input-method and unsupported
+V-Sync warnings; this is Linux Xvfb/llvmpipe evidence, not Android/Windows hardware
+certification. No export or live-save test was performed. `git diff --check` passes;
+pre-existing AGENTS.md, project.godot and scenes/game.tscn edits remain unchanged.
+
+## Adam selection to opening handoff — 2026-10-28
+
+The confirmed Begin Journey path now keeps its existing title layer visible while
+a navy curtain eases in for 0.28 seconds, holds for 0.06 seconds, then reveals the
+fishing illustration over 0.64 seconds. The caption fades in during the final
+0.22 seconds. Only the matching departing title is removed, at full cover. The
+first beat's entire six-second reading/animation clock starts after the 0.98-second
+entrance has settled. No camera movement, HUD flash or premature village is added.
+Reduce Motion uses a 0.28-second dissolve. Finishing/cancelling the entrance is
+idempotent; live accessibility changes cannot rewind it. Seen-intro Continue and
+rescue/ending stories bypass the prelude; unseen-intro Continue uses it.
+
+Final complete isolated gameplay: **1,300 checks, PASS, exit 0**. The main harness
+explicitly checks the title's retained ownership and stopped first-beat timer;
+`OpeningFishingChecks` includes 21 new entrance phase, opaque retirement,
+caption/timer, cancellation and live-setting checks (81 focused headless checks
+total). Native focused review: **112 checks, PASS, exit 0 each at 1280x720,
+832x480 and 1600x720**, including actual Begin/Next/Skip touch input, duplicate
+start/continue rejection, normal and shortened reveal captures, full first-beat
+reading time, safe Lobby/tutorial arrival and seen/unseen Continue branches.
+
+Matched baseline/modified/rollback handoff probes observe **hard cut / eased title
+to story / hard cut**, respectively, with exit 0 and exactly one completion each.
+Rollback restores the pre-handoff source hashes and all eight sampled baseline
+images exactly, retaining the improved fishing art. The eased implementation is
+reapplied afterward. All 13 settled story-panel captures remain pixel-identical to
+the previous fishing redesign; no later-beat artwork changed. The existing four
+transaction roles are extended in place, with the earlier evidence preserved.
+
+No failure/script/error markers occur in the final gate or native runs. Native
+X11 input-method and unsupported V-Sync warnings remain; this is Linux software-
+renderer evidence, not physical Android testing. Existing user edits and live saves
+are untouched by this isolated validation. See `OPENING_FISHING_REDESIGN.md` for
+ownership and rollback usage.
+
+## PB loading screen in the opening handoff — 2026-10-28
+
+Confirmed Begin Journey and unfinished-intro Continue now show the existing PB
+LoadingScreen UI, labeled "Adam's Journey", between title departure and the first
+fishing image. This is a local instance of the existing class, not a duplicated
+brand design or a borrowed global world-transition overlay. It fades in over
+0.12 seconds, remains fully readable for 0.55 seconds, then fades out over 0.18
+seconds into the existing illustration reveal. Total entrance is 1.59 seconds
+normally and 0.97 seconds with Reduce Motion. The first beat still receives six
+full seconds after the loader is gone and its caption is readable.
+
+Final complete isolated gameplay: **1,326 checks, PASS, exit 0**. Focused headless:
+**100 checks, PASS, exit 0**. Native focused: **138 checks, PASS, exit 0 each at
+1280x720, 832x480 and 1600x720**. Added coverage verifies brand/destination
+visibility, the readable hold, independent ownership, absent loading tweens,
+full reading time, disposal on normal reveal and early cancellation, unchanged
+global world-loading state, and real Begin/Next/Skip and Continue routes.
+
+Matched corrected native probes observe **eased entrance without loader / PB
+opening loader / eased entrance without loader** for baseline/modified/rollback,
+each with one completion and exit 0. The pre-loader source hashes and twelve
+sampled images are restored exactly; the loader-enabled implementation is
+reapplied afterward. All 13 settled story-panel images remain unchanged. The
+same four artifact roles are extended again; the prior eased-handoff records are
+preserved under `history/eased-handoff/`.
+
+Final validation has no failure/script/error markers. Xvfb input-method and
+unsupported V-Sync warnings remain. No physical Android/export/live-save run was
+performed. Existing user edits remain byte-identical and `git diff --check` passes.
+
+The resumed integration rerun includes the newer title-page slide changes (six
+additional checks beyond the earlier 1,320 PASS run). The loader, story and Game
+implementation is unchanged; its native suite again passes 138 checks at all
+three resolutions. Shared fixture timing and unrelated title/document edits are
+preserved, including by the generated pre-loader rollback baseline.

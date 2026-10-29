@@ -96,28 +96,28 @@ func _show_title() -> void:
 
 
 func _on_character_selected(_character_id: String) -> void:
-	if _transitioning:
+	if _transitioning or _story_active:
 		return
 	GameState.autosave_enabled = true
 	GameState.new_game("adam")
-	_remove_title()
 	hud.visible = true
 	_game_over = false
-	await play_story("intro")
+	await play_story("intro", true)
 	await _load_lobby(true)
 	hud.start_tutorial()
 
 
 func _on_continue_requested() -> void:
-	if _transitioning:
+	if _transitioning or _story_active:
 		return
 	if not GameState.continue_game():
 		if is_instance_valid(title_screen):
 			title_screen.show_continue_error()
 		return
-	_remove_title()
 	if not bool(GameState.campaign().get("intro_seen", false)):
-		await play_story("intro")
+		await play_story("intro", true)
+	else:
+		_remove_title()
 	hud.visible = true
 	if GameState.completed_mission_count() < MissionDB.STEPS.size():
 		hud.start_tutorial()
@@ -135,6 +135,11 @@ func _remove_title() -> void:
 		_title_layer.queue_free()
 	title_screen = null
 	_title_layer = null
+
+
+func _remove_title_if_owner(expected: CanvasLayer) -> void:
+	if _title_layer == expected:
+		_remove_title()
 
 
 # ------------------------------------------------------------------ world switching
@@ -681,7 +686,7 @@ func finish_ship_return(boarding: ShipDeparture) -> void:
 	_check_campaign_ending()
 
 
-func play_story(kind: String) -> void:
+func play_story(kind: String, from_title: bool = false) -> void:
 	_story_active = true
 	_input_locked = true
 	_apply_input_lock()
@@ -693,6 +698,11 @@ func play_story(kind: String) -> void:
 	hud.visible = false
 	var story := StorySequence.new()
 	story.kind = kind
+	var departing_title := _title_layer
+	story.arrive_from_title = from_title and is_instance_valid(departing_title)
+	story.include_loading_screen = story.arrive_from_title
+	if story.arrive_from_title:
+		story.departure_covered.connect(_remove_title_if_owner.bind(departing_title), CONNECT_ONE_SHOT)
 	add_child(story)
 	await story.completed
 	if kind == "intro": GameState.mark_story_seen("intro_seen")

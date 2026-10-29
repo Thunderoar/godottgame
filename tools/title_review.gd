@@ -21,15 +21,23 @@ func _ready() -> void:
 	var title := game.title_screen
 	_check(title.current_page == TitleScreen.Page.HOME and not title._heroes.is_visible_in_tree(), "fresh boot displays only the main menu")
 	await _shot("01-main-menu")
-	await _click(title._start_button)
+	await _press(title._start_button)
 	_check(title._heroes.is_visible_in_tree(), "actual Start Game click opens hero selection")
+	await get_tree().create_timer(0.14).timeout
+	await _shot_now("02a-page-slide")
+	await _wait_for_slide(title)
+	_check(is_equal_approx(title._heroes.position.x, 0.0) and not title._home.visible, "the page track settles on the road")
 	await _shot("02-choose-your-road")
 	_check(_cards_fit(title), "all three complete hero cards fit the landscape selection")
 	await _click(title._card_buttons[1])
-	_check(title.selected_character_id == "arjun", "clicking Arjun previews the scythe hero")
-	await _shot("03-farhan-selected")
+	_check(title.selected_character_id == "adam" and title._overlay.visible, "clicking a locked friend explains the rescue route")
+	await _shot("03-locked-friend")
 	await _key(KEY_ESCAPE)
-	_check(title.current_page == TitleScreen.Page.HOME and not FileAccess.file_exists(GameState.SAVE_PATH), "Escape returns without creating a save")
+	_check(not title._overlay.visible, "Escape closes the rescue explanation")
+	await _key(KEY_ESCAPE)
+	await _wait_for_slide(title)
+	_check(title.current_page == TitleScreen.Page.HOME and not FileAccess.file_exists(GameState.SAVE_PATH), "Escape slides back without creating a save")
+	_check(is_equal_approx(title._home.position.x, 0.0) and not title._heroes.visible, "the menu returns flush to the stage")
 	await _click(_find_button(title._home, "Settings"))
 	_check(title._overlay.visible, "Settings opens from the boot menu")
 	await _shot("04-settings")
@@ -42,6 +50,8 @@ func _ready() -> void:
 	_check(GameSettings.reduce_motion() and not (title.get_child(0) as TitleBackdrop).is_processing(), "Reduce Motion immediately stops harbour animation")
 	await _key(KEY_ESCAPE)
 	_check(not title._overlay.visible, "Escape closes Settings")
+	# Restore motion for the remaining real-input page transitions.
+	GameSettings.set_reduce_motion(false)
 	await _click(_find_button(title._home, "How to Play"))
 	await _shot("05-how-to-play")
 	await _key(KEY_ESCAPE)
@@ -51,13 +61,15 @@ func _ready() -> void:
 	# Keyboard activation and touch hero selection use the same native controls.
 	title._start_button.grab_focus()
 	await _key(KEY_ENTER)
+	await _wait_for_slide(title)
 	_check(title.current_page == TitleScreen.Page.HEROES, "Enter activates the focused Start Game button")
-	await _touch(title._card_buttons[2])
-	_check(title.selected_character_id == "mei_ling", "touch selects Mei Ling")
+	await _touch(title._card_buttons[0])
+	_check(title.selected_character_id == "adam" and not title._overlay.visible, "touch selects Adam")
 	await _click(title._card_buttons[0])
 	await _click(title._begin_button)
+	await _skip_story()
 	await _wait_for_world()
-	_check(game.world is Lobby and str(GameState.data.get("character_id")) == "adam", "Begin Journey loads the selected hero into the village")
+	_check(game.world is Lobby and str(GameState.data.get("character_id")) == "adam", "Begin Journey loads Adam into the village")
 	game.hud.tutorial_guide.call("_skip")
 	await _shot("07-journey-started")
 	await game.return_to_title()
@@ -67,6 +79,7 @@ func _ready() -> void:
 	await _shot("08-saved-journey")
 	var saved_text := FileAccess.get_file_as_string(GameState.SAVE_PATH)
 	await _click(title._start_button)
+	await _wait_for_slide(title)
 	await _click(title._card_buttons[1])
 	await _click(title._begin_button)
 	_check(title._overlay.visible, "existing progress has a visible replacement confirmation")
@@ -83,12 +96,14 @@ func _ready() -> void:
 	_check(_inside(title._begin_button) and _inside(title._back_button), "compact selection keeps Begin and Back on screen")
 	_check(_cards_fit(title), "compact selection shows every full hero card without scrolling")
 	await _click(title._back_button)
+	await _wait_for_slide(title)
 	await _shot("11-compact-menu")
 	_check(_inside(title._start_button) and _inside(title._continue_button), "compact menu keeps both journey actions on screen")
 	window.content_scale_size = Vector2i(600, 900)
 	window.size = Vector2i(600, 900)
 	await _settle()
 	await _click(title._start_button)
+	await _wait_for_slide(title)
 	await _shot("12-narrow-heroes")
 	_check(title._cards.vertical and _inside(title._begin_button), "narrow selection stacks cards and retains Begin")
 	window.content_scale_size = original_scale
@@ -97,8 +112,9 @@ func _ready() -> void:
 	await _click(title._begin_button)
 	var serial := GameState.journey_serial
 	await _click(title._overlay_actions.get_child(1))
+	await _skip_story()
 	await _wait_for_world()
-	_check(str(GameState.data.get("character_id")) == "arjun" and GameState.journey_serial == serial + 1, "confirmed replacement starts exactly one Arjun journey")
+	_check(str(GameState.data.get("character_id")) == "adam" and GameState.journey_serial == serial + 1, "confirmed replacement starts exactly one Adam journey")
 	game.hud.tutorial_guide.call("_skip")
 	await game.return_to_title()
 	await _settle()
@@ -106,7 +122,7 @@ func _ready() -> void:
 	serial = GameState.journey_serial
 	await _click(title._continue_button)
 	await _wait_for_world()
-	_check(game.world is Lobby and str(GameState.data.get("character_id")) == "arjun" and GameState.journey_serial == serial, "Continue resumes Arjun directly without starting a new journey")
+	_check(game.world is Lobby and str(GameState.data.get("character_id")) == "adam" and GameState.journey_serial == serial, "Continue resumes Adam directly without starting a new journey")
 	game.hud.tutorial_guide.call("_skip")
 	_check(GameState.start_expedition(PortalDB.ordered_ids()[0]), "expedition resume fixture starts")
 	await game.return_to_title()
@@ -160,6 +176,48 @@ func _click(control: Control) -> void:
 		await get_tree().process_frame
 	await _settle()
 
+func _press(control: Control) -> void:
+	# Same native press as _click, but returns while the page can still move.
+	if control == null:
+		_check(false, "requested press target exists")
+		return
+	var point := control.get_global_rect().get_center()
+	var motion := InputEventMouseMotion.new()
+	motion.position = point
+	Input.parse_input_event(motion)
+	await get_tree().process_frame
+	for pressed in [true, false]:
+		var event := InputEventMouseButton.new()
+		event.position = point
+		event.button_index = MOUSE_BUTTON_LEFT
+		event.pressed = pressed
+		Input.parse_input_event(event)
+		await get_tree().process_frame
+
+func _wait_for_slide(title: TitleScreen) -> void:
+	if title.is_sliding():
+		await get_tree().create_timer(TitleScreen.PAGE_SLIDE_SECONDS + 0.12).timeout
+	await get_tree().process_frame
+
+func _skip_story() -> void:
+	# The intro sequence arrived after this review was first written; drive its
+	# real Skip action before expecting the village world.
+	for i in 80:
+		var story: StorySequence = null
+		for child in game.get_children():
+			if child is StorySequence:
+				story = child
+				break
+		if story == null:
+			return
+		if not story._arrival_active:
+			var skip := _find_button(story, "Skip scene")
+			if skip != null and skip.is_visible_in_tree():
+				await _click(skip)
+				return
+		await get_tree().create_timer(0.1).timeout
+	_check(false, "intro story offered a real skip")
+
 func _touch(control: Control) -> void:
 	for pressed in [true, false]:
 		var event := InputEventScreenTouch.new()
@@ -188,6 +246,12 @@ func _wait_for_world() -> void:
 
 func _shot(label: String) -> void:
 	await _settle()
+	await RenderingServer.frame_post_draw
+	var error := get_viewport().get_texture().get_image().save_png(output.path_join(label + ".png"))
+	_check(error == OK, "capture " + label)
+
+func _shot_now(label: String) -> void:
+	# Capture a frame without settling, for evidence of motion in flight.
 	await RenderingServer.frame_post_draw
 	var error := get_viewport().get_texture().get_image().save_png(output.path_join(label + ".png"))
 	_check(error == OK, "capture " + label)

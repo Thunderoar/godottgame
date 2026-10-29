@@ -14,6 +14,7 @@ func _ready() -> void:
 	add_child(game)
 	await get_tree().process_frame
 	game.title_screen._start_button.pressed.emit()
+	await get_tree().create_timer(TitleScreen.PAGE_SLIDE_SECONDS + 0.12).timeout
 	await _shot("01_heroes")
 	await game._on_character_selected("adam")
 	game.set_process(false)

@@ -1,391 +1,491 @@
-# AGENTS.md — Save The World (Tidesworn)
+# AGENTS.md — PB (Protect BESUT) / Tidesworn
 
-2D pixel-art survival action-RPG vertical slice for **Godot 4.7.2**.
-Authors: Qayyim, Farhan and Ayiz.
+2D pixel-art survival action-RPG in **Godot 4.7.2**. Created by Qayyim, Farhan & Ayiz.
+The project/application name is still **Save The World**; the player-facing title is
+**PB (Protect BESUT)**. Tidesworn is also the name of the editor workspace.
 
-- Project root: `GAME_COMP_RPG-Godot/` (this directory)
-- Engine on this machine: `/usr/bin/godot` → `4.7.2.stable.arch_linux.ed1daf0bf` (exact match)
-- ~14,500 lines GDScript: 61 files / ~11,100 lines under `scripts/`, 8 tools / ~3,400 lines under `tools/`
-- Main scene: `res://scenes/game.tscn` (`project.godot:15`) — **6 lines, one root node, everything else built in code**
-- This is a Git repository. Repair branch: `visual-overhaul-merge-2`; known-good reference: `main`. Preserve user changes and do not replace the repair branch with main.
-- Three autoloads: `GameState`, `Sfx`, then `GameSettings` (`project.godot:21-23`). GameSettings owns device prefs (`user://settings.cfg`) incl. reduce_motion and effects_quality.
+## 1. Ground truth and scope
 
-Deep research backing this document (read on demand, not by default):
-`.hermes/research/agents-md/agent-a-architecture.md` (runtime),
-`agent-b-world-economy-ui.md` (gameplay/data/UI),
-`agent-c-tooling-tests-docs.md` (tests/build/docs).
+- This checkout is `/home/roku/Documents/ChatGPT/game`; `project.godot` is at its root.
+  Other tournamentgame/godottgame/GDT2 checkouts are independent repositories.
+- Inspected on **2026-10-27**, source commit **76b5357**, branch **main**. These are
+  observations, not instructions to switch branches. Run `git rev-parse --show-toplevel`
+  and `git status --short --branch` before edits. Preserve user changes; never reset
+  or replace a repair branch with main. Do not push unless requested.
+- `/usr/bin/godot --version` currently reports `4.7.2.stable.arch_linux.ed1daf0bf`.
+  Match export templates to the actual engine, not an older report.
+- `project.godot` runs `res://scenes/game.tscn`: one Node2D with `Game` attached.
+  Runtime worlds and UI are constructed in GDScript, not assembled in that scene.
+- Autoload order: **GameState → Sfx → GameSettings**. No Creative Studio autoload.
+- At inspection: 136 GDScript files under `scripts/`, 53 under `tools/`, 12 under
+  `addons/`. Counts and line numbers drift: use the symbols below as entry points.
 
----
+**Authority:** current source/resource data → current tests and observed logs →
+feature-specific documentation → historical completion reports. Older docs and
+`.hermes/research/agents-md/` describe earlier milestones, not current contracts.
+Do not revive obsolete Qayyim/Farhan/Ayiz hero selection, invulnerable trees,
+permanent day, mana, five turtle lives, fish healing, or the cave over the portals.
 
-## 1. Quick start
+## 2. Safe run, bootstrap and validation
+
+Run these commands from the confirmed repository root:
 
 ```sh
-# Run the game (opens a window)
-godot --path .                 # or open project.godot in Godot 4.7.2 and press F5
+set -eu
+# Refresh imports/global class metadata on a fresh OR newly updated checkout.
+# Import can initialise autoload settings: isolate its user data too.
+bootstrap=$(mktemp -d /tmp/tidesworn-bootstrap-XXXXXXXX)
+XDG_DATA_HOME="$bootstrap/userdata" TIDESWORN_TEST_ROOT="$bootstrap" \
+  timeout 120 godot --headless --path . --import >"$bootstrap/import.log" 2>&1
+cat "$bootstrap/import.log"
+# Treat any match as failure, even if Godot returned 0.
+if rg -n 'SCRIPT ERROR|ERROR:' "$bootstrap/import.log"; then exit 1; fi
 
-# Bootstrap a fresh checkout ONCE — without this the project cannot even parse
-godot --headless --path . --import
-
-# The only real gate
+# Canonical gameplay gate: wrapper creates/prints its own isolated test root.
 ./tools/test_isolated.sh
+
+# Editor/import/save/bake changes: disposable SOURCE and user-data copy.
+./tools/test_creative_editor.sh
+
+git diff --check
+
+# Interactive player session; this intentionally uses normal user data.
+godot --path .
 ```
 
-**Deep audit verification (2026-10-23): 408 checks, PASS, exit 0** on
-`visual-overhaul-merge-2`. The incoming baseline was 314 checks, PASS despite
-visual regressions. The follow-up native graphical audit passes 63 checks.
-See `docs/DEEP_AUDIT_REPORT.md` for evidence, fixes and limits.
-Use `./tools/test_isolated.sh`; the raw acceptance scene deletes its save and
-now refuses to run without a verified `TIDESWORN_TEST_ROOT` and isolated XDG data.
+**Never run the destructive acceptance scene against normal user data.**
+`tools/tide_test.gd` calls `GameState.delete_save()` before and after the suite.
+Copying the project directory alone does NOT isolate `user://`: the application
+name still selects `~/.local/share/godot/app_userdata/Save The World/`.
+Tests must set both `XDG_DATA_HOME` and `TIDESWORN_TEST_ROOT` before Godot starts.
+`TestEnvironment.require_isolation()` checks the actual user-data path before the
+harness mutates it; autoloads initialise earlier, so do not rely on that guard alone.
+Back up live progress before risky manual testing; never restore an old backup over
+progress from a concurrent player session. Do not stop unrelated Godot processes.
 
-A clean run must end `PASS` and exit 0. Nothing else is a green build.
+`test_isolated.sh` uses `timeout 600`, preserves Godot's pipeline exit status, rejects
+`[FAIL]`, `SCRIPT ERROR`, `ERROR:`, and requires the exact final summary pattern:
+`--- tide test: N checks, PASS ---`, plus exit 0. A partial stream of `[OK]` is not PASS.
+A stale `.godot/global_script_class_cache.cfg` can omit newly added classes and hang
+at parse errors; refresh imports before changing gameplay to fix those errors.
+`--editor --quit` and legacy `smoke_test.gd` are not substitutes for the gate.
+Warnings are not automatically failures in the Linux wrapper; inspect and report
+warnings rather than describing a warning-bearing log as completely clean.
 
-**The suite deletes the player's save** (`tools/tide_test.gd:13,109` →
-`GameState.delete_save()`), and `user://` is keyed on `config/name`, so running it from a
-*copy* of the project destroys the same real save at
-`~/.local/share/godot/app_userdata/Save The World/tidesworn_save.json`. Back it up first.
+Dated verification results for this update are recorded at the end of this file.
+Do not hardcode a permanent check tally or reuse an old PASS as current evidence.
 
----
+## 3. Runtime ownership and world lifecycle
 
-## 2. Tree rule (resolved)
+```text
+GameState  persistent progression, campaign, village simulation state, transactions
+Sfx        procedural effects + generated battle music; audio bus owner
+GameSettings  device preferences in user://settings.cfg
 
-Trees retain persistent HP, react to damage, fall at zero and trigger game over
-when all are lost. The visual repair preserves that rule and the existing tree
-creation RNG/order/IDs. Never restore the obsolete invulnerability assertion.
-Each ForestTree now owns both sprites, shadow and Body before its ready callback.
-
----
-
-## 3. Architecture in one screen
-
+Game (scripts/game/game.gd)
+├── TitleLayer → TitleScreen + TitleBackdrop (preview/menu, no preview save writes)
+├── WorldHolder → ONE current world
+│   ├── Lobby (64 × 40): village, forest, coast, shops, workers, portals, ship
+│   │   └── HomeInterior (temporary child at an off-map position)
+│   ├── Dungeon: selected Monster Portal level, enemies, boss, hazards, shore exit
+│   ├── OceanJourney: turtle route state machine, own camera/UI/controls
+│   └── KrakenIsland: fortress arena, KrakenKing, RescueCage, return interaction
+├── GameHUD: combat/village HUD, minimap, modal panels, tutorial, touch controls
+├── LoadingScreen + NpcInfo
+└── StorySequence (temporary illustrated story overlay)
 ```
-GameState (autoload)  ← single source of truth: data, economy, saves, XP, pets,
-      ↑                 house, portals, expedition, emergency, recovery, layout
-      │ signals
-Game (scenes/game.tscn)  ← flow controller: title → lobby ⇄ dungeon, HUD owner,
-      │                     modal routing, emergency clock
-      ├── WorldHolder ──► Lobby  (hub: shops, residents, 73 trees, editor, raids)
-      │                └► Dungeon (10 portal levels, monsters, boss, exit)
-      ├── GameHUD (layer 10) ── 8 modal panels + touch controls + tutorial
-      └── TitleLayer ──► TitleScreen (character select lives here too)
+
+- **Game owns transitions.** Use `_load_lobby()`, `_load_dungeon()`, `enter_home()`,
+  `board_ship()`, `enter_ocean()`, `return_from_ocean()`, `enter_kraken_island()` and
+  `play_story()`. There is no `change_scene_to_file()` / scene reload flow.
+- `_clear_world()` saves current village monsters when the world's `journey_serial`
+  matches GameState, resets portal/emergency accumulators and sailing, stops battle
+  music, queues the old world for deletion, and detaches it from HUD ownership.
+  Old and new nodes can coexist for a frame. **Use `Game.player()`**, which asks the
+  current world's `get_player()`, rather than taking the first global player.
+- Keep `_transitioning`, `_defeat_pending`, `_portal_fx_active`, `_sailing`,
+  `_story_active`, world-identity and validity guards. After any `await`, verify
+  that the same world/actor still owns the operation before changing its state.
+- **Normal menus do not pause simulation.** They lock `Player.controls_locked` via
+  `Game._input_locked` / `_apply_input_lock()`. `_on_modal_closed()` unlocks only
+  when no modal, story, transition, sailing or ocean ownership remains.
+- **Story is a deliberate exception:** `play_story()` disables the current world's
+  process mode, stops the world clock through `_story_active`, releases controls,
+  then restores world mode/HUD. Ocean's local Settings panel suspends `_update_run()`;
+  it does not globally pause the SceneTree. Do not wire in the orphan PauseMenu.
+- Lobby-only actions need explicit context guards, not just proximity. Existing
+  `open_shop()` and several older routes exclude Dungeon only; newer services and
+  missions require Lobby. Do not assume all open methods are globally safe.
+
+## 4. Source navigation by change type
+
+| Change | Primary owner / related code |
+|---|---|
+| Saves, currency, XP, house, workers, forest state, missions, rescue flags | `scripts/autoload/game_state.gd`: `_make_default()`, transactional methods, `load_game()`, `_sanitize()`, `_sanitize_campaign()` |
+| Title/continue/new journey/rescue locks | `scripts/ui/title_screen.gd`, `scripts/ui/title_backdrop.gd`, `scripts/game/game.gd` |
+| Village construction, wave restore, world services, spatial refresh | `scripts/world/lobby.gd` |
+| Map topology, coast, authored overlays, scenery | `scripts/creative/world_layout.gd`, `scripts/creative/world_terrain.gd`, `scripts/creative/world_composition.gd`, `scripts/creative/map_renderer.gd` |
+| Movement, stamina, phased weapon attacks, aim, sleep | `scripts/player/player.gd`, `scripts/data/attack_db.gd`, `scripts/player/player_vitals.gd` |
+| Monster targeting/FSM, special attacks, damage/rewards | `scripts/combat/enemy.gd`, `scripts/world/dungeon.gd`, `scripts/world/dungeon_hazard.gd` |
+| Fire, tree HP/growth, specialist tasks, physical routes | `scripts/world/forest_tree.gd`, `scripts/world/resident.gd`, `scripts/world/resident_routes.gd` |
+| House/fence targets, timed repair, shelter, rooftop weapons | `scripts/world/settlement_target.gd`, `scripts/world/house_defense.gd`, `scripts/world/home_interior.gd` |
+| Companion support, recruited guardians, rescued allies | `scripts/pets/pet.gd`, `scripts/pets/village_pet.gd`, `scripts/world/village_hero.gd` |
+| Ship ownership/deck/harbour return | `scripts/world/ship_departure.gd`, Game's `board_ship()` / `finish_ship_return()` |
+| Turtle routes, life/fullness/item rules, marine visuals | `scripts/world/ocean_journey.gd`, `scripts/world/ocean_scenery.gd`, `scripts/ui/ocean_progress.gd` |
+| Kraken tentacle/slam/drag, fortress, prison release | `scripts/combat/kraken_king.gd`, `scripts/world/kraken_island.gd`, `scripts/core/kraken_art.gd` |
+| HUD, maps, modal routing and control placement | `scripts/ui/game_hud.gd`, `scripts/ui/village_minimap.gd`, `scripts/ui/world_map_panel.gd`, `scripts/ui/settings_panel.gd`, `scripts/ui/control_layout_editor.gd` |
+| Shop transactions and presentation / manual pet duels | `scripts/ui/shop_panel.gd`, `scripts/ui/shop_scene.gd`, `scripts/ui/pet_battle_panel.gd` |
+| Tutorial, event guidance, illustrated field guide/story | `scripts/data/mission_db.gd`, `scripts/ui/tutorial_guide.gd`, `scripts/data/field_guide_db.gd`, `scripts/ui/story_sequence.gd` |
+| Pixel generation, imported overrides, quality/VFX/audio | `scripts/core/pixel_art.gd`, `scripts/creative/asset_registry.gd`, `scripts/core/game_settings.gd`, `scripts/core/vfx.gd`, `scripts/autoload/sfx.gd` |
+| Developer authoring UI, history, save/import | `addons/tidesworn_creative_tools/` (editor only) |
+
+`scenes/main.tscn` and the loose legacy scripts are the converted Unity demo, NOT
+this game's runtime. Never hand-edit the generated scene or run `tools/convert.gd`
+(its input points at an obsolete Windows Unity path). `scripts/control_mode.gd`
+is unused. `scripts/ui/pause_menu.gd` and `scripts/ui/confirm_dialog.gd` form an
+uninstantiated legacy feature; no `pause_menu` InputMap action exists.
+Do not run `tools/setup_input.gd` (rewrites project config) or
+`tools/tide_capture.tscn` (unguarded save deletion/source screenshots) in automation.
+
+## 5. Persistence and transaction rules
+
+1. **GameState is the only production writer of `data`.** UI/world call its methods
+   and check their bool or `{"ok": bool, "message"|"reason": String}` result before
+   presenting success. Existing direct `Lobby` tutorial_seen assignment is a legacy
+   exception, not a pattern to copy. Tests intentionally manipulate fixture state.
+2. New saved fields require defaults AND load sanitisation. `SAVE_VERSION` is **6**;
+   migration is recursive `_merge()` with defaults plus explicit normalisation,
+   not branching on version. Cast all save-derived numbers through `int()`/`float()`.
+3. `campaign()` and many DB getters return copies; mutate through GameState APIs.
+   Not every getter does: `get_pet()` exposes owned pet data. Verify the particular
+   accessor instead of assuming all dictionaries are either live or copied.
+4. Persist stable IDs and numeric positions, never nodes. Saved world state includes
+   `forest_health`, `forest_growth`, `resident_health`, `structures`, `roof_guns`,
+   `worker_counts`, `water_keeper_count`, `home_monsters`, `home_wave`, `world_time`,
+   `settlement_layout`, portal/duel/mission/campaign progress and expedition loot.
+   The old claim that only expedition/layout persist is false.
+5. `home_monsters` captures living fire/urchin kinds, positions, HP and raid flags.
+   `_save_now()` captures a ready current Lobby only when its `journey_serial`
+   matches. A new journey increments the serial so retiring worlds cannot save
+   old enemies into it. Dungeon enemy/boss HP and mid-route turtle state are NOT saved.
+6. Emit the owning signals (`data_changed`, `pet_changed`, `house_changed`, etc.)
+   after accepted mutations; panels often rebuild from these, gated on visibility.
+   Do not add per-frame disk writes; follow existing transaction save boundaries.
+7. `continue_game()` must reject unreadable saves without overwriting them. Merely
+   previewing title cards must not create/reset progression. New Journey deliberately
+   calls `new_game("adam")`, carries saved control settings, and replaces progression
+   only after the title's confirmation when a save exists.
+8. Separate **device** preferences (`GameSettings`, `user://settings.cfg`: volume,
+   UI scale, camera zoom, touch mode, reduce motion, effects quality, fullscreen)
+   from journey `settings.control_layout` (village and ocean control positions).
+   `GameState.gui_scale()` delegates to GameSettings. New Game carries layout;
+   deleting a save does not delete device settings. Use live-setting signals.
+9. `CharacterDB.canonical_id()` maps old IDs: qayyim→adam, farhan→arjun,
+   ayiz→mei_ling. However, `load_game()` currently validates the raw saved ID against
+   `CharacterDB.ids()` before `_sanitize()` canonicalises it: an unrecognised raw ID
+   falls back to Adam. Do not promise legacy discipline preservation without testing
+   that exact load path. Catalog helper mapping alone is not save migration proof.
+
+## 6. Gameplay contracts to preserve
+
+### Campaign, portals and defeat
+
+- New journeys play **Adam (sword)**. Arjun (scythe) and Mei Ling (bow) are missing
+  friends, not alternative new-game starts. Title cards remain locked until their
+  independent rescue flags are set, then describe **village defenders**. Even an
+  unlocked friend preview does not change the Adam story start.
+- `campaign` owns `intro_seen`, `ocean_stage`, `arjun_rescued`, `mei_ling_rescued`,
+  `ending_seen`. Defaults + `_sanitize_campaign()` preserve older progression.
+  Three 45-second ocean routes lead to Vorath, the Kraken King. Kill the boss,
+  then separately approach/tap the prison through `free_arjun()`; a kill alone
+  does not rescue him. Arjun returns visibly aboard the ship, then joins the village.
+- Mei Ling is rescued after Malakar in `drowned_throne`, the final Monster Portal.
+  Both flags trigger a one-time saved reunion ending; normal village play continues.
+  Replays must not duplicate friends, rewards or rescue transitions.
+- Ten Monster Portal definitions live in PortalDB. Prerequisites and attempts go
+  through `portal_clear_reason()` / `start_expedition()`. Unbanked expedition loot
+  is separate from banked inventory; victory/safe exit banks it, defeat discards it.
+- Portal defeat intentionally emits through multiple paths: preserve
+  `_defeat_pending` and expedition guards. Home defeat preserves banked progression,
+  restores 10% HP, revives the companion and starts recovery; island defeat reuses
+  home recovery. Recovery follows `sleep_recovery_seconds()` / HouseDB (10→2 s).
+  Only the main cottage is enterable; its interior is a Lobby child, not another scene.
+- Ten tutorial events are phase-aware (`MissionDB.DAY_STEPS` / `NIGHT_STEPS`).
+  `tutorial_complete()` also recognises Portal 1 already cleared in an old save.
+  Portal-entry/boss events survive a clock-phase change during the fight. Clearing
+  Tidebound Grotto ends training immediately; Portals 2–10 are Mei Ling's rescue arc.
+  Tutorial Skip hides the overlay; do not assume it completes progression.
+
+### Village ecology, enemies and defenses
+
+- One authoritative clock: **180 s day + 180 s night**. New journeys begin peacefully
+  by day. Night spawns fire monsters/urchins; dawn changes lighting, NOT surviving
+  enemies or their HP/AI. `home_wave` prevents repeat spawning on re-entry/reload.
+- The original forest fixture contains **64 trees**, not the historical 73 claim.
+  `tools/fixtures/monsoon_forest.json` binds each ID/order/position/max HP.
+  `_rng.seed = 7319`, frozen exclusion coordinates and **160** pre-forest RNG draws
+  preserve those associations. Never insert an earlier gameplay RNG call or reorder
+  tree creation for decoration. Scenery/visual families use separate deterministic streams.
+- Trees keep HP, ignite/burn, fall at zero, lose collision and can be replanted.
+  Water keepers extinguish/heal; planters produce protected, nonblocking **30 s**
+  saplings. Caretaker/builder claims must be released on death/unreachable tasks.
+  All trees lost triggers irreversible game over, devastation, and save deletion.
+  Do not restore tree invulnerability or confuse growing trees with attackable ones.
+- Fire monsters and urchins can attack a nearby living player/exposed resident;
+  intact houses shelter residents. Fire also attacks mature trees; urchins attack
+  structures/trees physically. Active-world ownership and dead/sheltered filters matter.
+  Fire-monster combat/burning are intentionally silent; physical hits on unburned
+  trees and other enemy kinds retain their own audio rules.
+- Four specialists: water (fires), planter (fallen trees), builder (day repairs),
+  fighter/swordsman (urchins). Hiring may replace a dead slot; counts scale at least
+  with house tier. Builders must arrive before spending **10 s** working; night
+  pauses construction, and partial work persists. Nearby manual repair is free.
+- House tier is the shared level source for structures/workers/fences/purchased
+  rooftop guns, not independent building progression. House upgrades cost diamonds;
+  workers and optional rooftop guns cost Gold. Guns are sold by the **Equipment Shop**,
+  require an intact house, and shoot fire/urchins only. Use GameState cost methods.
+- Cleared pet duels recruit rivals into owned pets and `village_pets`; rebuild
+  VillagePet guardians and rescued VillageHero allies once per stable ID. Pet
+  support/revival and house-tier defender scaling must remain consistent with saves.
+- The dungeon emergency starts after 14 s **and at night**, with a 5 s settlement
+  damage accumulator. The numeric `emergency_damage` tint is cosmetic; spawned
+  attackers still do real HP/structure damage. Menus are not a safe pause.
+
+### Movement, combat, input and presentation
+
+- Preserve continuous `Input.get_vector()` + acceleration/braking + `move_and_slide()`;
+  do not substitute grid movement or position snapping. Sprint is 1.7× speed with
+  stamina drain/exhaustion/recovery; stamina is displayed under overhead HP.
+- A health potion can auto-consume at nonzero HP ≤10%; the auto-heal latch rearms
+  after healing to ≥35%. Lethal damage does not auto-resurrect the player. Mana and
+  revival-potion items are retired; load sanitisation removes them. Pets recover
+  through existing revival/load rules, not permanent-death or paid-revival additions.
+- Attacks are `ANTICIPATION → ACTIVE → RECOVERY` using AttackDB. Damage/projectiles
+  happen at the active frame and cooldown restarts there. Keep combo windows,
+  discipline/range, bow aim, collision and damage pacing intact when changing art.
+  Enemy FSM: spawn/wander/alert/chase/windup/attack/recover/stagger/dead.
+- Collision **bit values**: World=1, Player=2, Enemy=4 (editor layers 1/2/3).
+  Enemy mask deliberately excludes Player. Never add player collision as a cosmetic fix.
+- Damage APIs are duck-typed through groups/`has_method()`. Enemies and settlement
+  targets generally expose `take_damage(amount, from_dir, source)`; Player's signature
+  differs. Match the actual callee. Guard validity, deletion and world ownership.
+- Land controls: WASD/arrows, Shift=sprint, F=attack, E=nearby interaction, I/Tab=Pack,
+  B=settlement build. Current touch HUD has joystick, Attack, **Sprint**, Pack, Menu.
+  **`_interact_button` and saved layout ID `interact` now mean `sprint`**, not Use.
+  Tap nearby interactables directly; ship's own direct-tap route permits remote boarding
+  but retains world/activity guards. Do not reintroduce Talk/Use/Board touch buttons.
+- Interactable is a distance/group API with physics monitoring disabled, plus direct
+  touch/mouse handling. `body_entered` cannot implement its interaction contract.
+  Every synthetic action needs release on pointer-up, hide, focus loss and exit.
+  Use `hud.release_world_controls()` during world/story/sailing changes.
+- Gold/diamonds are top-left; picture minimap top-right opens WorldMapPanel; clock
+  is bottom-centre; player/pet health/XP are overhead. Portal CLEARED captions are
+  intentionally hidden WITHOUT clearing saved flags. No old VITALS/quest/boss HUD box.
+- `GameHUD.show_toast()` is deliberately a no-op and toast_requested is not a reliable
+  feedback channel. Put important results in owned persistent UI, not a new toast.
+- Set `ModalBase._panel_size` BEFORE `super._ready()`. Register any new modal with
+  creation, close routing, `any_modal_open()` AND `hide_modals()`. Existing rebuilds
+  can reset scroll/hover during `data_changed`; pet battle has its own active guard.
+- PetBattlePanel is **manual**: `choose_skill()` starts the player's choice, the rival
+  replies afterward, and cooldowns tick while the panel is active. No automatic
+  player timeout turn. Preserve `_turn_timer` and other test-accessed members.
+- Gold/diamond drops magnetise nearby; other loot collects by contact. Use the
+  active current-world player and preserve one-payment/queued-deletion guards.
+
+### Ship, turtle and Kraken
+
+- Game owns sailing locks/HUD visibility; ShipDeparture owns deck placement and
+  departure/return motion. Yellow UNISZA ship docks before passenger disembarkation.
+  Preserve collision restoration, pet repositioning and held-action cleanup.
+- Ocean phases: `DIVE → RESCUE → RUNNING → TRAVELLING → ARRIVING` for routes 1/2;
+  route 3 travels into KrakenIsland. `FINISHED` is the death/retry state, not a
+  successful Next-button stop. Save the next route checkpoint before departure;
+  retries/shore return retain completed-route checkpoints and earned cleanup Gold.
+- Ocean uses normalised four-direction steering, its own camera/settings/joystick,
+  Pick Up/E (`ocean_pickup`) and Eat/F (`ocean_eat`). The combat HUD is hidden.
+  Village/ocean layouts are independently editable; saved pixel positions are
+  viewport-clamped and must not drift when GUI scale changes.
+- **Three lives** and a distinct fullness meter. `FULLNESS_DRAIN=3` per second,
+  `FISH_FULLNESS=35`, cap 100. Fish restore fullness, NEVER lives; pink hearts heal
+  one life capped at three. At zero fullness, `STARVATION_SECONDS=5` costs a life.
+- Pick Up rubbish pays one Gold exactly once through `register_rubbish_cleaned()`.
+  Each missed/wrongly eaten/end-of-route leftover rubbish costs a life, even during
+  blink immunity. Fatal penalties prevent checkpoint advance. Skipped fish or
+  avoided hazards do not incur rubbish penalties. Keep late-spawn travel margins.
+- Bomb/shark contact uses swept collision and 1.4 s hit immunity; rubbish/starvation
+  penalties deliberately bypass it. Fatal damage sinks/flips rider+turtle before
+  showing Ride Again. Retry/new route resets lives, fullness and missed counters.
+- KrakenKing alternates telegraphed slam/hook/drag; the other arm grips the cage.
+  Pull uses `move_and_collide()`, never teleporting through arena pillars. Boss death
+  unlocks, but does not itself open, RescueCage. Preserve separate tap-to-free and
+  repeat-rescue guards, full arena/cage framing, and human-scale returning Arjun.
+
+## 7. Content edits and coding conventions
+
+- Follow the surrounding indentation (mostly tabs; some existing core files use
+  spaces). `snake_case` functions/members, `PascalCase` classes, typed function
+  signatures, `:=` where inference is safe; file-level tuning constants. Avoid
+  unrelated reformatting and private-member renames: tests call internals directly.
+- Data catalogs use static accessors, not DB instances. Inspect copy/live semantics;
+  do not mutate const catalog records. Prefer `.get(key, default)` for optional UI data.
+- **Items:** edit `scripts/data/item_db.gd` / `ITEMS`. Supply name/kind/price/currency/
+  stack/description/shop; equipment also needs slot/style/stats. Shop filter is
+  `equipment|potion|pet`; empty means not sold. Current styles: sword/scythe/bow;
+  legacy `smith_hammer` IDs are scythes now. Blank style bypasses discipline filters,
+  so specify it for weapons. Vendor sale needs explicit `sellable: true` (wood).
+- **Portals:** update `scripts/data/portal_db.gd` / `PORTALS` AND `ordered_ids()`,
+  predecessor `unlocks`, requirements/rewards, art/guide/tests. Last ordered portal
+  owns Mei Ling's rescue; changing order affects campaign code, not just menus.
+- **House:** `scripts/data/house_db.gd` / ordered LEVELS, level/index alignment,
+  diamond costs and recovery. **Pets:** `scripts/data/pet_db.gd` / PETS + LEVEL_XP;
+  duel LEVELS + ORDER in `scripts/data/pet_battle_db.gd`. Keep unique backdrop paths.
+  `GameState.pet_upgrade_cost()` is the shared upgrade price, not a UI formula copy.
+- **Missions:** update STEPS, day/night index arrays, event callers, guidance/spotlight
+  and old-save completion handling together. **Campaign:** defaults/sanitizer,
+  rescue APIs, title locks, guide and transition checks move together.
+- Do not add state writes to UI/world or editor APIs to gameplay. Groups are a
+  cross-system API: renaming a group/method may silently break duck-typed callers.
+
+## 8. Creative Studio, map and asset contracts
+
+**Route:** Godot → **Tidesworn** workspace → **Map Studio**. If absent, enable
+**Tidesworn Creative Studio** in Project Settings → Plugins. Other tabs are
+Asset Library, Pixel & Animation, World Palette.
+
+- Default sources: `data/maps/village.tres`, `data/maps/village_layout.tres`,
+  `data/palettes/monsoon_afterglow.tres`, `data/asset_registry/library.tres`.
+  Map Studio supports anchors/buildings, routes, polygon districts, scenery,
+  activity workpoints, authored objects, undo/redo, validation, Save As and preview.
+  Read `docs/MAP_STUDIO_GUIDE.md` and `docs/MAP_STUDIO_UPGRADE.md` for actual tools.
+- Developer authoring and player settlement layout are separate. In-game **Menu →
+  Build settlement** or B edits player placements. Use Map Studio to edit source.
+  Preview runs with its own data. Never "fix" developer defaults by clearing a save.
+- Resolve **player layout > developer base override > canonical anchor** on copies;
+  do not mutate source resources during runtime resolution. AuthoredMap v1 falls
+  back to compatible WorldLayout defaults; v2 can reference/embed its layout.
+  House-relative arrival/recovery, approaches, collision, resident workpoints and
+  camera spawn need to move coherently, not just a building sprite.
+- Establish topology/clearance/reachability before decoration. ResidentRoutes is
+  physics-backed AStar; edited layouts invalidate routes and update service access.
+  Water paint creates collision; land paint cannot reclaim sea. Only the visible
+  `jetty_deck` footprint is removed from the shared coast collision polygon.
+- Preserve all original forest fixture associations. New authored trees use their
+  authored stable IDs. Existing tree base overrides move nodes after ID assignment.
+  Developer placement, gameplay RNG and decorative RNG must not become coupled.
+- Runtime art loads imported Texture2D resources through AssetRegistry. Optional
+  missing art falls back; required missing art emits an error and diagnostic checker.
+  Explicit overrides (including `authored_tree` and legacy foliage keys) win.
+  Generate through stable `PixelArt.cached_texture()` keys; use `PixelArt.PX`.
+  Duplicate shared image data before destructive resize/recolour/preview transforms.
+- MonsoonArt owns reproducible trees/cottage/props and editable exports under
+  `assets/authored/monsoon/`. Imported house art owns its windows: do not overlay
+  a procedural window mask on it. Coastal/Campaign/Ocean/KrakenArt own newer visuals.
+- WorldTerrain uses a geometry/palette-hash-validated imported terrain bake; edits
+  invalidate it. `tools/bake_village.tscn` writes source ONLY with
+  `--write-village-bake` AND verified isolation. Isolation of user data alone does
+  not protect source files: bake/import/save tests belong in a disposable checkout.
+- Palette changes invalidate generated caches; unchanged inputs reuse terrain.
+  MonsoonLighting derives from GameState time; no second clock or spawn logic.
+  Reduce Motion/low quality retain essential readable terrain, flame/health/state
+  feedback; respect the current quality gates rather than asserting every overlay
+  remains visible. Test live setting changes and tween ownership.
+- Editor recovery drafts stay under `user://tidesworn_studio_recovery`; explicit
+  Save is required to overwrite source art/maps. Plugin build blocks unsaved work.
+  `addons/tidesworn_creative_tools/` stays editor-only.
+
+## 9. Verification routes and evidence limits
+
+The full gate integrates DeepAuditChecks, CreativeChecks, WorldChecks, MonsoonChecks,
+KampungChecks, TitleChecks, combat/coastal/portal-tutorial/control-ocean/kraken-hunger,
+StoryChecks and MapUnlockChecks. Older standalone fixtures may lag current flow;
+read their setup before running (some still await a story without dismissing it).
+
+| Affected area | Additional route |
+|---|---|
+| Authoring/import/source save, map workbench, bake | `tools/test_creative_editor.sh`: disposable import + bake + reimport, editor UI checks, creative restart AND workbench restart |
+| World composition/movement/render configuration | `tools/review_world.sh` with an absolute external output directory |
+| Monsoon art/palette/performance | `tools/review_monsoon.sh` with an absolute external output directory |
+| Title/menu/input | `tools/review_title.sh` with an absolute external output directory; inspect for older title expectations |
+| Coastal/ship/shore ownership | `tools/coastal_test.tscn` |
+| Campaign/rescue/ending/touch layout | `tools/story_test.tscn` |
+| Minimap/picture map/friend locks | `tools/map_unlock_test.tscn` |
+| Sprint/direct ship tap/ocean controls | `tools/control_ocean_test.tscn` |
+| Kraken arena/drag/fullness/missed rubbish | `tools/kraken_hunger_test.tscn` |
+
+Focused scenes do not isolate the environment for you. Example, after import:
+
+```sh
+set -eu
+review=$(mktemp -d /tmp/tidesworn-review-XXXXXXXX)
+XDG_DATA_HOME="$review/userdata" TIDESWORN_TEST_ROOT="$review" \
+  timeout 180 xvfb-run -a -s '-screen 0 1280x720x24' \
+  env LIBGL_ALWAYS_SOFTWARE=1 godot --audio-driver Dummy --path . \
+  res://tools/kraken_hunger_test.tscn -- --small-screen \
+  >"$review/review.log" 2>&1
+cat "$review/review.log"
+if rg -n '\[FAIL\]|SCRIPT ERROR|ERROR:' "$review/review.log"; then exit 1; fi
+rg -q '^--- kraken hunger: [0-9]+ checks, PASS ---$' "$review/review.log"
+# Inspect the generated shots as well as the exit status and PASS summary.
 ```
 
-Rules of the runtime that shape every change:
+Use `tools/test_isolated.ps1` for Windows, with the correct Godot console executable;
+read its `-ImportOnly` / `-VisualReview` options rather than copying Linux commands.
+For visual/input changes, inspect actual rendered captures at 1280×720 and compact
+832×480 as relevant. Headless PASS proves neither appearance nor phone input.
+For movement, inspect consecutive positions/frames, not just endpoints. Paired
+static captures disable follow-camera processing and use identical camera state.
+Do not claim new performance figures from old fixtures or native Windows/Android
+validation from Linux llvmpipe, Xvfb or Wine.
 
-1. **Nothing is in the scene file.** `Lobby`, `Dungeon`, `GameHUD` and all panels are
-   `new()`-ed in GDScript (`game.gd:28-31,125,149`; `game_hud.gd:477-493`). There are no
-   exported `NodePath`s or scene connections to wire — do not look for them.
-2. **There is no scene switching.** Zero `change_scene_to_file` / `reload_current_scene`
-   calls. `Game._load_lobby` / `_load_dungeon` build a world; `Game._clear_world`
-   `queue_free`s the previous one (`game.gd:109-160`). Because `queue_free` is deferred,
-   **two worlds coexist for one frame** — every `get_first_node_in_group("player")` can
-   bind to the dying player. `Game.player()` (`game.gd:297-302`) is the only safe accessor.
-3. **There is no pause.** No `get_tree().paused` anywhere. Modals only set
-   `Game._input_locked` → `player.controls_locked` (`game.gd:222-225`), so enemies, the
-   14 s emergency timer and settlement damage keep running behind an open panel.
-4. **Groups are the API.** Combat and cross-world calls are duck-typed:
-   `has_method("take_damage")` + `call()`, and `has_method("get_player"|"open_shop"|…)`
-   through the `"game"` group. Renaming a group member or method breaks gameplay with **no
-   compile error**.
-5. **Only two properties of the world persist**: `expedition.active/portal_id` and
-   `settlement_layout`. Re-entering a dungeon does not restore monster/boss HP.
+**Definition of done:** requested implementation completed; affected tests added;
+`tools/tide_test.gd` and `docs/ACCEPTANCE_TESTS.md` updated together if a game rule
+changes; safe gate final PASS + exit 0 + no error/failure markers; relevant editor/
+render/restart evidence; truthful limits and warnings; `git diff --check`; scoped
+source diff, no stray screenshots/bakes/builds or player-save changes. For documentation
+only, verify the cited paths/symbols and distinguish source inspection from tests
+actually rerun. Do not modify gameplay merely to make the documentation true.
 
----
+## 10. Exports and deeper references
 
-## 4. Where things live
+- `export_presets.cfg` is **tracked**, not ignored, and currently defines **only Android**:
+  `com.tidesworn.protectbesut`, PB (Protect BESUT), ARMv7+ARM64, version **1.3.0**,
+  **versionCode 9**. Excludes tools/docs/addons/build and the legacy main scene.
+  Do not assume a Windows preset exists or silently alter package ID/signing key.
+- Matching `4.7.2.stable` Android and Windows templates are installed on this host;
+  this alone does not prove SDK/JDK/keystore configuration or export success.
+  Read current presets, credentials/configuration and output before packaging.
+  `build/` is ignored/generated; previous APK hashes/reports do not certify this source.
+- Android delivery requires the real requested export, package/version/architectures,
+  signing-certificate continuity, APK signature and alignment verification. A
+  development-signed direct-install APK is not a Play Store release. No physical
+  phone test may be claimed without doing one.
+- Runtime reference: `docs/ARCHITECTURE.md` (older scope); acceptance:
+  `docs/ACCEPTANCE_TESTS.md` (includes chronological, superseded milestones).
+  Current campaign/sea progression: `docs/BESUT_STORY_CAMPAIGN.md` (read through
+  the latest Kraken/fullness section, not just its original description).
+  Combat/guardians: `docs/COMBAT_GUARDIANS_REPORT.md`; coast/ship:
+  `docs/COASTAL_JOURNEY_REPORT.md` (initial five-life/fish-heal rules superseded).
+- Spatial/art ownership: `docs/WORLD_LAYOUT.md`, `docs/WORLD_OVERHAUL_REPORT.md`,
+  `docs/ART_DIRECTION.md`, `docs/MONSOON_AFTERGLOW_REPORT.md`,
+  `docs/ASSET_WORKFLOW.md`. Editor: `docs/MAP_STUDIO_GUIDE.md`,
+  `docs/PIXEL_EDITOR_GUIDE.md`. Title: `docs/TITLE_SCREEN_REDESIGN.md` predates
+  Adam-only campaign start. `docs/GDT2_INTEGRATION.md` records integration history.
+  Old QA/completion/conversion reports are historical, not a current green build.
 
-| Path | Lines | What it owns |
-|---|---|---|
-| `scripts/autoload/game_state.gd` | 1287 | **Everything stateful.** Economy, XP, pets, house, portals, expedition, emergency, recovery, save/load, sanitise |
-| `scripts/autoload/sfx.gd` | 136 | Procedural SFX synthesis (no audio assets exist) |
-| `scripts/game/game.gd` | 307 | Flow, world construction, modal routing, emergency clock |
-| `scripts/world/lobby.gd` | 1211 | **Hottest file** — the whole hub, 73 trees, raid spawning, recovery ward |
-| `scripts/world/dungeon.gd` | 378 | Portal level build, boss, exit, defeat |
-| `scripts/world/*.gd` (18 files) | — | Residents, forest trees, rubbish/sea, settlement editor, portals, loot, shops |
-| `scripts/ui/*.gd` (16 files) | — | HUD, 8 modal panels, joystick, touch buttons, tutorial |
-| `scripts/data/*.db.gd` (6 files) | — | Content tables: items, characters, portals, pets, houses, pet duels |
-| `scripts/core/pixel_art.gd` | 1106 | Procedural fallback art plus AssetRegistry overrides; bounded generation cache |
-| `scripts/core/ui_theme.gd` | 130 | Palette + `GameUI` widget helpers |
-| `scripts/player/`, `pets/`, `combat/` | — | Player controller, arrows, companion, monsters/bosses/projectiles |
-| `scripts/*.gd` (9 loose files) | — | **Unity-port demo only** — loaded by `scenes/main.tscn`, not by the game |
-| `tools/` | 3417 | Acceptance suite, screenshot tour, legacy tests, converters |
+### Observed validation for this documentation update — 2026-10-27
 
-`scenes/main.tscn` (4298 lines) is a **converted Unity demo**, not the game. Only
-`tools/convert.gd`, `play_test.gd` and `smoke_test.gd` reference it. It still ships
-(`export_presets.cfg:12-14` excludes only `tools/*, docs/*`). `scripts/control_mode.gd`
-is referenced by nothing at all. The same is true of `scripts/ui/pause_menu.gd`
-(615 lines) and `scripts/ui/confirm_dialog.gd`: nothing instantiates them and
-there is no `pause_menu` InputMap action. They are orphaned half-built
-features — do not wire them in without an owner decision.
-
----
-
-## 5. Content edits — the canonical recipes
-
-All content is a `const` table + `static func` accessors in `scripts/data/`. Never
-instantiate a DB; every getter returns `.duplicate(true)`, so do not mutate the result.
-
-**New item** — 1 file, 1 insertion: add a record to `ItemDB.ITEMS`
-(`scripts/data/item_db.gd:9-221`). Required keys: `name, kind, price, currency, stack,
-description, shop`. Then:
-
-- Sold in a shop? `shop` must be `"equipment"|"potion"|"pet"` — that field *is* the filter
-  (`item_db.gd:236-241`). `shop:""` = never sold.
-- Weapon? `style` must equal a hero's `weapon_style` (`sword|hammer|bow`) or it is invisible
-  to that hero (`item_db.gd:248-256`) and rejected by `equip_item` (`game_state.gd:346-348`).
-- Sellable to vendors? Set `"sellable": true` explicitly — the default is **false**
-  (`game_state.gd:241`; only `wood` opts in).
-
-**New portal** — 2 files, order matters: add the record to `PortalDB.PORTALS` **and**
-append its id to the hand-maintained `ordered_ids()` (`scripts/data/portal_db.gd:234-246`).
-Forgetting step 2 makes the level unreachable with no error. New portal ids also get
-default save state from `ordered_ids()` at `game_state.gd:62-67`.
-
-**New house tier** — `HouseDB.LEVELS` is ordered and index-aligned with its `level` field;
-`next_level()` indexes by current level (`house_db.gd:57-60`). Costs are **diamonds**.
-
-**New pet / duel** — `PetDB.PETS` + `LEVEL_XP` (`pet_db.gd:59`) / `PetBattleDB.LEVELS` +
-`ORDER` (`pet_battle_db.gd:89-91`). Duel order is a manual array like `PortalDB`.
-
-**Persisted per-instance things need stable ids.** Tree health is keyed `forest_%d` from a
-counter assigned in RNG-dependent creation order (`lobby.gd:656`); inserting a tree or
-adding an earlier `_rng` call rebinds every saved tree's health. Do not repeat that pattern.
-
----
-
-## 6. Conventions
-
-- **Indentation: tabs.** `snake_case` members, `PascalCase` classes, `SCREAMING_SNAKE` consts.
-- **Typed signatures everywhere:** every `func` declares `-> T`; locals use `:=`. Members
-  are typed ~half the time — follow the surrounding file.
-- **Nodes are found by group, never by path.** Gameplay scripts contain no `$Path` and no
-  `get_node()`. Build nodes in code; use `get_tree().get_nodes_in_group(...)`.
-- **`GameState` is the only writer of `data`.** UI and world call its transactional
-  methods and check the result: `{"ok": bool, "message"|"reason": String}`
-  (`game_state.gd:189-227,840-854`). The one exception in the codebase is
-  `lobby.gd:78` (writes `data.tutorial_seen`) — do not add a second.
-- **UI refreshes by full rebuild on a signal, guarded by `visible`:**
-  ```gdscript
-  GameState.data_changed.connect(func() -> void:
-        if visible:
-                _rebuild())
-  ```
-  and `_rebuild()` starts with `_clear_content()` (`portal_panel.gd:11-14`).
-- **Signals live on GameState**; world objects do not emit to UI — they `call()` `Game` as
-  a router (`shop_npc.gd:32-41`).
-- **Construction naming:** `_build_*` for builders, `_on_<signal>` for handlers, `_add_*`
-  for single-child appenders. Large files use `# ---- section ----` banners.
-- **Error handling is return-dicts, not asserts.** Keep player-facing strings out of
-  `push_error`.
-- **Tuning constants go in a file-level `const`/`@export`**, not inline in `_process`.
-
----
-
-## 7. Hard rules
-
-**State & saves**
-1. Never mutate `GameState.data` outside `game_state.gd`; call the method and check `.ok`.
-2. Adding a state field means adding it to `_make_default` (`:56-136`) **and** clamping it
-   in `_sanitize` (`:1221-1287`), or it will not survive a save/load.
-3. Emit `data_changed` after any mutation the HUD shows; panels refresh from that signal only.
-4. Call `_save_if_needed()` only from transactional `GameState` methods — never from
-   `_process`/`_physics_process`. Autosave already fires per kill (`grant_xp:496`).
-5. Never branch on `data.version`; `SAVE_VERSION` is written (`:1168`) and never read.
-   Migration *is* the recursive merge with defaults (`_merge:1210-1218`).
-6. Wrap every save-derived number in `int(...)`/`float(...)` — Godot's JSON parser returns
-   all numbers as floats (the live save contains `xp: 62.0`).
-7. Persist ids/positions only — never node references.
-
-**World & flow**
-8. Never call `change_scene_to_file`; create worlds via `_load_lobby`/`_load_dungeon`.
-9. Reset `_portal_elapsed`, `_emergency_triggered`, `_settlement_damage_accum` on every
-   world change (`game.gd:170-182`).
-10. Use `Game.player()`, not `get_first_node_in_group("player")`, across a transition.
-11. Guard group lookups with `is_instance_valid()`; dead nodes linger for a tween.
-12. Keep collision layers as declared: bit 1 = World, bit 2 = Player, bit 4 = Enemy
-    (`player.gd:36-37`, `enemy.gd:58-59`). Enemies deliberately do **not** collide with the
-    player; adding bit 2 to the enemy mask is a gameplay change, not a bugfix.
-13. Anything the player can use extends `Interactable` (`interactable.gd`) — it is a
-    distance check with all physics monitoring off. `body_entered` will never fire.
-14. Any damageable node joins a group and exposes
-    `take_damage(amount: int, from_dir: Vector2 = ZERO, source: Node = null)`.
-
-**UI**
-15. Do not pause the tree. Lock input with `Game._input_locked` + `player.controls_locked`
-    and unlock only through `_on_modal_closed`.
-16. Gate lobby-only modals behind a `world is Dungeon` guard, as `open_shop`/`open_portals`
-    do (`game.gd:231-267`). `open_inventory` currently lacks that guard.
-17. In a `ModalBase` subclass, set `_panel_size` **before** `super._ready()`.
-18. Use `.get(key, default)` on dictionary records in UI — dot access errors the frame.
-19. **Do not rely on `toast_requested`.** 45 emit sites, zero listeners, and
-    `GameHUD.show_toast()` is deliberately empty (`game_hud.gd:692-695`). Any feedback you
-    route through it is silently discarded.
-20. Release every `Input.action_press` in `_release()`; a stuck synthetic action survives
-    scene changes. Touch and keyboard must share the one InputMap path.
-
-**Art**
-21. Generate textures via `PixelArt.cached_texture` with a stable unique key — the cache is
-    process-global and bounded; explicit AssetRegistry overrides take priority (`pixel_art.gd:12-33`).
-22. Use `PixelArt.PX` for world scale (1/32); never a literal `0.03125`.
-
-**Tests & tooling**
-23. `tools/tide_test.tscn` is the only gate. Require `0 FAILURE(S)` and exit 0.
-24. Never trust an exit code alone: grep stdout for `[FAIL]`, `SCRIPT ERROR`, `ERROR:`.
-    `--editor --quit` exits 0 with parse errors; `smoke_test.gd` always exits 0 (`:53`).
-25. Wrap headless runs in `timeout` — a broken parse makes the process hang, not fail.
-26. The suite calls **private members by name** (`hud.get("_toast_box")`,
-    `panel.set("_turn_timer", …)`, `game.call("_load_lobby", …)`,
-    `forest_monster.call("_can_see_player")`). Renaming privates in `game_hud.gd`,
-    `pet_battle_panel.gd`, `game.gd` or `forest_tree.gd` is a breaking change.
-27. Update `tools/tide_test.gd` and `docs/ACCEPTANCE_TESTS.md` together when a rule changes.
-28. Never edit `scenes/main.tscn` by hand — it is generated by `tools/convert.gd:1957`.
-29. Never run `tools/convert.gd` (dead `C:/Users/LUQMAN/…` input, `:35`),
-    `tools/setup_input.gd` (rewrites `project.godot:27`), or `tools/tide_capture.tscn`
-    in automation (needs a window, writes `res://shots`, deletes the save).
-30. Do not hardcode `250` in docs or assertions — the tally is data-driven (212 call sites
-    expand to 250 through loops) and drifts when catalogue data changes.
-
----
-
-## 8. Highest-value gotchas
-
-1. **Every user-facing message is silent** — see rule 19. Purchases, level-ups,
-   "EMERGENCY!", tutorial skip: written into the void.
-2. **No pause** means opening a shop mid-raid is a control-locked death (`game.gd:37-48`).
-3. **The recovery ward used to ignore the house tier — FIXED.** It now heals at
-   `GameState.sleep_recovery_seconds()` (`HouseDB.recovery_time` per cottage
-   level, 10→2 s), the same clock as `house_bed.gd` and the `HousePanel`
-   progression. The hardcoded `RECOVERY_SECONDS := 8.0` const is gone; the
-   suite asserts the ward's heal rate follows HouseDB.
-4. **`upgrade_pet` cost duplication — FIXED.** Both the transaction and the shop
-   button now read `GameState.pet_upgrade_cost(level)` (`45 + level*35`,
-   single source); the formula lives in exactly one place.
-5. **`emergency_damage` is cosmetic.** `_apply_emergency_damage` only tints sprites
-   (`lobby.gd:1159-1169`); nothing is destroyed and the run cannot fail from it. It also
-   only resets at the *next* raid (`game_state.gd:1098`).
-6. **Death in the lobby — FIXED by the deep audit.** The guarded home-defeat
-   handler returns a living player to the recovery ward. Home recovery preserves
-   inventory/currency/progression and never overrides forest game over.
-7. **`player_defeated` is emitted twice per portal defeat** and has two listeners. It only
-   works because of the `_defeat_pending` guard and an `expedition_active()` early-out.
-   Preserve both (`game.gd:189-203`, `dungeon.gd:347-355`).
-8. **Six signals are emitted but never connected**: `toast_requested`,
-   `portal_completed`, `recovery_changed`, `nearby_changed`, `boss_started`,
-   `game_over_triggered`. The HUD polls instead of listening to `recovery_changed`.
-9. **`CharacterDB.get_character` silently falls back to Qayyim** for an unknown id
-   (`character_db.gd:73`), so a typo'd hero id loads the sword hero instead of failing.
-10. **A weapon with no `style` passes both gates and is equipable by every hero**
-    (`item_db.gd:253` treats `""` as "any").
-11. **Panel rebuilds wipe scroll and hover** on *any* `data_changed` — including the 1-gold
-    sea-cleaning drip every ~8.5 s while a shop is open.
-12. **`build/` is stale by definition** (APK 2026-10-21 05:44, EXE 05:27, source edits
-    08:19–08:37). Nothing regenerates it; there is no Makefile or CI.
-13. **`.godot/` hides breakage**: a deleted source PNG still "passes" from the cached
-    `.ctex`. Re-import before trusting a green run after an asset change.
-14. **`.gitignore:4` ignores `export_presets.cfg`** — that is the only record of both
-    presets. Remove that line before any `git init`, or the build config is lost.
-15. **Export is currently impossible on this host**: no 4.7.2 export templates
-    (`~/.local/share/godot/export_templates/` empty) and the configured debug keystore
-    `/home/roku/.local/share/godot/keystores/debug.keystore` does not exist.
-
----
-
-## 9. Docs: trust ranking
-
-Read in this order; older docs lie in a consistent direction ("250 checks, PASS",
-"invulnerable trees").
-
-| Rank | File | State |
-|---|---|---|
-| 1 | `docs/ARCHITECTURE.md` | Best doc; matches code except save `version 5` (code: 6, `game_state.gd:21`) and the tree claim |
-| 2 | `docs/ACCEPTANCE_TESTS.md` | Rules are substantively correct; its PASS claim and "warnings as failures" are false |
-| 3 | `README.md` | Good orientation; only the verification claim is stale |
-| 4 | `docs/QA_REPORT.md` | Historical, claims a PASS that no longer holds |
-| 5 | `docs/COMPLETION_REPORT.md` | Changelog; false "current result" |
-| 6 | `docs/ANDROID_BUILD.md` | Quoted config block does not exist in `project.godot`; preset already exists |
-| 7 | `docs/LEGACY_CONVERSION.md` | Wrongly names `main.tscn` as the run scene; false exit-code promise |
-| 8 | `CONVERSION.md`, `docs/LEGACY_CONVERSION_NOTES.md` | Byte-identical generated converter logs, not documentation |
-
----
-
-## 10. Definition of done
-
-1. `godot --headless --path . --import` ran (fresh checkout only).
-2. `./tools/test_isolated.sh` → `PASS`, exit 0, with a verified temporary user-data path.
-3. Stdout grepped for `[FAIL]`, `SCRIPT ERROR`, `ERROR:` — clean.
-4. Any doc you made false is updated in the same change; if the change alters a game rule,
-   `tools/tide_test.gd` and `docs/ACCEPTANCE_TESTS.md` changed together.
-5. Working tree has no stray output (`res://shots`, rebuilt `build/`) unless intended.
-6. Tests used verified isolated data. Back up the real save first; never overwrite
-   ongoing user progress by restoring an older backup after a concurrent live session.
-
-
-## 11. Creative Studio contracts
-
-The creative revamp adds no autoloads. `scripts/creative/` owns semantic palette,
-asset catalog, authored map/runtime rendering and micro-action resources.
-`addons/tidesworn_creative_tools/` is editor-only; never reference EditorInterface
-or EditorPlugin from gameplay scripts. The main workspace is **Tidesworn**.
-
-- Default authoring data: `data/maps/village.tres`, `data/palettes/monsoon_afterglow.tres`,
-  `data/asset_registry/library.tres`. Independent PNGs stay under assets/authored.
-- Existing procedural forest IDs and creation order remain authoritative. Map
-  base overrides move existing nodes; new authored trees use their authored ID.
-- Developer maps and imported art are source resources. Player settlement layout
-  remains GameState data and takes precedence over developer base placement.
-- Optional art falls back; required missing art logs an error and displays a
-  diagnostic checker. Runtime loads imported textures, never source PNG images.
-- Palette switches clear generated caches; unchanged palettes reuse terrain.
-- Use `./tools/test_creative_editor.sh` for authoring tests: it copies the source
-  into a temporary directory as well as isolating user data. Import/save tests
-  must never mutate the developer's normal source checkout or player save.
-- Plugin reload retains unsaved recovery drafts only in its dedicated user-data
-  subdirectory. A source PNG/map is overwritten only through an explicit Save.
-
-Workflows, current evidence and limits are in `docs/CREATIVE_REVAMP_COMPLETION.md`
-and `docs/CREATIVE_REVAMP_QA.md`. After the 2026-10-24 local gameplay merge,
-the verified gameplay tally is 524 checks; the
-native editor workflow has 27 checks plus a separate runtime restart verification.
-
-
-## 12. Monsoon Afterglow presentation
-
-The shipped village selects `data/palettes/monsoon_afterglow.tres`. Previous
-palettes remain compatible through semantic fallback. `MonsoonArt` owns original
-reproducible tree/plant/cottage/prop pixels; `assets/authored/monsoon/` contains
-editable exports and pivots. Explicit AssetRegistry overrides remain authoritative,
-including `authored_tree` and legacy `foliage/<path>` keys. Imported house art owns
-its windows; do not draw the procedural window mask over it.
-
-`MonsoonLighting` maps the existing GameState clock to presentation only. Do not
-add another clock or change phase spawning. Low/Reduce Motion keep the complete
-static terrain/water and warm windows. Optional boat motion has one owned tween
-that responds to live settings. Forest families consume no placement RNG.
-
-`MonsoonChecks` is part of the isolated gameplay gate and compares every original
-forest association against `tools/fixtures/monsoon_forest.json`. Run
-`./tools/review_monsoon.sh /absolute/output` for actual-renderer fixtures and
-measured software-renderer performance. Full evidence, caveats and authoring
-instructions: `docs/MONSOON_AFTERGLOW_REPORT.md` and `docs/ART_DIRECTION.md`.
-
-## 13. Coordinated village layout
-
-`data/maps/village.tres` selects `village_layout.tres` (WorldLayout). Anchors,
-route edges, district polygons, footprints/approaches and contextual workspaces
-are developer source data. AuthoredMap v1 maps inherit defaults; v2 may embed or
-reference a layout. Resolve player settlement positions above developer base
-objects above canonical anchors, without mutating source resources.
-
-The existing 64-tree fixture remains authoritative. Legacy exclusion coordinates
-and the 160-draw pre-forest RNG prefix are compatibility-only; optional decoration
-uses independent streams. Do not make new scenery consume forest/gameplay RNG.
-WorldTerrain uses a hash-verified imported terrain bake for the unchanged village;
-geometry/palette edits invalidate it. `tools/bake_village.tscn` requires explicit
-`--write-village-bake` to write source pixels/metadata; reimport afterward.
-`tools/test_creative_editor.sh` tests source baking only in a disposable copy.
-
-`WorldChecks` is integrated into the isolated gameplay gate. Run
-`./tools/review_world.sh /absolute/output` for actual-renderer district/day/night,
-movement/combat/configuration fixtures and comparable performance metrics. See
-`docs/WORLD_LAYOUT.md` and `docs/WORLD_OVERHAUL_REPORT.md` for ownership, editing,
-measured evidence and limits. Never reclaim sea through land paint; only the
-visible jetty deck footprint is cut out of the shared sea collision.
+- First gameplay attempt encountered missing global class metadata in the stale
+  local import cache. It was stopped and failed the wrapper (exit 1). No gameplay
+  code was changed to mask the error. Isolated `--import` completed with exit 0;
+  the subsequent full gameplay gates before and after this guidance update each
+  reported **1,217 checks, PASS**, exit 0, without `[FAIL]`, `SCRIPT ERROR` or `ERROR:`.
+- Disposable Creative Studio workflow reported **84 checks, 0 failures** and both
+  `creative restart: PASS` / `workbench restart: PASS`, exit 0. Xvfb emitted input-
+  method and unsupported V-Sync warnings; these are not hidden or gameplay failures.
+- Focused actual-renderer Kraken/fullness review at **832×480** reported **25 checks,
+  PASS**, exit 0; ocean/fullness and fortress/grapple captures were inspected.
+  The same two Xvfb warning types occurred. This is Linux llvmpipe evidence, not
+  a physical-device or native Windows certification. No release export was rerun.
+- This update changes guidance only; gameplay/resources and live saves were not
+  edited. Documentation paths and selected current-contract coverage were checked;
+  a reconstruction patch and executable pristine-byte rollback were verified.

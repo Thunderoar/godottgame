@@ -12,6 +12,14 @@ static func run(game: Game, check: Callable) -> void:
 	title._start_button.pressed.emit()
 	await game.get_tree().process_frame
 	check.call(title.current_page == TitleScreen.Page.HEROES and title._heroes.is_visible_in_tree(), "Start Game opens a dedicated hero selection page")
+	var animate := not GameSettings.reduce_motion()
+	if animate:
+		check.call(title._home.is_visible_in_tree() and title.is_sliding(), "Start Game travels on the page track instead of cutting")
+		await game.get_tree().create_timer(TitleScreen.PAGE_SLIDE_SECONDS + 0.08).timeout
+		check.call(not title.is_sliding() and is_equal_approx(title._heroes.position.x, 0.0) and not title._home.visible, "the road settles flush after the slide")
+	else:
+		check.call(not title.is_sliding() and not title._home.visible, "Reduce Motion reaches the road without travel")
+	check.call(title._home.modulate.a == 1.0 and title._heroes.modulate.a == 1.0, "page travel never fades the content")
 	for i in CharacterDB.CHARACTERS.size():
 		title._card_buttons[i].pressed.emit()
 		if i == 0:
@@ -24,12 +32,21 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(game.world == null and browsed == original and not FileAccess.file_exists(GameState.SAVE_PATH), "browsing heroes does not create a world or write a save")
 	title._back_button.pressed.emit()
 	check.call(title.current_page == TitleScreen.Page.HOME, "Back returns from selection to the main menu")
+	if animate:
+		await game.get_tree().create_timer(TitleScreen.PAGE_SLIDE_SECONDS + 0.08).timeout
+		check.call(not title.is_sliding() and is_equal_approx(title._home.position.x, 0.0) and not title._heroes.visible, "Back slides the menu back onto the stage")
 	title._start_button.pressed.emit()
 	check.call(title.selected_character_id == "adam", "Back preserves the available Adam selection")
 	title._open_credits()
 	check.call(title._overlay.visible and title._start_button.focus_mode == Control.FOCUS_NONE, "title overlays isolate keyboard focus from the page")
 	title._close_overlay()
 	check.call(not title._overlay.visible and title._start_button.focus_mode == Control.FOCUS_ALL, "closing an overlay restores page keyboard focus")
+	GameSettings.set_reduce_motion(true, false)
+	title._show_page(TitleScreen.Page.HEROES, true)
+	check.call(not title.is_sliding() and is_equal_approx(title._heroes.position.x, 0.0) and not title._home.visible, "Reduce Motion swaps pages without travel")
+	title._show_page(TitleScreen.Page.HOME, true)
+	check.call(not title.is_sliding() and is_equal_approx(title._home.position.x, 0.0) and not title._heroes.visible, "Reduce Motion restores the menu instantly")
+	GameSettings.set_reduce_motion(false, false)
 	# Use a second title instance to exercise saved-journey confirmation and
 	# signal guards without starting another world in the acceptance game.
 	GameState.new_game("arjun")
