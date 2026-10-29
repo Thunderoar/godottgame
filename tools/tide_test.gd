@@ -37,7 +37,8 @@ func _ready() -> void:
 	for scene in game.get_children():
 		if scene is StorySequence: opening_story = scene
 	_check(opening_story != null and opening_story._arrival_active and game.title_screen != null, "Adam handoff keeps the title until a covered transition replaces it")
-	_check(opening_story != null and opening_story.lines().size() == 7 and opening_story.lines()[StorySequence.INTRO_LANDFALL_PAGE].contains("washed ashore"), "opening establishes Mei Ling reaching a guarded shore between wreck and capture")
+	_check(opening_story != null and opening_story.lines().size() == 8 and opening_story.lines()[StorySequence.INTRO_LANDFALL_PAGE].contains("washed ashore"), "opening establishes Mei Ling reaching a guarded shore between wreck and capture")
+	_check(opening_story != null and opening_story.lines()[StorySequence.INTRO_WELCOME_PAGE].contains("Welcome to BESUT, Adam"), "the eighth opening beat explicitly welcomes Adam into village life before gameplay")
 	_check(opening_story != null and opening_story.lines()[StorySequence.INTRO_RESCUE_PAGE] == "A brave turtle rescued Adam and brought him to the villagers of BESUT.", "sixth-beat rescue keeps its original story promise after the landfall insertion")
 	_check(opening_story != null and opening_story._page_time == 0 and not game.hud.visible, "opening arrival hides HUD and preserves the first beat's reading time")
 	_check(opening_story != null and opening_story.include_loading_screen and opening_story.opening_loader() != game.loading_screen, "Adam opening owns the existing loading-screen UI independently of world transitions")

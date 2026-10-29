@@ -1141,3 +1141,48 @@ boarding/contact, shore support, face clearance, captions and the static promise
 handoff. These runs do not establish physical-phone input, native Windows/Android
 validation or hardware frame rate. Prior intermediate framing/clearance corrections
 and earlier results are preserved as draft evidence, not substituted for final PASS.
+
+## Eighth intro beat: welcome to BESUT — 2026-10-29
+
+The intro has eight pages. Its first seven captions and renderers stay in order;
+the seventh promise now offers Next into the new welcome. The eighth page starts
+on the exact completed shore tableau, passes the planter's cloth into Adam's
+hands, gives the water keeper space to invite him inland, and pans across a
+continuous extended shore to an open cottage and a waiting villager's greeting.
+Adam keeps the cloth as he walks. The turtle remains visibly safe at the shore.
+The last second holds the welcome before Continue/automatic advance hands off to
+the existing village and tutorial. No inventory item or house reward is granted.
+
+See [OPENING_WELCOME.md](OPENING_WELCOME.md) for staging and source ownership.
+`OpeningWelcomeChecks` joins `StoryChecks`; `tools/tide_test.gd` checks the new
+caption at the real title/new-journey entry. Earlier seven-page verification
+entries above remain historical records.
+
+Final verification on native Windows, Godot **4.7.2.stable.official.ed1daf0bf**:
+
+- Canonical `tools/test_isolated.ps1`: **5,570 checks, PASS**, exit 0, no `[FAIL]`,
+  `SCRIPT ERROR`, `ERROR:` or engine warnings in the final gameplay logs.
+- Native `opening_welcome_test.tscn`: **929 PASS** at actual **1280×720**, including
+  73 consecutive exact-time frames; **856 PASS** at actual **832×480** and
+  **1600×720**. All exit 0; native stderr files are empty.
+- Inspected the cloth transfer, successive walking/pan frames, final village
+  tableau, caption clearance, accessibility variants and actual Lobby handoff.
+- Synthetic mouse/touch Next, Continue and Skip exercise the real story buttons.
+  Continuing marks the intro seen, restores player controls and shows the existing
+  village tutorial. Physical-phone input and Android export were not tested.
+- The preceding promise's rendered art and welcome frame zero are pixel-identical
+  above the caption (1280×536 crop SHA-256, Base64:
+  `FJgT30fDR0hqMbG8WGBqzYdfsXgerTT6ndJBbdNNq84=`).
+- Isolated class import passed without script/error markers. Import still reports
+  `Unable to open Android 'build-tools' directory.`; Android tooling was not changed.
+- `git diff --check` passed. Captures and runtime data remain outside the repository;
+  normal player data was not used. No commit or push was performed.
+
+External visual evidence:
+`C:/Users/LUQMAN/.codex/visualizations/2026/10/29/01a1869c-c888-7723-b100-09df8dc6fb73/`:
+`welcome-1280x720-799712a4`, `welcome-832x480-acd7cf4e`,
+`welcome-1600x720-55d869f1`, and `final-gate.log`.
+The final gate's isolated root is
+`C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-0df4d09019f24de3ae988d8c763b3f8b`.
+The earlier 1280 review with the planter's temporary tray-shaped empty pose is
+superseded by these final captures; it is not the final visual evidence.

@@ -42,7 +42,7 @@ static func run(game: Game, check: Callable) -> void:
 		check.call(story._canvas._rescue == null and not story._canvas.uses_rescue_shot(), "intro page %d never warms or draws the sixth-beat rescue early" % i)
 		story.advance()
 	check.call(story._canvas._rescue != null and story._canvas.uses_rescue_shot() and story._page_time == 0, "entering only intro page five warms rescue art before drawing")
-	check.call(story.lines().size() == 7 and story._caption.text == StorySequence.INTRO[StorySequence.INTRO_RESCUE_PAGE], "rescue preserves the seven-beat order and original sixth caption")
+	check.call(story.lines().size() == 8 and story._caption.text == StorySequence.INTRO[StorySequence.INTRO_RESCUE_PAGE], "rescue preserves the eight-beat order and original sixth caption")
 	check.call(source[0] == OpeningFishingArt.hero("adam", 0).get_image().get_data() and source[1] == CoastalArt.turtle_texture().get_image().get_data() and source[2] == OpeningWreckArt.piece("hull", 0).get_image().get_data() and source[3] == PixelArt.npc_texture("water_keeper").get_image().get_data(), "new rescue poses and art leave shared hero, turtle, wreck and villager pixels untouched")
 	var settings := [GameSettings.reduce_motion(), GameSettings.effects_quality()]
 	story._page_time = 2.0
@@ -67,7 +67,7 @@ static func run(game: Game, check: Callable) -> void:
 	story._page_time = 5.8
 	var promise_end := story._canvas.rescue_state()
 	check.call(promise_start == promise_end, "the final promise holds the exact completed rescue tableau for its whole reading time")
-	check.call(story._caption.text == StorySequence.INTRO[6] and story._next.text == "Continue", "epilogue reuse preserves the final promise's words and Continue behavior")
+	check.call(story._caption.text == StorySequence.INTRO[6] and story._next.text == "Next", "epilogue reuse preserves the promise's words and Next into the village welcome")
 	story.finish()
 	await game.get_tree().process_frame
 	check.call(GameState.campaign() == campaign and float(GameState.data.get("world_time", 0)) == world_time, "standalone rescue viewing never writes campaign or advances village time")
