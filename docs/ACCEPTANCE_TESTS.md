@@ -2185,3 +2185,62 @@ Verification:
 
 Evidence and verified rollback:
 `/tmp/tidesworn-objectives-left-B63fCJtC/VERIFICATION.txt`.
+
+
+## Main and side quest sections (2026-10-30)
+
+The existing objective accordion now renders two explicit, counted sections:
+**MAIN QUESTS** (gold) and **SIDE QUESTS** (teal). Recovery/urgent village defense
+is grouped separately as **NEEDS ATTENTION** above both. The same left-edge tab,
+device collapse preference, raw-touch/mouse/keyboard header handling, non-modal
+input ownership and world/context visibility guards remain unchanged.
+
+Presentation classification is explicit in each read-only entry's `section`
+field (`main`, `side`, `priority`), not inferred from translated display tags.
+Missing/unknown categories fall back to main for older callers. Main quests cover
+current training when tips are enabled, both outstanding rescue arcs and local
+expedition/realm progression. Side quests cover the eligible West Workshop,
+discovered optional wild companions and peaceful restored-realm/village care.
+Training and the rescue arcs can coexist; hiding tips still omits only training
+and phase-wait guidance, not either rescue. Workshop eligibility, purchase gates,
+pet discovery/bonding, rescue conditions and rewards remain GameState-owned.
+
+Removed the old three-row truncation. In the concrete village fixture, danger +
+workshop + both rescues previously produced `defend, workshop, arjun`, silently
+dropping Mei Ling. It now produces `defend, arjun, mei_ling, workshop`, grouped as
+priority/main/main/side. Stable ordering keeps urgent action first, then story,
+then side work. Per-section counts exclude urgent duties. Native containers hold
+cards under their correct heading, with truthful empty main/side states rather
+than invented tasks. The one bounded vertical scroll retains access to lower
+side quests without overlap or sideways scrolling. Folded tooltips include main
+and side counts. Progress-only refreshes retain card nodes and scroll state;
+changing a stable entry's category correctly reparents it.
+
+Verification:
+
+- Canonical `./tools/test_isolated.sh` on the current checkout: **6,151 checks,
+  PASS, exit 0**, without failure/script/error markers. Script, scene and resource
+  hashes remained unchanged throughout this run, including the existing art edits.
+- Focused Compatibility/OpenGL objective suite: **106 checks, PASS, exit 0**,
+  with no failure/script/error markers. New checks cover section membership,
+  counts, card parenting, urgency without truncation, retained rescue arcs,
+  empty/completed/undiscovered states, hidden training, workshop prerequisites,
+  realm companion discovery/bond retirement, reclassification and read-only
+  refreshes. Existing collapse, input ownership and settings checks remain.
+- Inspected expanded main/side and scrolled side captures at **1280x720** and
+  **832x480**. All six size/UI-scale combinations (75/100/130 percent) prove the
+  side heading is reachable, panel/control separation, no horizontal scroll and
+  retained 44-pixel folded-header touch targets. Linux Xvfb/llvmpipe only, with
+  the existing input-method and V-Sync warnings; no phone/Windows/export claim.
+- Same-input baseline/modified/rollback probe confirms the above ordered IDs,
+  new explicit categories and native section containers. Hide tips mutates no
+  progression and the existing collapse preference is unchanged. Separate-copy
+  rollback restores all five stage-baseline SHA-256 hashes and literal output.
+- This extends the previous four artifact roles in place. Earlier transaction
+  records are retained under `history/left-tab`. The default `ROLLBACK.sh` now
+  restores only this section change to its committed left-tab baseline;
+  `--previous` retains the original left-tab rollback. The latest patch is scoped
+  to the five section-change source/test/documentation files. Unrelated ongoing
+  art edits are preserved and never included in that patch.
+
+Evidence: `/tmp/tidesworn-objectives-left-B63fCJtC/VERIFICATION.txt`.

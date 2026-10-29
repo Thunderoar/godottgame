@@ -11,6 +11,9 @@ var _rows: VBoxContainer
 var _box: VBoxContainer
 var _entries: Array[Dictionary] = []
 var _cards: Array[Dictionary] = []
+var _sections: Dictionary = {}
+var _section_headers: Dictionary = {}
+var _section_empty: Dictionary = {}
 var _height_limit := 320.0
 var _compact := false
 var _touch_id := -1
@@ -67,20 +70,25 @@ func collapsed() -> bool:
 
 func set_entries(entries: Array[Dictionary]) -> void:
 	if _entries == entries: return
-	var old_ids: Array = _entries.map(func(row: Dictionary) -> String: return str(row.id))
-	var new_ids: Array = entries.map(func(row: Dictionary) -> String: return str(row.id))
+	var old_ids: Array = _entries.map(func(row: Dictionary) -> String: return str(row.id) + ":" + ObjectiveTrackerData.section_for(row))
+	var new_ids: Array = entries.map(func(row: Dictionary) -> String: return str(row.id) + ":" + ObjectiveTrackerData.section_for(row))
 	_entries = entries.duplicate(true)
-	if old_ids != new_ids:
+	if old_ids != new_ids or _sections.is_empty():
 		for child in _rows.get_children():
 			_rows.remove_child(child)
 			child.queue_free()
 		_cards.clear()
+		_sections.clear()
+		_section_headers.clear()
+		_section_empty.clear()
 		_scroll.scroll_vertical = 0
+		for section in ObjectiveTrackerData.SECTION_ORDER:
+			_build_section(section)
 		for entry in _entries:
 			var card := VBoxContainer.new()
 			card.add_theme_constant_override("separation", 3)
 			card.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			_rows.add_child(card)
+			_sections[ObjectiveTrackerData.section_for(entry)].add_child(card)
 			var tag := _label("", 11, GameUI.TEAL, card)
 			var title := _label("", 17, GameUI.TEXT, card)
 			var detail := _label("", BODY_FONT, GameUI.MUTED, card)
@@ -90,7 +98,7 @@ func set_entries(entries: Array[Dictionary]) -> void:
 			bar.show_percentage = false
 			bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			card.add_child(bar)
-			_cards.append({"tag": tag, "title": title, "detail": detail, "bar": bar})
+			_cards.append({"id": str(entry.id), "container": card, "tag": tag, "title": title, "detail": detail, "bar": bar})
 	for i in _entries.size():
 		var entry: Dictionary = _entries[i]
 		var card: Dictionary = _cards[i]
@@ -101,10 +109,34 @@ func set_entries(entries: Array[Dictionary]) -> void:
 		card.detail.text = str(entry.detail)
 		card.bar.visible = pct >= 0
 		card.bar.value = maxf(0, pct)
+	for section in ObjectiveTrackerData.SECTION_ORDER:
+		var count := section_count(section)
+		_sections[section].visible = section != ObjectiveTrackerData.PRIORITY or count > 0
+		_section_headers[section].text = ("MAIN QUESTS" if section == ObjectiveTrackerData.MAIN else "SIDE QUESTS" if section == ObjectiveTrackerData.SIDE else "NEEDS ATTENTION") + "  ·  %d" % count
+		_section_empty[section].visible = count == 0
 	_summary.text = str(_entries[0].title) if not _entries.is_empty() else "No active objectives"
 	_summary.tooltip_text = str(_entries[0].detail) if not _entries.is_empty() else ""
 	_summary.add_theme_color_override("font_color", GameUI.RED.lightened(0.3) if not _entries.is_empty() and bool(_entries[0].get("urgent", false)) else GameUI.TEXT)
 	_sync_expansion()
+
+func section_count(section: String) -> int:
+	var count := 0
+	for entry in _entries:
+		if ObjectiveTrackerData.section_for(entry) == section: count += 1
+	return count
+
+func _build_section(section: String) -> void:
+	var box := VBoxContainer.new()
+	box.name = "MainQuests" if section == ObjectiveTrackerData.MAIN else "SideQuests" if section == ObjectiveTrackerData.SIDE else "PriorityObjectives"
+	box.set_meta("quest_section", section)
+	box.add_theme_constant_override("separation", 12)
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_rows.add_child(box)
+	_sections[section] = box
+	var color := GameUI.GOLD if section == ObjectiveTrackerData.MAIN else GameUI.TEAL if section == ObjectiveTrackerData.SIDE else GameUI.RED.lightened(0.3)
+	_section_headers[section] = _label("", 13, color, box)
+	var empty := _label("No active main quests here." if section == ObjectiveTrackerData.MAIN else "No active side quests here.", BODY_FONT, GameUI.MUTED, box)
+	_section_empty[section] = empty
 
 func _label(text: String, font_size: int, color: Color, parent: Control) -> Label:
 	var label := GameUI.label(text, font_size, color)
@@ -130,7 +162,9 @@ func _sync_expansion() -> void:
 	_header.alignment = HORIZONTAL_ALIGNMENT_CENTER if folded else HORIZONTAL_ALIGNMENT_LEFT
 	_header.add_theme_font_size_override("font_size", 24 if folded else 15)
 	_header.tooltip_text = "Expand objectives" if folded else "Collapse objectives to the left"
-	if folded and not _entries.is_empty(): _header.tooltip_text += "\n" + str(_entries[0].title)
+	if folded and not _entries.is_empty():
+		_header.tooltip_text += "\n" + str(_entries[0].title)
+		_header.tooltip_text += "\nMain quests: %d · Side quests: %d" % [section_count(ObjectiveTrackerData.MAIN), section_count(ObjectiveTrackerData.SIDE)]
 	_header.add_theme_color_override("font_color", GameUI.RED.lightened(0.3) if not _entries.is_empty() and bool(_entries[0].get("urgent", false)) else GameUI.TEXT)
 	_header.custom_minimum_size.x = 44.0 / maxf(0.1, scale.x * _display_scale) if folded else 0.0
 	_panel_style.content_margin_left = 4 if folded else 12

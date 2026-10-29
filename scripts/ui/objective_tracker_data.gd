@@ -1,6 +1,11 @@
 class_name ObjectiveTrackerData
 extends RefCounted
-## Read-only HUD guidance. World context takes precedence over village lessons.
+## Read-only quest guidance. World context takes precedence over village lessons.
+## These are presentation categories, not new saved quest or reward state.
+const MAIN := "main"
+const SIDE := "side"
+const PRIORITY := "priority"
+const SECTION_ORDER := [PRIORITY, MAIN, SIDE]
 
 const LESSON_HINTS := {
 	"move": "Walk to the yard marker. Use WASD or the joystick; Shift or Sprint runs.",
@@ -35,9 +40,9 @@ static func entries(world: Node, counts: Dictionary = {}) -> Array[Dictionary]:
 static func _village(counts: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if GameState.recovery_active():
-		out.append(_entry("recovery", "Recover at the cottage", "Rest in the recovery ward before heading out again.", "RECOVERY"))
+		out.append(_entry("recovery", "Recover at the cottage", "Rest in the recovery ward before heading out again.", "RECOVERY", false, PRIORITY))
 	elif GameState.emergency_active() or int(counts.get("fires", 0)) > 0 or int(counts.get("monsters", 0)) > 0:
-		out.append(_entry("defend", "Defend BESUT", "Fight the attackers and protect the residents and burning trees.", "URGENT", true))
+		out.append(_entry("defend", "Defend BESUT", "Fight the attackers and protect the residents and burning trees.", "URGENT", true, PRIORITY))
 	var show_training := not bool(GameSettings.get_value("tutorial_hidden"))
 	var lesson := MissionDB.step(GameState.mission_step())
 	if show_training and not lesson.is_empty():
@@ -46,20 +51,22 @@ static func _village(counts: Dictionary) -> Array[Dictionary]:
 		out.append(_entry("lesson_" + str(lesson.event), title, str(LESSON_HINTS.get(str(lesson.event), "Follow the village path markers.")), "NIGHT TRAINING" if GameState.is_night() else "DAY TRAINING"))
 	elif show_training and not GameState.tutorial_complete():
 		out.append(_entry("phase", "Prepare for dawn" if GameState.is_night() else "Prepare for night", "This phase's lessons are complete. Help the village and keep supplies ready.", "TRAINING"))
-	else:
-		var project := GameState.project_status()
-		if bool(project.get("eligible", false)) and str(project.state) != "complete":
-			var working := str(project.state) == "working"
-			var detail := "Visit Bram's Construction Shop to commission the free restoration."
-			var row := _entry("workshop", "Restore the West Workshop", detail, "VILLAGE")
-			if working:
-				row.detail = "Work resumes by day. You can help at the workbench." if GameState.is_night() else "Builders work on site when it is safe. Help at the workbench."
-				row.progress = clampf(1.0 - float(project.remaining) / VillageProjectDB.WORK_SECONDS, 0, 1)
-			out.append(row)
-		out.append_array(_rescue_entries())
-		if out.is_empty():
-			out.append(_entry("home", "Care for BESUT", "Your friends are home. Explore, improve the village and protect its forest.", "VILLAGE"))
-	return out.slice(0, 3)
+	# Optional village work and the two rescue arcs remain independent of the
+	# current training lesson. No UI category bypasses the real project gate.
+	var project := GameState.project_status()
+	if bool(project.get("eligible", false)) and str(project.state) != "complete":
+		var working := str(project.state) == "working"
+		var detail := "Visit Bram's Construction Shop to commission the free restoration."
+		var row := _entry("workshop", "Restore the West Workshop", detail, "VILLAGE", false, SIDE)
+		if working:
+			row.detail = "Work resumes by day. You can help at the workbench." if GameState.is_night() else "Builders work on site when it is safe. Help at the workbench."
+			row.progress = clampf(1.0 - float(project.remaining) / VillageProjectDB.WORK_SECONDS, 0, 1)
+		out.append(row)
+	out.append_array(_rescue_entries())
+	if not out.any(func(row: Dictionary) -> bool: return section_for(row) != PRIORITY):
+		out.append(_entry("home", "Care for BESUT", "Your friends are home. Explore, improve the village and protect its forest.", "VILLAGE", false, SIDE))
+	return _ordered(out)
+
 
 static func _rescue_entries() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
@@ -75,7 +82,7 @@ static func _twilight(realm: TwilightRealm) -> Array[Dictionary]:
 	var progress := GameState.realm_progress()
 	var landmarks: Array = progress.get("landmarks", [])
 	if realm._boss_defeated:
-		out.append(_entry("restored", "Explore the restored Wilds", "The citadel is peaceful. Return through a rift whenever you are ready.", "EXPLORE"))
+		out.append(_entry("restored", "Explore the restored Wilds", "The citadel is peaceful. Return through a rift whenever you are ready.", "EXPLORE", false, SIDE))
 		if not bool(GameState.campaign().get("mei_ling_rescued", false)):
 			out.append(_entry("onward", "Continue Mei Ling's rescue", "The onward passages have level requirements. Check the signs before entering.", "STORY"))
 	elif realm._boss_arrived:
@@ -91,8 +98,19 @@ static func _twilight(realm: TwilightRealm) -> Array[Dictionary]:
 		if pair[0] in landmarks and not GameState.realm_pet_bonded(str(pair[1])) and GameState.get_pet(str(pair[1])).is_empty():
 			known_pets.append(str(RealmDB.ENCOUNTERS[pair[1]].name))
 	if not known_pets.is_empty():
-		out.append(_entry("companions", "Befriend a wild companion", "Approach %s to choose a challenge." % " or ".join(known_pets), "OPTIONAL"))
-	return out.slice(0, 3)
+		out.append(_entry("companions", "Befriend a wild companion", "Approach %s to choose a challenge." % " or ".join(known_pets), "OPTIONAL", false, SIDE))
+	return _ordered(out)
 
-static func _entry(id: String, title: String, detail: String, tag: String, urgent: bool = false) -> Dictionary:
-	return {"id": id, "title": title, "detail": detail, "tag": tag, "urgent": urgent, "progress": -1.0}
+static func section_for(entry: Dictionary) -> String:
+	var section := str(entry.get("section", MAIN))
+	return section if section in SECTION_ORDER else MAIN
+
+static func _ordered(entries: Array[Dictionary]) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for section in SECTION_ORDER:
+		for entry in entries:
+			if section_for(entry) == section: out.append(entry)
+	return out # Never drop a rescue because a side quest or urgent task is present.
+
+static func _entry(id: String, title: String, detail: String, tag: String, urgent: bool = false, section: String = MAIN) -> Dictionary:
+	return {"id": id, "title": title, "detail": detail, "tag": tag, "urgent": urgent, "progress": -1.0, "section": section}

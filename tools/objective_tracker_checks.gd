@@ -122,12 +122,13 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	GameState.data.village_progression.projects[VillageProjectDB.WORKSHOP] = {"state": "working", "remaining": 5.0}
 	GameState._emit_all()
 	game.hud._refresh_objectives()
-	check.call(tracker._entries[0].id == "workshop" and is_equal_approx(float(tracker._entries[0].progress), 0.5), "workshop objective uses actual remaining construction work")
+	var workshop_index := _entry_index(tracker, "workshop")
+	check.call(workshop_index >= 0 and is_equal_approx(float(tracker._entries[workshop_index].progress), 0.5), "workshop side quest uses actual remaining construction work")
 	GameState.data.village_progression.projects[VillageProjectDB.WORKSHOP].remaining = 2.0
-	var first_card: Label = tracker._cards[0].title
+	var first_card: Label = tracker._cards[workshop_index].title
 	game.hud._process(0.21)
-	check.call(is_equal_approx(float(tracker._entries[0].progress), 0.8), "throttled refresh follows construction without requiring save signals")
-	check.call(tracker._cards[0].title == first_card, "construction refresh updates cards in place instead of rebuilding the scroll content")
+	check.call(is_equal_approx(float(tracker._entries[workshop_index].progress), 0.8), "throttled refresh follows construction without requiring save signals")
+	check.call(tracker._cards[workshop_index].title == first_card, "construction refresh updates cards in place instead of rebuilding the scroll content")
 	GameState.data.campaign.arjun_rescued = true
 	GameState.data.campaign.mei_ling_rescued = true
 	GameState.data.village_progression.projects[VillageProjectDB.WORKSHOP].state = "complete"
@@ -137,6 +138,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	GameState.data.campaign.mei_ling_rescued = false
 	GameState.data.village_progression.projects[VillageProjectDB.WORKSHOP].state = "working"
 	game.hud._refresh_objectives()
+	await _quest_sections(game, check, capture)
 	await _layouts(game, check, capture)
 	# Exercise context selection independently of an actor's temporary ready state.
 	var realm := TwilightRealm.new()
@@ -153,7 +155,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	realm._boss_defeated = true
 	GameState.data.realm_progress.landmarks.append("grove")
 	rows = ObjectiveTrackerData.entries(realm)
-	check.call(rows[0].id == "restored" and rows.any(func(row: Dictionary) -> bool: return row.id == "companions" and row.tag == "OPTIONAL"), "a restored realm offers peaceful exploration and discovered optional companions")
+	check.call(rows[0].id == "onward" and rows.any(func(row: Dictionary) -> bool: return row.id == "restored" and row.section == ObjectiveTrackerData.SIDE) and rows.any(func(row: Dictionary) -> bool: return row.id == "companions" and row.tag == "OPTIONAL"), "a restored realm offers peaceful exploration and discovered optional companions")
 	GameState.data.realm_progress.bonded.append("bramble_cat")
 	check.call(not ObjectiveTrackerData.entries(realm).any(func(row: Dictionary) -> bool: return row.id == "companions"), "bonded pets leave optional guidance without requiring tournament clears")
 	realm.free()
@@ -241,6 +243,77 @@ static func _hidden_tutorial(game: Game, check: Callable, capture: Callable) -> 
 	GameState._emit_all()
 
 
+static func _entry_index(tracker: ObjectiveTracker, id: String) -> int:
+	for i in tracker._entries.size():
+		if str(tracker._entries[i].id) == id: return i
+	return -1
+
+static func _quest_sections(game: Game, check: Callable, capture: Callable) -> void:
+	var tracker := game.hud.objective_tracker
+	var saved := GameState.data.duplicate(true)
+	var hidden: bool = bool(GameSettings.get_value("tutorial_hidden"))
+	var main := ObjectiveTrackerData.MAIN
+	var side := ObjectiveTrackerData.SIDE
+	var priority := ObjectiveTrackerData.PRIORITY
+	game.hud._refresh_objectives()
+	check.call(tracker._entries.map(func(row: Dictionary) -> String: return str(row.id)) == ["arjun", "mei_ling", "workshop"], "main rescue arcs appear before optional workshop restoration")
+	check.call(tracker.section_count(main) == 2 and tracker.section_count(side) == 1, "main and side sections count only their own active quests")
+	check.call(tracker._section_headers[main].text.begins_with("MAIN QUESTS") and tracker._section_headers[side].text.begins_with("SIDE QUESTS"), "both native quest sections have explicit readable headings")
+	for card in tracker._cards:
+		var index := _entry_index(tracker, str(card.id))
+		check.call(card.container.get_parent() == tracker._sections[ObjectiveTrackerData.section_for(tracker._entries[index])], "quest card is parented to its declared section: " + str(card.id))
+	var danger := ObjectiveTrackerData.entries(game.world, {"fires": 1})
+	check.call(danger.size() == 4 and danger[0].id == "defend" and danger[0].section == priority, "urgent defense is separate and cannot truncate a rescue or the side quest")
+	check.call(danger.any(func(row: Dictionary) -> bool: return row.id == "mei_ling") and danger.any(func(row: Dictionary) -> bool: return row.id == "workshop"), "both main rescues and optional construction survive simultaneous danger")
+	tracker.set_entries(danger)
+	check.call(tracker._sections[priority].visible and tracker._sections[priority].get_index() < tracker._sections[main].get_index(), "needs-attention guidance renders above both quest sections")
+	check.call(tracker.section_count(main) == 2 and tracker.section_count(side) == 1, "urgent duties do not inflate main or side quest counts")
+	game.hud._refresh_objectives()
+	var before := GameState.data.duplicate(true)
+	for i in 4: game.hud._refresh_objectives()
+	check.call(GameState.data == before, "grouping and counting quests is read-only with no reward or completion mutation")
+	GameState.data = GameState._make_default("adam")
+	GameSettings.set_value("tutorial_hidden", false, false)
+	game.hud._refresh_objectives()
+	check.call(tracker.section_count(main) == 3 and _entry_index(tracker, "lesson_move") >= 0, "visible training prepares the story without suppressing either rescue arc")
+	check.call(tracker.section_count(side) == 0 and tracker._section_empty[side].visible, "undiscovered or ineligible side quests use a truthful empty state")
+	check.call(_entry_index(tracker, "workshop") < 0 and not bool(GameState.project_status().eligible), "side quest presentation never bypasses the first-clear workshop prerequisite")
+	GameSettings.set_value("tutorial_hidden", true, false)
+	game.hud._refresh_objectives()
+	check.call(tracker.section_count(main) == 2 and not tracker._entries.any(func(row: Dictionary) -> bool: return str(row.id).begins_with("lesson_") or row.id == "phase"), "Hide tips still removes training while preserving the new main quest section")
+	check.call(not GameState.tutorial_complete() and GameState.completed_mission_count() == 0, "hidden training and section browsing do not complete the tutorial")
+	GameState.data.campaign.arjun_rescued = true
+	GameState.data.campaign.mei_ling_rescued = true
+	game.hud._refresh_objectives()
+	check.call(tracker.section_count(main) == 0 and tracker._section_empty[main].visible, "completed rescue arcs leave an explicit empty main-quest section")
+	check.call(tracker._entries[0].id == "home" and tracker._entries[0].section == side, "peaceful post-story village care belongs to side guidance")
+	GameState.data = GameState._make_default("adam")
+	var realm := TwilightRealm.new()
+	var rows := ObjectiveTrackerData.entries(realm)
+	check.call(rows.size() == 1 and rows[0].section == main, "undiscovered realm companions are not revealed as side quests")
+	GameState.data.realm_progress.landmarks.append("grove")
+	rows = ObjectiveTrackerData.entries(realm)
+	check.call(rows[0].id == "explore" and rows[0].section == main and rows[-1].id == "companions" and rows[-1].section == side, "realm exploration is main and a discovered wild companion is optional side content")
+	realm._boss_defeated = true
+	rows = ObjectiveTrackerData.entries(realm)
+	check.call(rows[0].id == "onward" and rows[0].section == main and rows.any(func(row: Dictionary) -> bool: return row.id == "restored" and row.section == side), "post-clear rescue progression stays main while peaceful exploration becomes side content")
+	GameState.data.realm_progress.bonded.append("bramble_cat")
+	check.call(not ObjectiveTrackerData.entries(realm).any(func(row: Dictionary) -> bool: return row.id == "companions"), "bonded companions retire their side objective without duplicate rewards")
+	realm.free()
+	var sample: Array[Dictionary] = [{"id": "section_fixture", "title": "Fixture", "detail": "", "tag": "", "section": main}]
+	tracker.set_entries(sample)
+	sample[0].section = side
+	tracker.set_entries(sample)
+	check.call(tracker._cards[0].container.get_parent() == tracker._sections[side] and tracker.section_count(main) == 0, "a stable quest ID changing category reparents its card without stale section content")
+	check.call(ObjectiveTrackerData.section_for({"id": "legacy"}) == main and ObjectiveTrackerData.section_for({"section": "unknown"}) == main, "legacy or unknown display categories fall back safely to main quests")
+	GameState.data = saved
+	GameSettings.set_value("tutorial_hidden", hidden, false)
+	GameState._emit_all()
+	game.hud._refresh_objectives()
+	await _settle(game)
+	if capture.is_valid(): await capture.call("main_side_sections")
+
+
 static func _layouts(game: Game, check: Callable, capture: Callable) -> void:
 	var tracker := game.hud.objective_tracker
 	for dimensions in [Vector2i(1280, 720), Vector2i(832, 480)]:
@@ -261,6 +334,12 @@ static func _layouts(game: Game, check: Callable, capture: Callable) -> void:
 			check.call(tracker._header.size.y * tracker.scale.y >= 43.9 and not tracker._scroll.get_h_scroll_bar().visible, "objective header stays touch-sized with no sideways scrolling at %dx%d / %d%%" % [dimensions.x, dimensions.y, scale_percent])
 			if capture.is_valid() and scale_percent == 100:
 				await capture.call("expanded_%dx%d" % [dimensions.x, dimensions.y])
+			tracker._scroll.scroll_vertical = int(tracker._sections[ObjectiveTrackerData.SIDE].position.y)
+			await _settle(game)
+			check.call(_rect(tracker._scroll).encloses(_rect(tracker._section_headers[ObjectiveTrackerData.SIDE])), "side quest heading is reachable by vertical scrolling at %dx%d / %d%%" % [dimensions.x, dimensions.y, scale_percent])
+			if capture.is_valid() and scale_percent == 100:
+				await capture.call("side_quests_%dx%d" % [dimensions.x, dimensions.y])
+			tracker._scroll.scroll_vertical = 0
 			GameSettings.set_value("objectives_collapsed", true, false)
 			await _settle(game)
 			check.call(_rect(tracker).size.y < rect.size.y and _rect(tracker).size.x < rect.size.x * 0.4 and not tracker._summary.visible and is_zero_approx(_rect(tracker).position.x), "collapse retracts to a narrow left-edge tab at %dx%d / %d%%" % [dimensions.x, dimensions.y, scale_percent])
