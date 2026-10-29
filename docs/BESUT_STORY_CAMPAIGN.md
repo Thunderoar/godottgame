@@ -8,7 +8,7 @@ New journeys start as Adam. The title's other hero cards preview his missing fri
 
 The ship leads to three sea routes, each lasting 45 seconds. Completed routes persist as checkpoints. Route three leads to Kraken Island: defeat Vorath, who pursues Adam around the stone pillars, uses telegraphed melee attacks and alternates tentacle slams and dragging hooks; approach the prison and press Use to open it. The rescue scene shows Arjun leaving the cage and boarding the ship. Arjun stands visibly on the rear deck, away from Adam and the mast, with the same foot alignment and human scale as the player. He disembarks and follows village walking routes at the normal resident pace (0.9 world units/second), instead of finishing the trip in a fixed few seconds.
 
-Mei Ling is held by Abyss Monarch in Abyssal Throne, the last Monster Portal. Defeating that boss frees her. She walks out through the portal alongside Adam. Both rescued friends become village defenders: Arjun uses his scythe and Mei Ling fires arrows at fire monsters and sea urchins.
+Mei Ling is held by Abyss Monarch in Abyssal Throne, the third and last Monster Portal (level 5). The shortened chain is Chaos Citadel (level 1) → Tempest Spire (level 3) → Abyssal Throne (level 5). Defeating that boss frees her. She walks out through the portal alongside Adam. Both rescued friends become village defenders: Arjun uses his scythe and Mei Ling fires arrows at fire monsters and sea urchins.
 
 When both friends have returned, an illustrated reunion reveals that their fishing voyage crossed into another dimension. They choose BESUT as their new home. The ending is saved once; village play continues afterward. The sea king can be challenged again without imprisoning or recruiting Arjun twice.
 
@@ -31,7 +31,7 @@ Tower-defense purchases are at the Equipment/Weapons Shop. The existing paid roo
 
 Settings offers a drag-and-resize control editor alongside numeric X/Y/size rows. World and sea layouts can be edited separately, including Menu. Changes commit through GameState; saved positions remain where selected when GUI scale changes, with viewport clamping for smaller screens.
 
-Tap villagers, workers, rescued friends, guardians, the coastal guard and guide for their roles and abilities. Merchant panels explain their services. The illustrated field guide has People, Monsters, Bosses and Story & Sea categories, with current behavior explanations. Tutorial text now acknowledges attacks on people, explains weapon-shop towers, uses English day/night labels, keeps the world undimmed, and closes training after the first Monster Battle Portal is cleared. Portal 1 victory is recorded across day/night changes; older saves with Portal 1 already cleared also count as finished. Portals 2-10 remain part of the rescue story.
+Tap villagers, workers, rescued friends, guardians, the coastal guard and guide for their roles and abilities. Merchant panels explain their services. The illustrated field guide has People, Monsters, Bosses and Story & Sea categories, with current behavior explanations. Tutorial text now acknowledges attacks on people, explains weapon-shop towers, uses English day/night labels, keeps the world undimmed, and closes training after the first Monster Battle Portal is cleared. Portal 1 victory is recorded across day/night changes; older saves with Portal 1 already cleared also count as finished. Portals 2-3 remain part of the rescue story.
 
 ## Ownership and saves
 
@@ -63,7 +63,7 @@ APK 1.1.1 (versionCode 3) exported successfully: 55537255 bytes, SHA-256 10ee159
 
 ## Portal 1 tutorial finish
 
-Clearing Tidebound Grotto finishes and hides the tutorial immediately. Its boss event survives a night-to-day change during combat. Continued saves with Portal 1 already cleared require no repeat fight. Later portal guidance is labeled as the Mei Ling rescue objective. Portals 2-10 and both rescue flags retain their campaign progression.
+Clearing Tidebound Grotto finishes and hides the tutorial immediately. Its boss event survives a night-to-day change during combat. Continued saves with Portal 1 already cleared require no repeat fight. Later portal guidance is labeled as the Mei Ling rescue objective. Portals 2-3 and both rescue flags retain their campaign progression.
 
 Full isolated gate: 1,142 checks, PASS, exit 0; clean logs. APK 1.1.2 (versionCode 4): 55537255 bytes; SHA-256 78525b3a0b0f95c198073be8fc1aa88957f209273241d4fb80f347f1dde8bc9c. Signatures v2/v3, 16-KiB alignment, min API 24 and both ARM architectures verified. Output: build/android/ProtectBESUT-1.1.2.apk; stable ProtectBESUT.apk is identical.
 

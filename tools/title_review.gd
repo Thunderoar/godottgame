@@ -21,6 +21,12 @@ func _ready() -> void:
 	var title := game.title_screen
 	_check(title.current_page == TitleScreen.Page.HOME and not title._heroes.is_visible_in_tree(), "fresh boot displays only the main menu")
 	await _shot("01-main-menu")
+	_check(_inside(title._home_nav) and _inside(title._home_title), "desktop wordmark and harbour navigation fit the viewport")
+	_check(not title._save_card.visible, "fresh home has no empty journey-details card")
+	var backdrop := title.get_child(0) as TitleBackdrop
+	var start_time := backdrop._time
+	await get_tree().create_timer(0.1).timeout
+	_check(backdrop._time > start_time, "harbour animation advances without a gameplay world")
 	await _press(title._start_button)
 	_check(title._heroes.is_visible_in_tree(), "actual Start Game click opens hero selection")
 	await get_tree().create_timer(0.14).timeout
@@ -76,6 +82,7 @@ func _ready() -> void:
 	await _settle()
 	title = game.title_screen
 	_check(not title._continue_button.disabled and title._save_summary.text.contains("Adam"), "returning title displays the saved hero")
+	_check(title._home_actions.get_child(0) == title._continue_button and title._save_card.visible, "saved home leads with Continue and the saved portrait")
 	await _shot("08-saved-journey")
 	var saved_text := FileAccess.get_file_as_string(GameState.SAVE_PATH)
 	await _click(title._start_button)
@@ -99,16 +106,38 @@ func _ready() -> void:
 	await _wait_for_slide(title)
 	await _shot("11-compact-menu")
 	_check(_inside(title._start_button) and _inside(title._continue_button), "compact menu keeps both journey actions on screen")
+	_check(_inside(title._home_title) and _inside(title._home_nav), "compact wordmark and complete navigation panel fit")
 	window.content_scale_size = Vector2i(600, 900)
 	window.size = Vector2i(600, 900)
 	await _settle()
+	await _shot("11b-portrait-menu")
+	_check(_inside(title._home_nav) and _inside(title._home_title), "portrait home keeps the complete wordmark and navigation on screen")
+	await _touch(_find_button(title._home, "Settings"))
+	_check(title._overlay.visible, "home utilities respond to real touch input in portrait")
+	await _key(KEY_ESCAPE)
 	await _click(title._start_button)
 	await _wait_for_slide(title)
 	await _shot("12-narrow-heroes")
 	_check(title._cards.vertical and _inside(title._begin_button), "narrow selection stacks cards and retains Begin")
+	await _click(title._back_button)
+	await _wait_for_slide(title)
+	window.content_scale_size = Vector2i(360, 780)
+	window.size = Vector2i(360, 780)
+	await _settle()
+	await _shot("12b-phone-menu")
+	_check(_inside(title._home_title) and _inside(title._home_nav), "360-pixel phone keeps the wordmark and complete navigation visible")
+	for utility in title._home_utilities.get_children():
+		_check(_inside(utility), "phone utility remains on screen: " + utility.text)
+	window.content_scale_size = Vector2i(1600, 720)
+	window.size = Vector2i(1600, 720)
+	await _settle()
+	await _shot("12c-wide-menu")
+	_check(_inside(title._home_nav) and _inside(title._home_title), "wide home keeps the navigation rail clear of the scenery")
 	window.content_scale_size = original_scale
 	window.size = Vector2i(1280, 720)
 	await _settle()
+	await _click(title._start_button)
+	await _wait_for_slide(title)
 	await _click(title._begin_button)
 	var serial := GameState.journey_serial
 	await _click(title._overlay_actions.get_child(1))

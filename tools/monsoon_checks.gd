@@ -28,6 +28,25 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(silhouettes.size() == MonsoonArt.TREE_SIZES.size(), "all five tree families have distinct silhouette bounds and proportions")
 	for level in range(1, 6):
 		check.call(PixelArt.house_texture(level).get_size() == Vector2(224, 176) and MonsoonArt.house(level, true).get_used_rect().has_area(), "cottage tier %d retains frame footprint and dedicated night windows" % level)
+	var house_variants := {}
+	for level in range(1, 6):
+		var painted := MonsoonArt.house(level)
+		var mask := MonsoonArt.house(level, true)
+		check.call(painted.get_pixel(110, 30).a > 0.9 and painted.get_pixel(110, 80).a > 0.9 and painted.get_pixel(70, 90) != painted.get_pixel(154, 90), "approved cottage tier %d retains receding ridge and two roof planes" % level)
+		check.call(is_zero_approx(painted.get_pixel(191, 135).a) and is_zero_approx(mask.get_pixel(112, 129).a) and mask.get_pixel(65, 129).a > 0.9 and mask.get_pixel(149, 129).a > 0.9, "cottage tier %d has no extra side wall and dedicated front window emission" % level)
+		house_variants[painted.get_data().hex_encode().hash()] = true
+	check.call(house_variants.size() == 5, "five cottage material grades are visually distinct within the same approved projection")
+	var ground := lobby.house_sprite.get_parent().get_node_or_null("CottageGround") as Sprite2D
+	check.call(is_instance_valid(ground) and ground.visible and ground.texture.get_size() == Vector2(384, 256), "Classic Pixel cottage owns one static native ground-detail layer")
+	var ground_image := MonsoonArt.cottage_ground()
+	check.call(ground_image.get_data() == MonsoonArt.cottage_ground().get_data(), "yard clusters use their own reproducible decorative stream")
+	var cottage := lobby.house_sprite.get_parent() as Node2D
+	var before_position := cottage.position
+	cottage.position = Vector2(5, 39)
+	lobby._refresh_cottage_ground(cottage)
+	check.call(not ground.texture.get_image().get_used_rect().has_area(), "yard painting clips entirely off sea without changing coastline or collision")
+	cottage.position = before_position
+	lobby._refresh_cottage_ground(cottage)
 	var time_before := float(GameState.data.get("world_time", 0.0))
 	for boundary in [0.0, 133.0, 180.0, 193.0, 340.0, 360.0]:
 		var before := MonsoonLighting.grade(boundary - 0.001)
@@ -61,6 +80,7 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(canopy.texture == AssetRegistry.get_texture("foliage/" + legacy_upper), "legacy foliage overrides remain authoritative on existing forest trees")
 	fixture.free()
 	check.call(not lobby.house_sprite.get_node("WarmWindows").visible, "imported house overrides never receive a procedural window mask")
+	check.call(not ground.visible, "explicit house replacement also owns its ground presentation")
 	AssetRegistry.catalog = catalog
 	AssetRegistry.invalidate()
 	lobby._add_window_lights(lobby.house_sprite, GameState.house_level())

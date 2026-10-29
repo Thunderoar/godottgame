@@ -563,12 +563,12 @@ powershell -File tools/test_pb_isolated.ps1 -Godot <console-exe> -Native -Scene 
 ```
 
 - New Journey, Continue, portal travel, home entry/exit and return to title show a loading cover and fade. Current and newly built players stay locked until the cover leaves. Modals and pet arenas fade in.
-- BESUT Field Guide opens from Menu. Its NPC pages, five monster pages and ten boss pages explain actions using sprites and visual symbols, with character names as headings. It has no explanatory paragraphs. Page turn and Close work at both landscape sizes.
+- BESUT Field Guide opens from Menu. Its NPC pages, five monster pages and three active boss pages explain actions using sprites and visual symbols, with character names as headings. It has no explanatory paragraphs. Page turn and Close work at both landscape sizes.
 - A new journey has one worker per specialist role. Main-house Levels 2-5 provide a baseline of 2-5 of each role. Hiring can add workers beyond that baseline within role limits, and ownership/deaths persist.
 - One main-house upgrade charges once and synchronizes the village house, archer-hut and fence tiers. Previews show the house, hut, fence and baseline worker count for each level. A ruined main house must be repaired before upgrading.
 - Purchased rooftop machine guns replace archer huts. Yellow bullets damage fire monsters and sea urchins. Missing, ruined, unaffordable and duplicate purchases fail without charging. Ownership survives save/load.
 - Fences progress from wood to wood with a stone base, stone walls, fortified posts and battlements. Changing level refreshes existing fence sprites and survives save/load.
-- Night lessons retain the pointer without an extra dark overlay. The level-one portal is the only portal shown during that training. Other bosses cannot complete its final lesson; defeating Shadow & Chaos Fiend ends that tutorial. All ten bosses show their distinct names above their HP.
+- Night lessons retain the pointer without an extra dark overlay. The level-one portal is the only portal shown during that training. Other bosses cannot complete its final lesson; defeating Shadow & Chaos Fiend ends that tutorial. All three active bosses show their distinct names above their HP.
 - Continue after finishing daytime lessons retains the unfinished nighttime tutorial and activates it at the next night. Build remains in Menu.
 
 
@@ -581,7 +581,7 @@ The isolated gameplay gate also runs tools/combat_revamp_checks.gd:
 - Every hero's basic attack still deals damage; arrows stop at world obstacles. Mana stats, overhead bars, character-selection MP values and mana potions are removed. Loading an older save removes retired mana fields, potions and skill control positions while preserving currency, equipment, health potions and active control customization. A second save/load keeps mana removed.
 - Winning each of five pet duels recruits that named rival, unlocks its roster entry and spawns an invincible village guardian. Replays do not duplicate a guardian. Guardians path toward and damage both fire monsters and sea urchins near the settlement. Prior cleared duels recruit their rivals when an older save is loaded.
 - The main-house interior has an interactable HouseBed using the existing house-tier recovery time. The automatic defeat-recovery ward remains governed by its existing rules.
-- All ten portals have intimidating named bosses, a special power, colliding pillars and six repeating rune traps. Rune traps warn for one second, damage for 0.65 seconds and then become safe until the next cycle. Higher portal levels increase trap damage and shorten the cycle. Bosses activate at range after a 2.2-second arrival warning and use their existing pursuit pathfinder.
+- All three active portals have intimidating named bosses, a special power, colliding pillars and six repeating rune traps. Rune traps warn for one second, damage for 0.65 seconds and then become safe until the next cycle. Higher portal levels increase trap damage and shorten the cycle. Bosses activate at range after a 2.2-second arrival warning and use their existing pursuit pathfinder.
 - Original procedural looping battle music starts for both monster portals and pet duels. World changes and closed/resolved pet duels stop it. The Master volume/mute controls also control music.
 - Player-facing book, missions, pet duel controls/status and loading destinations are English. Creator credits retain the authors' names.
 
@@ -1097,6 +1097,17 @@ XIM and unsupported V-Sync warnings remain in native logs. Phase images were
 visually inspected; a first-pass floating-foot/guard-post issue was corrected
 and 242 visible-ground support assertions added before these final runs.
 No native Windows/Android or physical-phone validation is claimed.
+
+
+## Three-boss portal campaign (2026-10-29)
+
+This supersedes the dated ten-realm roster above; historical verification counts remain historical.
+
+- Exactly three playable portal bosses: Chaos Citadel / Shadow & Chaos Fiend (level 1), Tempest Spire / Gale Tempest Demon (level 3), Abyssal Throne / Abyss Monarch (level 5). The second unlocks the final portal directly. Both clearing and level gates still apply.
+- The final encounter uses twelve level-five minions, 1,120 boss HP, 30 melee/ground damage, 15 projectile damage, a 3.8-second special cooldown and 9-damage traps on a 4.30-second cycle. Rewards: first 650 Gold / 20 diamonds / 320 XP; repeat 360 / 9 / 120.
+- Portal menu and Field Guide show three active bosses. Each retains three real warned powers (nine total). Clearing Chaos still completes the tutorial and awards Luma; final victory still rescues Mei Ling. The ocean/Kraken/Arjun campaign is unchanged.
+- Fresh journeys contain only three portal states. The seven removed IDs cannot be entered. Legacy second-boss clears or retired-realm progress unlock the new finale; in-flight retired expeditions redirect there without losing their bag, banked currency, rescue flags or attempt history. Repeated save/load is idempotent. Previously completed finales remain complete without duplicate rewards.
+- `tools/portal_tutorial_checks.gd` exercises exact counts, UI/book, progression, gates and legacy JSON save/reload for all seven removed IDs. `tools/elemental_checks.gd` exercises all nine retained powers; `tools/story_checks.gd` enters the final rescue at level five. These run through `tools/tide_test.gd`.
 
 
 ## Sixth intro beat: Adam's turtle rescue — 2026-10-29
@@ -1698,3 +1709,78 @@ Verified on native Windows / Godot 4.7.2:
 See `docs/CRASH_INVESTIGATION_2026-10-30.md` for the evidence paths, exact limits,
 diagnostic location and distinction between observed script errors and an
 unproven native process-crash cause.
+
+## Main-menu copy cleanup (2026-10-29)
+
+The small `PB (Protect BESUT)` header, `A HOME WORTH FIGHTING FOR`,
+`Between the forest and the sea, a village is counting on you.`,
+`Build a home. Find a companion. Defend your shore.`, and fresh-save
+`Your first chapter is waiting. Start a new journey.` text are removed.
+The large two-line `PROTECT BESUT` title remains. Without a save, the empty
+summary is hidden rather than reserving space. With a save, hero/level/location
+details remain. Buttons, right-side scenic caption, credits and gameplay are unchanged.
+`tools/tide_test.gd` explicitly checks the retained title, all five removals,
+and hidden no-save summary. Prior dated title descriptions above are historical.
+
+
+### Main-menu scenic-caption follow-up (2026-10-29)
+
+Also remove `01 / THE SHORE WE CALL HOME` and
+`Every great journey begins with a little hope.` from the home menu.
+The earlier copy-cleanup removals remain applied. Keep the harbour artwork,
+large `PROTECT BESUT` title, buttons, saved-journey details and layout unchanged.
+The existing removed-copy regression list now covers all seven text elements.
+
+
+## Cinematic harbour home revamp (2026-10-29)
+
+Supersedes the earlier home layout, not its seven requested text removals.
+The home now has a two-tier PROTECT / BESUT wordmark with a bundled OFL Noto
+Serif display font, a translucent framed navigation rail, restrained utility
+buttons, and a saved-journey portrait/details row. Continue leads when a save
+exists; a fresh journey still focuses Start Game. No-save details remain hidden.
+The harbour diorama uses current cached art for Adam, Ember, cottages, trees
+and the UNISZA ship, layered dusk mountains, reflected sunlight, a foreground
+boardwalk and lanterns. It is presentation-only and consumes no gameplay RNG.
+Backdrop redraws are capped at 30 Hz. Reduce Motion and Low effects stop the
+animation; static essential scenery remains. Settings changes apply live.
+Desktop uses a left rail, compact landscape splits wordmark and navigation,
+and portrait centres the stacked controls. Home scrolling remains available for
+short windows. Overlay focus, clipped page slides, rescue locks, explicit save
+replacement, corrupt-save handling and Adam's loading/story handoff remain.
+The How to Play control legend now matches Sprint, Pack, Build and direct taps.
+TitleChecks and the native title review cover rail containment, portable font,
+fresh/saved details, Continue ordering, animated backdrop state, responsive
+bounds and actual portrait touch input, in addition to prior save-safety checks.
+
+
+## Cross-source synchronization — 2026-10-30
+
+Pulled11 upstream commits and reconciled the local title/cottage and three-stage
+campaign sources with the incoming dock arrival, HUD, West Workshop and Twilight
+Wilds exploration/combat work. Twilight Wilds remains the first stable campaign
+stage, with its authored six encounters/local guard system; the two later stages
+retain the level3/5 rescue chain. Both upstream and local historical acceptance
+sections above are preserved, not presented as new runs.
+
+The combined sources passed the Linux isolated canonical gate: **5753 checks,
+PASS**, exit0, with no failure/script/error markers. Native title/input review
+passed **69 checks,0 failures**, exit0, including compact/portrait layouts and
+corrupt-save preservation. Isolated class import and `git diff --check` passed.
+Linux Xvfb/Mesa llvmpipe review retains XIM/unsupportedVSync warnings; import
+reports an unavailableADB daemon. No physical-device, Windows-export or hardware
+performance claim is made. Recovery snapshots and literal logs are outside the
+checkout under `/tmp/tidesworn-menu-cleanup-6li7ss7s/SYNC_12_20261030`.
+
+### Windows merge verification — 2026-10-30
+
+Combined the three-stage campaign/title/cottage update with the boss lifecycle
+fixes and crash diagnostics. The acceptance-document append conflict retains both
+sets of historical notes. On the merged Windows sources, isolated import passed
+(with the existing Android build-tools warning), the canonical gameplay gate
+reported **5,755 checks, PASS, exit 0**, and the accelerated stability gate reported
+**32 checks, PASS, exit 0**. Both gameplay/stability error logs are empty.
+Evidence: `C:/Users/ayiz/AppData/Local/Temp/tidesworn-tests-823fa859e46c4f329d6e3622ac36d774`
+and `tidesworn-tests-79f33910930e4cc5aa5dcc3c2103e40b`. No native visual review was
+repeated for this merge. Existing local settings/import edits and player progress
+were preserved.

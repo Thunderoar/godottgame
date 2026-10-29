@@ -11,6 +11,8 @@ signal continue_requested
 enum Page { HOME, HEROES }
 const PAGE_SLIDE_SECONDS := 0.36
 const PAGE_SLIDE_MIN_SECONDS := 0.12
+const TITLE_FONT_PATH := "res://assets/fonts/title/NotoSerif-Bold.ttf"
+static var TITLE_FONT: Font
 const INK := Color("#0d2029")
 const CREAM := Color("#f4ebd8")
 const GOLD := Color("#e4bc78")
@@ -33,6 +35,11 @@ var _home_column: BoxContainer
 var _home_intro: VBoxContainer
 var _home_actions: VBoxContainer
 var _home_title: Label
+var _home_wordmark: Label
+var _home_scroll: ScrollContainer
+var _home_nav: PanelContainer
+var _home_utilities: HBoxContainer
+var _save_card: HBoxContainer
 var _scenic_caption: VBoxContainer
 var _heroes: VBoxContainer
 var _cards: BoxContainer
@@ -73,6 +80,10 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = GameUI.theme()
+	# Load only when a menu is created, after imports; fresh editor boot must
+	# not preload an as-yet-unimported font through the autoload dependency graph.
+	if TITLE_FONT == null:
+		TITLE_FONT = load(TITLE_FONT_PATH) as Font
 	var backdrop := TitleBackdrop.new()
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(backdrop)
@@ -93,10 +104,9 @@ func _build() -> void:
 	shell.add_theme_constant_override("separation", 18)
 	_margin.add_child(shell)
 	var header := HBoxContainer.new()
-	header.add_child(_label("PB (Protect BESUT)", 17, CREAM))
-	var location := _label("BESUT, TERENGGANU  /  MALAYSIA", 12, MUTED)
+	var location := _label("BESUT  /  TERENGGANU", 11, GOLD)
 	location.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	location.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	location.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	header.add_child(location)
 	if not OS.has_feature("web") and not OS.has_feature("mobile"):
 		var quit := _button("Quit", func() -> void: get_tree().quit())
@@ -104,7 +114,6 @@ func _build() -> void:
 		quit.add_theme_font_size_override("font_size", 13)
 		header.add_child(quit)
 	shell.add_child(header)
-	shell.add_child(GameUI.divider(Color(0.65, 0.74, 0.70, 0.22)))
 	_body = Control.new()
 	_body.name = "PageStage"
 	# The two pages share one horizontal track; the stage is the window they
@@ -128,62 +137,126 @@ func _build() -> void:
 func _build_home(parent: Control) -> void:
 	_home = HBoxContainer.new()
 	_home.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_home.add_theme_constant_override("separation", 40)
+	_home.add_theme_constant_override("separation", 56)
 	parent.add_child(_home)
-	var scroll := _scroll()
-	scroll.custom_minimum_size.x = 460
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_home.add_child(scroll)
+	_home_scroll = _scroll()
+	_home_scroll.name = "HomeNavigationScroll"
+	_home_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_home.add_child(_home_scroll)
 	_home_column = BoxContainer.new()
 	_home_column.vertical = true
+	_home_column.alignment = BoxContainer.ALIGNMENT_CENTER
 	_home_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_home_column.add_theme_constant_override("separation", 16)
-	scroll.add_child(_home_column)
+	_home_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_home_column.add_theme_constant_override("separation", 28)
+	_home_scroll.add_child(_home_column)
 	_home_intro = VBoxContainer.new()
+	_home_intro.alignment = BoxContainer.ALIGNMENT_CENTER
 	_home_intro.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_home_intro.add_theme_constant_override("separation", 10)
+	_home_intro.add_theme_constant_override("separation", -2)
 	_home_column.add_child(_home_intro)
-	_home_intro.add_child(_label("A HOME WORTH FIGHTING FOR", 13, GOLD))
-	_home_title = _label("PROTECT\nBESUT", 76, CREAM)
-	_home_title.add_theme_constant_override("line_spacing", -12)
+	_home_wordmark = _label("P R O T E C T", 22, GOLD)
+	_home_intro.add_child(_home_wordmark)
+	_home_title = _label("BESUT", 108, CREAM)
+	_home_title.add_theme_font_override("font", TITLE_FONT)
+	_home_title.add_theme_color_override("font_shadow_color", Color(0.015, 0.035, 0.04, 0.6))
+	_home_title.add_theme_constant_override("shadow_offset_y", 5)
 	_home_intro.add_child(_home_title)
-	_home_intro.add_child(_paragraph("Between the forest and the sea, a village is counting on you.", 16, CREAM))
-	_home_intro.add_child(_paragraph("Build a home. Find a companion. Defend your shore.", 14, MUTED))
+	var signature := HBoxContainer.new()
+	signature.add_theme_constant_override("separation", 12)
+	for i in 3:
+		if i == 1:
+			signature.add_child(_label("◇", 16, GOLD))
+		else:
+			var rule := ColorRect.new()
+			rule.color = Color(0.78, 0.65, 0.43, 0.45)
+			rule.custom_minimum_size = Vector2(48, 1)
+			rule.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			signature.add_child(rule)
+	signature.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_home_intro.add_child(signature)
+	_home_nav = PanelContainer.new()
+	_home_nav.name = "HarbourNavigation"
+	_home_nav.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_home_nav.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var rail := _style(Color(0.025, 0.075, 0.09, 0.86), Color(0.48, 0.65, 0.61, 0.3))
+	rail.set_corner_radius_all(10)
+	rail.content_margin_left = 20
+	rail.content_margin_right = 20
+	rail.content_margin_top = 20
+	rail.content_margin_bottom = 18
+	_home_nav.add_theme_stylebox_override("panel", rail)
+	_home_column.add_child(_home_nav)
 	_home_actions = VBoxContainer.new()
-	_home_actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_home_actions.add_theme_constant_override("separation", 10)
-	_home_column.add_child(_home_actions)
-	_start_button = _button("Start Game   →", _open_heroes, true)
+	_home_nav.add_child(_home_actions)
+	_start_button = _button("Start Game   →", _open_heroes, not save_available)
 	_start_button.name = "StartGame"
+	_style_home_action(_start_button, not save_available)
 	_home_actions.add_child(_start_button)
-	_continue_button = _button("Continue Journey", _request_continue)
+	_continue_button = _button("Continue Journey   →", _request_continue, save_available)
 	_continue_button.name = "ContinueJourney"
 	_continue_button.disabled = not save_available
+	_style_home_action(_continue_button, save_available)
 	_home_actions.add_child(_continue_button)
-	_save_summary = _paragraph(_saved_journey_text() if save_available else "Your first chapter is waiting. Start a new journey.", 13, MUTED)
-	_home_actions.add_child(_save_summary)
+	if save_available:
+		_home_actions.move_child(_continue_button, 0)
+	_save_card = HBoxContainer.new()
+	_save_card.name = "SavedJourneyDetails"
+	_save_card.visible = save_available
+	_save_card.add_theme_constant_override("separation", 12)
+	_home_actions.add_child(_save_card)
+	var portrait := TextureRect.new()
+	portrait.texture = PixelArt.portrait(str(GameState.data.get("character_id", "adam")), 96)
+	portrait.custom_minimum_size = Vector2(42, 42)
+	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_save_card.add_child(portrait)
+	_save_summary = _paragraph(_saved_journey_text() if save_available else "", 13, MUTED)
+	_save_summary.visible = save_available
+	_save_summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_save_summary.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_save_card.add_child(_save_summary)
 	_error = _paragraph("", 14, Color("#ffb2a0"))
 	_error.visible = false
 	_home_actions.add_child(_error)
-	var utilities := HFlowContainer.new()
-	utilities.add_theme_constant_override("h_separation", 10)
-	utilities.add_theme_constant_override("v_separation", 8)
-	_home_actions.add_child(utilities)
+	_home_actions.add_child(GameUI.divider(Color(0.48, 0.65, 0.61, 0.22)))
+	_home_utilities = HBoxContainer.new()
+	_home_utilities.alignment = BoxContainer.ALIGNMENT_CENTER
+	_home_utilities.add_theme_constant_override("separation", 6)
+	_home_actions.add_child(_home_utilities)
 	for entry in [["How to Play", _open_guide], ["Settings", _open_settings], ["Credits", _open_credits]]:
 		var button := _button(str(entry[0]), entry[1])
-		button.custom_minimum_size = Vector2(124, 42)
-		button.add_theme_font_size_override("font_size", 14)
-		utilities.add_child(button)
+		button.custom_minimum_size = Vector2(0, 42)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.add_theme_font_size_override("font_size", 13)
+		var quiet := _style(Color.TRANSPARENT, Color.TRANSPARENT, 0)
+		quiet.content_margin_left = 7
+		quiet.content_margin_right = 7
+		button.add_theme_stylebox_override("normal", quiet)
+		var hover := quiet.duplicate() as StyleBoxFlat
+		hover.bg_color = Color(0.45, 0.67, 0.61, 0.12)
+		button.add_theme_stylebox_override("hover", hover)
+		_home_utilities.add_child(button)
+	# An empty scenic region preserves composition without bringing back copy.
 	_scenic_caption = VBoxContainer.new()
-	_scenic_caption.custom_minimum_size.x = 560
 	_scenic_caption.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_scenic_caption.alignment = BoxContainer.ALIGNMENT_BEGIN
-	_scenic_caption.add_theme_constant_override("separation", 8)
 	_home.add_child(_scenic_caption)
-	_scenic_caption.add_child(GameUI.spacer(20))
-	_scenic_caption.add_child(_label("01  /  THE SHORE WE CALL HOME", 12, GOLD))
-	_scenic_caption.add_child(_label("Every great journey\nbegins with a little hope.", 26, CREAM))
-	_scenic_caption.add_child(GameUI.spacer(22))
+
+
+func _style_home_action(button: Button, primary: bool) -> void:
+	button.custom_minimum_size.y = 58 if primary else 48
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.add_theme_font_size_override("font_size", 17)
+	var normal := _style(GOLD if primary else Color(0.12, 0.23, 0.25, 0.48), GOLD if primary else Color("#365351"))
+	normal.set_corner_radius_all(5)
+	normal.content_margin_left = 22
+	button.add_theme_stylebox_override("normal", normal)
+	var disabled := normal.duplicate() as StyleBoxFlat
+	disabled.bg_color = Color(0.09, 0.16, 0.18, 0.36)
+	disabled.border_color = Color(0.28, 0.40, 0.40, 0.32)
+	button.add_theme_stylebox_override("disabled", disabled)
 
 
 func _build_heroes(parent: Control) -> void:
@@ -363,7 +436,7 @@ func _settle_pages() -> void:
 
 
 func _focus_page(page: Page) -> void:
-	var target: Control = _start_button
+	var target: Control = _continue_button if save_available else _start_button
 	if page == Page.HEROES:
 		var index := CharacterDB.ids().find(selected_character_id)
 		if index >= 0 and index < _card_buttons.size():
@@ -666,7 +739,7 @@ func _open_guide() -> void:
 	for entry in [
 		["01  /  MAKE YOURSELF AT HOME", "Follow the purple question mark for your first village tasks. Meet the residents, gather supplies and build your home."],
 		["02  /  PREPARE FOR THE NIGHT", "Protect the forest and the people who live here. Visit the shops, train your companion and venture through the portals when you're ready."],
-		["03  /  FIND YOUR FOOTING", "WASD / Arrows  ·  Move\nF  ·  Attack     1 / 2 / 3  ·  Skills (3s / 6s / 9s)\nE  ·  Interact     Menu  ·  Build\nTouch  ·  Left joystick to move; right-side actions to fight and interact."],
+		["03  /  FIND YOUR FOOTING", "WASD / Arrows  ·  Move\nF  ·  Attack     Shift  ·  Sprint\nE  ·  Interact     B  ·  Build     I / Tab  ·  Pack\nTouch  ·  Joystick to move. Attack and Sprint on the right. Tap nearby people and objects to interact."],
 	]:
 		_overlay_body.add_child(_paragraph(str(entry[0]), 13, GOLD))
 		_overlay_body.add_child(_paragraph(str(entry[1]), 17, CREAM))
@@ -707,18 +780,27 @@ func _set_page_focus(enabled: bool) -> void:
 func _layout() -> void:
 	_compact = size.y < 650 or size.x < 1100
 	var narrow := size.x < 800
-	var margin := 24 if _compact else 44
+	var margin := 24 if _compact else 64
 	for side in ["left", "right"]:
 		_margin.add_theme_constant_override("margin_" + side, margin)
 	_margin.add_theme_constant_override("margin_top", 18 if _compact else 24)
 	_margin.add_theme_constant_override("margin_bottom", 16 if _compact else 20)
-	_home_title.add_theme_font_size_override("font_size", 56 if _compact else 76)
-	_home_column.vertical = not (_compact and size.x >= 800)
-	_home_column.add_theme_constant_override("separation", 24 if not _home_column.vertical else 16)
+	var landscape_compact := _compact and not narrow
+	_home_column.vertical = not landscape_compact
+	_home_column.add_theme_constant_override("separation", 32 if landscape_compact else 24)
+	_home_scroll.custom_minimum_size.x = size.x - margin * 2 if _compact else 424
+	_home_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL if _compact else Control.SIZE_FILL
+	_home_intro.custom_minimum_size.x = 290 if landscape_compact else 0
+	_home_nav.custom_minimum_size.x = 300 if landscape_compact else (minf(360, size.x - margin * 2) if narrow else 0)
+	_home_title.add_theme_font_size_override("font_size", 88 if landscape_compact else (92 if size.x < 500 else 108))
+	_home_wordmark.add_theme_font_size_override("font_size", 18 if landscape_compact else 22)
+	_home_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER if narrow else HORIZONTAL_ALIGNMENT_LEFT
+	_home_wordmark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER if narrow else HORIZONTAL_ALIGNMENT_LEFT
+	_home_intro.get_child(2).alignment = BoxContainer.ALIGNMENT_CENTER if narrow else BoxContainer.ALIGNMENT_BEGIN
+	_home_nav.size_flags_horizontal = Control.SIZE_SHRINK_CENTER if narrow else Control.SIZE_EXPAND_FILL
 	_hero_intro.visible = not _compact
-	_scenic_caption.visible = size.x >= 1150
-	_scenic_caption.custom_minimum_size.x = maxf(0, size.x - 610)
-	_home.get_child(0).custom_minimum_size.x = minf(460, size.x - margin * 2)
+	_scenic_caption.visible = not _compact
+	_scenic_caption.custom_minimum_size.x = 0
 	_cards.vertical = narrow
 	for portrait in _card_portraits:
 		portrait.custom_minimum_size.y = 48 if _compact else 64

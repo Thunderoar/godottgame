@@ -211,10 +211,10 @@ Do not run `tools/setup_input.gd` (rewrites project config) or
   Three 45-second ocean routes lead to Vorath, the Kraken King. Kill the boss,
   then separately approach/tap the prison through `free_arjun()`; a kill alone
   does not rescue him. Arjun returns visibly aboard the ship, then joins the village.
-- Mei Ling is rescued after Malakar in `drowned_throne`, the final Monster Portal.
+- Mei Ling is rescued after Abyss Monarch in `drowned_throne`, the final Monster Portal.
   Both flags trigger a one-time saved reunion ending; normal village play continues.
   Replays must not duplicate friends, rewards or rescue transitions.
-- Ten Monster Portal definitions live in PortalDB. Prerequisites and attempts go
+- Three active Monster Portal definitions live in PortalDB (Chaos Citadel → Tempest Spire → Abyssal Throne, levels 1/3/5). Prerequisites and attempts go
   through `portal_clear_reason()` / `start_expedition()`. Unbanked expedition loot
   is separate from banked inventory; victory/safe exit banks it, defeat discards it.
 - Portal defeat intentionally emits through multiple paths: preserve
@@ -225,7 +225,7 @@ Do not run `tools/setup_input.gd` (rewrites project config) or
 - Ten tutorial events are phase-aware (`MissionDB.DAY_STEPS` / `NIGHT_STEPS`).
   `tutorial_complete()` also recognises Portal 1 already cleared in an old save.
   Portal-entry/boss events survive a clock-phase change during the fight. Clearing
-  Tidebound Grotto ends training immediately; Portals 2–10 are Mei Ling's rescue arc.
+  Tidebound Grotto ends training immediately; Portals 2–3 are Mei Ling's rescue arc.
   Tutorial Skip hides the overlay; do not assume it completes progression.
 
 ### Village ecology, enemies and defenses

@@ -109,7 +109,7 @@ func _ready() -> void:
 	var names: Array[String] = []
 	for id in PortalDB.ordered_ids():
 		names.append(str(PortalDB.get_portal(id).get("boss_name", "")))
-	_check(names.size() == 10 and names.all(func(n: String) -> bool: return n != "" and names.count(n) == 1), "every campaign boss has a distinct name")
+	_check(names.size() == 3 and names.all(func(n: String) -> bool: return n != "" and names.count(n) == 1), "every campaign boss has a distinct name")
 	GameState.start_expedition("tidebound_grotto")
 	game._load_dungeon("tidebound_grotto", true)
 	_check(game.player().controls_locked and game.loading_screen.active, "portal travel locks input before fading out")

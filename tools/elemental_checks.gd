@@ -1,6 +1,6 @@
 class_name ElementalChecks
 extends RefCounted
-## Gameplay checks for shared rewards, weapon transactions and all thirty powers.
+## Gameplay checks for shared rewards, weapon transactions and all nine campaign powers.
 
 static func run(game: Game, check: Callable, capture: Callable = Callable()) -> void:
 	var saved := GameState.data.duplicate(true)
@@ -231,7 +231,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 		boss.dead = true
 		orphan._physics_process(1)
 		check.call(orphan.is_queued_for_deletion(),"%s magic cancels when its caster dies" % boss.element)
-	check.call(seen_skills.size() == 30 and seen_art.size() == 10,"all ten bosses have unique artwork and thirty named powers")
+	check.call(seen_skills.size() == 9 and seen_art.size() == 3,"all three campaign bosses have unique artwork and nine named powers")
 	GameState.data = saved
 	GameState._emit_all()
 	await game._load_lobby(false)

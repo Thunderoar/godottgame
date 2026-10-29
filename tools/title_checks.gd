@@ -9,6 +9,9 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(title.current_page == TitleScreen.Page.HOME and not title._heroes.is_visible_in_tree(), "boot shows the main menu without hero selection")
 	check.call(title._continue_button.disabled, "Continue is disabled without a save")
 	check.call(title._start_button.focus_mode == Control.FOCUS_ALL, "Start Game supports keyboard focus")
+	check.call(title._home_nav.name == "HarbourNavigation" and title._home_nav.is_ancestor_of(title._start_button), "home actions belong to the framed harbour navigation")
+	check.call(title._home_title.get_theme_font("font") == TitleScreen.TITLE_FONT, "home wordmark uses the bundled portable display font")
+	check.call(not title._save_card.visible, "fresh home hides the saved-journey portrait and details")
 	title._start_button.pressed.emit()
 	await game.get_tree().process_frame
 	check.call(title.current_page == TitleScreen.Page.HEROES and title._heroes.is_visible_in_tree(), "Start Game opens a dedicated hero selection page")
@@ -47,6 +50,10 @@ static func run(game: Game, check: Callable) -> void:
 	title._show_page(TitleScreen.Page.HOME, true)
 	check.call(not title.is_sliding() and is_equal_approx(title._home.position.x, 0.0) and not title._heroes.visible, "Reduce Motion restores the menu instantly")
 	GameSettings.set_reduce_motion(false, false)
+	var quality_before := GameSettings.effects_quality()
+	GameSettings.set_effects_quality("low", false)
+	check.call(not (title.get_child(0) as TitleBackdrop).is_processing(), "Low effects keeps the harbour static without hiding the menu")
+	GameSettings.set_effects_quality(quality_before, false)
 	# Use a second title instance to exercise saved-journey confirmation and
 	# signal guards without starting another world in the acceptance game.
 	GameState.new_game("arjun")
@@ -62,6 +69,7 @@ static func run(game: Game, check: Callable) -> void:
 	saved.continue_requested.connect(func() -> void: continued.append(true))
 	saved.character_selected.connect(func(id: String) -> void: selected.append(id))
 	check.call(not saved._continue_button.disabled and saved._save_summary.text.contains("Arjun"), "saved journey summary identifies the existing hero")
+	check.call(saved._save_card.visible and saved._home_actions.get_child(0) == saved._continue_button, "saved home puts Continue first and displays its journey details")
 	saved._start_button.pressed.emit()
 	saved._card_buttons[0].pressed.emit()
 	saved._begin_button.pressed.emit()
