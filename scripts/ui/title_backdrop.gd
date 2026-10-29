@@ -10,6 +10,7 @@ var _time := 0.0
 var _redraw_accum := 0.0
 var _houses: Array[Texture2D] = []
 var _trees: Array[Texture2D] = []
+var _market: Texture2D
 var _ship: Texture2D
 var _hero: Texture2D
 var _companion: Texture2D
@@ -22,6 +23,7 @@ func _ready() -> void:
 		_houses.append(PixelArt.house_texture(level))
 	for species in [0, 2, 4]:
 		_trees.append(MonsoonArt.tree_texture(species))
+	_market = PixelArt.stall_texture("potion")
 	_ship = PixelArt.ship_texture()
 	_hero = PixelArt.character_texture("adam", 3, 4)
 	_companion = PixelArt.pet_texture("ember")
@@ -125,6 +127,9 @@ func _draw_village() -> void:
 		_stamp(_houses[1], Vector2(1110, 493), 0.95)
 		_stamp(_houses[0], Vector2(1240, 513), 0.74, Color("#c5c7b0"))
 		_stamp(_houses[0], Vector2(1216, 588), 0.92)
+	if _market != null:
+		draw_ellipse_shadow(Vector2(1145,650),Vector2(44,8))
+		_stamp(_market,Vector2(1145,649),0.88,Color("#c5c7b0"))
 	# Working harbour: mooring pier, piles and a quietly bobbing student ship.
 	draw_rect(Rect2(892, 528, 235, 12), Color("#493f37"))
 	draw_rect(Rect2(892, 528, 235, 6), Color("#aa8861"))

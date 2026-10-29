@@ -137,3 +137,22 @@ Reduce Motion. Context and source references: [KAMPUNG_REDESIGN.md](KAMPUNG_REDE
 Classic Pixel cottages now follow the user-approved front-gable reference: the ridge runs away in screen Y, both roof slopes are visible, and thick front eaves frame a recessed entrance. Do not replace this with a flat front-facing trapezoid roof or an extended right wall. The five visual material grades retain the 224×176 frame, existing scale, centered doorway/steps, collision and saved anchors. Character artwork is unchanged.
 
 `MonsoonArt.house()` owns clustered clay tiles, weathered timber, projected roof glazing, front window details and matching night emission. `MonsoonArt.cottage_ground()` supplies a static soil/stone/planting layer through Lobby's `CottageGround`, clipped on a copied image to water/map bounds and rebuilt only at construction/layout changes. Explicit house overrides and Modern Illustrated do not receive this procedural yard. No terrain bake, map topology, ecology RNG, light budget or game rule is changed. The title backdrop reuses the same cached cottage art.
+
+
+## Companion market and foliage family (2026-10-30)
+
+The Classic Pixel market now shares the approved elevated view, warm timber and
+restrained material ramps with the cottage. Five occupations have distinct pitched
+cloth canopies, visible counter tops and useful goods. `PixelArt.stall_texture()`
+retains its existing key/override/Modern fallback route; `MonsoonArt.stall()` and
+`stall_front()` separate rear art from canopy/counter foreground so the unchanged
+merchant remains in the service opening. No NPC sprite or collision is redesigned.
+
+Monsoon tree families retain their native bounds,46-pixel lower split and stable
+forest identity, with deeper canopy interiors, warmer/yellow-green upper clusters
+and coordinated trunks/palms. Only private decorative image streams are used.
+Shop frontage soil/stone/edge details are static child sprites, clipped on copied
+images through the same water/bounds helper as the cottage, rebuilt at placement
+changes. Imported stall overrides retain presentation ownership. The title reuses
+these cached foliage assets and adds one small matching harbour market frontage.
+Terrain topology, source bakes, light budgets, actor artwork and gameplay are unchanged.

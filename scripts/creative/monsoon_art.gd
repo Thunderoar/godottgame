@@ -24,8 +24,8 @@ static func _tree(species: int) -> Image:
 	var img := PixelArt.image(size.x, size.y)
 	var cx := size.x / 2
 	var foot := size.y - 3
-	var dark := WorldPalette.color("wood_shadow")
-	var wood := WorldPalette.color("wood")
+	var dark := WorldPalette.color("wood_shadow").lerp(Color("2d5146"),0.22)
+	var wood := WorldPalette.color("wood").lerp(WorldPalette.color("sunlight"),0.18)
 	var rim := WorldPalette.color("sunlight")
 	# Buttress roots and forked, tapering trunk: common material, distinct structure.
 	PixelArt._fill_polygon(img, [Vector2i(cx - 12, foot), Vector2i(cx - 4, foot - 9), Vector2i(cx - 5, 38), Vector2i(cx + 3, 33), Vector2i(cx + 5, foot - 8), Vector2i(cx + 13, foot)], dark)
@@ -56,10 +56,10 @@ static func _tree(species: int) -> Image:
 		1: lobes = [[22, 49, 18, 17], [46, 33, 25, 19], [81, 34, 25, 20], [98, 55, 16, 17], [61, 60, 30, 21], [30, 66, 20, 15], [88, 69, 20, 16]]
 		2: lobes = [[40, 23, 18, 21], [24, 48, 20, 23], [58, 46, 19, 24], [38, 64, 25, 24], [19, 80, 14, 18], [63, 83, 15, 17]]
 		3: lobes = [[25, 42, 19, 21], [63, 39, 21, 23], [46, 21, 20, 18], [46, 61, 26, 21], [74, 65, 17, 17], [20, 65, 14, 16]]
-	var deep := WorldPalette.color("leaf_deep")
-	var leaf := WorldPalette.color("leaf")
-	var mint := WorldPalette.color("leaf_mint")
-	var sun := WorldPalette.color("leaf_sun")
+	var deep := WorldPalette.color("leaf_deep").darkened(0.10).lerp(Color("253f39"),0.18)
+	var leaf := WorldPalette.color("leaf").lerp(WorldPalette.color("fern"),0.24).darkened(0.03)
+	var mint := WorldPalette.color("leaf_mint").lerp(WorldPalette.color("leaf_sun"),0.62).darkened(0.08)
+	var sun := WorldPalette.color("leaf_sun").lerp(WorldPalette.color("sunlight"),0.12)
 	# Overlapping asymmetrical leaf masses, then directional clusters; no white noise.
 	for i in lobes.size():
 		var l: Array = lobes[i]
@@ -70,13 +70,14 @@ static func _tree(species: int) -> Image:
 		_crown_mass(img, x, y + 3, rx, ry, deep.darkened(0.1))
 		_crown_mass(img, x - 1, y, rx - 1, ry - 3, deep)
 		_crown_mass(img, x - 3, y - 5, rx - 3, ry - 6, leaf)
+		_crown_mass(img,x-5,y-9,maxi(7,rx-7),maxi(5,ry-10),leaf.lerp(mint,0.28))
 		var rng := RandomNumberGenerator.new()
 		rng.seed = 381 + species * 719 + i * 97
-		for cluster in 7:
+		for cluster in 10:
 			var dx := rng.randi_range(-rx + 9, rx - 10)
 			var dy := rng.randi_range(-ry + 10, ry - 7)
 			if pow(float(dx) / rx, 2) + pow(float(dy) / ry, 2) > 0.72: continue
-			var ink := leaf.lerp(mint, 0.72 if cluster % 3 == 0 else 0.36) if dy < 2 else leaf.lightened(0.035)
+			var ink := leaf.lerp(mint, 0.62 if cluster % 3 == 0 else 0.26) if dy < 2 else leaf.lerp(deep,0.14)
 			_leaf_cluster(img, x + dx, y + dy - 4, ink, deep)
 			if cluster % 5 == 0 and dy < 0:
 				PixelArt.hline(img, x + dx - 2, y + dy - 6, 4, sun)
@@ -100,9 +101,9 @@ static func _leaf_cluster(img: Image, x: int, y: int, ink: Color, shadow: Color)
 	PixelArt.hline(img, x - 1, y + 3, 4, shadow)
 
 static func _frond(img: Image, origin: Vector2i, end: Vector2i) -> void:
-	var leaf := WorldPalette.color("leaf")
-	var mint := WorldPalette.color("leaf_mint")
-	var dark := WorldPalette.color("leaf_deep")
+	var leaf := WorldPalette.color("leaf").lerp(WorldPalette.color("fern"),0.32)
+	var mint := WorldPalette.color("leaf_mint").lerp(WorldPalette.color("leaf_sun"),0.65).darkened(0.08)
+	var dark := WorldPalette.color("leaf_deep").darkened(0.12)
 	var delta := Vector2(end - origin)
 	for step in 22:
 		var t := step / 21.0
@@ -132,9 +133,10 @@ static func tree_shadow(species: int) -> Texture2D:
 
 static func undergrowth(variant: int) -> Image:
 	var img := PixelArt.image(40, 32)
-	var deep := WorldPalette.color("leaf_deep")
-	var leaf := WorldPalette.color("fern")
-	var mint := WorldPalette.color("leaf_mint")
+	var deep := WorldPalette.color("leaf_deep").darkened(0.10)
+	var leaf := WorldPalette.color("fern").lerp(WorldPalette.color("leaf"),0.35).darkened(0.10)
+	var mint := WorldPalette.color("leaf_mint").lerp(WorldPalette.color("leaf_sun"),0.70).darkened(0.10)
+	PixelArt.ellipse(img,20,28,15,3,Color(WorldPalette.color("grass_shadow"),0.14))
 	match posmod(variant, 6):
 		0, 1: # Fern / pandan fan: long stalks with paired pinnae.
 			for end in [Vector2i(3, 16), Vector2i(8, 7), Vector2i(17, 2), Vector2i(28, 5), Vector2i(36, 15)]:
@@ -449,3 +451,141 @@ static func prop(kind: String) -> Texture2D:
 					for at in [Vector2i(22, 35), Vector2i(31, 33), Vector2i(41, 35)]:
 						PixelArt.ellipse(img, at.x, at.y, 5, 4, WorldPalette.color("grass_warm"))
 		return img)
+
+
+# Companion frontage family: same elevated view and warm timber as the cottage.
+static func stall(kind: String) -> Image:
+	var img := PixelArt.image(112, 96)
+	var timber := WorldPalette.color("wood").lerp(Color("ac8959"), 0.42)
+	var dark := WorldPalette.color("wood_shadow").lerp(Color("344a43"), 0.32)
+	var cream := WorldPalette.color("cream").darkened(0.08)
+	var dye: Color = {"potion":Color("5a9188"),"equipment":Color("b76b58"),"pet":Color("93799c"),"house":Color("aa9668"),"services":Color("718e77")}.get(kind,Color("718e77"))
+	# Posts, shelves and a visible counter-top; interaction/collision stay external.
+	for x in [13, 95]:
+		PixelArt.rect(img,x,29,4,57,dark)
+		PixelArt.vline(img,x+1,31,53,timber.lightened(0.16))
+	PixelArt.rect(img,19,35,74,22,dark.darkened(0.20))
+	for x in range(21,92,9): PixelArt.vline(img,x,36,20,timber.darkened(0.32))
+	PixelArt.hline(img,20,47,72,timber)
+	PixelArt.hline(img,20,48,72,dark)
+	_house_poly(img,[[15,56],[97,56],[103,62],[9,62]],timber.lightened(0.17))
+	PixelArt.rect(img,9,62,94,5,dark)
+	PixelArt.hline(img,10,62,92,timber.lightened(0.32))
+	PixelArt.rect(img,12,67,88,16,timber.darkened(0.11))
+	for row in range(68,82,4):
+		PixelArt.hline(img,14,row,84,dark.lightened(0.07))
+		for x in range(15+(row%8),96,10):
+			PixelArt.hline(img,x,row+1,6,timber.lightened(0.11))
+	for x in [13,39,69,96]:
+		PixelArt.vline(img,x,67,16,dark)
+		PixelArt.vline(img,x+1,67,15,timber.lightened(0.15))
+	PixelArt.hline(img,12,82,88,dark)
+	# A shallow pitched cloth canopy: centre ridge recedes in screen Y.
+	_house_poly(img,[[7,19],[56,4],[105,19],[105,44],[56,29],[7,44]],dark)
+	for side in 2:
+		for x in range(10,103):
+			var u := float(x-10)/44.0 if side==0 else float(102-x)/44.0
+			if u<0.0 or u>=1.0:continue
+			var back := 20.0-u*13.0
+			for y in range(7,43):
+				var v := float(y)-back
+				if v<0.0 or v>=20.0:continue
+				var stripe := int((1.0-u)*44.0)/10
+				var ink: Color=dye if stripe%2==0 else cream
+				if side==1:ink=ink.darkened(0.16)
+				if int(v)%5==4:ink=ink.darkened(0.06)
+				elif int(v)%5==0:ink=ink.lightened(0.04)
+				PixelArt.px(img,x,y,ink)
+	_house_poly(img,[[8,42],[54,27],[56,30],[10,46]],dye.darkened(0.32))
+	_house_poly(img,[[56,30],[58,27],[104,42],[102,46]],dye.darkened(0.42))
+	_house_poly(img,[[10,42],[54,28],[54,30],[11,44]],cream.darkened(0.22))
+	_house_poly(img,[[58,28],[102,42],[101,44],[58,30]],cream.darkened(0.35))
+	PixelArt.rect(img,54,6,4,23,dark)
+	PixelArt.vline(img,55,7,20,timber.lightened(0.38))
+	# Goods have a purpose and share the cottage's restrained material ramps.
+	match kind:
+		"potion":
+			for x in [22,88]:
+				PixelArt.vline(img,x,41,8,dark)
+				PixelArt.ellipse(img,x,48,4,3,WorldPalette.color("leaf_deep"))
+				PixelArt.ellipse(img,x-1,46,3,2,WorldPalette.color("leaf_sun").darkened(0.13))
+			for i in 4:
+				var x := 28+i*16
+				var y := 50+(i%2)*2
+				var glass: Color=[Color("aa655d"),Color("619d91"),Color("c8a468"),Color("8e829d")][i]
+				PixelArt.rect(img,x,y,3,3,cream.darkened(0.25))
+				PixelArt.ellipse(img,x+1,y+6,4,4,glass.darkened(0.25))
+				PixelArt.ellipse(img,x,y+5,3,3,glass)
+				PixelArt.rect(img,x-1,y+4,1,2,glass.lightened(0.38))
+		"equipment":
+			PixelArt.line(img,23,57,36,43,Color("596c6d"))
+			PixelArt.line(img,25,57,38,43,Color("c1ccba"))
+			PixelArt.line(img,27,51,33,56,Color("c69b62"))
+			PixelArt.ellipse(img,58,53,8,7,dark)
+			PixelArt.ellipse(img,57,52,6,5,Color("8d9a8e"))
+			PixelArt.ellipse(img,57,52,2,2,cream.darkened(0.20))
+			PixelArt.rect(img,77,47,12,11,dark)
+			PixelArt.rect(img,79,49,8,6,Color("a17550"))
+			PixelArt.hline(img,79,49,8,WorldPalette.color("roof").darkened(0.13))
+		"pet":
+			PixelArt.rect(img,23,49,15,11,dark)
+			PixelArt.rect(img,25,50,11,8,Color("ba9b68"))
+			for y in [52,55,58]:PixelArt.hline(img,25,y,11,Color("887149"))
+			PixelArt.ellipse(img,57,56,9,4,Color("546968"))
+			PixelArt.ellipse(img,57,54,7,2,Color("c2ae77"))
+			PixelArt.rect(img,77,47,8,12,dye.darkened(0.17))
+			PixelArt.rect(img,79,45,4,3,cream.darkened(0.17))
+			PixelArt.rect(img,79,52,4,3,cream.darkened(0.13))
+		"house":
+			PixelArt.rect(img,24,47,25,12,cream.darkened(0.12))
+			PixelArt.hline(img,27,50,19,Color("5e8e92"))
+			PixelArt.vline(img,31,51,6,Color("5e8e92"))
+			PixelArt.hline(img,31,56,12,Color("5e8e92"))
+			for y in [51,55]:
+				PixelArt.rect(img,58,y,27,4,timber.lightened(0.13))
+				PixelArt.hline(img,58,y+3,27,dark)
+			PixelArt.rect(img,89,44,3,15,Color("b7a470"))
+			for y in range(46,58,3):PixelArt.hline(img,89,y,2,dark)
+		_:
+			PixelArt.ellipse(img,29,55,7,5,Color("537d7a"))
+			PixelArt.hline(img,23,51,12,Color("88aaa0"))
+			for x in [51,64]:
+				PixelArt.line(img,x,57,x-3,43,timber.lightened(0.21))
+				PixelArt.rect(img,x-6,42,6,4,Color("7c9388"))
+			PixelArt.rect(img,77,47,13,11,dark)
+			PixelArt.rect(img,79,49,9,7,cream.darkened(0.21))
+	return img
+
+static func shop_ground(kind: String) -> Image:
+	var img := PixelArt.image(192,160)
+	var soil := WorldPalette.color("path_edge").lerp(WorldPalette.color("wood_shadow"),0.18)
+	soil.a=0.16
+	for p in [[96,53,58,14],[84,65,37,18],[107,74,32,20]]:
+		PixelArt.ellipse(img,p[0],p[1],p[2],p[3],soil)
+	var contact := WorldPalette.color("shadow")
+	contact.a=0.16
+	PixelArt.ellipse(img,96,39,45,6,contact)
+	var stone := WorldPalette.color("stone").lerp(WorldPalette.color("path"),0.42)
+	stone.a=0.54
+	for at: Vector2i in [Vector2i(96,67),Vector2i(94,86)]:
+		_house_poly(img,[[at.x-10,at.y],[at.x-6,at.y-3],[at.x+8,at.y-2],[at.x+11,at.y+2],[at.x+6,at.y+4],[at.x-8,at.y+3]],stone)
+	# Margin details never add collision or block customer/service workpoints.
+	if kind in ["potion","services"]:
+		for at: Vector2i in [Vector2i(45,63),Vector2i(145,69)]:
+			_house_poly(img,[[at.x-5,at.y],[at.x-2,at.y-6],[at.x,at.y-2],[at.x+3,at.y-8],[at.x+6,at.y]],Color(WorldPalette.color("leaf"),0.65))
+	elif kind=="house":
+		PixelArt.rect(img,140,66,12,3,Color(WorldPalette.color("wood"),0.40))
+		PixelArt.hline(img,140,68,12,Color(WorldPalette.color("wood_shadow"),0.35))
+	return img
+
+static func stall_front(kind: String) -> Image:
+	var img := stall(kind)
+	# The original one-piece stall covered the merchant with its rear wall.
+	# Keep canopy, posts and counter in front, but let the same unchanged NPC
+	# sprite occupy the service opening. No actor art or physics changes.
+	for y in range(62):
+		for x in img.get_width():
+			var post := (x>=13 and x<17) or (x>=95 and x<99)
+			var canopy_front := 31.0+absf(float(x-56))*0.30
+			if not post and float(y)>canopy_front:img.set_pixel(x,y,Color.TRANSPARENT)
+	return img

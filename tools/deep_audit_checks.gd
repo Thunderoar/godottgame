@@ -203,8 +203,12 @@ static func run(game: Node, check: Callable) -> void:
 	check.call(customer.shopping_state == Resident.Shopping.ROUTINE and (reserved == null or reserved._customer == null), "audit: directly frightened customer releases its shop reservation")
 	customer.queue_free()
 	# Merchants are now seated behind the stall counter rather than outside it.
-	var counter_art := shop.get_parent().get_children().filter(func(node: Node) -> bool: return node is Sprite2D)[0] as Sprite2D
+	var rear_art := shop.get_parent().get_children().filter(func(node: Node) -> bool: return node is Sprite2D)[0] as Sprite2D
+	var front := shop.get_parent().get_node_or_null("StallFront") as Sprite2D
+	var counter_art := front if front != null and front.visible else rear_art
 	check.call(shop.position.y < 0 and _effective_z(shop.sprite) < _effective_z(counter_art), "audit: merchant is inside the stall behind its counter art")
+	if front != null and front.visible:
+		check.call(_effective_z(rear_art) < _effective_z(shop.sprite) and is_zero_approx(front.texture.get_image().get_pixel(56,48).a), "audit: split native stall leaves the merchant in front of the rear wall and visible through its service opening")
 	# Low->high must work without rebuilding the dungeon.
 	var old_quality := GameSettings.effects_quality()
 	var old_motion := GameSettings.reduce_motion()

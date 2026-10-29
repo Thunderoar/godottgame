@@ -47,6 +47,33 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(not ground.texture.get_image().get_used_rect().has_area(), "yard painting clips entirely off sea without changing coastline or collision")
 	cottage.position = before_position
 	lobby._refresh_cottage_ground(cottage)
+	for variant in 6:
+		var understory := MonsoonArt.undergrowth(variant)
+		check.call(understory.get_size()==Vector2i(40,32) and understory.get_data()==MonsoonArt.undergrowth(variant).get_data(),"understory family %d keeps native bounds and deterministic material clusters" % variant)
+	var market_signatures := {}
+	for kind in ["potion","equipment","pet","house","services"]:
+		var stall := MonsoonArt.stall(kind)
+		var front := MonsoonArt.stall_front(kind)
+		check.call(stall.get_size()==Vector2i(112,96) and PixelArt.stall_texture(kind).get_size()==Vector2(112,96), "%s market art retains the existing native frame and cache route" % kind)
+		check.call(stall.get_used_rect().position.x>0 and stall.get_used_rect().position.y>0 and stall.get_used_rect().end.x<112 and stall.get_used_rect().end.y<96, "%s canopy and goods have transparent silhouette clearance" % kind)
+		check.call(stall.get_pixel(30,24)!=stall.get_pixel(82,24) and stall.get_pixel(56,12).a>0.9, "%s canopy reads as two projected roof planes with a receding ridge" % kind)
+		var subset := true
+		for y in 96:
+			for x in 112:
+				if front.get_pixel(x,y).a>0.0:subset=subset and front.get_pixel(x,y)==stall.get_pixel(x,y)
+		check.call(subset and is_zero_approx(front.get_pixel(56,48).a) and front.get_pixel(56,70).a>0.9, "%s unchanged merchant occupies the opening behind the counter foreground" % kind)
+		market_signatures[stall.get_data().hex_encode().hash()]=true
+	check.call(market_signatures.size()==5,"all five market occupations retain distinct cloth and purposeful goods")
+	var potion_shop := lobby.get_node("PotionShop") as Node2D
+	var yard := potion_shop.get_node("StallGround") as Sprite2D
+	check.call(yard.visible and yard.texture.get_size()==Vector2(192,160),"native stall owns a bounded noncolliding ground layer")
+	var shop_position := potion_shop.position
+	potion_shop.position=Vector2(5,39)
+	lobby._refresh_shop_ground(potion_shop,"potion")
+	check.call(not yard.texture.get_image().get_used_rect().has_area(),"shop frontage clips off sea using a copied image")
+	potion_shop.position=shop_position
+	lobby._refresh_shop_ground(potion_shop,"potion")
+	check.call(MonsoonArt.shop_ground("potion").get_data()==MonsoonArt.shop_ground("potion").get_data(),"market ground details are reproducible without gameplay RNG")
 	var time_before := float(GameState.data.get("world_time", 0.0))
 	for boundary in [0.0, 133.0, 180.0, 193.0, 340.0, 360.0]:
 		var before := MonsoonLighting.grade(boundary - 0.001)
@@ -65,12 +92,15 @@ static func run(game: Game, check: Callable) -> void:
 	var catalog := AssetRegistry.library()
 	var replacement := catalog.duplicate(true) as AssetCatalog
 	replacement.entries["house_1"] = catalog.entries["coastal/planter"].duplicate(true)
+	replacement.entries["stall_potion"] = catalog.entries["coastal/planter"].duplicate(true)
 	replacement.entries["authored_tree"] = catalog.entries["coastal/planter"].duplicate(true)
 	var legacy_upper := "res://assets/sprites/TX Plant__TX Tree T1 Upper.tres"
 	replacement.entries["foliage/" + legacy_upper] = catalog.entries["coastal/planter"].duplicate(true)
 	AssetRegistry.catalog = replacement
 	AssetRegistry.invalidate()
 	lobby._add_window_lights(lobby.house_sprite, 1)
+	lobby._refresh_shop_ground(potion_shop,"potion")
+	check.call(PixelArt.stall_texture("potion")==AssetRegistry.get_texture("stall_potion") and not yard.visible and not potion_shop.get_node("StallFront").visible,"explicit stall replacement owns its art, foreground and yard")
 	check.call(PixelArt.authored_tree_texture() == AssetRegistry.get_texture("authored_tree"), "existing authored_tree semantic overrides retain priority")
 	# Unparented construction checks a legacy override without running a world or
 	# assigning any additional persistent tree state in the active game.
@@ -84,6 +114,7 @@ static func run(game: Game, check: Callable) -> void:
 	AssetRegistry.catalog = catalog
 	AssetRegistry.invalidate()
 	lobby._add_window_lights(lobby.house_sprite, GameState.house_level())
+	lobby._refresh_shop_ground(potion_shop,"potion")
 	var cached := WorldTerrain._make_terrain_texture()
 	check.call(cached == WorldTerrain._make_terrain_texture(), "unchanged palettes reuse the whole terrain texture")
 	var quality := GameSettings.effects_quality()

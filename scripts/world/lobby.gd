@@ -425,17 +425,46 @@ func _refresh_cottage_ground(house: Node2D) -> void:
 		ground.z_index = -997
 		house.add_child(ground)
 	var source := PixelArt.cached_texture("monsoon/cottage_ground/v1", MonsoonArt.cottage_ground).get_image()
+	ground.texture = ImageTexture.create_from_image(_clip_frontage_image(source,house.position,ground.offset))
+	ground.visible = true
+
+
+func _clip_frontage_image(source: Image, origin: Vector2, offset: Vector2) -> Image:
 	var image := source.duplicate() as Image
-	# Clip a COPY to real water/bounds. Moving a saved house rebuilds this once
-	# on drag completion, never per frame and never by changing source terrain.
+	# Copy before clipping; source caches and authored terrain remain immutable.
 	for y in image.get_height():
 		for x in image.get_width():
-			if is_zero_approx(image.get_pixel(x, y).a): continue
-			var at := house.position + (Vector2(x, y) + ground.offset) * PixelArt.PX
+			if is_zero_approx(image.get_pixel(x,y).a):continue
+			var at := origin+(Vector2(x,y)+offset)*PixelArt.PX
 			if not MAP_RECT.has_point(at) or WorldTerrain.is_sea(at) or (_authored_map and _authored_map.water_cell(Vector2i(at.floor()))):
-				image.set_pixel(x, y, Color.TRANSPARENT)
-	ground.texture = ImageTexture.create_from_image(image)
-	ground.visible = true
+				image.set_pixel(x,y,Color.TRANSPARENT)
+	return image
+
+
+func _refresh_shop_ground(shop: Node2D, kind: String) -> void:
+	var ground := shop.get_node_or_null("StallGround") as Sprite2D
+	var front := shop.get_node_or_null("StallFront") as Sprite2D
+	var base := shop.get_node_or_null("%sStall" % kind.capitalize()) as Sprite2D
+	var native_art := VisualStyle.is_pixel() and AssetRegistry.get_texture("stall_"+kind)==null
+	if front:front.visible=native_art
+	if base:
+		base.texture=PixelArt.stall_texture(kind)
+		base.z_index=0 if native_art else 2
+	if not native_art:
+		if ground:ground.visible=false
+		return
+	if ground==null:
+		ground=Sprite2D.new()
+		ground.name="StallGround"
+		ground.centered=false
+		ground.offset=Vector2(-96,-48)
+		ground.scale=Vector2.ONE*PixelArt.PX
+		ground.z_as_relative=false
+		ground.z_index=-997
+		shop.add_child(ground)
+	var source := PixelArt.cached_texture("monsoon/stall_ground/"+kind+"/v1",func() -> Image:return MonsoonArt.shop_ground(kind)).get_image()
+	ground.texture=ImageTexture.create_from_image(_clip_frontage_image(source,shop.position,ground.offset))
+	ground.visible=true
 
 
 func _add_window_lights(art: Sprite2D, level: int) -> void:
@@ -511,6 +540,17 @@ func _add_shop(kind: String, at: Vector2, npc_name: String, color: Color) -> voi
 	stall.z_index = 2
 	shop.add_child(stall)
 	_shop_stalls.append(stall)
+	if VisualStyle.is_pixel() and AssetRegistry.get_texture("stall_"+kind)==null:
+		stall.z_index=0
+		var front := Sprite2D.new()
+		front.name="StallFront"
+		front.texture=PixelArt.cached_texture("monsoon/stall_front/"+kind+"/v1",func() -> Image:return MonsoonArt.stall_front(kind))
+		front.centered=false
+		front.offset=stall.offset
+		front.scale=stall.scale
+		front.z_index=2
+		shop.add_child(front)
+	_refresh_shop_ground(shop,kind)
 	var counter := StaticBody2D.new()
 	counter.name = "CounterBody"
 	counter.collision_layer = 1
@@ -1868,6 +1908,9 @@ func refresh_spatial_layout() -> void:
 	for placeable in _placeables:
 		var entry := _layout.anchor(placeable.placeable_id)
 		if not str(entry.get("relative_to", "")).is_empty(): placeable.position = _layout.position_of(placeable.placeable_id)
+	for placeable in _placeables:
+		if placeable.category=="shop":
+			_refresh_shop_ground(placeable,placeable.placeable_id.trim_prefix("shop_"))
 	for resident in _residents:
 		if is_instance_valid(resident) and resident.has_meta("home_shelter_offset"):
 			resident.shelter = _house_position + resident.get_meta("home_shelter_offset")
