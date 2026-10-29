@@ -347,7 +347,7 @@ func _layout_gui() -> void:
 		_status_strip.position = Vector2(22, 18) * factor
 		var right := _root.size.x - 22 * factor
 		if _menu_button.position.y < 90 * factor:
-			right = minf(right, _menu_button.position.x - 10 * factor)
+			right = minf(right, minf(_menu_button.position.x, _map_button.position.x) - 10 * factor)
 		if right - _status_strip.position.x < 240 * factor:
 			_status_strip.position.y = maxf(_menu_button.position.y + _menu_button.size.y * _menu_button.scale.y, _map_button.position.y + _map_button.size.y * _map_button.scale.y) + 8 * factor
 			right = _root.size.x - 22 * factor

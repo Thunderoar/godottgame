@@ -1342,3 +1342,46 @@ Earlier implementation drafts exposed a malformed-flag type error, a touch's
 emulated mouse toggling work off, a stale-lease fixture which allowed the fresh
 crew to claim work before freezing, and a sign background alignment issue. Those
 draft results are superseded by the final gate and native evidence above.
+
+## Two combined HUD sections — 2026-10-29
+
+Gold and Diamonds now share one `CurrencySection` frame. NPCs, Monsters, Trees,
+Fire and Homes share a separate `StatsSection` frame beside it. The individual
+values use padding with no individual boxes. On narrow windows the whole stats
+section moves below currency; its contents can wrap within that shared frame.
+The width reservation includes both Menu and the wider Map button. Census data,
+currency formatting, the half-second refresh and control-layout IDs are unchanged.
+
+Verification on Windows / Godot 4.7.2.stable.official.ed1daf0bf:
+
+- Native status-strip review in the shared working tree: **136 checks, PASS**,
+  exit 0, stderr empty. This includes both shared-frame membership and full-panel
+  clearance, day/threat states, GUI 75/100/130%, large balances, custom Menu,
+  dungeon scope, and 1280×720, 832×480, 640×360 and 480×320 views. Inspected the
+  desktop/compact panels and narrow stacked stats panel after the Map-clearance fix.
+- A full shared-tree gameplay run reported **5,661 checks, 1 failure** in the
+  concurrently edited village-project checks: "return rebuilds the project from
+  saved work without reviving a stale lease". The grouping update does not edit
+  that implementation or its tests; this is not presented as a shared-tree PASS.
+- Canonical gameplay in a disposable copy of committed `b2bb16c` plus only the
+  four HUD-related changed files: **5,606 checks, PASS**, exit 0. Its three code
+  files matched the working files byte for byte. No failure/script-error/error
+  or engine-warning markers; stderr empty. This verifies the HUD update apart
+  from the concurrent village-project work without resetting that work.
+- Shared-source import passed. The clean-copy import initially exceeded its
+  bootstrap timeout; after reusing the imported texture/audio cache, independent
+  script metadata import completed. The existing missing Android build-tools
+  diagnostic remains. No Android export or physical-device test was performed.
+- Scoped `git diff --check` passed. No normal player data, construction source or
+  source maps were modified by this update.
+
+Evidence under
+`C:/Users/LUQMAN/.codex/visualizations/2026/10/29/01a1869c-c888-7723-b100-09df8dc6fb73/`:
+`status-1280x720-46ebb2cf/` (final native logs/shots), `grouped-status-import.log`,
+`grouped-status-gate.log` (shared-tree result), `grouped-status.patch`, and
+`grouped-source-c7ebe6bb/import-cached.log` plus `grouped-source-c7ebe6bb/gate.log`
+(scoped PASS). The scoped gate's full logs are in
+`C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-e4ed12c164dc4de9b04826336a2f37c0`.
+Earlier native grouped-panel captures with Map overlap are superseded by the
+final 136-check review. The redundant source ZIP was removed after validation;
+the disposable source, patch and logs remain outside the checkout.

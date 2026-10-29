@@ -1,9 +1,10 @@
 # Compact balances and live world tallies
 
-The top-left HUD now starts with two smaller balance chips, followed by live
-status counters. Gold and Diamonds use 18-pixel icons and 34-pixel-high chips;
-their combined minimum width is 204 pixels plus the gap, replacing the previous
-344×48 currency panel. Large amounts use K/M/B notation from 10,000 onward;
+The top-left HUD has two combined sections: Gold and Diamonds share one compact
+framed panel, and live status counters share a separate framed panel beside it.
+Individual values have padding rather than their own boxes. The currency section
+uses 18-pixel icons and is about 34 pixels high and 212 pixels wide, replacing the
+previous 344×48 currency panel. Large amounts use K/M/B notation from 10,000 onward;
 desktop hover text retains the exact balance.
 
 | Counter | Meaning |
@@ -40,7 +41,8 @@ or simulation pause. Its collection is scoped to one world even when old and new
 nodes coexist during transitions.
 
 The strip follows GUI scale with a minimum 12 physical pixels for its text.
-It wraps before Menu/Map rather than compressing the labels indefinitely.
+When both sections cannot fit beside Menu/Map, the entire statistics panel moves
+below currency and its values wrap inside their shared frame.
 Wrapped height moves the emergency/build banner down when needed. A custom Menu
 position leaving too little horizontal space moves the strip below the edge
 controls. Existing control-layout IDs and placement persistence are unchanged.

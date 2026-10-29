@@ -1,26 +1,36 @@
 class_name HudStatusStrip
 extends Control
-## Compact balances followed by live world tallies; rows wrap before edge controls.
+## Two framed sections: combined balances and combined live world tallies.
 signal height_changed
 const FONT_SIZE := 18
 const HEIGHT := 34.0
 var gold_label: Label
 var diamond_label: Label
-var _flow: HFlowContainer
+var _currency_panel: PanelContainer
+var _stats_panel: PanelContainer
+var _currency_row: HBoxContainer
+var _stats_flow: HFlowContainer
+var _available_width := 1000.0
 var _chips: Dictionary = {}
 var _labels: Dictionary = {}
 var counts: Dictionary = {}
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_flow = HFlowContainer.new()
-	_flow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_flow.add_theme_constant_override("h_separation", 6)
-	_flow.add_theme_constant_override("v_separation", 5)
-	_flow.minimum_size_changed.connect(_sync_height)
-	add_child(_flow)
+	_currency_panel = _section("CurrencySection")
+	_currency_row = HBoxContainer.new()
+	_currency_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_currency_row.add_theme_constant_override("separation", 6)
+	_currency_panel.add_child(_currency_row)
+	_stats_panel = _section("StatsSection")
+	_stats_flow = HFlowContainer.new()
+	_stats_flow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_stats_flow.add_theme_constant_override("h_separation", 6)
+	_stats_flow.add_theme_constant_override("v_separation", 4)
+	_stats_flow.minimum_size_changed.connect(_sync_height)
+	_stats_panel.add_child(_stats_flow)
 	for kind in ["gold", "diamond"]:
-		var chip := _chip(kind, 106 if kind == "gold" else 98)
+		var chip := _chip(kind, 106 if kind == "gold" else 98, _currency_row)
 		var row := HBoxContainer.new()
 		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_theme_constant_override("separation", 5)
@@ -33,8 +43,8 @@ func _ready() -> void:
 		row.add_child(label)
 		if kind == "gold": gold_label = label
 		else: diamond_label = label
-	for entry in [["npc", 118], ["monsters", 115], ["trees", 124], ["fires", 76], ["homes", 128]]:
-		var chip := _chip(str(entry[0]), int(entry[1]))
+	for entry in [["npc", 108], ["monsters", 105], ["trees", 114], ["fires", 66], ["homes", 118]]:
+		var chip := _chip(str(entry[0]), int(entry[1]), _stats_flow)
 		var label := GameUI.label("", FONT_SIZE)
 		label.mouse_filter = Control.MOUSE_FILTER_PASS
 		chip.add_child(label)
@@ -42,18 +52,28 @@ func _ready() -> void:
 	refresh_currency()
 	refresh_world(null)
 
-func _chip(id: String, width: int) -> PanelContainer:
+func _section(section_name: String) -> PanelContainer:
 	var panel := PanelContainer.new()
-	panel.name = id.capitalize() + "Count"
-	panel.custom_minimum_size = Vector2(width, HEIGHT)
+	panel.name = section_name
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var style := GameUI.style(Color(0.035, 0.08, 0.09, 0.9), Color("#3a565a"), 1)
-	style.content_margin_left = 8
-	style.content_margin_right = 8
-	style.content_margin_top = 4
-	style.content_margin_bottom = 4
+	style.content_margin_left = 1
+	style.content_margin_right = 1
+	style.content_margin_top = 1
+	style.content_margin_bottom = 1
 	panel.add_theme_stylebox_override("panel", style)
-	_flow.add_child(panel)
+	add_child(panel)
+	return panel
+
+func _chip(id: String, width: int, parent: Container) -> MarginContainer:
+	# Cells have padding only; their shared section owns the single frame.
+	var panel := MarginContainer.new()
+	panel.name = id.capitalize() + "Count"
+	panel.custom_minimum_size = Vector2(width, HEIGHT - 2)
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for edge in ["left", "right"]: panel.add_theme_constant_override("margin_" + edge, 4 if parent == _stats_flow else 8)
+	for edge in ["top", "bottom"]: panel.add_theme_constant_override("margin_" + edge, 4)
+	parent.add_child(panel)
 	_chips[id] = panel
 	return panel
 
@@ -75,6 +95,8 @@ func refresh_world(world: Node) -> void:
 	var village := bool(counts.get("village", false))
 	for id in _labels:
 		_chips[id].visible = not counts.is_empty() and (village or id == "monsters")
+	_stats_panel.visible = not counts.is_empty()
+	call_deferred("_arrange_sections")
 	if counts.is_empty(): return
 	_set_count("npc", "NPC %d/%d" % [counts.npc_alive, counts.npc_total], GameUI.TEXT if counts.npc_alive == counts.npc_total else GameUI.RED)
 	_set_count("monsters", "Monsters %d" % counts.monsters, GameUI.RED if counts.monsters > 0 else GameUI.TEXT)
@@ -97,11 +119,29 @@ func fit(available_width: float, factor: float, display_scale: float) -> void:
 	var zoom := maxf(factor, 12.0 / (FONT_SIZE * maxf(0.1, display_scale)))
 	scale = Vector2.ONE * zoom
 	size.x = maxf(140, available_width / zoom)
-	_flow.size.x = size.x
+	_available_width = size.x
+	_arrange_sections()
 	call_deferred("_sync_height")
 
+func _arrange_sections() -> void:
+	_currency_panel.position = Vector2.ZERO
+	_currency_panel.size = _currency_panel.get_combined_minimum_size()
+	var natural_width := 2.0
+	var visible_cells := 0
+	for id in _labels:
+		if not _chips[id].visible: continue
+		natural_width += _chips[id].get_combined_minimum_size().x
+		visible_cells += 1
+	natural_width += maxf(0, visible_cells - 1) * 6
+	_stats_panel.size.x = minf(natural_width, _available_width)
+	var beside := _currency_panel.size.x + 12 + _stats_panel.size.x <= _available_width
+	_stats_panel.position = Vector2(_currency_panel.size.x + 12, 0) if beside else Vector2(0, _currency_panel.size.y + 5)
+	_sync_height()
+
 func _sync_height() -> void:
-	var height := maxf(HEIGHT, _flow.get_combined_minimum_size().y)
+	_stats_panel.size.y = maxf(HEIGHT, _stats_panel.get_combined_minimum_size().y)
+	var height := maxf(HEIGHT, _currency_panel.size.y)
+	if _stats_panel.visible: height = maxf(height, _stats_panel.position.y + _stats_panel.size.y)
 	if not is_equal_approx(size.y, height):
 		size.y = height
 		height_changed.emit()

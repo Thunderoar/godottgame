@@ -74,6 +74,14 @@ func _check_layout(game: Game, label: String) -> void:
 		separated = separated and not rect.intersects(game.hud._menu_button.get_global_rect()) and not rect.intersects(game.hud._map_button.get_global_rect())
 		if game.hud._emergency_panel.visible: separated = separated and not rect.intersects(game.hud._emergency_panel.get_global_rect())
 	_check(fit and separated, "status chips fit without overlapping each other, edge controls or emergency banner: " + label)
+	var currency_rect := strip._currency_panel.get_global_rect()
+	var stats_rect := strip._stats_panel.get_global_rect()
+	var sections_clear := bounds.encloses(currency_rect) and bounds.encloses(stats_rect) and not currency_rect.intersects(stats_rect)
+	for section in [currency_rect, stats_rect]:
+		sections_clear = sections_clear and not section.intersects(game.hud._menu_button.get_global_rect()) and not section.intersects(game.hud._map_button.get_global_rect())
+		if game.hud._emergency_panel.visible: sections_clear = sections_clear and not section.intersects(game.hud._emergency_panel.get_global_rect())
+	_check(sections_clear, "currency and statistics have separate combined sections clear of edge controls and emergency UI: " + label)
+	_check(strip._currency_panel.is_ancestor_of(strip._chips.gold) and strip._currency_panel.is_ancestor_of(strip._chips.diamond) and strip._labels.values().all(func(item: Label) -> bool: return strip._stats_panel.is_ancestor_of(item)), "both balances share one frame and every statistic shares the other: " + label)
 	var display := minf(float(get_window().size.x) / bounds.size.x, float(get_window().size.y) / bounds.size.y)
 	_check(HudStatusStrip.FONT_SIZE * strip.scale.x * display >= 11.99, "status text remains at least twelve physical pixels: " + label)
 	var gold: Control = strip._chips.gold
