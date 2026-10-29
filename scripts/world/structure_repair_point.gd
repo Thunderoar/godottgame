@@ -15,6 +15,7 @@ func _ready() -> void:
 func is_interactable_available() -> bool:
 	if not is_instance_valid(target) or GameState.game_over_active:
 		return false
+	if GameState.structure_project_locked(target.structure_id): return false
 	var entry := GameState.structure_state(target.structure_id)
 	return not entry.is_empty() and int(entry.get("health", 0)) < int(entry.get("maximum", 1))
 

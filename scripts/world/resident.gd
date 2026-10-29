@@ -518,6 +518,8 @@ func _end_visit() -> void:
 
 func _exit_tree() -> void:
 	_release_tree_task()
+	_release_build_task()
+	_release_project_task()
 	if is_instance_valid(_shop):
 		_shop.release_customer(self)
 
@@ -576,7 +578,11 @@ func _run_worker(delta: float) -> void:
 			return
 	if _seek_shelter(delta):
 		_release_build_task()
+		_release_project_task()
 		return
+	if worker_role == "builder":
+		var home := get_parent() as Lobby
+		if is_instance_valid(home) and is_instance_valid(home.workshop) and home.workshop.work_builder(self, delta): return
 	if worker_role == "builder" and _repair_buildings(delta):
 		return
 	if worker_role == "planter" and _care_for_forest(delta):
@@ -635,6 +641,8 @@ func _repair_buildings(delta: float) -> bool:
 		_release_build_task()
 		return false
 	if is_instance_valid(_build_target):
+		if GameState.structure_project_locked(_build_target.structure_id): _release_build_task()
+	if is_instance_valid(_build_target):
 		var state := GameState.structure_state(_build_target.structure_id)
 		if int(state.get("health", 0)) >= int(state.get("maximum", 1)):
 			_release_build_task()
@@ -644,6 +652,7 @@ func _repair_buildings(delta: float) -> bool:
 			if not is_instance_valid(node) or node.get_parent().get_parent() != get_parent() or node.is_queued_for_deletion():
 				continue
 			var state := GameState.structure_state(node.structure_id)
+			if GameState.structure_project_locked(node.structure_id): continue
 			if int(state.get("health", 0)) >= int(state.get("maximum", 1)) or (is_instance_valid(node.builder) and node.builder != self):
 				continue
 			var distance := global_position.distance_to(node.attack_position(global_position))
@@ -669,3 +678,8 @@ func _repair_buildings(delta: float) -> bool:
 		if GameState.work_structure(_build_target.structure_id, delta):
 			_release_build_task()
 	return true
+
+func _release_project_task() -> void:
+	var home := get_parent() as Lobby
+	if is_instance_valid(home) and is_instance_valid(home.workshop) and home.workshop.current_worker() == self:
+		home.workshop.release_worker()

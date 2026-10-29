@@ -1274,3 +1274,71 @@ Final evidence under
 `C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-c25fa6408eea4d4b83d2f4684d925033`.
 Earlier draft runs retain a daytime-spawn fixture failure, a shop-inflated home
 count and fixture cleanup failures; they are superseded by the final evidence.
+
+## West Workshop story progression (2026-10-29)
+
+The audited first village project is implemented. On a new journey, clearing
+Chaos Citadel makes Bram's free **A Roof for the Workshop** commission eligible.
+The existing western ruin becomes a working cottage through ten seconds of
+on-site daytime labor. A builder walks to it, or the player can help by direct
+tap/E. Movement, attack, damage, modal opening and focus loss cancel player
+labor; night, danger and world departure suspend it without discarding accepted
+work. Multiple actors/repeated submissions cannot accelerate a physics tick.
+Construction does not advance during travel or offline time.
+
+Pending project structures cannot be built through ordinary repair APIs or offer
+shelter/gun installation. Completion waits for safe collision activation, restores
+the cottage once, retains ordinary house/shelter/optional-gun semantics, and
+licenses the entire advanced sword family at Garrick's. Weapons still cost their
+catalog price. Later damage repairs normally and never revokes the license.
+House upgrade eligibility, worker baselines, original forest identities and both
+independent rescue branches remain unchanged. Later district projects are deferred.
+
+The construction shop, mission journal, compact forge card, stock action states,
+Rami's dialogue/routine and picture map share saved project state. Activity
+overrides survive layout refresh. Runtime footprint reservations and player drag
+validation preserve work access without modifying source maps or the terrain bake.
+The workbench is clear of the original `forest_15` palm. One touch plus its emulated
+mouse press is handled as one gesture.
+
+Raw saves without the new schema retain legacy stock access and existing restored
+houses, HP, shelter and bought guns. Their fit-out is optional. Current project
+records sanitize without inventing completion; future schemas are rejected before
+rewriting the file. Work ownership is runtime-only and never revives on reload.
+
+`VillageProjectChecks` runs in the canonical tide gate and the isolated focused
+`res://tools/village_project_test.tscn`. Native mode additionally captures desktop
+and compact interfaces, a real touch-driven ten-second build without builders,
+successive craftsman positions, map/stock completion and live low-quality/Reduce
+Motion feedback. See `VILLAGE_WORKSHOP.md` for the player flow and ownership model.
+
+Final verification, Windows / Godot `4.7.2.stable.official.ed1daf0bf`:
+
+- Canonical isolated gate: **5,661 checks, PASS**, exit 0; no `[FAIL]`,
+  `SCRIPT ERROR` or `ERROR:` markers; stderr empty.
+- Native Classic Pixel: **71 checks, PASS**, exit 0; stderr empty.
+- Native Modern Illustrated: **71 checks, PASS**, exit 0; stderr empty.
+- The 55 integrated project checks cover transaction gates, free/idempotent
+  commissioning, actual builder movement before labor, capped single-tick work,
+  interruptions, world handoff, occupied-site activation, live stock updates,
+  permanent licensing after damage, ordinary repair, activity/map reconciliation,
+  partial/completed JSON reload, legacy entitlements and malformed/future schemas.
+- Each native style adds eleven captures and actual touch-driven player labor,
+  ten-second completion without builders, consecutive craftsman movement,
+  compact Close placement and accessible completion feedback. Inspected the
+  rendered commission, work, completion, map and forge states at 1280×720 and
+  832×480 in both styles. Final sign text stays within its plaque and updates
+  immediately on completion.
+- Isolated import passed. It retained the existing Android build-tools-directory
+  diagnostic. No authored map/bake, live player progress, Android export or
+  physical-phone test was changed/performed. `git diff --check` passed.
+
+Preserved final evidence:
+`C:/Users/LUQMAN/.codex/visualizations/2026/10/29/01a186d6-db12-71a2-815d-2f832d7e3d18/workshop-implementation/`.
+The directory contains canonical/import logs and `classic-pixel/` plus
+`modern-illustrated/` logs and shots. Canonical raw artifacts are under
+`C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-tests-d6ce6d634e324d92a6c13e8fe9afab53`.
+Earlier implementation drafts exposed a malformed-flag type error, a touch's
+emulated mouse toggling work off, a stale-lease fixture which allowed the fresh
+crew to claim work before freezing, and a sign background alignment issue. Those
+draft results are superseded by the final gate and native evidence above.

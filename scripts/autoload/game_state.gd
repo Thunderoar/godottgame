@@ -6,6 +6,7 @@ extends Node
 ## methods; they never keep their own copy of health, gold or progression.
 
 signal data_changed
+signal village_project_changed
 signal day_phase_changed(night: bool)
 
 var journey_serial := 0
@@ -37,6 +38,7 @@ var game_over_active := false
 var _clock_accum := 0.0
 var _last_purchase: Dictionary = {}
 var _purchase_serial := 0
+var _project_work_frames: Dictionary = {}
 
 
 func _ready() -> void:
@@ -77,6 +79,7 @@ func _make_default(character_id: String) -> Dictionary:
 	}
 	return {
 		"version": SAVE_VERSION,
+		"village_progression": VillageProjectDB.default_progression(),
 		"campaign": {"intro_seen": false, "ocean_stage": 1, "arjun_rescued": false, "mei_ling_rescued": false, "ending_seen": false},
 		"character_id": str(character.id),
 		"character_name": str(character.name),
@@ -151,6 +154,7 @@ func _make_default(character_id: String) -> Dictionary:
 
 func new_game(character_id: String = DEFAULT_CHARACTER) -> void:
 	journey_serial += 1
+	_project_work_frames.clear()
 	var carried_settings: Dictionary = (data.get("settings", {}) as Dictionary).duplicate(true)
 	data = _make_default(character_id)
 	if not carried_settings.is_empty():
@@ -206,6 +210,8 @@ func buy_item(item_id: String, quantity: int = 1) -> Dictionary:
 	var item := ItemDB.get_item(item_id)
 	if item.is_empty():
 		return {"ok": false, "message": "Unknown item."}
+	var access := item_purchase_status(item_id)
+	if not bool(access.ok): return access
 	quantity = maxi(1, quantity)
 	var now := Time.get_ticks_msec()
 	var previous: int = int(_last_purchase.get(item_id, -9999))
@@ -470,6 +476,7 @@ func damage_player(amount: int) -> void:
 	if reduced > 0:
 		data.hp = maxi(0, health() - reduced)
 	var potion_used := _try_auto_heal()
+	_interrupt_village_work()
 	data_changed.emit()
 	if potion_used: _save_if_needed()
 	if health() <= 0:
@@ -821,6 +828,7 @@ func damage_resident(id: String, amount: int) -> void:
 	var healths: Dictionary = data.get("resident_health", {})
 	healths[id] = maxi(0, resident_health(id) - maxi(0, amount))
 	data.resident_health = healths
+	_interrupt_village_work(id)
 	data_changed.emit()
 	if int(healths[id]) == 0:
 		_save_if_needed()
@@ -875,6 +883,8 @@ func damage_structure(id: String, amount: int) -> void:
 
 
 func repair_structure(id: String) -> Dictionary:
+	if structure_project_locked(id):
+		return {"ok": false, "message": "Commission the West Workshop with Bram first."}
 	var entry := structure_state(id)
 	if entry.is_empty() or game_over_active:
 		return {"ok": false, "message": "This structure cannot be repaired."}
@@ -1431,12 +1441,21 @@ func load_game() -> bool:
 	if not parsed is Dictionary:
 		return false
 	var loaded: Dictionary = parsed
+	# Inspect raw schema before defaults merge, preserving future saves unchanged.
+	var raw_progression: Variant = loaded.get("village_progression", {})
+	if raw_progression is Dictionary and (raw_progression.get("schema", 1) is int or raw_progression.get("schema", 1) is float) and int(raw_progression.get("schema", 1)) > 1:
+		return false
+	for site in get_tree().get_nodes_in_group("village_project_sites"):
+		if is_instance_valid(site): site.release_worker(false)
 	# Merge into a fresh default so old saves gain new fields safely.
 	var loaded_id := str(loaded.get("character_id", DEFAULT_CHARACTER))
 	if not CharacterDB.ids().has(loaded_id):
 		loaded_id = DEFAULT_CHARACTER
 	var fallback := _make_default(loaded_id)
 	data = _merge(fallback, loaded)
+	if not loaded.has("village_progression"):
+		data.village_progression = VillageProjectDB.default_progression(true)
+	_project_work_frames.clear()
 	if not loaded.has("completed_missions"):
 		var completed: Array = []
 		for index in mini(int(loaded.get("mission_step", 0)), MissionDB.STEPS.size()):
@@ -1468,6 +1487,7 @@ func _merge(base: Dictionary, incoming: Dictionary) -> Dictionary:
 
 func _sanitize() -> void:
 	_sanitize_campaign()
+	_sanitize_village_progression()
 	# Mana was retired; legacy saves keep all remaining progression.
 	data.erase("mana")
 	data.erase("mana_max")
@@ -1663,6 +1683,7 @@ func upgrade_structure(id: String) -> Dictionary:
 	return upgrade_house()
 
 func start_structure_work(id: String) -> bool:
+	if structure_project_locked(id): return false
 	var entry := structure_state(id)
 	if entry.is_empty() or game_over_active or is_night() or int(entry.get("health", 0)) >= int(entry.get("maximum", 1)):
 		return false
@@ -1673,6 +1694,7 @@ func start_structure_work(id: String) -> bool:
 	return true
 
 func work_structure(id: String, delta: float) -> bool:
+	if structure_project_locked(id): return false
 	if game_over_active or is_night():
 		return false
 	var entry := structure_state(id)
@@ -1716,6 +1738,8 @@ func has_roof_gun(structure_id: String) -> bool:
 
 
 func buy_roof_gun(structure_id: String) -> Dictionary:
+	if structure_project_locked(structure_id):
+		return {"ok": false, "message": "Finish the West Workshop before installing a defense."}
 	var structure := structure_state(structure_id)
 	if str(structure.get("kind", "")) != "house" or int(structure.get("health", 0)) <= 0:
 		return {"ok": false, "message": "Choose an intact house first."}
@@ -1732,6 +1756,134 @@ func buy_roof_gun(structure_id: String) -> Dictionary:
 
 
 # --------------------------------------------------------------- BESUT campaign
+# --------------------------------------------------------------- village projects
+
+func _sanitize_village_progression() -> void:
+	var raw: Variant = data.get("village_progression", {})
+	if not raw is Dictionary: raw = {}
+	var clean := VillageProjectDB.default_progression()
+	clean.legacy_access = raw.get("legacy_access", false) is bool and raw.get("legacy_access", false) == true
+	var projects: Variant = raw.get("projects", {})
+	if not projects is Dictionary: projects = {}
+	for id in VillageProjectDB.ordered_ids():
+		var entry: Variant = projects.get(id, {})
+		if not entry is Dictionary: continue
+		var state := str(entry.get("state", "not_started"))
+		if state not in ["not_started", "working", "complete"]: state = "not_started"
+		var remaining := float(entry.get("remaining", VillageProjectDB.WORK_SECONDS)) if entry.get("remaining", 0) is float or entry.get("remaining", 0) is int else VillageProjectDB.WORK_SECONDS
+		if not is_finite(remaining) or remaining < 0: remaining = VillageProjectDB.WORK_SECONDS
+		if state != "not_started" and not bool(portal_state("tidebound_grotto").get("cleared", false)): state = "not_started"
+		clean.projects[id] = {"state": state, "remaining": 0.0 if state == "complete" else (VillageProjectDB.WORK_SECONDS if state == "not_started" else clampf(remaining, 0, VillageProjectDB.WORK_SECONDS))}
+	var tracked := str(raw.get("tracked_project", ""))
+	if tracked in VillageProjectDB.ordered_ids() and str(clean.projects[tracked].state) != "complete": clean.tracked_project = tracked
+	data.village_progression = clean
+
+func village_legacy_access() -> bool:
+	var value: Variant = (data.get("village_progression", {}) as Dictionary).get("legacy_access", false)
+	return value is bool and value == true
+
+func project_status(id: String = VillageProjectDB.WORKSHOP) -> Dictionary:
+	var definition := VillageProjectDB.get_project(id)
+	if definition.is_empty(): return {"ok": false, "state": "unknown", "message": "Unknown village project."}
+	var progress: Dictionary = (data.get("village_progression", {}) as Dictionary).get("projects", {})
+	var entry: Dictionary = progress.get(id, {"state": "not_started", "remaining": VillageProjectDB.WORK_SECONDS})
+	var state := str(entry.get("state", "not_started"))
+	var eligible := bool(portal_state(str(definition.portal)).get("cleared", false))
+	var reason := "Defeat %s in %s to make the workshop possible." % [PortalDB.get_portal(str(definition.portal)).boss_name, PortalDB.get_portal(str(definition.portal)).name]
+	if eligible: reason = "Ready to commission with Bram. Free village restoration."
+	if state == "working": reason = "Work pauses at night or near danger. Approach the workbench to help."
+	if state == "complete": reason = "Workshop restored. Garrick's advanced sword stock is permanently licensed."
+	definition.merge({"ok": eligible and state == "not_started" and not game_over_active, "eligible": eligible, "state": state, "remaining": float(entry.get("remaining", VillageProjectDB.WORK_SECONDS)), "message": reason, "legacy": village_legacy_access()}, true)
+	return definition
+
+func structure_project_locked(id: String) -> bool:
+	return id == VillageProjectDB.WORKSHOP_STRUCTURE and not village_legacy_access() and str(project_status().state) != "complete"
+
+func item_purchase_status(item_id: String) -> Dictionary:
+	if not ItemDB.exists(item_id): return {"ok": false, "message": "Unknown item."}
+	if item_id in VillageProjectDB.ADVANCED_SWORDS and item_count(item_id) <= 0 and not village_legacy_access() and str(project_status().state) != "complete":
+		return {"ok": false, "message": "Restore the West Workshop with Bram to license this sword."}
+	return {"ok": true, "message": ""}
+
+func _village_project_site(id: String) -> Node:
+	for site in get_tree().get_nodes_in_group("village_project_sites"):
+		if is_instance_valid(site) and not site.is_queued_for_deletion() and str(site.project_id) == id and site.active_context(): return site
+	return null
+
+func start_village_project(id: String) -> Dictionary:
+	var status := project_status(id)
+	if not bool(status.get("ok", false)): return {"ok": false, "message": status.message}
+	var site := _village_project_site(id)
+	if site == null: return {"ok": false, "message": "Visit BESUT after your journey to commission this work."}
+	var blocked: String = site.commission_blocker()
+	if not blocked.is_empty(): return {"ok": false, "message": blocked}
+	var cost := maxi(0, int(status.get("gold", 0)))
+	if gold() < cost: return {"ok": false, "message": "Not enough Gold for this commission."}
+	data.gold = gold() - cost
+	data.village_progression.projects[id] = {"state": "working", "remaining": float(status.seconds)}
+	data.village_progression.tracked_project = id
+	_project_work_frames.erase(id)
+	_save_if_needed()
+	data_changed.emit()
+	village_project_changed.emit()
+	return {"ok": true, "message": "West Workshop commissioned. Builders work by day; you can help at the site."}
+
+func work_village_project(id: String, delta: float, actor: Node) -> bool:
+	if delta <= 0 or not is_finite(delta) or game_over_active: return false
+	var site := _village_project_site(id)
+	if site == null or not site.accepts_work(actor) or not bool(project_status(id).eligible) or str(project_status(id).state) != "working": return false
+	var frame := Engine.get_physics_frames()
+	if int(_project_work_frames.get(id, -1)) == frame: return false
+	_project_work_frames[id] = frame
+	var entry: Dictionary = data.village_progression.projects[id]
+	entry.remaining = maxf(0, float(entry.remaining) - minf(delta, minf(0.1, site.get_physics_process_delta_time())))
+	data.village_progression.projects[id] = entry
+	return true
+
+func complete_village_project(id: String) -> bool:
+	var status := project_status(id)
+	if not bool(status.get("eligible", false)) or str(status.get("state", "")) != "working" or float(status.get("remaining", 1)) > 0: return false
+	var site := _village_project_site(id)
+	if site == null or not site.activation_clear(): return false
+	var structure := structure_state(str(status.structure))
+	if structure.is_empty(): return false
+	structure.health = int(structure.maximum)
+	structure.repair_remaining = 0.0
+	data.structures[str(status.structure)] = structure
+	data.village_progression.projects[id] = {"state": "complete", "remaining": 0.0}
+	data.village_progression.tracked_project = ""
+	_save_if_needed()
+	data_changed.emit()
+	village_project_changed.emit()
+	return true
+
+func checkpoint_village_project() -> void:
+	_save_if_needed()
+	village_project_changed.emit()
+
+func _interrupt_village_work(resident_id: String = "") -> void:
+	for site in get_tree().get_nodes_in_group("village_project_sites"):
+		if not is_instance_valid(site): continue
+		var actor: Node = site.current_worker()
+		if not is_instance_valid(actor): continue
+		if (actor is Player and resident_id.is_empty()) or (actor is Resident and actor.resident_name == resident_id): site.release_worker()
+
+func track_village_project(id: String) -> void:
+	if id != "" and (not id in VillageProjectDB.ordered_ids() or str(project_status(id).state) == "complete"): return
+	data.village_progression.tracked_project = id
+	_save_if_needed()
+	data_changed.emit()
+
+func tracked_village_project() -> String:
+	return str((data.get("village_progression", {}) as Dictionary).get("tracked_project", ""))
+
+func village_npc_lines(speaker: String) -> Array:
+	if speaker != "Rami": return []
+	var status := project_status()
+	if str(status.state) == "complete": return ["A sound roof and room to work. This workshop belongs to all of BESUT. Garrick can now offer you our advanced swords."]
+	if str(status.state) == "working": return ["The western workshop is underway. Meet the builders there by day, or lend a hand yourself. We will keep the work safe until morning."]
+	return VillageProjectDB.npc_lines(speaker) + [status.message]
+
 const OCEAN_STAGES := 3
 
 func campaign() -> Dictionary:

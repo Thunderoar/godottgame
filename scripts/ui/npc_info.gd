@@ -8,9 +8,9 @@ static func description(role: String) -> String:
 		"planter", "tree_planter": return "TREE PLANTER · Plants a new sapling at a lost tree. Saplings are protected while growing for 30 seconds. Protect every tree: losing the entire forest ends the journey."
 		"fighter", "swordsman", "defender": return "SWORDSMAN · Patrols BESUT and attacks nearby sea urchins. Protect the houses where vulnerable residents shelter."
 		"potion": return "POTION MERCHANT · Sells health potions. Buy with Gold, then use them from Pack. Mana and player skills are no longer used."
-		"equipment": return "WEAPONS & TOWER DEFENSE · Sells weapons for your fighting style, armour and shields. Buy rooftop machine guns for intact houses here. Guns target fire monsters and sea urchins. Sell gathered wood for Gold."
+		"equipment": return "WEAPONS & TOWER DEFENSE · Basic swords, armour and shields are available from arrival. Restore Bram's West Workshop after Chaos Citadel to license advanced swords. Buy rooftop machine guns for intact houses here. Guns target fire monsters and sea urchins. Sell gathered wood for Gold."
 		"pet": return "PET KEEPER · Buy and feed companions, then select your active pet. Winning tournament duels recruits rivals as permanent village guardians."
-		"house": return "CONSTRUCTION MERCHANT · Upgrade the main house using Diamonds. Its level improves village houses, worker baselines, fences and purchased rooftop guns."
+		"house": return "CONSTRUCTION MERCHANT · Upgrade the main house using Diamonds. Its level improves village houses, worker baselines, fences and purchased rooftop guns. After Chaos Citadel, commission the free West Workshop restoration. Builders work there by day, or you can help at its workbench."
 		"services": return "WORKER SHOP · Hire Water Keepers, Builders, Tree Planters and Swordsmen. Each specialist has a different job."
 		"guard": return "COASTAL GUARD · Catches floating rubbish for one Gold. If rubbish reaches the beach, approach it and press Pick Up. Each piece pays only once."
 		"mission_guide": return "MISSION GUIDE · Follow the current task's dotted arrows. Day lessons cover village life; night lessons teach defense and the first portal boss. Use Menu to reopen tips."
@@ -62,5 +62,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif selected is AuthoredInteraction:
 		title = selected.speaker
 		role = "student" if title.to_lower().contains("unisza") else "resident"
-	game.open_dialogue(title, [description(role)] + ([str(selected.activity)] if selected is Resident else []))
+	var project_lines := GameState.village_npc_lines(title)
+	game.open_dialogue(title, project_lines if not project_lines.is_empty() else [description(role)] + ([str(selected.activity)] if selected is Resident else []))
 	get_viewport().set_input_as_handled()

@@ -35,6 +35,7 @@ func _rebuild() -> void:
 	_band = ShopScene.new()
 	_band.setup("house", "Bram")
 	content.add_child(_band)
+	content.add_child(VillageProjectCard.new())
 	add_body_text("Orange builders repair damaged buildings by day. Work takes 10 seconds after arrival. Hire extra builders at the Worker Shop.", GameUI.TEAL, 15)
 	if not _message.is_empty():
 		add_body_text(_message, GameUI.GOLD, 14)

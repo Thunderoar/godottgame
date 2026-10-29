@@ -54,7 +54,7 @@ func _build_repair_points() -> void:
 
 
 func is_intact() -> bool:
-	return not structure_id.is_empty() and int(GameState.structure_state(structure_id).get("health", 0)) > 0
+	return not structure_id.is_empty() and not GameState.structure_project_locked(structure_id) and int(GameState.structure_state(structure_id).get("health", 0)) > 0
 
 
 func shelter_position() -> Vector2:
@@ -104,6 +104,9 @@ func _process(delta: float) -> void:
 					sheltered_count += 1
 		var damaged := int(entry.get("health", 0)) < int(entry.get("maximum", 1))
 		var remaining := float(entry.get("repair_remaining", 0.0))
+		if GameState.structure_project_locked(structure_id):
+			_status.text = ""
+			return
 		_status.text = ("Repair %.1fs%s" % [remaining, " - resumes by day" if GameState.is_night() else ""]) if remaining > 0 else ("Builder repairs by day (10s)" if damaged else ("Shelter: %d" % sheltered_count if sheltered_count > 0 else ""))
 	if _flash_timer > 0.0:
 		_flash_timer -= delta

@@ -164,6 +164,7 @@ func _ready() -> void:
 	# Includes authored-size combat poses and interrupted tween regression checks.
 	await preload("res://tools/presentation_checks.gd").run(game, _check)
 	await StatusStripChecks.run(game, _check)
+	await VillageProjectChecks.run(game, _check)
 	await _test_forest_game_over()
 
 	GameState.delete_save()

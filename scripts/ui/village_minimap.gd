@@ -79,10 +79,13 @@ func map_icons(world: Node2D) -> Array[Dictionary]:
 			elif id == "house":
 				texture = PixelArt.house_texture(GameState.house_level())
 				priority = 3
+			elif id == VillageProjectDB.WORKSHOP_ANCHOR:
+				texture = PixelArt.occupation_tool("hammer")
+				priority = 3
 			elif kind in ["residence", "ruin"]: texture = PixelArt.house_texture(1)
 			elif kind == "garden": texture = PixelArt.garden_texture()
 			if texture:
-				icons.append({"id": id, "position": world._layout.position_of(id), "texture": texture, "priority": priority, "theme": theme})
+				icons.append({"id": id, "position": world._layout.position_of(id), "texture": texture, "priority": priority, "theme": theme, "project_state": str(GameState.project_status().state) if id == VillageProjectDB.WORKSHOP_ANCHOR else ""})
 		if is_instance_valid(world.ship_boarding) and is_instance_valid(world.ship_boarding.ship):
 			icons.append({"id": "ship", "position": world.ship_boarding.ship.global_position, "texture": PixelArt.ship_texture(), "priority": 3, "theme": ""})
 	elif world is Dungeon:
@@ -109,6 +112,10 @@ func _picture(icon: Dictionary, at: Vector2) -> void:
 		var scale := fitted / dimensions
 		draw_texture_rect(swirl, Rect2(rect.position + Vector2(16, 20) * scale, swirl.get_size() * scale), false)
 	draw_texture_rect(texture, rect, false)
+	if not str(icon.get("project_state", "")).is_empty():
+		var color := Color("#a3ebc5") if str(icon.project_state) == "complete" else Color("#f2c45a")
+		draw_arc(at, extent * 0.57, 0, TAU, 20, color, 2)
+		if expanded: draw_string(ThemeDB.fallback_font, at + Vector2(-28, extent * 0.8), "Workshop", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, color)
 
 func _draw() -> void:
 	draw_style_box(GameUI.style(Color.TRANSPARENT, Color("#73928b"), 2, 0), Rect2(Vector2.ZERO, size))

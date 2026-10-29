@@ -123,6 +123,8 @@ func _drag(world_pos: Vector2) -> void:
 		max_y = min_y
 	target.x = snappedf(clampf(target.x, min_x, max_x), 0.25)
 	target.y = snappedf(clampf(target.y, min_y, max_y), 0.25)
+	var home := get_parent() as Lobby
+	if home != null and not home.project_placement_allowed(_selected, target): return
 	_selected.global_position = target
 
 
