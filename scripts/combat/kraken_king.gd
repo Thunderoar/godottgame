@@ -6,6 +6,8 @@ const EXTEND_SECONDS := 0.4
 const IMPACT_SECONDS := WARNING_SECONDS + EXTEND_SECONDS
 const RELEASE_SECONDS := 3.1
 const MAX_TENTACLE_REACH := 18.0
+const WALK_SPEED := 1.8
+const ARENA_AGGRO_RANGE := 32.0
 var prison: Node2D
 var tentacle_time := -1.0
 var tentacle_target := Vector2.ZERO
@@ -20,7 +22,7 @@ func _ready() -> void:
 	max_hp = 720
 	damage = 16
 	special_damage = 22
-	speed = 0
+	speed = WALK_SPEED
 	body_radius = 2.1
 	boss_ability = "tentacle"
 	boss_ability_name = "Royal Tentacle: Slam / Drag"
@@ -34,8 +36,13 @@ func _ready() -> void:
 
 func _update_body() -> void:
 	sprite.texture = KrakenArt.body_texture()
-	sprite.scale = Vector2.ONE * PixelArt.PX * 1.5
-	sprite.position.y = -2.5 + (0.0 if GameSettings.reduce_motion() else sin(_bob*1.7)*0.05)
+	sprite.texture_filter=CanvasItem.TEXTURE_FILTER_LINEAR
+
+func _sprite_rest_scale() -> Vector2:
+	return Vector2.ONE*PixelArt.PX*1.5
+
+func _sprite_rest_position() -> Vector2:
+	return Vector2(0,-2.5)
 
 func _physics_process(delta: float) -> void:
 	if dead: return
@@ -44,18 +51,19 @@ func _physics_process(delta: float) -> void:
 	_update_tentacle(delta)
 	queue_redraw()
 
-func _chase(_delta: float) -> void:
-	velocity = Vector2.ZERO
-	if not is_instance_valid(_target): return
-	if not active:
-		active = true
-		_notify_boss_start()
-	if _special_timer <= 0 and tentacle_time < 0:
-		_special_timer = special_cooldown
-		_cast_special()
+func _aggro_range() -> float:
+	return ARENA_AGGRO_RANGE
+
+func _chase(delta: float) -> void:
+	if tentacle_time >= 0:
+		velocity = Vector2.ZERO
+		move_and_slide()
+		return
+	super._chase(delta)
 
 func _cast_special() -> void:
-	if dead or not is_instance_valid(_player) or bool(_player.get("dead")): return
+	if dead or tentacle_time >= 0 or not is_instance_valid(_player) or bool(_player.get("dead")): return
+	velocity = Vector2.ZERO
 	hook_attack = not hook_attack
 	var origin := global_position + Vector2(-1,-0.6)
 	tentacle_target = origin + (_player.global_position-origin).limit_length(MAX_TENTACLE_REACH)
@@ -120,6 +128,9 @@ func _draw_arm(from: Vector2, to: Vector2, bend: Vector2, color: Color) -> void:
 
 func _draw() -> void:
 	if dead: return
+	if _state in [State.WINDUP, State.ATTACK] and is_instance_valid(_target):
+		var reach := to_local(_target.global_position).limit_length(body_radius + 1.35)
+		_draw_arm(Vector2(-1,-0.6),reach,Vector2(-0.6,0.5),Color("#a778a5"))
 	if is_instance_valid(prison) and not bool(prison.get("opened")):
 		var grip := to_local(prison.global_position+Vector2(0,-3.7))
 		_draw_arm(Vector2(1.4,-0.7),grip,Vector2(4,-3.3),Color("#88679d"))

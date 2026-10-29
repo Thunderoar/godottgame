@@ -9,15 +9,17 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	game.set_process(false)
 	game.hud.hide_modals()
 	var minimap := game.hud._minimap
+	var map_button := game.hud._map_button
 	var icons := minimap.map_icons(game.world)
 	var ids: Array = icons.map(func(icon: Dictionary) -> String: return str(icon.id))
 	check.call(["shop_potion", "shop_equipment", "shop_pet", "shop_house", "shop_services", "monster_portal", "pet_portal", "jetty_deck", "house", "ship"].all(func(id: String) -> bool: return id in ids), "map contains pictures for every shop, both portals, home, jetty and ship")
 	check.call(icons.all(func(icon: Dictionary) -> bool: return icon.texture is Texture2D and not icon.has("letter") and not icon.has("label")), "map markers use textures without letter labels or explanations")
-	check.call(minimap.mouse_filter == Control.MOUSE_FILTER_STOP and not minimap.expanded, "minimap accepts interaction instead of passing touches into the world")
-	if capture.is_valid(): await capture.call("01_picture_minimap")
+	check.call(not minimap.visible and not minimap.is_processing() and not game.hud.map_panel.visible, "no map is drawn or updated on the normal HUD")
+	check.call(map_button.is_visible_in_tree() and map_button.text=="Map" and map_button.mouse_filter==Control.MOUSE_FILTER_STOP, "Map button is the visible touch target")
+	if capture.is_valid(): await capture.call("01_map_button")
 	var press := InputEventScreenTouch.new()
 	press.index = 24
-	press.position = game.get_viewport().get_final_transform() * minimap.get_global_rect().get_center()
+	press.position = game.get_viewport().get_final_transform() * map_button.get_global_rect().get_center()
 	press.pressed = true
 	Input.parse_input_event(press)
 	await game.get_tree().process_frame
@@ -27,14 +29,15 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	Input.parse_input_event(release)
 	await game.get_tree().process_frame
 	await game.get_tree().process_frame
-	check.call(game.hud.map_panel.visible and game.hud.any_modal_open(), "a real minimap screen tap opens the expanded map")
+	check.call(game.hud.map_panel.visible and game.hud.any_modal_open(), "a real Map button screen tap opens the expanded map")
 	check.call(game.player().controls_locked and not game.player().try_attack(), "expanded map locks movement and combat input")
 	var expanded := game.hud.map_panel.map
 	check.call(expanded.expanded and expanded.mouse_filter == Control.MOUSE_FILTER_IGNORE and expanded.size.y > 200, "expanded map presents a larger non-recursive picture surface")
-	check.call(expanded.map_icons(game.world).size() == icons.size(), "expanded and compact maps share live location records")
+	check.call(expanded.map_icons(game.world).size() == icons.size(), "opened map displays the live location records")
 	if capture.is_valid(): await capture.call("02_expanded_picture_map")
 	game.hud.map_panel.close_panel()
 	check.call(not game.hud.any_modal_open() and not game.player().controls_locked, "closing the map restores world controls")
+	check.call(not minimap.visible and not game.hud.map_panel.visible, "closing the map returns to a HUD with no map preview")
 	var layer := CanvasLayer.new()
 	layer.layer = 210
 	game.add_child(layer)
@@ -46,7 +49,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	await game.get_tree().process_frame
 	check.call(title._hero_available("adam") and not title._hero_available("arjun") and not title._hero_available("mei_ling"), "Choose Your Road begins with only Adam available")
 	check.call(title._card_locks[1].visible and title._card_locks[2].visible and title._card_status[1].text == "LOCKED", "missing friends have visible lock art and locked status")
-	check.call(title._card_unlock_text[1].text.contains("Kraken") and title._card_unlock_text[2].text.contains("Drowned Throne"), "each locked card explains its own rescue condition")
+	check.call(title._card_unlock_text[1].text.contains("Kraken") and title._card_unlock_text[2].text.contains(str(PortalDB.get_portal("drowned_throne").get("name",""))), "each locked card explains its own rescue condition")
 	if capture.is_valid(): await capture.call("03_locked_friends")
 	title._card_buttons[1].pressed.emit()
 	await game.get_tree().process_frame

@@ -11,7 +11,6 @@ const CONTROL_ROWS := [
 	["menu", "Menu"],
 	["ocean_joystick", "Sea Joystick"],
 	["ocean_pickup", "Sea Pick Up"],
-	["ocean_eat", "Sea Eat"],
 ]
 
 var _rows: Dictionary = {}

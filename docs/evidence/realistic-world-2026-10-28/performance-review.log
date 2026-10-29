@@ -1,0 +1,60 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+OpenGL API 3.3.13596 Core Profile Forward-Compatible Context 20.10.28 27.20.1028.1 - Compatibility - Using Device: ATI Technologies Inc. - AMD Radeon(TM) Vega 3 Graphics
+
+Verified isolated user data: C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-presentation-realistic-performance-9ca9fe0f68e14aa3b7e138c98aebc8f7/userdata/Godot/app_userdata/Protect Besut
+PRESENTATION_METRICS {"draw_calls":494.0,"enemies":48,"physics_median_ms":44.511,"physics_p95_ms":50.669,"process_median_ms":47.015,"process_p95_ms":54.872,"renderer":"AMD Radeon(TM) Vega 3 Graphics","samples":120}
+[OK] chaos boss uses bounded imported transparent game art
+[OK] chaos minion uses bounded imported transparent game art
+[OK] wind boss uses bounded imported transparent game art
+[OK] wind minion uses bounded imported transparent game art
+[OK] ice boss uses bounded imported transparent game art
+[OK] ice minion uses bounded imported transparent game art
+[OK] earth boss uses bounded imported transparent game art
+[OK] earth minion uses bounded imported transparent game art
+[OK] fire boss uses bounded imported transparent game art
+[OK] fire minion uses bounded imported transparent game art
+[OK] lightning boss uses bounded imported transparent game art
+[OK] lightning minion uses bounded imported transparent game art
+[OK] forest boss uses bounded imported transparent game art
+[OK] forest minion uses bounded imported transparent game art
+[OK] water boss uses bounded imported transparent game art
+[OK] water minion uses bounded imported transparent game art
+[OK] decay boss uses bounded imported transparent game art
+[OK] decay minion uses bounded imported transparent game art
+[OK] dark boss uses bounded imported transparent game art
+[OK] dark minion uses bounded imported transparent game art
+[OK] all bosses and minions use twenty distinct authored sprites
+[OK] chaos boss stays at authored size throughout windup, recovery and interrupted lunge
+[OK] chaos minion stays at authored size throughout windup, recovery and interrupted lunge
+[OK] wind boss stays at authored size throughout windup, recovery and interrupted lunge
+[OK] wind minion stays at authored size throughout windup, recovery and interrupted lunge
+[OK] ice boss stays at authored size throughout windup, recovery and interrupted lunge
+[OK] ice minion stays at authored size throughout windup, recovery and interrupted lunge
+[OK] earth boss stays at authored size throughout windup, recovery and interrupted lunge
+[OK] earth minion stays at authored size throughout windup, recovery and interrupted lunge
+[OK] fire boss stays at authored size throughout windup, recovery and interrupted lunge
+[OK] fire minion stays at authored size throughout windup, recovery and interrupted lunge
+[OK] lightning boss stays at authored size throughout windup, recovery and interrupted lunge
+[OK] lightning minion stays at authored size throughout windup, recovery and interrupted lunge
+[OK] forest boss stays at authored size throughout windup, recovery and interrupted lunge
+[OK] forest minion stays at authored size throughout windup, recovery and interrupted lunge
+[OK] water boss stays at authored size throughout windup, recovery and interrupted lunge
+[OK] water minion stays at authored size throughout windup, recovery and interrupted lunge
+[OK] decay boss stays at authored size throughout windup, recovery and interrupted lunge
+[OK] decay minion stays at authored size throughout windup, recovery and interrupted lunge
+[OK] dark boss stays at authored size throughout windup, recovery and interrupted lunge
+[OK] dark minion stays at authored size throughout windup, recovery and interrupted lunge
+[OK] night keeps local lighting within its render budget
+[OK] low quality retains the night grade while disabling dynamic lights
+[OK] a physically blocked resident retries without invalidating the whole village navigation grid
+[OK] ocean entry waits for the sea lesson before gameplay
+[OK] reading the sea guide cannot drain fullness or create hazards
+[OK] briefing cannot accidentally consume an item
+[OK] food has no floating instruction label
+[OK] trash has no floating instruction label
+[OK] heart has no floating instruction label
+[OK] bomb has no floating instruction label
+[OK] shark has no floating instruction label
+[OK] Sea Guide can reopen safely during a route
+[OK] Ready resumes the same route without resetting progress
+presentation review: 54 checks, PASS

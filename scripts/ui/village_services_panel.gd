@@ -2,6 +2,7 @@ class_name VillageServicesPanel
 extends ModalBase
 
 var _message := ""
+var _band: ShopScene
 
 func _ready() -> void:
 	_panel_size = Vector2(810, 620)
@@ -17,6 +18,9 @@ func open_services(_repairs: bool = false) -> void:
 
 func _rebuild() -> void:
 	_clear_content()
+	_band=ShopScene.new()
+	_band.setup("services","Village Workers")
+	content.add_child(_band)
 	add_body_text("Gold: %d" % GameState.gold(), GameUI.GOLD, 19)
 	if not _message.is_empty():
 		add_body_text(_message, GameUI.TEAL, 14)

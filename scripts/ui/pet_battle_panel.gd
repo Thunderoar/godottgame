@@ -113,7 +113,7 @@ func _add_level_card(level_id: String) -> void:
 	preview.custom_minimum_size = Vector2(74, 74)
 	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	preview.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	preview.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	hbox.add_child(preview)
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -365,15 +365,19 @@ func _render_battle() -> void:
 	_arena_backdrop = TextureRect.new()
 	_arena_backdrop.name = "FullArenaBackground"
 	_arena_backdrop.texture = load(str(definition.get("background", ""))) as Texture2D
+	if ResourceLoader.exists("res://assets/authored/realistic/pet-arena.png"):
+		_arena_backdrop.texture=load("res://assets/authored/realistic/pet-arena.png") as Texture2D
 	_arena_backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_arena_backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	_arena_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(_arena_backdrop)
+	_arena_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	panel.move_child(_arena_backdrop, 0)
 	_arena_veil = ColorRect.new()
 	_arena_veil.color = Color(0, 0, 0, 0.25)
 	_arena_veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(_arena_veil)
+	_arena_veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	panel.move_child(_arena_veil, 1)
 	var stage := Control.new()
 	stage.name = "OpenBattleStage"
@@ -443,7 +447,7 @@ func _arena_pet(stage: Control, id: String, at: Vector2, tint: Color) -> Texture
 	sprite.modulate = tint
 	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	sprite.anchor_left = at.x
 	sprite.anchor_right = at.x
 	sprite.anchor_top = at.y
@@ -493,7 +497,7 @@ func _battle_card(pet_id: String, display_name: String, subtitle: String, tint: 
 	preview.custom_minimum_size = Vector2(260, 132)
 	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	preview.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	preview.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	box.add_child(preview)
 	card.set_meta("preview", preview)
 	var title := GameUI.label(display_name, 19, GameUI.TEXT)
@@ -565,7 +569,7 @@ func _render_result() -> void:
 	pose.custom_minimum_size = Vector2(120, 110)
 	pose.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pose.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	pose.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	pose.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	pose.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	content.add_child(pose)
 	if not GameSettings.reduce_motion():

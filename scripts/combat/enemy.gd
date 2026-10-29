@@ -17,6 +17,7 @@ signal boss_started(enemy: Enemy)
 signal boss_finished(enemy: Enemy)
 
 const VILLAGE_ACTOR_RANGE := 6.0
+const TARGET_REFRESH_SECONDS := 0.22
 
 enum State { SPAWN, WANDER, ALERT, CHASE, WINDUP, ATTACK, RECOVER, STAGGER, DEAD }
 
@@ -82,6 +83,9 @@ var _route := PackedVector2Array()
 var _route_clock := 0.0
 var _route_goal := Vector2(INF, INF)
 var _route_index := 0
+var _target_clock := 0.0
+var _pose_tween: Tween
+var _separation_push := Vector2.ZERO
 
 
 func _ready() -> void:
@@ -102,6 +106,9 @@ func _ready() -> void:
 	var game := get_tree().get_first_node_in_group("game") as Game
 	_player = game.player() if is_instance_valid(game) else null
 	_personality = _personality_for(kind)
+	# Spread expensive perception and path searches across different frames.
+	_target_clock = float(get_instance_id()%19)*0.011
+	_route_clock = float(get_instance_id()%23)*0.025
 	_build()
 	# A short spawn-in shimmer so monsters do not pop into the dark.
 	modulate.a = 0.0
@@ -132,14 +139,18 @@ func _build() -> void:
 	_shadow.modulate = Color(0, 0, 0, 0.4)
 	_shadow.position = Vector2(0, -0.05)
 	_shadow.z_index = -1
+	_shadow.light_mask = 0
 	add_child(_shadow)
 
 	sprite = Sprite2D.new()
 	sprite.name = "Sprite"
 	sprite.texture = PixelArt.enemy_texture(kind, is_boss, 0)
-	sprite.scale = Vector2(PixelArt.PX, PixelArt.PX)
-	sprite.position = Vector2(0, -float(size) * 0.5 * PixelArt.PX)
+	sprite.scale = _sprite_rest_scale()
+	sprite.position = _sprite_rest_position()
 	sprite.z_index = 0
+	# Village packs use the ambient night grade; repeated per-lantern passes
+	# do not add useful detail to these tiny fire/urchin sprites.
+	if kind in ["fire","urchin"]: sprite.light_mask = 0
 	add_child(sprite)
 
 	# Telegraph decal: a pulsing disc under the body while winding up.
@@ -148,6 +159,7 @@ func _build() -> void:
 	_telegraph.modulate = Color(0.95, 0.45, 0.35, 0.0)
 	_telegraph.z_as_relative = false
 	_telegraph.z_index = 1
+	_telegraph.light_mask = 0
 	_telegraph.scale = Vector2(0.02, 0.011)
 	add_child(_telegraph)
 
@@ -184,7 +196,8 @@ func _physics_process(delta: float) -> void:
 		if sprite and _state not in [State.WINDUP, State.STAGGER]:
 			sprite.texture = PixelArt.enemy_texture(kind, is_boss, _frame)
 	if sprite and _state not in [State.WINDUP]:
-		sprite.position.y = -float(64 if is_boss else 32) * 0.5 * PixelArt.PX + (sin(_bob * 4.0) * (0.022 if get_real_velocity().length() > 0.1 else 0.008) if not GameSettings.reduce_motion() else 0.0)
+		if _pose_tween == null or not _pose_tween.is_running():
+			sprite.position.y = _sprite_rest_position().y + (sin(_bob * 4.0) * (0.022 if get_real_velocity().length() > 0.1 else 0.008) if not GameSettings.reduce_motion() else 0.0)
 	if _hit_flash > 0.0:
 		_hit_flash = maxf(0.0, _hit_flash - delta)
 		if sprite:
@@ -214,20 +227,21 @@ func _physics_process(delta: float) -> void:
 	if not is_instance_valid(_player) or _player.get_parent() != get_parent():
 		var game := get_tree().get_first_node_in_group("game") as Game
 		_player = game.player() if is_instance_valid(game) else null
-	if kind == "fire":
-		_target = _choose_village_actor(_nearest_forest_tree())
-		if is_instance_valid(_target) and _state == State.WANDER:
-			_enter(State.CHASE)
-	elif kind == "urchin":
-		_target = _choose_urchin_target()
-		if is_instance_valid(_target) and _state == State.WANDER:
-			_enter(State.CHASE)
+	_target_clock -= delta
+	if kind in ["fire","urchin"] and (_target_clock <= 0.0 or not _target_is_usable()):
+		_target_clock = TARGET_REFRESH_SECONDS
+		_target = _choose_village_actor(_nearest_forest_tree()) if kind == "fire" else _choose_urchin_target()
+		if is_instance_valid(_target) and _state == State.WANDER: _enter(State.CHASE)
+	elif kind in ["fire","urchin"]:
+		pass
 	elif forest_mode:
 		_update_forest_target()
 		if is_instance_valid(_target) and _state == State.WANDER:
 			_enter(State.CHASE)
 	elif settlement_mode:
-		_target = _choose_settlement_target()
+		if _target_clock <= 0.0 or not _target_is_usable():
+			_target_clock = TARGET_REFRESH_SECONDS
+			_target = _choose_settlement_target()
 	else:
 		_target = _player
 
@@ -258,7 +272,14 @@ func _physics_process(delta: float) -> void:
 			move_and_slide()
 			if _state_time <= 0.0:
 				_enter(State.CHASE)
-	queue_redraw()
+
+
+func _target_is_usable() -> bool:
+	if not is_instance_valid(_target) or _target.is_queued_for_deletion(): return false
+	if _target is ForestTree: return _target.is_attackable()
+	if _target is Resident: return not _target.dead and not _target.sheltered
+	if _target is Player: return not _target.dead and not _target.sleeping
+	return true
 
 
 func combat_sounds_enabled() -> bool:
@@ -289,9 +310,10 @@ func _enter(next: State) -> void:
 				var back := Vector2.ZERO
 				if is_instance_valid(_target):
 					back = -( _target.global_position - global_position).normalized() * 0.16
-				var tween := create_tween()
-				tween.tween_property(sprite, "position", Vector2(back.x, -float(64 if is_boss else 32) * 0.5 * PixelArt.PX + back.y), 0.18)
-				tween.parallel().tween_property(sprite, "scale", Vector2(PixelArt.PX * 1.12, PixelArt.PX * 0.94), 0.2)
+				_stop_pose_tween()
+				_pose_tween = create_tween()
+				_pose_tween.tween_property(sprite, "position", _sprite_rest_position()+back, 0.18)
+				_pose_tween.parallel().tween_property(sprite, "scale", _sprite_rest_scale()*Vector2(1.12,0.94), 0.2)
 			_play_combat_sound("aggro", -14.0)
 		State.ATTACK:
 			_state_time = 0.14
@@ -304,9 +326,20 @@ func _enter(next: State) -> void:
 
 
 func _clear_windup_pose() -> void:
+	_stop_pose_tween()
 	if sprite:
-		sprite.scale = Vector2(PixelArt.PX, PixelArt.PX)
-		sprite.position = Vector2(0, -float(64 if is_boss else 32) * 0.5 * PixelArt.PX)
+		sprite.scale = _sprite_rest_scale()
+		sprite.position = _sprite_rest_position()
+
+func _sprite_rest_scale() -> Vector2:
+	return Vector2.ONE*PixelArt.PX
+
+func _sprite_rest_position() -> Vector2:
+	return Vector2(0,-float(64 if is_boss else 32)*0.5*PixelArt.PX)
+
+func _stop_pose_tween() -> void:
+	if _pose_tween != null and _pose_tween.is_valid(): _pose_tween.kill()
+	_pose_tween = null
 
 
 func _wander(delta: float) -> void:
@@ -443,9 +476,11 @@ func _separate(delta: float) -> void:
 	# Soft repulsion from nearby monsters so packs never stack. The group list
 	# is cached and refreshed on a timer (no per-frame group scans at scale).
 	_separation_timer -= delta
-	if _separation_timer <= 0.0:
-		_separation_timer = 0.25
-		_cached_enemies = get_tree().get_nodes_in_group("enemies")
+	if _separation_timer > 0.0:
+		velocity += _separation_push * speed * 0.65
+		return
+	_separation_timer = 0.12
+	_cached_enemies = get_tree().get_nodes_in_group("enemies")
 	var push := Vector2.ZERO
 	var reach := body_radius * 2.6
 	for other in _cached_enemies:
@@ -453,12 +488,13 @@ func _separate(delta: float) -> void:
 		if other == self or not is_instance_valid(other) or not (other is Node2D):
 			continue
 		var to_other: Vector2 = (other as Node2D).global_position - global_position
-		var d := to_other.length()
-		if d > reach or d < 0.0001:
+		var squared := to_other.length_squared()
+		if squared > reach*reach or squared < 0.00000001 or other.get_parent() != get_parent():
 			continue
+		var d := sqrt(squared)
 		push -= to_other / d * (1.0 - d / reach)
-	if push.length_squared() > 0.001:
-		velocity += push.limit_length(1.0) * speed * 0.65
+	_separation_push = push.limit_length(1.0) if push.length_squared() > 0.001 else Vector2.ZERO
+	velocity += _separation_push * speed * 0.65
 
 
 func _show_alert() -> void:
@@ -648,10 +684,10 @@ func _target_point() -> Vector2:
 
 func _village_direction(destination: Vector2) -> Vector2:
 	var world := get_parent()
-	if not world is Lobby and not world is Dungeon:
+	if not world is Lobby and not world is Dungeon and not world is KrakenIsland:
 		return (destination - global_position).normalized()
-	if _route_clock <= 0.0 or destination.distance_to(_route_goal) > 0.5:
-		_route_clock = 0.8
+	if _route_clock <= 0.0 or destination.distance_to(_route_goal) > 1.25:
+		_route_clock = 1.0 + float(get_instance_id()%13)*0.035
 		_route_goal = destination
 		_route = world.resident_path(global_position, destination) if world is Lobby else world.monster_path(global_position, destination)
 		_route_index = 0
@@ -734,9 +770,11 @@ func _lunge(dir: Vector2) -> void:
 	if sprite == null:
 		return
 	var base := sprite.position
-	var tween := create_tween()
-	tween.tween_property(sprite, "position", base + dir * 0.22, 0.09)
-	tween.tween_property(sprite, "position", Vector2(0, -float(64 if is_boss else 32) * 0.5 * PixelArt.PX), 0.14)
+	_stop_pose_tween()
+	sprite.scale = _sprite_rest_scale()
+	_pose_tween = create_tween()
+	_pose_tween.tween_property(sprite, "position", base + dir * 0.22, 0.09)
+	_pose_tween.tween_property(sprite, "position", _sprite_rest_position(), 0.14)
 
 
 # ------------------------------------------------------------------ damage & death
@@ -773,6 +811,7 @@ func _die() -> void:
 	if dead:
 		return
 	dead = true
+	_clear_windup_pose()
 	if get_parent() is Lobby:
 		get_parent().forget_monster(self)
 	if kind == "fire":
@@ -786,12 +825,13 @@ func _die() -> void:
 		GameState.register_kill(0)
 	elif settlement_mode:
 		GameState.add_gold(gold_reward)
+		GameState.register_kill(xp_reward)
 		GameState.register_emergency_kill()
 		GameState.toast_requested.emit("Emergency monster defeated: +%d Gold." % gold_reward, "gold")
 	else:
+		if kind in ["fire", "rubbish", "urchin"]: GameState.add_gold(gold_reward)
 		GameState.register_kill(xp_reward)
-	if kind in ["rubbish", "urchin"] and not settlement_mode:
-		GameState.add_gold(gold_reward)
+	if kind in ["fire", "rubbish", "urchin"] and not settlement_mode:
 		GameState.toast_requested.emit("Rubbish monster defeated: +%d Gold." % gold_reward, "gold")
 	elif not settlement_mode and not is_boss:
 		_spawn_reward()

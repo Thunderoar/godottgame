@@ -12,4 +12,4 @@ For a direct-install development APK, supply the existing development keystore u
 
 Use a production signing key and an Android App Bundle for a later Play Store submission. A development-signed APK is intended for direct phone installation. Android SDK apksigner verify and zipalign -c -P 16 4 verify the signed output.
 
-Current gameplay, sea controls and story progression are documented in BESUT_STORY_CAMPAIGN.md. On a phone, check simultaneous joystick/Attack, Menu/Settings, drag-and-resize controls, NPC tapping, minimap readability, the bottom clock, sea steering/Pick Up/Eat, background/resume saving, and both rescue paths. Physical-phone playtesting is performed by the player.
+Current gameplay, sea controls and story progression are documented in BESUT_STORY_CAMPAIGN.md. On a phone, check simultaneous joystick/Attack, Menu/Settings, drag-and-resize controls, NPC tapping, minimap readability, the bottom clock, sea steering/Pick Up and automatic nearby fish/heart collection, background/resume saving, and both rescue paths. Physical-phone playtesting is performed by the player.

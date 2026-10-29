@@ -2,8 +2,18 @@ class_name StreetLamp
 extends Node2D
 var light: PointLight2D
 var bulb: Sprite2D
+var _authored: Sprite2D
 func _ready() -> void:
 	z_index = 8
+	var texture := RealisticArt.get_texture("monsoon/props/lamp")
+	if texture:
+		_authored=Sprite2D.new()
+		_authored.texture=texture
+		_authored.centered=false
+		_authored.offset=Vector2(-32,-64)
+		_authored.scale=Vector2.ONE*PixelArt.PX*1.65
+		_authored.texture_filter=CanvasItem.TEXTURE_FILTER_LINEAR
+		add_child(_authored)
 	light = PointLight2D.new()
 	light.texture = PixelArt.light_texture()
 	light.texture_scale = 0.065
@@ -21,6 +31,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	bulb.visible = GameState.is_night()
 func _draw() -> void:
+	if is_instance_valid(_authored): return
 	draw_set_transform(Vector2(0,0.05),0,Vector2(1,0.3))
 	draw_circle(Vector2.ZERO,0.4,Color(0.03,0.07,0.08,0.3))
 	draw_set_transform(Vector2.ZERO)

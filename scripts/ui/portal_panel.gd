@@ -69,7 +69,9 @@ func _add_portal_card(portal_id: String) -> void:
 	lore.custom_minimum_size = Vector2(470, 0)
 	info.add_child(lore)
 	var details := "Boss: %s  •  %s    Monsters: %d" % [str(def.boss_name), str(def.get("boss_ability_name", "Heavy Strike")), int(def.monster_count)]
-	info.add_child(GameUI.label(details, 13, GameUI.TEAL))
+	var powers := GameUI.label(details, 13, GameUI.TEAL)
+	powers.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	info.add_child(powers)
 	var rewards: Dictionary = def.rewards_repeat if cleared else def.rewards_first
 	var bits: Array[String] = []
 	if int(rewards.get("gold", 0)) > 0:

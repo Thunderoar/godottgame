@@ -88,9 +88,9 @@ func _skip() -> void:
 
 func _render() -> void:
 	if _step >= STEPS.size():
-		_title.text = "Find your friends"
-		_body.text = GameState.campaign_objective() + "\nOpen the field guide for sea controls and rescue routes."
-		_counter.text = "BESUT STORY"
+		_title.text = "Night lessons complete" if GameState.is_night() else "Day lessons complete"
+		_body.text = ("Daytime lessons resume at dawn. Surviving monsters still attack: protect the village and keep Health Potions ready." if GameState.is_night() else "The remaining battle lessons start at night. Prepare weapons, carry Health Potions and help the village until dusk.")
+		_counter.text = "WAIT FOR DAWN" if GameState.is_night() else "WAIT FOR NIGHT"
 		_next.text = "Story & Sea Guide"
 		_next.disabled = false
 		return

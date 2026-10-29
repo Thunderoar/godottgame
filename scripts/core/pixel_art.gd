@@ -31,6 +31,10 @@ static func cached_texture(key: String, builder: Callable) -> Texture2D:
                 CACHE.clear()
         if CACHE.has(key):
                 return CACHE[key]
+        var realistic := RealisticArt.get_texture(key)
+        if realistic != null:
+                CACHE[key] = realistic
+                return realistic
         var img: Image = builder.call()
         var tex := texture(img)
         CACHE[key] = tex
@@ -597,6 +601,11 @@ static func _pet_pose(img: Image, pet_id: String, frame: int) -> Image:
 # ------------------------------------------------------------------ enemies
 
 static func enemy_texture(kind: String, boss: bool = false, frame: int = 0) -> Texture2D:
+        var element := ElementDB.element_for_kind(kind)
+        if element != "":
+                var override := AssetRegistry.get_texture("enemy_%s_%s_%d" % [kind,str(boss),frame])
+                if override != null: return override
+                return ElementalArt.boss_texture(element,frame) if boss else ElementalArt.minion_texture(element,frame)
         return cached_texture("enemy_%s_%s_%d" % [kind, str(boss), frame], func() -> Image:
                 var size := 64 if boss else 32
                 var img := image(size, size)
@@ -1080,6 +1089,7 @@ static func portal_texture(portal_id: String) -> Texture2D:
 
 
 static func portal_theme_palette(theme_id: String) -> Dictionary:
+        if ElementDB.ELEMENTS.has(theme_id): return ElementDB.palette(theme_id)
         # One palette per PortalDB theme. No portal-id special cases anywhere.
         var table := {
                 "grotto": {"stone": "#5a6a72", "stone_light": "#8b9aa0", "glow": "#9a6ae0", "glow_light": "#d6b9ff", "mote": "#c9a8ff"},

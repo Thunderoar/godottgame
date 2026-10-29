@@ -1,0 +1,16 @@
+# Realm assets v2
+
+Generated using the built-in `image_gen` tool, then copied into this project. No external API/CLI or post-generation pixel editing was used. Alpha is preserved on all three atlases. Runtime loads imported Texture2D resources and uses AtlasTexture regions; it never opens PNGs as source images. Original procedural artwork remains as a missing-asset fallback and explicit AssetRegistry overrides take precedence.
+
+The atlas order is five columns, two rows: chaos, wind, ice, earth, fire / lightning, forest, water, decay, dark. Regions share their source GPU texture and are cached.
+
+## Final production prompt set (condensed)
+
+- `demon-bosses-v3.png`: Transparent RGBA atlas, five equal columns and two rows, ten isolated full-body dark fantasy rulers; front three-quarter orthographic camera slightly from above. Realistic sculpted prerendered game sprites with metal, ice, basalt, bark and cloth, ambient occlusion and restrained rim lighting. No painting, drawing, cartoon outlines, labels, scenery or backgrounds. Shadow winged fiend; wind demon; crystal ice skeleton knight; magma rock titan; fire lord with molten sword; blue voltage demon; thorn forest queen with branch antlers and staff; teal sea demon with trident; hooded acid necromancer; black-armoured Abyss Monarch on spiked purple throne. Complete weapons/silhouettes within each cell, feet aligned, transparent gaps.
+- `demon-minions-v3.png`: Same transparent five-by-two atlas and camera/material constraints. Smaller readable underlings rather than imposing rulers: red-black winged imp; grey wind harpy; icy skeleton with spear; squat magma golem; fire-armoured goblin; electric blue short-horned demon; thorn root dryad; teal finned sea creature with trident; hooded toxic skeletal acolyte; purple spectral knight. No text, ground or backdrop, complete silhouettes and padding.
+- `basalt-floor-v2.png`: Landscape 3:2 empty basalt flagstone floor seen orthographically straight down, edge-to-edge small staggered rectangular charcoal slabs with bevels, shallow seams, granular rough rock and sparse cracks. Neutral realistic PBR-style game material, no painting or outlines. No walls, props, portals, runes, characters, lava, coloured glows, borders or vignette. Uniform walkable surface for engine-side biome tinting and light.
+- `realm-props-v2.png`: Transparent five-by-two prop atlas using the same elevated orthographic camera and realistic rough stone/metal/crystal/bark materials. Ten isolated readable props on compact bases: red chaos obsidian spire; weathered wind shrine; jagged blue ice cluster; cracked magma basalt; black fire brazier; blue electric obelisk; thorn-wrapped ancient pillar; sea-worn coral monolith; toxic green alchemy urn; violet soul obelisk. No text, drawn outlines or background. Complete silhouettes within cells.
+
+Integration, test evidence and measured performance: `docs/REALM_GRAPHICS_AND_PERFORMANCE.md`.
+
+The final boss/minion atlases were edited with the built-in image tool to preserve all identities while adding large transparent gaps around every full silhouette (55–60% cell width, 60–65% height, no overlapping weapons/glows). Runtime uses individually authored region rectangles rather than equal canvas fractions, accounting for export trimming. Previous crowded variants are not shipped.

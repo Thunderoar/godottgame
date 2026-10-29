@@ -68,7 +68,7 @@ func _build_handles() -> void:
 		handle.queue_free()
 	_handles.clear()
 	var layout := _hud.get_control_layout_current()
-	var ids := ["ocean_joystick", "ocean_pickup", "ocean_eat"] if _sea else ["joystick", "attack", "interact", "inventory", "menu"]
+	var ids := ["ocean_joystick", "ocean_pickup"] if _sea else ["joystick", "attack", "interact", "inventory", "menu"]
 	for id in ids:
 		var values: Dictionary = layout.get(id, {})
 		var handle := DragHandle.new()

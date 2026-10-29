@@ -23,6 +23,7 @@ var _sailing := false
 var _return_to_harbour := false
 var _story_active := false
 var _arjun_returning := false
+var _arjun_walk: Tween
 
 const EMERGENCY_DELAY := 14.0
 const SETTLEMENT_DAMAGE_TICK := 5.0
@@ -145,6 +146,7 @@ func _remove_title_if_owner(expected: CanvasLayer) -> void:
 # ------------------------------------------------------------------ world switching
 
 func _clear_world() -> void:
+	if _arjun_walk and _arjun_walk.is_valid(): _arjun_walk.kill()
 	if world is Lobby: _arjun_returning = false
 	_portal_elapsed = 0.0
 	_emergency_triggered = false
@@ -519,7 +521,8 @@ func player() -> Player:
 		return null
 	if world.has_method("get_player"):
 		return world.call("get_player") as Player
-	return get_tree().get_first_node_in_group("player") as Player
+	# A queued previous world can retain its player group until frame end.
+	return world.get("player") as Player
 
 
 func _notification(what: int) -> void:
@@ -768,16 +771,32 @@ func _check_campaign_ending() -> void:
 
 func _land_arjun(boarding: ShipDeparture) -> void:
 	var home := world as Lobby
-	var actor := boarding.ship.get_node_or_null("ArjunPassenger") as Sprite2D
+	var actor := boarding.ship.get_node_or_null("ArjunPassenger") as PlayerSprite
 	if is_instance_valid(actor):
 		actor.reparent(home)
-		var walk := actor.create_tween()
-		walk.tween_property(actor, "global_position", boarding.global_position + Vector2(0.6, 0), 1.0)
-		walk.tween_property(actor, "global_position", home._house_position + Vector2(-3, 3), 3.0)
-		await walk.finished
+		actor.base_scale = Vector2.ONE * PixelArt.PX
+		actor.scale = actor.base_scale
+		actor.set_meta("passenger_onboard", false)
+		var landing := boarding.global_position + Vector2(0.6, 0)
+		var destination := home._house_position + Vector2(-3, 3)
+		var route := home.resident_path(landing, destination)
+		_arjun_walk = actor.create_tween()
+		var from := actor.global_position
+		var points := PackedVector2Array([landing])
+		points.append_array(route)
+		for point in points:
+			var direction := point - from
+			var facing := (2 if direction.x > 0 else 3) if absf(direction.x) > absf(direction.y) else (0 if direction.y > 0 else 1)
+			_arjun_walk.tween_callback(func() -> void:
+				actor.motion_ratio = 1.0
+				actor.set_facing(facing, true))
+			_arjun_walk.tween_property(actor, "global_position", point, direction.length() / Resident.WALK_SPEED)
+			from = point
+		await _arjun_walk.finished
 		actor.queue_free()
-	_arjun_returning = false
-	if is_instance_valid(home) and world == home: home._sync_rescued_friends()
+	if is_instance_valid(home) and world == home:
+		_arjun_returning = false
+		home._sync_rescued_friends()
 
 func open_map() -> void:
 	if not is_instance_valid(world) or _transitioning or _story_active or _sailing or _game_over or hud.any_modal_open(): return

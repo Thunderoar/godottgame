@@ -16,6 +16,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	game.hud.visible = false
 	ocean.set_process(false)
 	ocean._process(4)
+	ocean.dismiss_sea_guide()
 	_quiet_spawn(ocean)
 	var full := ocean.fullness
 	ocean._update_run(0.5)
@@ -23,24 +24,63 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	ocean.health = 2
 	ocean.fullness = 40
 	ocean.spawn_item("food",ocean.mouth_position().x)
-	check.call(ocean.choose_action("eat") and is_equal_approx(ocean.fullness,75) and ocean.health == 2, "eating a fish restores fullness instead of lives")
+	ocean._update_run(0)
+	check.call(is_equal_approx(ocean.fullness,75) and ocean.health == 2 and ocean.food_eaten == 1, "nearby fish automatically restore fullness instead of lives without an input")
+	check.call(ocean.fullness_speed_multiplier() == 1.0, "eating fish across 50 percent fullness immediately restores fast swimming")
+	ocean._update_run(0)
+	check.call(is_equal_approx(ocean.fullness,75) and ocean.food_eaten == 1, "an automatically eaten fish cannot feed the turtle twice")
 	ocean.fullness = 95
 	ocean.spawn_item("food",ocean.mouth_position().x)
-	ocean.choose_action("eat")
+	ocean._update_run(0)
 	check.call(ocean.fullness == OceanJourney.FULLNESS_MAX, "fish cannot overfill the fullness meter")
 	ocean.fullness = 50
 	ocean.spawn_item("heart",ocean.mouth_position().x)
-	ocean.choose_action("eat")
+	ocean._update_run(0)
 	check.call(ocean.health == 3 and ocean.fullness == 50, "pink hearts restore lives without replacing fish as food")
-	ocean.fullness = 0
-	ocean._starvation_clock = OceanJourney.STARVATION_SECONDS-0.1
-	ocean._update_run(0.2)
-	check.call(ocean.health == 2, "an empty stomach costs a life only after the hunger interval")
+	var distant := ocean.spawn_item("food",ocean.mouth_position().x + OceanJourney.ACTION_REACH + 1)
+	ocean._update_run(0)
+	check.call(not distant.resolved and ocean.fullness == 50, "fish outside the mouth's feeding reach stay uneaten")
+	distant.node.position = ocean.mouth_position() + Vector2(6,4)
+	distant.lane = distant.node.position.y
+	distant.phase = -ocean._clock * 3.0
+	ocean._update_run(1.4)
+	check.call(not distant.resolved, "fast fish in a different lane are not eaten")
+	_clear(ocean)
+	ocean.fullness = 40
+	var fast_fish := ocean.spawn_item("food",ocean.mouth_position().x + 6)
+	fast_fish.lane = ocean.mouth_position().y
+	fast_fish.phase = -ocean._clock * 3.0
+	ocean._update_run(1.4)
+	check.call(fast_fish.resolved and ocean.fullness > 65, "swept automatic feeding catches fast fish crossing the mouth between frames")
+	var waiting := ocean.spawn_item("food",ocean.mouth_position().x)
+	var before_wait := ocean.fullness
+	ocean._ocean_settings.visible = true
+	ocean._update_run(0.5)
+	check.call(not waiting.resolved and ocean.fullness == before_wait, "opening ocean settings suspends automatic feeding and fullness drain")
+	ocean._ocean_settings.visible = false
+	ocean.phase = OceanJourney.Phase.TRAVELLING
+	ocean._update_run(0.5)
+	check.call(not waiting.resolved and ocean.fullness == before_wait, "automatic feeding is disabled between routes")
+	ocean.phase = OceanJourney.Phase.RUNNING
+	_clear(ocean)
+	ocean.health = 3
+	ocean.fullness = 0.2
+	ocean._hurt_time = OceanJourney.HIT_IMMUNITY
+	var saved_stage := int(GameState.campaign().get("ocean_stage"))
+	ocean._update_run(0.1)
+	check.call(ocean.fullness == 0 and ocean.health == 0 and ocean.phase == OceanJourney.Phase.FINISHED, "reaching zero fullness immediately kills the turtle even with three protected lives")
+	check.call(not Input.is_action_pressed("ocean_pickup") and ocean.swim_speed() == 0 and ocean.speed() == 0 and int(GameState.campaign().get("ocean_stage")) == saved_stage, "starvation stops movement and input without unlocking a sea checkpoint")
+	ocean.restart()
+	ocean._process(4)
+	ocean.dismiss_sea_guide()
+	_quiet_spawn(ocean)
+	check.call(ocean.fullness == OceanJourney.FULLNESS_MAX and ocean.health == OceanJourney.MAX_HEALTH, "retry restores fullness and lives after immediate starvation")
+	ocean.fullness = 1
 	ocean.spawn_item("food",ocean.mouth_position().x)
-	ocean.choose_action("eat")
+	ocean._update_run(0)
 	var hp := ocean.health
 	ocean._update_run(0.2)
-	check.call(ocean.fullness > 0 and ocean.health == hp and ocean._starvation_clock == 0, "eating fish stops starvation and resets its damage clock")
+	check.call(ocean.fullness > 0 and ocean.health == hp, "eating nearby fish before fullness empties prevents starvation")
 	_clear(ocean)
 	ocean.health = 3
 	ocean.fullness = 100
@@ -64,15 +104,16 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(ocean.health == 3 and ocean.missed_trash == 3, "missed fish, hearts and avoided hazards do not count as missed rubbish")
 	var gold := GameState.gold()
 	ocean._hurt_time = 1.2
-	ocean.spawn_item("trash",ocean.mouth_position().x)
-	ocean.choose_action("eat")
-	check.call(ocean.health == 2 and ocean.missed_trash == 4 and GameState.gold() == gold, "eating rubbish cannot bypass mandatory collection through invulnerability")
+	trash = ocean.spawn_item("trash",ocean.mouth_position().x)
+	ocean._update_run(0)
+	check.call(not trash.resolved and ocean.health == 3 and GameState.gold() == gold, "automatic feeding never consumes rubbish or awards its gold")
+	check.call(ocean.choose_action("pickup") and trash.resolved and GameState.gold() == gold+1, "the remaining Pick Up action collects nearby rubbish during protection blinking")
 	_clear(ocean)
 	ocean.health = 3
 	ocean.elapsed = OceanJourney.STAGE_SECONDS
 	for i in 2: ocean.spawn_item("trash",25+i*3)
 	ocean._complete_stage()
-	check.call(ocean.health == 1 and ocean.phase == OceanJourney.Phase.TRAVELLING and ocean.missed_trash == 6, "route completion charges every uncollected rubbish item before saving success")
+	check.call(ocean.health == 1 and ocean.phase == OceanJourney.Phase.TRAVELLING and ocean.missed_trash == 5, "route completion charges every uncollected rubbish item before saving success")
 	ocean._process(OceanJourney.ROUTE_EXIT_SECONDS)
 	ocean._process(OceanJourney.ROUTE_ENTRY_SECONDS)
 	check.call(ocean.stage == 2 and ocean.fullness == OceanJourney.FULLNESS_MAX and ocean.health == 3 and ocean.missed_trash == 0, "a new sea route resets lives, fullness and missed-rubbish count")
@@ -85,6 +126,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(ocean.health == 0 and ocean.phase == OceanJourney.Phase.FINISHED and int(GameState.campaign().get("ocean_stage")) == checkpoint, "fatal rubbish left behind causes defeat instead of unlocking the next route")
 	ocean.restart()
 	ocean._process(4)
+	ocean.dismiss_sea_guide()
 	_quiet_spawn(ocean)
 	ocean.elapsed = 44
 	for i in 20:
@@ -121,6 +163,45 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	var ray := PhysicsRayQueryParameters2D.create(Vector2(4,7.7),Vector2(8,7.7),1)
 	check.call(not island.get_world_2d().direct_space_state.intersect_ray(ray).is_empty(), "reference-style stone pillars are real combat obstacles")
 	check.call(king.prison == island.cage and island.cage.friend.visible and not island.cage.available and king.sprite.texture == KrakenArt.body_texture(), "detailed Kraken visibly holds Arjun's locked illustrated prison")
+	var king_start := king.position
+	island.player.position = Vector2(21,16)
+	king._state = Enemy.State.CHASE
+	king._special_timer = 99
+	var chase_distance := king.position.distance_to(island.player.position)
+	for frame in 40:
+		king._physics_process(1.0/60.0)
+		await game.get_tree().physics_frame
+	check.call(king.speed > 0 and king.position.distance_to(island.player.position) < chase_distance-0.5, "the Kraken actually walks toward Adam instead of staying at its spawn")
+	var detour := island.monster_path(Vector2(6,14),Vector2(6,4.8))
+	check.call(not detour.is_empty() and Array(detour).any(func(point: Vector2) -> bool: return absf(point.x-6) > 0.5), "Kraken pursuit plans a body-sized detour around stone pillars")
+	king._special_timer = 0
+	king._physics_process(0.01)
+	check.call(king.tentacle_time >= 0 and king._boss_notified, "normal Kraken AI starts its tentacle power automatically")
+	var casting_at := king.position
+	king._physics_process(0.1)
+	check.call(king.position.is_equal_approx(casting_at), "the Kraken holds still while its tentacle attack is telegraphed")
+	if capture.is_valid(): await capture.call("02a_kraken_pursuit_and_power")
+	king.position = king_start
+	king.tentacle_time = -1
+	king.grabbing = false
+	king.hook_attack = false
+	king._state = Enemy.State.CHASE
+	king._attack_timer = 0
+	king._special_timer = 99
+	island.player.position = king.position + Vector2(0,2.8)
+	island.player.invulnerable = 0
+	var melee_health := GameState.health()
+	var melee_damage := maxi(1,king.damage-GameState.defense())
+	king._physics_process(0.01)
+	check.call(king._state == Enemy.State.WINDUP and GameState.health() == melee_health, "nearby Kraken melee attacks warn before dealing damage")
+	king._physics_process(0.6)
+	king._physics_process(0.01)
+	check.call(GameState.health() == melee_health-melee_damage, "the Kraken's ordinary melee attack deals real damage after player defence")
+	island.player.invulnerable = 0
+	king._physics_process(0.01)
+	check.call(GameState.health() == melee_health-melee_damage, "one Kraken melee swing cannot damage Adam twice")
+	GameState.set_health(melee_health)
+	island.player.invulnerable = 0
 	island.player.position = Vector2(21,16)
 	var health := GameState.health()
 	king._cast_special()

@@ -6,26 +6,26 @@ Implemented 2026-10-25 for Godot 4.7.2.
 
 New journeys start as Adam. The title's other hero cards preview his missing friends. The skippable illustrated opening shows their fishing trip, Arjun hooking the Kraken, the ship breaking into three parts, both friends being captured, and the turtle rescuing Adam. Adam repays BESUT's villagers by defending their island while searching for his friends.
 
-The ship leads to three sea routes, each lasting 45 seconds. Completed routes persist as checkpoints. Route three leads to Kraken Island: defeat Vorath, approach the prison and press Use to open it. The rescue scene shows Arjun leaving the cage and boarding the ship. His visible passenger returns to the jetty, disembarks and walks into the village.
+The ship leads to three sea routes, each lasting 45 seconds. Completed routes persist as checkpoints. Route three leads to Kraken Island: defeat Vorath, who pursues Adam around the stone pillars, uses telegraphed melee attacks and alternates tentacle slams and dragging hooks; approach the prison and press Use to open it. The rescue scene shows Arjun leaving the cage and boarding the ship. Arjun stands visibly on the rear deck, away from Adam and the mast, with the same foot alignment and human scale as the player. He disembarks and follows village walking routes at the normal resident pace (0.9 world units/second), instead of finishing the trip in a fixed few seconds.
 
-Mei Ling is held by Malakar in Drowned Throne, the last Monster Portal. Defeating that boss frees her. She walks out through the portal alongside Adam. Both rescued friends become village defenders: Arjun uses his scythe and Mei Ling fires arrows at fire monsters and sea urchins.
+Mei Ling is held by Abyss Monarch in Abyssal Throne, the last Monster Portal. Defeating that boss frees her. She walks out through the portal alongside Adam. Both rescued friends become village defenders: Arjun uses his scythe and Mei Ling fires arrows at fire monsters and sea urchins.
 
 When both friends have returned, an illustrated reunion reveals that their fishing voyage crossed into another dimension. They choose BESUT as their new home. The ending is saved once; village play continues afterward. The sea king can be challenged again without imprisoning or recruiting Arjun twice.
 
 ## Turtle controls and rules
 
-- Initial speed is 2.5 times the previous baseline; three starting lives.
-- Steer up/down with the joystick, W/S or arrow keys. The rider stays on the shell.
+- Initial travel speed is 2.5 times the previous baseline; three starting lives. At 50% fullness or above, four-direction steering is equally fast (12 world units/second), including reverse. Below 50%, steering and scrolling use a shared 0.7 speed multiplier. At 0%, the turtle immediately dies, even with remaining lives or blinking protection.
+- Steer in all four directions with the joystick, WASD or arrow keys. Reverse steering can catch drifting rubbish; diagonals remain normalized. The rider stays on the shell.
 - Pick Up/E collects rubbish for one Gold; each item resolves once.
-- Eat/F consumes fish to refill fullness without restoring health. Pink hearts periodically appear: Eat one to restore one life, capped at three, with a recovery effect.
+- Fish within mouth reach are eaten automatically to refill fullness without restoring health; no Eat button or F input is needed. Pink hearts are also collected automatically nearby to restore one life, capped at three, with a recovery effect. Pick Up is the only sea action button and targets rubbish only.
 - Bombs drift horizontally and vertically. Contact explodes, costs a life and starts a 1.4-second blinking protection window. Swept collision prevents fast bombs skipping through the turtle.
-- Wrong item actions cost a life. Each missed rubbish item costs one life, including during blinking protection; missed fish and avoided hazards do not.
+- Pick Up ignores fish, hearts and hazards without consuming them or costing a life. Each missed rubbish item costs one life, including during blinking protection; missed fish and avoided hazards do not.
 - At zero lives, the turtle flips, sinks and fades with its rider; retry becomes available after that animation. Retry preserves cleared-route checkpoints and earned cleanup Gold.
 - Controls opens Settings locally during a sea run; the run waits while that settings panel is visible.
 
 ## Village interface
 
-Loading screens animate the NPC and pet jumping; Reduce Motion keeps them still. The world clock is bottom-centre, above the screen edge, with interaction prompts separated above it. A top-right minimap uses actual resolved shop, portal and jetty anchors, marks the player, and flashes red at attacked targets and burning trees.
+Loading screens animate the NPC and pet jumping; Reduce Motion keeps them still. The world clock is bottom-centre, above the screen edge, with interaction prompts separated above it. Press the top-right Map button to view the map with actual resolved shop, portal and jetty anchors, the player, attacked targets and burning trees. Close returns to gameplay; there is no always-visible minimap.
 
 Tower-defense purchases are at the Equipment/Weapons Shop. The existing paid rooftop mounts, costs, targets and house-tier fire rates are unchanged. Construction handles house upgrades.
 
@@ -53,7 +53,7 @@ Android APK exported successfully after reconnect: **ProtectBESUT 1.1.0**, versi
 
 The compact map is touch/click/keyboard accessible and opens WorldMapPanel. Both sizes draw the current world terrain and picture markers for shops, portals, home, houses, gardens, the jetty and ship. Letter markers and the explanatory legend are removed. Player location and flashing danger markers remain live. The expanded map uses the existing modal input lock and close path. Dungeon/sea-island maps use their own actual bounds and key landmarks.
 
-Choose Your Road keeps Arjun and Mei Ling locked until their campaign rescue flags are set. Darkened portraits, lock artwork and LOCKED status are accompanied by visible instructions, including on compact layouts. Tapping a locked card opens a fuller explanation without selecting it or writing a save. Arjun requires all three sea routes, the Kraken King and his prison; Mei Ling requires Malakar in the final Drowned Throne portal. Each rescue independently unlocks that friend’s card as a village defender, and save reload preserves both unlocks. New journeys still begin as Adam.
+Choose Your Road keeps Arjun and Mei Ling locked until their campaign rescue flags are set. Darkened portraits, lock artwork and LOCKED status are accompanied by visible instructions, including on compact layouts. Tapping a locked card opens a fuller explanation without selecting it or writing a save. Arjun requires all three sea routes, the Kraken King and his prison; Mei Ling requires Abyss Monarch in the final Abyssal Throne portal. Each rescue independently unlocks that friend’s card as a village defender, and save reload preserves both unlocks. New journeys still begin as Adam.
 
 MapUnlockChecks is included in the isolated gameplay gate. tools/map_unlock_test.tscn is the focused renderer/touch test; the 832×480 native review passes 18 checks, exit 0, with clean logs and inspected map/card fixtures.
 
@@ -87,6 +87,11 @@ Finishing routes 1 and 2 now visibly carries Adam forwards on the turtle, then a
 
 The Kraken arena uses the same blue-grey portal flagstone renderer as the supplied reference, with stone pillars, purple runic circles and dungeon lighting. The camera frames the entire boss, player and illustrated prison. A visible arm grips Arjun’s locked cage while the fighting tentacle alternates an orange telegraph, extending slam and hook/drag. Collision-aware pulling cannot pass through walls; defeating the real boss unlocks the cage for a separate tap-to-free action. Kraken and cage use new cached, original pixel art.
 
-Fish restore 35 fullness (capped at 100), never lives. Swimming drains fullness at 3 per second; zero fullness costs one turtle life per five seconds until fed. Pink hearts still heal. Every rubbish item must be collected: an escaped or uncollected end-of-route item costs one life even during blink immunity, and a wrongly eaten rubbish item cannot bypass the penalty. Final route spawns allow enough travel time to collect rubbish before the timer ends. A fatal missed-rubbish penalty prevents advancing the checkpoint. Fullness, lives and missed counts reset on a new route or retry. The HUD and illustrated guide separate fullness from health.
+Fish restore 35 fullness (capped at 100), never lives. Swimming drains fullness at 3 per second. The current movement rule slows steering/travel below 50% and makes zero fullness immediately fatal (superseding the original five-second damage interval). Pink hearts still heal. Every rubbish item must be collected: an escaped or uncollected end-of-route item costs one life even during blink immunity, and automatic feeding never consumes rubbish or bypasses its collection penalty. Final route spawns allow enough travel time to collect rubbish before the timer ends. A fatal missed-rubbish penalty prevents advancing the checkpoint. Fullness, lives and missed counts reset on a new route or retry. The HUD and illustrated guide separate fullness from health.
 
 1.3.0 verification: 1,217 full gameplay checks PASS and 25 native checks PASS at 832x480, exit 0. APK 55570862 bytes, SHA-256 7de1f1c21f8d578fc0ce624533f1f8f7cd0848f6c1f581f73451b89a6334094b. Original application ID and signing certificate retained; v2/v3 signatures and 16-KiB ZIP alignment verified. Output: build/android/ProtectBESUT-1.3.0.apk; stable ProtectBESUT.apk updated identically.
+
+
+## Low-health potion protection
+
+Carry Health Potions from Mara. After a hit leaves the living player at 25% HP or below, one potion is used automatically for up to 45 HP. It can trigger again on the next critical hit while stock lasts, including when maximum HP is high. Healing has green world feedback; depleted stock stays depleted across save/load. It does not revive an already defeated player or affect the turtle's separate sea-run lives/fullness.

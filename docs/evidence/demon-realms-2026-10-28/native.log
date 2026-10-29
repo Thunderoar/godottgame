@@ -1,0 +1,213 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+OpenGL API 3.3.13596 Core Profile Forward-Compatible Context 20.10.28 27.20.1028.1 - Compatibility - Using Device: ATI Technologies Inc. - AMD Radeon(TM) Vega 3 Graphics
+
+Verified isolated user data: C:/Users/LUQMAN/AppData/Local/Temp/tidesworn-elemental-226b2adef702461ca7407ca61e036e3b/elemental/userdata/Godot/app_userdata/Protect Besut
+[OK] arjun kills credit fire Gold and tripled XP directly to the player
+[OK] a dead fire cannot pay allied rewards twice
+[OK] arjun kills credit urchin Gold and tripled XP directly to the player
+[OK] a dead urchin cannot pay allied rewards twice
+[OK] mei_ling kills credit fire Gold and tripled XP directly to the player
+[OK] a dead fire cannot pay allied rewards twice
+[OK] mei_ling kills credit urchin Gold and tripled XP directly to the player
+[OK] a dead urchin cannot pay allied rewards twice
+[OK] CharacterBody2D kills credit fire Gold and tripled XP directly to the player
+[OK] a dead fire cannot pay allied rewards twice
+[OK] CharacterBody2D kills credit urchin Gold and tripled XP directly to the player
+[OK] a dead urchin cannot pay allied rewards twice
+[OK] raid kills also credit player XP and Gold immediately
+[OK] adam has at least nine purchasable weapons
+[OK] adam can buy and equip a new endgame weapon
+[OK] adam weapon +1 consumes the displayed cost and raises real combat attack
+[OK] adam weapon +2 consumes the displayed cost and raises real combat attack
+[OK] adam weapon +3 consumes the displayed cost and raises real combat attack
+[OK] adam weapon +4 consumes the displayed cost and raises real combat attack
+[OK] adam weapon +5 consumes the displayed cost and raises real combat attack
+[OK] adam weapon cannot exceed +5
+[OK] adam weapon upgrades survive JSON save/load
+[OK] adam forge shows all ten weapon cards including its upgradeable starter
+[OK] arjun has at least nine purchasable weapons
+[OK] arjun can buy and equip a new endgame weapon
+[OK] arjun weapon +1 consumes the displayed cost and raises real combat attack
+[OK] arjun weapon +2 consumes the displayed cost and raises real combat attack
+[OK] arjun weapon +3 consumes the displayed cost and raises real combat attack
+[OK] arjun weapon +4 consumes the displayed cost and raises real combat attack
+[OK] arjun weapon +5 consumes the displayed cost and raises real combat attack
+[OK] arjun weapon cannot exceed +5
+[OK] arjun weapon upgrades survive JSON save/load
+[OK] arjun forge shows all ten weapon cards including its upgradeable starter
+[OK] mei_ling has at least nine purchasable weapons
+[OK] mei_ling can buy and equip a new endgame weapon
+[OK] mei_ling weapon +1 consumes the displayed cost and raises real combat attack
+[OK] mei_ling weapon +2 consumes the displayed cost and raises real combat attack
+[OK] mei_ling weapon +3 consumes the displayed cost and raises real combat attack
+[OK] mei_ling weapon +4 consumes the displayed cost and raises real combat attack
+[OK] mei_ling weapon +5 consumes the displayed cost and raises real combat attack
+[OK] mei_ling weapon cannot exceed +5
+[OK] mei_ling weapon upgrades survive JSON save/load
+[OK] mei_ling forge shows all ten weapon cards including its upgradeable starter
+[OK] an unaffordable upgrade leaves weapon rank unchanged
+[OK] non-weapons and unowned weapons cannot be upgraded
+[OK] save sanitization clamps ranks and removes invalid upgrade records
+[OK] legacy exponential XP thresholds migrate without discarding earned XP
+[OK] tidebound_grotto binds its own living player during world replacement
+[OK] tidebound_grotto builds its matching demon with exactly three powers
+[OK] tidebound_grotto small monsters match their ruler's element
+[OK] Darkfire Imp actually uses its dash elemental attack
+[OK] Shadow & Chaos Fiend warns before Dark Blaze
+[OK] darkfire projectiles miss a player who dodges their path
+[OK] darkfire executes real damaging magic or living summoned attackers
+[OK] Shadow & Chaos Fiend warns before Mirage Assault
+[OK] illusion can be avoided by leaving its warned area
+[OK] illusion ground warning deals no early damage
+[OK] illusion executes real damaging magic or living summoned attackers
+[OK] Shadow & Chaos Fiend warns before Chaos Crossfire
+[OK] chaos_cross can be avoided by leaving its warned area
+[OK] chaos_cross ground warning deals no early damage
+[OK] chaos_cross executes real damaging magic or living summoned attackers
+[OK] chaos magic cancels when its caster dies
+[OK] sunken_crypt binds its own living player during world replacement
+[OK] sunken_crypt builds its matching demon with exactly three powers
+[OK] sunken_crypt small monsters match their ruler's element
+[OK] Gale Harpy actually uses its ranged elemental attack
+[OK] Gale Tempest Demon warns before Razor Tornado
+[OK] tornado can be avoided by leaving its warned area
+[OK] tornado ground warning deals no early damage
+[OK] tornado executes real damaging magic or living summoned attackers
+[OK] Gale Tempest Demon warns before Gale Blades
+[OK] wind_blades projectiles miss a player who dodges their path
+[OK] wind_blades executes real damaging magic or living summoned attackers
+[OK] Gale Tempest Demon warns before Cyclone Uplift
+[OK] updraft can be avoided by leaving its warned area
+[OK] updraft ground warning deals no early damage
+[OK] updraft executes real damaging magic or living summoned attackers
+[OK] wind magic cancels when its caster dies
+[OK] reef_hollow binds its own living player during world replacement
+[OK] reef_hollow builds its matching demon with exactly three powers
+[OK] reef_hollow small monsters match their ruler's element
+[OK] Frost Revenant actually uses its ranged elemental attack
+[OK] Glacial Frost Demon warns before Crystal Barrage
+[OK] ice_shards projectiles miss a player who dodges their path
+[OK] ice_shards executes real damaging magic or living summoned attackers
+[OK] Glacial Frost Demon warns before Eternal Frost
+[OK] frost_nova can be avoided by leaving its warned area
+[OK] frost_nova ground warning deals no early damage
+[OK] frost_nova executes real damaging magic or living summoned attackers
+[OK] Glacial Frost Demon warns before Glacial Prison
+[OK] ice_prison can be avoided by leaving its warned area
+[OK] ice_prison ground warning deals no early damage
+[OK] ice_prison executes real damaging magic or living summoned attackers
+[OK] ice magic cancels when its caster dies
+[OK] brine_cavern binds its own living player during world replacement
+[OK] brine_cavern builds its matching demon with exactly three powers
+[OK] brine_cavern small monsters match their ruler's element
+[OK] Magma Golem actually uses its slam elemental attack
+[OK] Tectonic Earth Titan warns before Rupture Fault
+[OK] faultline can be avoided by leaving its warned area
+[OK] faultline ground warning deals no early damage
+[OK] faultline executes real damaging magic or living summoned attackers
+[OK] Tectonic Earth Titan warns before Magma Bombardment
+[OK] magma projectiles miss a player who dodges their path
+[OK] magma executes real damaging magic or living summoned attackers
+[OK] Tectonic Earth Titan warns before Titan Earthquake
+[OK] quake can be avoided by leaving its warned area
+[OK] quake ground warning deals no early damage
+[OK] quake executes real damaging magic or living summoned attackers
+[OK] earth magic cancels when its caster dies
+[OK] kelp_maze binds its own living player during world replacement
+[OK] kelp_maze builds its matching demon with exactly three powers
+[OK] kelp_maze small monsters match their ruler's element
+[OK] Cinder Swordsman actually uses its dash elemental attack
+[OK] Infernal Blaze Lord warns before Magma Sword Cleave
+[OK] magma_blade can be avoided by leaving its warned area
+[OK] magma_blade ground warning deals no early damage
+[OK] magma_blade executes real damaging magic or living summoned attackers
+[OK] Infernal Blaze Lord warns before Infernal Rush
+[OK] blaze_rush can be avoided by leaving its warned area
+[OK] blaze_rush ground warning deals no early damage
+[OK] blaze_rush executes real damaging magic or living summoned attackers
+[OK] Infernal Blaze Lord warns before Hellfire Crown
+[OK] fire_ring can be avoided by leaving its warned area
+[OK] fire_ring ground warning deals no early damage
+[OK] fire_ring executes real damaging magic or living summoned attackers
+[OK] fire magic cancels when its caster dies
+[OK] bone_gallery binds its own living player during world replacement
+[OK] bone_gallery builds its matching demon with exactly three powers
+[OK] bone_gallery small monsters match their ruler's element
+[OK] Volt Wraith actually uses its dash elemental attack
+[OK] Voltage Lightning Demon warns before Lightning Step
+[OK] volt_dash can be avoided by leaving its warned area
+[OK] volt_dash ground warning deals no early damage
+[OK] volt_dash executes real damaging magic or living summoned attackers
+[OK] Voltage Lightning Demon warns before Thunder Judgment
+[OK] thunder can be avoided by leaving its warned area
+[OK] thunder ground warning deals no early damage
+[OK] thunder executes real damaging magic or living summoned attackers
+[OK] Voltage Lightning Demon warns before Voltaic Arcs
+[OK] chain_bolt projectiles miss a player who dodges their path
+[OK] chain_bolt executes real damaging magic or living summoned attackers
+[OK] lightning magic cancels when its caster dies
+[OK] storm_shrine binds its own living player during world replacement
+[OK] storm_shrine builds its matching demon with exactly three powers
+[OK] storm_shrine small monsters match their ruler's element
+[OK] Thorn Stalker actually uses its snare elemental attack
+[OK] Thorn Forest Queen warns before Root Prison
+[OK] roots can be avoided by leaving its warned area
+[OK] roots ground warning deals no early damage
+[OK] roots executes real damaging magic or living summoned attackers
+[OK] Thorn Forest Queen warns before Venom Blossom
+[OK] poison_bloom can be avoided by leaving its warned area
+[OK] poison_bloom ground warning deals no early damage
+[OK] poison_bloom executes real damaging magic or living summoned attackers
+[OK] Thorn Forest Queen warns before Thorn Lash
+[OK] vine_lash can be avoided by leaving its warned area
+[OK] vine_lash ground warning deals no early damage
+[OK] vine_lash executes real damaging magic or living summoned attackers
+[OK] forest magic cancels when its caster dies
+[OK] coral_throne binds its own living player during world replacement
+[OK] coral_throne builds its matching demon with exactly three powers
+[OK] coral_throne small monsters match their ruler's element
+[OK] Trident Marauder actually uses its wave elemental attack
+[OK] Abyssal Tsunami Demon warns before Tsunami Wall
+[OK] tsunami can be avoided by leaving its warned area
+[OK] tsunami ground warning deals no early damage
+[OK] tsunami executes real damaging magic or living summoned attackers
+[OK] Abyssal Tsunami Demon warns before Hydro Trident
+[OK] hydro_spear projectiles miss a player who dodges their path
+[OK] hydro_spear executes real damaging magic or living summoned attackers
+[OK] Abyssal Tsunami Demon warns before Pressure Whirlpool
+[OK] whirlpool can be avoided by leaving its warned area
+[OK] whirlpool ground warning deals no early damage
+[OK] whirlpool executes real damaging magic or living summoned attackers
+[OK] water magic cancels when its caster dies
+[OK] abyss_gate binds its own living player during world replacement
+[OK] abyss_gate builds its matching demon with exactly three powers
+[OK] abyss_gate small monsters match their ruler's element
+[OK] Plague Acolyte actually uses its pool elemental attack
+[OK] Necromancer of Decay warns before Corrosive Plague
+[OK] acid can be avoided by leaving its warned area
+[OK] acid ground warning deals no early damage
+[OK] acid executes real damaging magic or living summoned attackers
+[OK] Necromancer of Decay warns before Soul Corruption
+[OK] soul_curse projectiles miss a player who dodges their path
+[OK] soul_curse executes real damaging magic or living summoned attackers
+[OK] Necromancer of Decay warns before Raise the Fallen
+[OK] raise_dead executes real damaging magic or living summoned attackers
+[OK] decay magic cancels when its caster dies
+[OK] drowned_throne binds its own living player during world replacement
+[OK] drowned_throne builds its matching demon with exactly three powers
+[OK] drowned_throne small monsters match their ruler's element
+[OK] Soulbound Knight actually uses its homing elemental attack
+[OK] Abyss Monarch warns before Black-Hole Dominion
+[OK] gravity can be avoided by leaving its warned area
+[OK] gravity ground warning deals no early damage
+[OK] gravity executes real damaging magic or living summoned attackers
+[OK] Abyss Monarch warns before Sovereign Souls
+[OK] soul_rule projectiles miss a player who dodges their path
+[OK] soul_rule executes real damaging magic or living summoned attackers
+[OK] Abyss Monarch warns before Pure-Darkness Apocalypse
+[OK] darkness can be avoided by leaving its warned area
+[OK] darkness ground warning deals no early damage
+[OK] darkness executes real damaging magic or living summoned attackers
+[OK] dark magic cancels when its caster dies
+[OK] all ten bosses have unique artwork and thirty named powers
+--- elemental test: 208 checks, PASS ---

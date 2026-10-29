@@ -28,6 +28,7 @@ var _swirl_frame := 0
 var _awake := false
 var _theme := "grotto"
 var _cleared := false
+var _rift_material: ShaderMaterial
 
 
 func _ready() -> void:
@@ -70,6 +71,10 @@ func _build_visuals(palette: Dictionary, shown_title: String, is_pet: bool) -> v
 	_swirl.scale = Vector2.ONE * PixelArt.PX
 	_swirl.position = Vector2(0, 0.02)
 	_swirl.z_index = 6
+	_rift_material = RealmPresentation.spell_material("water" if is_pet else "dark")
+	_rift_material.set_shader_parameter("tint",palette["glow"])
+	_rift_material.set_shader_parameter("activation",1.0)
+	_swirl.material = _rift_material
 	add_child(_swirl)
 
 	# Stone frame on top.
@@ -146,9 +151,12 @@ func _build_visuals(palette: Dictionary, shown_title: String, is_pet: bool) -> v
 func _process(delta: float) -> void:
 	super._process(delta)
 	_time += delta
+	if _rift_material:
+		_rift_material.set_shader_parameter("clock",_time)
+		_rift_material.set_shader_parameter("motion",not GameSettings.reduce_motion() and GameSettings.effects_at_least("med"))
 	var unlocked := available or gate_kind == "pet"
 	# Swirl animation only when the gate is live.
-	if unlocked and not GameSettings.reduce_motion():
+	if unlocked and not GameSettings.reduce_motion() and _rift_material == null:
 		_swirl_timer += delta
 		if _swirl_timer >= 1.0 / SWIRL_FPS:
 			_swirl_timer = 0.0

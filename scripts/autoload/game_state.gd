@@ -14,6 +14,7 @@ signal pet_changed
 signal house_changed(level: int)
 signal portal_completed(portal_id: String)
 signal player_defeated
+signal auto_potion_used(healed: int)
 signal expedition_changed
 signal boss_health_changed(active: bool, name: String, value: int, maximum: int)
 signal recovery_changed(active: bool, progress: float)
@@ -24,8 +25,9 @@ const SAVE_PATH := "user://tidesworn_save.json"
 const SAVE_VERSION := 6
 const INVENTORY_STACK_DEFAULT := 9
 const DEFAULT_CHARACTER := "adam"
-const AUTO_HEAL_RATIO := 0.10
-const AUTO_HEAL_REARM_RATIO := 0.35
+const AUTO_HEAL_RATIO := 0.25
+const COMBAT_XP_MULTIPLIER := 3
+const MAX_WEAPON_UPGRADE := 5
 
 var data: Dictionary = {}
 var has_existing_save := false
@@ -35,7 +37,6 @@ var game_over_active := false
 var _clock_accum := 0.0
 var _last_purchase: Dictionary = {}
 var _purchase_serial := 0
-var _auto_heal_armed := true
 
 
 func _ready() -> void:
@@ -89,6 +90,7 @@ func _make_default(character_id: String) -> Dictionary:
 		"gold": 120,
 		"diamonds": 12,
 		"inventory": inventory,
+		"weapon_upgrades": {},
 		"equipped": {
 			"weapon": starter_weapon,
 			"armor": "cloth_tunic",
@@ -153,7 +155,6 @@ func new_game(character_id: String = DEFAULT_CHARACTER) -> void:
 	data = _make_default(character_id)
 	if not carried_settings.is_empty():
 		data.settings = carried_settings
-	_auto_heal_armed = true
 	game_over_active = false
 	has_existing_save = true
 	_save_now()
@@ -291,7 +292,9 @@ func remove_item(item_id: String, quantity: int = 1) -> bool:
 	if count < quantity:
 		return false
 	if count == quantity:
-		inventory.erase(item_id)
+		# A zero marker prevents default starter potions reappearing on save merge.
+		if item_id == "health_potion": inventory[item_id] = 0
+		else: inventory.erase(item_id)
 	else:
 		inventory[item_id] = count - quantity
 	data.inventory = inventory
@@ -383,8 +386,43 @@ func attack_power() -> int:
 	for slot in ["weapon", "armor", "shield"]:
 		var id := equipped_item(slot)
 		if id != "":
-			total += int(ItemDB.get_item(id).get("attack", 0))
+			total += weapon_attack(id)
 	return total
+
+func weapon_rank(item_id: String) -> int:
+	return clampi(int((data.get("weapon_upgrades", {}) as Dictionary).get(item_id, 0)),0,MAX_WEAPON_UPGRADE)
+
+func weapon_attack(item_id: String) -> int:
+	var base := int(ItemDB.get_item(item_id).get("attack", 0))
+	return base + roundi(base * 0.2 * weapon_rank(item_id))
+
+func weapon_upgrade_cost(item_id: String) -> int:
+	var item := ItemDB.get_item(item_id)
+	return maxi(25, roundi(int(item.get("price", 0))*0.25) + int(item.get("attack",0))*3) * (weapon_rank(item_id)+1)
+
+func upgrade_weapon(item_id: String) -> Dictionary:
+	var item := ItemDB.get_item(item_id)
+	if item.get("kind", "") != "weapon" or item_count(item_id) <= 0:
+		return {"ok":false,"message":"Buy this weapon before upgrading it."}
+	if str(item.get("style","")) != character_weapon_style():
+		return {"ok":false,"message":"This weapon belongs to another discipline."}
+	if weapon_rank(item_id) >= MAX_WEAPON_UPGRADE:
+		return {"ok":false,"message":"Weapon is already +5."}
+	var cost := weapon_upgrade_cost(item_id)
+	if gold() < cost: return {"ok":false,"message":"Not enough Gold for this upgrade."}
+	data.gold = gold()-cost
+	var ranks: Dictionary = data.get("weapon_upgrades", {})
+	ranks[item_id] = weapon_rank(item_id)+1
+	data.weapon_upgrades = ranks
+	_save_if_needed()
+	data_changed.emit()
+	return {"ok":true,"message":"%s upgraded to +%d." % [ItemDB.name_of(item_id),weapon_rank(item_id)]}
+
+func item_stat_line(item_id: String) -> String:
+	var item := ItemDB.get_item(item_id)
+	if item.get("kind","") == "weapon":
+		return "ATK +%d  ·  Upgrade +%d/%d" % [weapon_attack(item_id),weapon_rank(item_id),MAX_WEAPON_UPGRADE]
+	return ItemDB.stat_line(item_id)
 
 
 func defense() -> int:
@@ -431,43 +469,46 @@ func damage_player(amount: int) -> void:
 		reduced -= absorbed
 	if reduced > 0:
 		data.hp = maxi(0, health() - reduced)
-	_try_auto_heal()
+	var potion_used := _try_auto_heal()
 	data_changed.emit()
+	if potion_used: _save_if_needed()
 	if health() <= 0:
 		player_defeated.emit()
 
 
-func _try_auto_heal() -> void:
-	if not _auto_heal_armed or health() <= 0:
-		return
+func _try_auto_heal() -> bool:
+	if health() <= 0:
+		return false
 	if float(health()) / float(maxi(1, health_max())) > AUTO_HEAL_RATIO:
-		return
+		return false
 	if item_count("health_potion") <= 0:
-		return
+		return false
 	var potion := ItemDB.get_item("health_potion")
-	remove_item("health_potion", 1)
+	if not remove_item("health_potion", 1): return false
+	var previous_hp := health()
 	data.hp = mini(health_max(), health() + int(potion.get("effect", {}).get("heal", 45)))
-	_auto_heal_armed = false
-	toast_requested.emit("Health critical! A potion was used automatically.", "bad")
+	# One bottle per damage event; the next hit can trigger another if still low.
+	auto_potion_used.emit(health()-previous_hp)
+	return true
 
 
 func heal(amount: int) -> void:
 	if amount <= 0:
 		return
 	data.hp = clampi(health() + amount, 0, health_max())
-	if float(health()) / float(maxi(1, health_max())) >= AUTO_HEAL_REARM_RATIO:
-		_auto_heal_armed = true
 	data_changed.emit()
 
 
 func set_health(value: int) -> void:
 	data.hp = clampi(value, 0, health_max())
-	if float(health()) / float(maxi(1, health_max())) >= AUTO_HEAL_REARM_RATIO:
-		_auto_heal_armed = true
 	data_changed.emit()
 
 
 # --------------------------------------------------------------- experience
+
+func xp_for_level(level: int) -> int:
+	var step := maxi(0,level-1)
+	return 60+35*step+5*step*step
 
 func grant_xp(amount: int) -> void:
 	if amount <= 0:
@@ -477,12 +518,11 @@ func grant_xp(amount: int) -> void:
 	while int(data.xp) >= int(data.get("xp_next", 60)):
 		data.xp = int(data.xp) - int(data.get("xp_next", 60))
 		data.level = int(data.get("level", 1)) + 1
-		data.xp_next = int(round(float(data.get("xp_next", 60)) * 1.45))
+		data.xp_next = xp_for_level(int(data.level))
 		data.hp_max = int(data.get("hp_max", 100)) + 10
 		data.hp = health_max()
 		leveled = true
 	if leveled:
-		_auto_heal_armed = true
 		toast_requested.emit("Level %d reached. Your path grows clearer." % int(data.level), "gold")
 	data_changed.emit()
 	_save_if_needed()
@@ -1197,7 +1237,7 @@ func kills() -> int:
 
 func register_kill(xp: int) -> void:
 	data.kills = int(data.get("kills", 0)) + 1
-	grant_xp(xp)
+	grant_xp(xp * COMBAT_XP_MULTIPLIER)
 
 
 # --------------------------------------------------------------- recovery / emergency
@@ -1215,7 +1255,6 @@ func finish_recovery() -> void:
 		return
 	data.recovery_active = false
 	data.hp = health_max()
-	_auto_heal_armed = true
 	_save_if_needed()
 	data_changed.emit()
 	recovery_changed.emit(false, 1.0)
@@ -1404,7 +1443,6 @@ func load_game() -> bool:
 			completed.append(str(MissionDB.step(index).get("event", "")))
 		data.completed_missions = completed
 	_sanitize()
-	_auto_heal_armed = true
 	game_over_active = false
 	has_existing_save = true
 	_emit_all()
@@ -1456,8 +1494,23 @@ func _sanitize() -> void:
 	data.shield = clampi(int(data.get("shield", 0)), 0, 60)
 	data.house_level = clampi(int(data.get("house_level", 1)), 1, HouseDB.max_level())
 	data.level = maxi(1, int(data.get("level", 1)))
+	data.xp_next = xp_for_level(int(data.level))
+	data.xp = maxi(0,int(data.get("xp",0)))
+	# Preserve earned XP while migrating older exponential thresholds.
+	while int(data.xp) >= int(data.xp_next):
+		data.xp = int(data.xp)-int(data.xp_next)
+		data.level = int(data.level)+1
+		data.xp_next = xp_for_level(int(data.level))
+		data.hp_max = int(data.hp_max)+10
+		data.hp = int(data.hp_max)
 	if not (data.get("inventory", {}) is Dictionary):
 		data.inventory = {}
+	var upgrades: Dictionary = {}
+	if data.get("weapon_upgrades", {}) is Dictionary:
+		for id in data.get("weapon_upgrades", {}):
+			if ItemDB.get_item(str(id)).get("kind","") == "weapon" and item_count(str(id)) > 0:
+				upgrades[str(id)] = clampi(int(data.weapon_upgrades[id]),0,MAX_WEAPON_UPGRADE)
+	data.weapon_upgrades = upgrades
 	if not (data.get("pets", {}) is Dictionary):
 		data.pets = {}
 	if not (data.get("portals", {}) is Dictionary):

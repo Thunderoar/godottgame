@@ -10,7 +10,7 @@ config_version=5
 
 [application]
 
-config/name="Save The World"
+config/name="Protect Besut"
 config/description="A seaside pixel-art survival action RPG vertical slice."
 run/main_scene="res://scenes/game.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")

@@ -12,9 +12,11 @@ var defeated := false
 var _rescuing := false
 var _hint: Label
 var _rune_clock := 0.0
+var _monster_routes: ResidentRoutes
 const RUNES := [Vector2(6,4.5),Vector2(34,4.5),Vector2(10,14.5),Vector2(30,14.5)]
 
 func _ready() -> void:
+	texture_filter=CanvasItem.TEXTURE_FILTER_LINEAR
 	add_to_group("world")
 	Vfx.ensure_pool(self)
 	_build_arena()
@@ -80,6 +82,17 @@ func _build_arena() -> void:
 	background.z_as_relative = false
 	background.z_index = -1000
 	add_child(background)
+	var floor_art := Sprite2D.new()
+	floor_art.name="KrakenStoneFloor"
+	floor_art.texture=load("res://assets/authored/realms/basalt-floor-v2.png") as Texture2D
+	floor_art.position=Vector2(20,13)
+	floor_art.scale=Vector2(37,22)/floor_art.texture.get_size()
+	floor_art.z_as_relative=false
+	floor_art.z_index=-999
+	var floor_material := RealmPresentation.floor_material("water")
+	floor_material.set_shader_parameter("motion",false)
+	floor_art.material=floor_material
+	add_child(floor_art)
 	painter.free()
 	canvas_modulate = CanvasModulate.new()
 	canvas_modulate.name = "FortressDarkness"
@@ -91,11 +104,11 @@ func _build_arena() -> void:
 		holder.position = at
 		add_child(holder)
 		var sprite := Sprite2D.new()
-		sprite.texture = load("res://assets/sprites/TX Props__TX Props Pillar.tres")
+		sprite.texture = RealmPresentation.prop_texture("water")
 		sprite.centered = false
 		var extent := sprite.texture.get_size()
 		sprite.offset = Vector2(-extent.x*0.5,-extent.y)
-		sprite.scale = Vector2.ONE * PixelArt.PX * 1.3
+		sprite.scale = Vector2.ONE * PixelArt.PX * 64.0/extent.y * 1.3
 		sprite.modulate = Color("#bac3d2")
 		holder.add_child(sprite)
 		var body := StaticBody2D.new()
@@ -144,6 +157,12 @@ func get_player() -> Player:
 
 func get_map_rect() -> Rect2:
 	return Rect2(0,0,40,25)
+
+func monster_path(from: Vector2, destination: Vector2) -> PackedVector2Array:
+	if _monster_routes == null:
+		_monster_routes = ResidentRoutes.new(self, get_map_rect())
+		_monster_routes.clearance = boss.body_radius + 0.15
+	return _monster_routes.path(from, destination)
 
 func get_guidance_targets() -> Array:
 	return [{"label":"FREE ARJUN" if defeated else "KRAKEN KING","position":cage.position if defeated else boss.position,"color":GameUI.GOLD}]

@@ -11,6 +11,7 @@ var _bounds: Rect2
 var _built := false
 var revision := 0
 var clearance := CLEARANCE
+var _circle: CircleShape2D
 
 
 func _init(world: Node2D, bounds: Rect2 = Rect2(0, 0, 64, 40)) -> void:
@@ -25,9 +26,9 @@ func invalidate() -> void:
 
 func _query(at: Vector2) -> PhysicsShapeQueryParameters2D:
 	var query := PhysicsShapeQueryParameters2D.new()
-	var shape := CircleShape2D.new()
-	shape.radius = clearance
-	query.shape = shape
+	if _circle == null: _circle = CircleShape2D.new()
+	_circle.radius = clearance
+	query.shape = _circle
 	query.transform = Transform2D(0.0, at)
 	query.collision_mask = 1
 	return query
@@ -55,7 +56,10 @@ func _build() -> void:
 	_grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
 	_grid.update()
 	var query := _query(Vector2.ZERO)
-	(query.shape as CircleShape2D).radius = maxf(0.35, clearance)
+	# The build uses its own shape; segment queries retain their clearance.
+	var build_shape := CircleShape2D.new()
+	build_shape.radius = maxf(0.35, clearance)
+	query.shape = build_shape
 	for y in _grid.region.size.y:
 		for x in _grid.region.size.x:
 			var cell := Vector2i(x, y)
@@ -113,11 +117,11 @@ func path(from: Vector2, to: Vector2, allow_nearest_goal: bool = true) -> Packed
 	var origin := from
 	var index := 0
 	while index < points.size():
-		var furthest := index
-		for next in range(index, points.size()):
-			if not segment_clear(origin, points[next]):
-				break
-			furthest = next
+		# Test the destination first: clear stretches need one cast, rather than
+		# testing each half-unit cell while every attacker replans.
+		var furthest := points.size()-1
+		while furthest > index and not segment_clear(origin,points[furthest]):
+			furthest -= 1
 		if not segment_clear(origin, points[furthest]):
 			return PackedVector2Array()
 		result.append(points[furthest])

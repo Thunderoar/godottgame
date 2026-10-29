@@ -568,7 +568,7 @@ powershell -File tools/test_pb_isolated.ps1 -Godot <console-exe> -Native -Scene 
 - One main-house upgrade charges once and synchronizes the village house, archer-hut and fence tiers. Previews show the house, hut, fence and baseline worker count for each level. A ruined main house must be repaired before upgrading.
 - Purchased rooftop machine guns replace archer huts. Yellow bullets damage fire monsters and sea urchins. Missing, ruined, unaffordable and duplicate purchases fail without charging. Ownership survives save/load.
 - Fences progress from wood to wood with a stone base, stone walls, fortified posts and battlements. Changing level refreshes existing fence sprites and survives save/load.
-- Night lessons retain the pointer without an extra dark overlay. The level-one portal is the only portal shown during that training. Other bosses cannot complete its final lesson; defeating Vharok, Maw of the Deep ends that tutorial. All ten bosses show their distinct names above their HP.
+- Night lessons retain the pointer without an extra dark overlay. The level-one portal is the only portal shown during that training. Other bosses cannot complete its final lesson; defeating Shadow & Chaos Fiend ends that tutorial. All ten bosses show their distinct names above their HP.
 - Continue after finishing daytime lessons retains the unfinished nighttime tutorial and activates it at the next night. Build remains in Menu.
 
 
@@ -645,7 +645,7 @@ Complete fire-silence verification: official Windows isolated gate (`tools/test_
 
 ## BESUT rescue campaign update (2026-10-25)
 
-See [BESUT_STORY_CAMPAIGN.md](BESUT_STORY_CAMPAIGN.md) for the current story, sea rules and ownership. StoryChecks now runs in the isolated gameplay gate. Its focused scene is tools/story_test.tscn. The current turtle has three lives, starts at 2.5x speed, heals only from Eat on pink hearts, steers vertically and avoids moving bombs. Three 45-second routes lead to the Kraken/prison rescue. The final Monster Portal rescues Mei Ling; both friends defend BESUT and unlock the saved reunion ending. The minimap is restored, time is at the bottom, towers are purchased at the weapon shop, and real touch gestures cover NPC inspection and control dragging. Older assertions about no minimap, four controls excluding Menu, five turtle lives and healing food are superseded.
+See [BESUT_STORY_CAMPAIGN.md](BESUT_STORY_CAMPAIGN.md) for the current story, sea rules and ownership. StoryChecks now runs in the isolated gameplay gate. Its focused scene is tools/story_test.tscn. The current turtle has three lives, starts at 2.5x speed, heals only from automatically collected nearby pink hearts, steers vertically and avoids moving bombs. Three 45-second routes lead to the Kraken/prison rescue. The final Monster Portal rescues Mei Ling; both friends defend BESUT and unlock the saved reunion ending. The minimap is restored, time is at the bottom, towers are purchased at the weapon shop, and real touch gestures cover NPC inspection and control dragging. Older assertions about no minimap, four controls excluding Menu, five turtle lives and healing food are superseded.
 
 Final campaign verification: **1,114 checks, PASS, exit 0** in the complete isolated gameplay gate. Native 832×480 verification: **41 checks, PASS, exit 0**, including real screen touch and drag gestures, rendered book/tower-shop fixtures and both friend damage paths. Earlier native 1280×720 and 832×480 runs passed 39 checks before the two additional tower-refresh and archer-damage assertions. Final logs contain no [FAIL], SCRIPT ERROR, ERROR or WARNING entries.
 
@@ -780,3 +780,97 @@ additional checks beyond the earlier 1,320 PASS run). The loader, story and Game
 implementation is unchanged; its native suite again passes 138 checks at all
 three resolutions. Shared fixture timing and unrelated title/document edits are
 preserved, including by the generated pre-loader rollback baseline.
+
+
+## Automatic turtle feeding (2026-10-28)
+
+This supersedes the older manual Eat/F and wrong-action rules in the coastal reports.
+
+- Pick Up/E is the only sea action button. Eat is absent from the ocean HUD, Settings rows and both sea layout editors. Existing saved control positions remain compatible.
+- During RUNNING, nearby fish are eaten automatically within mouth reach without pressing a button, restore 35 fullness (capped at 100), open the mouth and resolve exactly once. Fish never heal or award rubbish Gold.
+- Pink hearts are collected automatically nearby and restore one life (capped at three) without changing fullness.
+- Swept relative movement catches fast fish crossing the mouth between frames; fish in another lane or outside reach remain uneaten. Settings and route transitions suspend automatic feeding.
+- Rubbish still requires Pick Up. Fish/hearts cannot block picking up overlapping rubbish; Pick Up ignores edible items and hazards without a wrong-action penalty. Missed rubbish, hunger, bomb/shark damage, retry and route checkpoint rules remain intact.
+- The isolated gate covers automatic feeding, range/lane/fast movement, one-time rewards, fullness and health caps, settings/transit suspension and manual rubbish pickup. Coastal native review retains real screen touches for Pick Up and captures the automatic mouth animation. Historical native Eat-button evidence predates this change.
+
+Verification on Windows / Godot 4.7.2: the isolated gameplay gate passed 1,224 checks, exit 0, with no `[FAIL]`, `SCRIPT ERROR` or `ERROR:` output. Native 832x480 coastal review passed 77 checks, exit 0; the automatic-mouth capture was inspected and shows Pick Up with no Eat button. The first full run, overlapping the native review, reported one failure in the unchanged home-defeat recovery assertion; the sequential full rerun passed without changes to that test or recovery gameplay. Both runs used verified temporary user-data directories; live player data was not restored or overwritten.
+
+
+## Fullness movement, moving Kraken and Arjun homecoming (2026-10-28)
+
+These rules supersede the earlier starvation interval, stationary Kraken and fixed-duration Arjun return.
+
+- All four steering directions, including reverse, use 12 world units/second while fed. At 50% fullness or above, fast steering and travel are retained; below 50%, steering and ocean scrolling both use a 0.7 multiplier. Fish can immediately restore the fast tier.
+- At zero fullness the turtle immediately loses all remaining lives, stops controls and enters its existing sinking/retry sequence, regardless of hit immunity. Starvation cannot clear a route or modify earned Gold; retry restores full health/fullness and preserves checkpoints.
+- KrakenKing notices Adam across the arena, actually pursues with body-sized paths around pillars, warns then deals ordinary melee damage once per swing, and automatically starts its alternating tentacle slam/hook power. It holds its position during the tentacle warning/extension so attacks remain dodgeable. Existing wall-respecting grapples and boss-gated prison rules remain covered.
+- Rescued Arjun stands separately from Adam on the stern, with foot alignment, idle animation and correct world scale. He travels with the ship, disembarks as the same actor and walks along resident routes at Resident.WALK_SPEED (0.9 world units/second); there is no fixed three-second rush to his home. He joins the village once after that walk.
+- ControlOceanChecks measures matching directional speeds and the fullness multiplier. KrakenHungerChecks covers immediate starvation, retry, real pursuit, pillar routing, automatic powers, warned melee and existing hook damage. StoryChecks measures Arjun's deck location, scale, continuous handoff and actual distance walked per second; native review captures the returning pair and his first steps off the jetty.
+
+Verification: Godot 4.7.2 on Windows, full isolated gameplay gate 1,248 checks PASS, exit 0; no `[FAIL]`, `SCRIPT ERROR` or `ERROR:` entries. Sequential native 832x480 reviews passed 42 Kraken/fullness checks and 68 story checks (110 total), each exit 0 with clean logs. Inspected actual-renderer fixtures show Adam and Arjun standing separately on the returning ship, Arjun starting his resident-paced jetty walk, and the moving Kraken's tentacle warning. The live player save was backed up; all tests/captures used verified temporary user data. No APK/EXE was rebuilt.
+
+
+## Ten demon rulers, shared rewards and forge upgrades (2026-10-28)
+
+See [DEMON_REALMS.md](DEMON_REALMS.md) for the stable portal-to-demon mapping, all thirty powers and ownership. This supersedes the old boss names/single-power catalogue and two-weapon shop selection.
+
+- Fire/urchin kills from Arjun, Mei Ling, NPCs and raids immediately credit the player Gold and 3x combat XP, once per death, without requiring floor collection.
+- All regular combat kills give 3x XP. A quadratic next-level curve replaces runaway exponential requirements; saved levels and accumulated XP migrate without loss.
+- Each weapon discipline has nine purchasable weapons plus a starter. Every owned weapon can be upgraded to +5 with real Gold transactions and +20% base attack per rank. Combat, shop comparison and inventory read the upgraded value. Unknown/unowned/non-weapon/cross-discipline/over-cap/unaffordable upgrades are rejected; ranks persist and sanitize from JSON floats.
+- Ten ElementalBoss variants replace the portal guardians. Each rotates exactly three named, warned powers with damaging effects/projectiles, charge or living summons. Their small monsters use matching elemental art and ranged, rush, trap, wave or slam attacks. Floors, lighting, props and traps match the realm. The Abyss Monarch guards the final Mei Ling rescue; all original portal IDs/unlocks remain compatible.
+- Active-world player access must return the new world's player while the old world is queued for deletion. Elemental magic validates world/caster ownership and expires when its caster dies.
+- The integrated ElementalChecks exercises these transactions and all thirty real execution paths. The native focused scene captures every realm and a closer view of every boss.
+
+Final demon-realm verification: **1,456 full isolated checks PASS, exit 0**, plus **208 native 832x480 checks PASS, exit 0**. No FAIL, SCRIPT ERROR or ERROR entries. All ten boss/realm renders and all three weapon counters were inspected; previews and logs are preserved under `docs/evidence/demon-realms-2026-10-28/` and linked from DEMON_REALMS.md. Live player data was backed up; all test saves/captures used verified temporary paths.
+
+
+## Repeatable low-HP auto-potions (2026-10-28)
+
+- Damage still applies defence and shields first. If the player remains alive at 25% HP or below and carries Health Potions, that hit automatically consumes exactly one bottle and restores up to the item-defined 45 HP.
+- Later critical hits can use another bottle without first healing above 35%; one hit never spends multiple bottles even when 45 HP leaves a high-level player critically low. Above-threshold health, empty stock and already-dead players consume nothing.
+- The transaction saves consumed stock and recovered HP together. A depleted Health Potion entry stays at zero so recursive save defaults cannot recreate starter potions on reload.
+- The new GameState auto_potion_used signal gives only Game.player() a green recovery ring, healed-health number, bottle effect and recovery sound. No feedback depends on the disconnected toast signal; player presentation settings still apply through the existing VFX pool.
+- The isolated gameplay gate tests the exact 25% boundary, above-boundary conservation, repeated low-health hits, one bottle per event, empty stock, heal capping, no resurrection, shield ordering and immediate save/load of the last consumed bottle.
+
+Auto-potion verification: **1,464 isolated gameplay checks PASS, exit 0**. Both stdout and stderr are clean of FAIL, SCRIPT ERROR and ERROR entries. Tests used verified temporary user data; the live Protect Besut save was backed up without restoration.
+
+## Realm presentation, sea briefing and crowded nights (2026-10-28)
+
+- Imported boss/minion atlases provide twenty distinct alpha sprites; matching props/floors and shared spell shaders replace the flat portal presentation while keeping AssetRegistry precedence and existing gameplay timings/collisions.
+- Every fresh sea visit waits at its own guide before starting route time, fullness drain or hazards. Ready starts the route; Sea Guide reopens/resumes without resetting it. Retries retain acknowledgement for that visit. No sea object has an overhead label. Pickup/E collects rubbish only; fish feed automatically and bombs/sharks remain hazards.
+- Day/night tutorial waiting messages describe the next teaching phase; potion lessons explain 25% automatic use.
+- Crowded-night tuning bounds village dynamic lights and throttles perception, separation and lighting work without skipping physics movement/attacks. A blocked resident cannot invalidate the shared static navigation grid; actual world edits still invalidate it.
+- `presentation_checks.gd` joins the gate. Updated coastal/movement/hunger/story checks acknowledge the sea briefing; the native `presentation_review` captures spell warnings, all ten realms, sea UI and a reproducible 48-monster performance workload. See [REALM_GRAPHICS_AND_PERFORMANCE.md](REALM_GRAPHICS_AND_PERFORMANCE.md).
+
+Final graphics/sea/night verification: **1,500 checks PASS, exit 0**, plus **34 native final-atlas checks PASS, exit 0**. Final stdout/stderr are clean. Authored atlas rectangles stay within their imported resources, the sea briefing is safe at small resolution, and the melee fixture waits for actual transition unlock. Evidence: docs/evidence/realm-graphics-2026-10-28/.
+
+## Boss-size animation regression (2026-10-28)
+
+Boss and minion wind-up/recovery/lunge poses use each sprite's authored rest scale and origin instead of the old 32px scale. One owned pose tween is cancelled on replacement, recovery, stagger and death; subclass art refresh cannot overwrite its transforms. All twenty elemental actors are sampled throughout the real wind-up tween, checked for bounded scale, then checked for exact recovery and interrupted-lunge cancellation. Native review captures each boss winding up. Combat timing, damage, movement and skills remain unchanged.
+
+Boss-size fix verification: **1,520 isolated gameplay checks PASS, exit 0**, plus **54 native checks PASS, exit 0**. Clean stdout/stderr; all twenty actor pose regressions pass and all ten boss wind-up captures are preserved in docs/evidence/boss-size-fix-2026-10-28/.
+
+## Realistic coastal presentation (2026-10-28)
+
+Imported prerendered 3D artwork now covers the village, five house tiers, all five shops and interiors, heroes/residents, pets, marine life and home furnishings. RealisticArt keeps physical source detail while preserving each texture's original logical dimensions. Explicit AssetRegistry replacements, original WorldLayout/forest IDs, gameplay movement/collisions and presentation settings retain their contracts. Directional views share bounded cached textures; existing motion/attack transforms animate the views.
+
+`realistic_checks.gd` is part of the isolated gate. It verifies detailed imported physical pixels at their gameplay sizes, frame reuse, five distinct homes, eight distinct pet appearances, five shop exterior/interior pairs and stable Kraken wind-up/recovery. Existing Monsoon checks enforce exact tree split pixels, transparent clearance, palette invalidation and override precedence. Native realistic_review captures village day/night, forest/coast, every shop, furnished home, a live duel, sea guide/swimming and Kraken island, including 832x480 sea UI. Arena backgrounds must fill the panel after layout.
+
+Verification: **1,542 isolated gameplay checks PASS, exit 0**; **26 native realistic checks PASS, exit 0**, plus **54 native realm/performance checks PASS, exit 0**. All error scans are clean. Evidence and measured limits are in [REALISTIC_WORLD.md](REALISTIC_WORLD.md) and `docs/evidence/realistic-world-2026-10-28/`.
+
+## Map opens on request (2026-10-28)
+
+The normal HUD shows a Map button below Menu instead of an always-visible minimap. The private compact-map accessor remains hidden with processing disabled. Pressing Map opens WorldMapPanel through the existing guarded Game.open_map route, releases held controls and locks player movement/combat. Close removes the map and restores world controls. Live picture markers and warnings remain in the expanded map. The Map button keeps a minimum 44 physical pixel height and separate placement from Menu when the window scales; tutorial instructions avoid its rectangle.
+
+MapUnlockChecks uses a real screen-touch press/release on Map and verifies hidden idle maps, live locations, input lock and restoration without a minimap. StoryChecks and the main HUD assertion follow the same contract. The native map_unlock_test also verifies mouse opening/closing at 832x480 and captures normal/expanded screens. The previous always-visible-minimap presentation is superseded by this interaction.
+
+Verification: **1,544 isolated gameplay checks PASS, exit 0**, plus **23 native map/unlock checks PASS, exit 0**. Error scans are clean. Actual-renderer captures at 1280x720 and 832x480 and raw logs are saved under `docs/evidence/map-button-2026-10-28/`; player saves remain outside the repository.
+
+## Opening/world-update merge integration — 2026-10-29
+
+Merged the Adam opening/title/loading work with the incoming elemental-realm,
+coastal, realistic-world and map-control update. The only textual conflict was
+these independently appended acceptance records; both histories are retained.
+Isolated Godot import passed with exit 0, then `./tools/test_isolated.sh` reported
+**1,653 checks, PASS**, exit 0, with no `[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers.
+This is a fresh Linux headless integration run, not a new visual/device/export
+certification. Live player data was not used. `git diff --cached --check` passed.

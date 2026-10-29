@@ -1,0 +1,10 @@
+{
+	"draw_calls": 612.0,
+	"enemies": 48,
+	"physics_median_ms": 23.61,
+	"physics_p95_ms": 61.83,
+	"process_median_ms": 47.048,
+	"process_p95_ms": 96.033,
+	"renderer": "AMD Radeon(TM) Vega 3 Graphics",
+	"samples": 120
+}

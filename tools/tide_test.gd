@@ -64,10 +64,11 @@ func _ready() -> void:
 	_check(GameState.water_keeper_count() == 1, "new journeys start with one water keeper")
 	_check(game.call("player").get_node_or_null("VitalHud") is PlayerVitalHud, "player keeps its world HP/XP indicator")
 	_check(not _has_label(hud, "VITALS") and hud.get("_health_bar") == null and hud.get("_pet_bar") == null, "obsolete top-right VITALS construction is removed")
-	_check(hud.get("_minimap") is VillageMinimap, "live minimap exists at the top right")
+	_check(hud.get("_map_button") is Button and not hud.get("_minimap").visible, "Map button replaces the always-visible minimap")
 	_check(hud.get("_emergency_panel") != null, "emergency HUD exists")
 	_check(hud.get("_recovery_panel") != null, "recovery HUD exists")
 	_check(hud.get("_joystick") != null, "touch joystick exists")
+	_check(not hud.get_control_layout_current().has("ocean_eat") and not SettingsPanel.CONTROL_ROWS.any(func(row: Array) -> bool: return row[0] == "ocean_eat"), "Eat is removed from saved sea-control editing and Settings")
 	_check(hud.get("_attack_button").action == "attack", "touch attack maps to attack action")
 	_check(hud.get("_interact_button").action == "sprint", "permanent touch Sprint maps to sprint action")
 	_check(hud.get("_inventory_button").action == "open_inventory", "backpack touch action exists")
@@ -90,6 +91,7 @@ func _ready() -> void:
 	await KampungChecks.run(game, _check)
 	await WorldChecks.run(game, _check)
 	await MonsoonChecks.run(game, _check)
+	await preload("res://tools/realistic_checks.gd").run(game, _check)
 	await _test_day_night()
 	await _test_settlement_expansion()
 	var resident_count := 0
@@ -147,9 +149,13 @@ func _ready() -> void:
 	await preload("res://tools/coastal_checks.gd").run(game, _check)
 	await preload("res://tools/portal_tutorial_checks.gd").run(game, _check)
 	await preload("res://tools/control_ocean_checks.gd").run(game, _check)
+	# Includes fullness-based speed/death and the Kraken's moving combat AI.
 	await preload("res://tools/kraken_hunger_checks.gd").run(game, _check)
 	await StoryChecks.run(game, _check)
 	await MapUnlockChecks.run(game, _check)
+	await preload("res://tools/elemental_checks.gd").run(game, _check)
+	# Includes authored-size combat poses and interrupted tween regression checks.
+	await preload("res://tools/presentation_checks.gd").run(game, _check)
 	await _test_forest_game_over()
 
 	GameState.delete_save()
@@ -496,21 +502,67 @@ func _test_menu_and_settings() -> void:
 
 
 func _test_auto_heal_and_shield() -> void:
-	if GameState.item_count("health_potion") == 0:
-		GameState.add_item("health_potion", 2, true)
-	GameState.set_health(int(round(GameState.health_max() * 0.10)) + 1)
+	var saved := GameState.data.duplicate(true)
+	var autosave := GameState.autosave_enabled
+	GameState.autosave_enabled = false
+	GameState.data.hp_max = 1000
 	GameState.data.shield = 0
+	GameState.add_item("health_potion",9-GameState.item_count("health_potion"),true)
+	var healing_events: Array[int] = []
+	var on_healed := func(amount: int) -> void: healing_events.append(amount)
+	GameState.auto_potion_used.connect(on_healed)
+	GameState.set_health(252)
 	var potions := GameState.item_count("health_potion")
-	GameState.damage_player(6)
-	_check(GameState.health() > int(round(GameState.health_max() * 0.10)), "critical health triggers an automatic potion")
-	_check(GameState.item_count("health_potion") == potions - 1, "auto-heal consumes one health potion")
-
+	GameState.damage_player(GameState.defense()+1)
+	_check(GameState.health() == 251 and GameState.item_count("health_potion") == potions, "HP above 25 percent does not waste a health potion")
+	GameState.damage_player(GameState.defense()+1)
+	_check(GameState.health() == 295 and GameState.item_count("health_potion") == potions-1, "reaching exactly 25 percent HP automatically drinks one potion")
+	_check(healing_events == [45], "auto-potion emits the real recovered health for visible feedback")
+	GameState.set_health(251)
+	GameState.damage_player(GameState.defense()+11)
+	potions = GameState.item_count("health_potion")
+	_check(GameState.health() == 285, "a later critical hit can use another potion without a rearm threshold")
+	GameState.damage_player(GameState.defense()+50)
+	_check(GameState.health() == 280 and GameState.item_count("health_potion") == potions-1, "auto-potion repeats on a new critical hit even without recovering above 35 percent")
+	GameState.set_health(5)
+	potions = GameState.item_count("health_potion")
+	GameState.damage_player(GameState.defense()+1)
+	_check(GameState.health() == 49 and GameState.item_count("health_potion") == potions-1, "one very-low-health hit consumes only one bottle, not the whole pack")
+	GameState.remove_item("health_potion",GameState.item_count("health_potion"))
+	GameState.set_health(200)
+	var event_count := healing_events.size()
+	GameState.damage_player(GameState.defense()+1)
+	_check(GameState.health() == 199 and healing_events.size() == event_count, "empty potion stock leaves damage unchanged and emits no false heal")
+	GameState.add_item("health_potion",1,true)
+	GameState.data.hp_max = 40
+	GameState.set_health(10)
+	GameState.damage_player(GameState.defense()+1)
+	_check(GameState.health() == 40 and healing_events[-1] == 31, "auto-potion caps healing at maximum HP and reports the actual amount")
+	GameState.add_item("health_potion",1,true)
+	GameState.set_health(0)
+	potions = GameState.item_count("health_potion")
+	_check(not GameState._try_auto_heal() and GameState.health() == 0 and GameState.item_count("health_potion") == potions, "auto-potion never resurrects an already defeated player")
+	GameState.data.hp_max = 1000
 	GameState.set_health(GameState.health_max())
 	GameState.add_shield(20)
 	var hp_before := GameState.health()
 	GameState.damage_player(10)
 	_check(GameState.health() == hp_before, "pet shield absorbs damage before health")
 	_check(GameState.shield() < 20, "shield value decreases when hit")
+	GameState.data.shield = 0
+	GameState.set_health(251)
+	GameState.autosave_enabled = true
+	GameState.damage_player(GameState.defense()+2)
+	var saved_hp := GameState.health()
+	var saved_potions := GameState.item_count("health_potion")
+	GameState.data.hp = 1
+	GameState.data.inventory.erase("health_potion")
+	_check(GameState.load_game() and GameState.health() == saved_hp and GameState.item_count("health_potion") == saved_potions, "automatic healing immediately saves both recovered HP and the consumed bottle")
+	GameState.auto_potion_used.disconnect(on_healed)
+	GameState.data = saved
+	GameState._emit_all()
+	GameState.autosave_enabled = autosave
+	GameState.save_game()
 
 
 func _test_pet_support() -> void:
@@ -618,6 +670,11 @@ func _test_portal_combat_and_auto_loot() -> void:
 	game.call("enter_portal", "tidebound_grotto")
 	await get_tree().create_timer(0.8).timeout
 	_check(game.world is Dungeon, "portal dungeon loads")
+	# Large imported art can finish construction before the fade has unlocked
+	# input. Wait for the real transition contract rather than racing a timer.
+	for frame in 180:
+		if not game._transitioning and is_instance_valid(game.player()) and not game.player().controls_locked: break
+		await get_tree().process_frame
 	_check(game.world.camera.zoom.distance_to(Vector2.ONE * GameSettings.camera_zoom()) < 0.1, "dungeon inherits saved camera zoom")
 	var enemies := get_tree().get_nodes_in_group("enemies")
 	for enemy in enemies:
@@ -840,13 +897,13 @@ func _test_second_portal() -> void:
 		if enemy.get("is_boss"):
 			boss = enemy
 	_check(enemies.size() >= 15, "second portal meets monster count (14 + boss)")
-	_check(boss != null and str(boss.kind) == "drowned_king", "second portal spawns its own boss")
+	_check(boss != null and str(boss.kind) == str(PortalDB.get_portal("sunken_crypt").get("boss_id","")), "second portal spawns its own boss")
 	if boss != null:
 		var p: Player = game.call("player")
 		p.global_position = boss.global_position + Vector2(0, 3.5)
 		await get_tree().create_timer(0.35).timeout
 		_check(boss.get_node_or_null("BossHealth") != null, "boss health appears overhead")
-		_check("DROWNED" in boss._boss_name().to_upper(), "overhead bar belongs to the active boss")
+		_check(boss._boss_name() == str(PortalDB.get_portal("sunken_crypt").get("boss_name","")), "overhead bar belongs to the active boss")
 	var dungeon: Dungeon = game.world
 	dungeon.call("exit_to_lobby", true)
 	await get_tree().create_timer(0.9).timeout

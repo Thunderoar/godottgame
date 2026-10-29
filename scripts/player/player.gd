@@ -42,6 +42,8 @@ var sleeping := false
 var sleep_progress := 0.0
 var invulnerable := 0.0
 var dead := false
+var _element_slow_time := 0.0
+var _element_slow_factor := 1.0
 
 var _attack_timer := 0.0
 var _attack_total := 0.45
@@ -74,7 +76,16 @@ func _ready() -> void:
 	var vitals := PlayerVitalHud.new()
 	vitals.name = "VitalHud"
 	add_child(vitals)
+	GameState.auto_potion_used.connect(_on_auto_potion_used)
 	set_process_input(true)
+
+func _on_auto_potion_used(healed: int) -> void:
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if is_queued_for_deletion() or not is_instance_valid(game) or game.player() != self: return
+	Vfx.ring(global_position,1.0,GameUI.GREEN,0.45)
+	Vfx.number(global_position+Vector2(0,-0.9),healed,false,GameUI.GREEN)
+	Vfx.pop(global_position+Vector2(0,-1.3),"health_potion",GameUI.GREEN)
+	Sfx.play("skill_recover",-12)
 
 
 func _build_body() -> void:
@@ -117,6 +128,8 @@ func _build_visual() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_element_slow_time = maxf(0,_element_slow_time-delta)
+	if _element_slow_time <= 0: _element_slow_factor = 1.0
 	_update_stamina(delta)
 	if invulnerable > 0.0:
 		invulnerable = maxf(0.0, invulnerable - delta)
@@ -150,7 +163,7 @@ func _physics_process(delta: float) -> void:
 	var input := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if input.length_squared() > 0.01:
 		facing = input.normalized()
-		var target := input.limit_length(1.0) * GameState.move_speed() * (SPRINT_MULTIPLIER if sprinting else 1.0)
+		var target := input.limit_length(1.0) * GameState.move_speed() * _element_slow_factor * (SPRINT_MULTIPLIER if sprinting else 1.0)
 		# Turning against the current slide direction grips harder.
 		var turn := turn_assistance if velocity.dot(input) < -0.5 else 1.0
 		velocity = velocity.move_toward(target, acceleration * turn * delta)
@@ -366,8 +379,9 @@ func _fire_arrow(character: Dictionary, arc_kind: String) -> void:
 func _show_slash(arc := "lr") -> void:
 	if _attack_sprite == null:
 		return
-	var tex := PixelArt.slash_arc_texture(arc if arc != "shot" else "lr")
+	var tex := RealmPresentation.weapon_arc(arc if arc != "shot" else "lr")
 	_attack_sprite.texture = tex
+	_attack_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	_attack_sprite.visible = true
 	_attack_sprite.position = facing * 0.88
 	_attack_sprite.rotation = facing.angle() + (0.4 if arc != "slam" else 0.0)
@@ -376,10 +390,10 @@ func _show_slash(arc := "lr") -> void:
 	if arc == "slam":
 		color = Color(1.0, 0.7, 0.35, 0.95)
 	_attack_sprite.modulate = color
-	_attack_sprite.scale = Vector2(0.020, 0.020)
+	_attack_sprite.scale = Vector2(0.010, 0.010)
 	var tween := create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(_attack_sprite, "scale", Vector2(0.042, 0.042), 0.12)
+	tween.tween_property(_attack_sprite, "scale", Vector2(0.021, 0.021), 0.12)
 	tween.tween_property(_attack_sprite, "modulate:a", 0.0, 0.22)
 	tween.chain().tween_callback(func() -> void:
 		if is_instance_valid(_attack_sprite):
@@ -437,6 +451,11 @@ func take_damage(amount: int, from: Vector2 = Vector2.ZERO) -> void:
 		tween.tween_property(_visual, "modulate", Color.WHITE, 0.22)
 	if GameState.health() <= 0:
 		die()
+
+func apply_elemental_slow(seconds: float, factor: float) -> void:
+	if dead: return
+	_element_slow_time = maxf(_element_slow_time,clampf(seconds,0,4))
+	_element_slow_factor = minf(_element_slow_factor,clampf(factor,0.2,1.0))
 
 
 func die() -> void:

@@ -26,7 +26,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	GameState._emit_all()
 	await game._load_lobby(false)
 	await game.get_tree().process_frame
-	check.call(game.hud._minimap is VillageMinimap and game.hud._minimap.anchor_right == 1, "minimap is attached to the top-right HUD")
+	check.call(game.hud._map_button is Button and game.hud._map_button.anchor_right == 1 and not game.hud._minimap.visible, "top-right Map button keeps the map hidden until requested")
 	check.call(game.hud._clock_label.get_parent().anchor_bottom == 1, "world clock is anchored to the bottom of the screen")
 	check.call(FieldGuideDB.entries(3).size() == 4 and NpcInfo.description("water").contains("extinguishes"), "book includes four story/sea pages and NPC job explanations")
 	if capture.is_valid(): await capture.call("01_village_map_clock")
@@ -114,6 +114,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	game.hud.visible = false
 	ocean.set_process(false)
 	ocean._process(4.0)
+	ocean.dismiss_sea_guide()
 	check.call(ocean.health == 3 and is_equal_approx(ocean.speed() / OceanJourney.INITIAL_SPEED, 2.5), "turtle starts with three lives and 2.5x speed")
 	var initial_y := ocean.turtle.position.y
 	Input.action_press("move_up")
@@ -127,9 +128,11 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 		for item in ocean.items.duplicate(): ocean._resolve_item(item, false)
 	ocean.health = 2
 	ocean.spawn_item("food", ocean.mouth_position().x)
-	check.call(ocean.choose_action("eat") and ocean.health == 2, "eating ordinary food never restores a life")
+	ocean._update_run(0)
+	check.call(ocean.food_eaten == 1 and ocean.health == 2, "automatically eating ordinary food never restores a life")
 	ocean.spawn_item("heart", ocean.mouth_position().x)
-	check.call(ocean.choose_action("eat") and ocean.health == 3, "Eat on a pink heart restores exactly one life")
+	ocean._update_run(0)
+	check.call(ocean.health == 3, "a nearby pink heart automatically restores exactly one life")
 	var bomb := ocean.spawn_item("bomb", ocean.turtle.position.x + 0.6)
 	bomb.node.position = ocean.turtle.position + Vector2(0.6, 0)
 	bomb.lane = ocean.turtle.position.y
@@ -152,18 +155,18 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 		ocean.phase = OceanJourney.Phase.RUNNING
 		ocean.elapsed = OceanJourney.STAGE_SECONDS
 		ocean._refresh_ui()
-		ocean._eat._press()
+		ocean._pickup._press()
 		var start_position := ocean.turtle.position
 		ocean._update_run(0)
 		check.call(ocean.phase == OceanJourney.Phase.TRAVELLING and ocean.stage_cleared, "route %d automatically begins forward departure" % route)
 		check.call(int(GameState.campaign().get("ocean_stage")) == mini(route+1,GameState.OCEAN_STAGES), "route %d saves its checkpoint before the travel animation" % route)
-		check.call(not ocean._retry.visible and ocean._return.disabled and ocean._controls_button.disabled and not Input.is_action_pressed("ocean_eat"), "route %d transit hides Next and releases/locks gameplay controls" % route)
+		check.call(not ocean._retry.visible and ocean._return.disabled and ocean._controls_button.disabled and not Input.is_action_pressed("ocean_pickup"), "route %d transit hides Next and releases/locks gameplay controls" % route)
 		var lives := ocean.health
 		var saved_route := int(GameState.campaign().get("ocean_stage"))
 		ocean._complete_stage()
 		ocean.restart()
 		ocean._mistake("cannot damage between routes")
-		check.call(ocean.phase == OceanJourney.Phase.TRAVELLING and ocean.health == lives and int(GameState.campaign().get("ocean_stage")) == saved_route and not ocean.choose_action("eat"), "route %d transit cannot be skipped, damaged or rewarded twice" % route)
+		check.call(ocean.phase == OceanJourney.Phase.TRAVELLING and ocean.health == lives and int(GameState.campaign().get("ocean_stage")) == saved_route and not ocean.choose_action("pickup"), "route %d transit cannot be skipped, damaged or rewarded twice" % route)
 		if route == 1:
 			GameState.save_game()
 			check.call(GameState.load_game() and int(GameState.campaign().get("ocean_stage")) == 2, "next sea checkpoint survives a save reload during departure")
@@ -205,13 +208,25 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(boarding.ship.get_node_or_null("ArjunPassenger") != null, "rescued Arjun is visible aboard the returning ship")
 	var returning_friend := boarding.ship.get_node_or_null("ArjunPassenger") as Sprite2D
 	check.call(returning_friend != null and is_equal_approx(returning_friend.global_scale.x,PixelArt.PX), "rescued Arjun keeps the correct human scale aboard the ship")
+	check.call(returning_friend is PlayerSprite and returning_friend.offset == Vector2(0,-24) and returning_friend.global_position.distance_to(home.player.global_position) > 2.0, "Arjun stands feet-aligned on the stern, clearly separated from Adam and the mast")
+	boarding.ship.position = boarding._moored_position + Vector2(-4,0)
+	boarding._physics_process(0)
+	check.call(returning_friend.global_position.is_equal_approx(boarding.ship.global_position+ShipDeparture.ARJUN_OFFSET), "Arjun follows the returning ship at his visible rear-deck position")
+	if capture.is_valid(): await capture.call("06a_arjun_visible_on_returning_ship")
 	boarding.ship.position = boarding._moored_position
 	boarding._physics_process(0)
 	home.player.position = boarding.position
 	boarding._physics_process(0.01)
-	for i in 240:
-		if not game._arjun_returning: break
-		await game.get_tree().create_timer(0.025).timeout
+	check.call(game._arjun_walk != null and game._arjun_walk.is_valid() and returning_friend.get_parent() == home and _hero_count(home) == 0, "Arjun leaves the ship as one continuous actor without a duplicate villager")
+	var walk_route := home.resident_path(boarding.global_position+Vector2(0.6,0),home._house_position+Vector2(-3,3))
+	check.call(not walk_route.is_empty() and walk_route[-1].distance_to(home._house_position+Vector2(-3,3)) < 0.6, "Arjun's walk has a connected resident route from the jetty into the village")
+	game._arjun_walk.pause()
+	var walk_start := returning_friend.global_position
+	game._arjun_walk.custom_step(0.5)
+	check.call(is_equal_approx(returning_friend.global_position.distance_to(walk_start),Resident.WALK_SPEED*0.5) and is_equal_approx(returning_friend.global_scale.x,PixelArt.PX), "Arjun disembarks at normal resident walking speed and keeps human scale")
+	if capture.is_valid(): await capture.call("06b_arjun_walking_from_jetty")
+	game._arjun_walk.custom_step(300)
+	await game.get_tree().process_frame
 	check.call(not game._arjun_returning and _hero_count(home) == 1, "Arjun disembarks and joins the village once")
 	var friend: VillageHero
 	for child in home.get_children():

@@ -7,6 +7,7 @@ extends PanelContainer
 
 signal action_pressed(card: ItemCard)
 signal selected(card: ItemCard)
+signal upgrade_pressed(card: ItemCard)
 
 var item_id := ""
 var icon_kind := "spark"
@@ -17,6 +18,7 @@ var _stat_label: Label
 var _price_label: Label
 var _price_icon: TextureRect
 var _action_button: Button
+var _upgrade_button: Button
 var _state_label: Label
 var _card: PanelContainer
 
@@ -76,6 +78,10 @@ func _build() -> void:
 		action_pressed.emit(self)
 		_press_squash())
 	right.add_child(_action_button)
+	_upgrade_button = GameUI.button("Upgrade", Vector2(122,32))
+	_upgrade_button.add_theme_font_size_override("font_size",12)
+	_upgrade_button.pressed.connect(func() -> void: upgrade_pressed.emit(self))
+	right.add_child(_upgrade_button)
 	_state_label = GameUI.label("", 12, GameUI.MUTED)
 	_state_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	right.add_child(_state_label)
@@ -109,7 +115,13 @@ func refresh() -> void:
 	# Updates every mutable value in place. Called on open and on data_changed.
 	var item := ItemDB.get_item(item_id)
 	_name_label.text = str(item.get("name", item_id))
-	_stat_label.text = ItemDB.stat_line(item_id)
+	_stat_label.text = GameState.item_stat_line(item_id)
+	_upgrade_button.visible = item.get("kind","") == "weapon" and GameState.item_count(item_id) > 0
+	if _upgrade_button.visible:
+		var rank := GameState.weapon_rank(item_id)
+		_upgrade_button.text = "Max +5" if rank >= GameState.MAX_WEAPON_UPGRADE else "Upgrade · %d G" % GameState.weapon_upgrade_cost(item_id)
+		_upgrade_button.disabled = rank >= GameState.MAX_WEAPON_UPGRADE or GameState.gold() < GameState.weapon_upgrade_cost(item_id)
+	_name_label.text += " +%d" % GameState.weapon_rank(item_id) if GameState.weapon_rank(item_id) > 0 else ""
 	var price := int(item.get("price", 0))
 	if price > 0:
 		_price_label.text = "%d" % price

@@ -169,7 +169,7 @@ func _rebuild() -> void:
 		"potion":
 			add_section("POTIONS & CARE")
 			_add_stock_grid(ItemDB.stock_for("potion"))
-			add_body_text("Health potions are permanent inventory; your pack stores up to nine.", GameUI.MUTED, 13)
+			add_body_text("Carry up to nine health potions. At 25% HP or below, hits automatically use one to heal you.", GameUI.MUTED, 13)
 		"equipment":
 			_add_roof_gun_shop()
 			add_section("EQUIPMENT  •  %s discipline" % GameState.character_weapon_style().capitalize(), GameUI.GOLD)
@@ -192,7 +192,7 @@ func _rebuild() -> void:
 func _equipment_stock() -> Array[String]:
 	var out: Array[String] = []
 	for item_id in ItemDB.equipment_for_style(GameState.character_weapon_style()):
-		if ItemDB.get_item(item_id).get("price", 0) == 0 and GameState.item_count(item_id) > 0:
+		if ItemDB.get_item(item_id).get("price", 0) == 0 and GameState.item_count(item_id) > 0 and ItemDB.get_item(item_id).get("kind","") != "weapon":
 			continue
 		out.append(item_id)
 	return out
@@ -224,6 +224,7 @@ func _add_stock_grid(item_ids: Array[String], summary := false) -> void:
 		card.setup(item_id, _icon_kind(item_id))
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		card.action_pressed.connect(_on_card_action)
+		card.upgrade_pressed.connect(_on_card_upgrade)
 		card.selected.connect(_on_card_selected)
 		grid.add_child(card)
 		_cards.append(card)
@@ -573,6 +574,16 @@ func _on_card_selected(card: ItemCard) -> void:
 	card.mark_selected(true)
 	_show_detail(card.item_id)
 
+func _on_card_upgrade(card: ItemCard) -> void:
+	var result := GameState.upgrade_weapon(card.item_id)
+	if bool(result.get("ok",false)):
+		Sfx.play("equip",-8)
+		card.pop()
+		_on_card_selected(card)
+	else:
+		card.flash_error()
+	_detail_hint.text = str(result.get("message",""))
+
 
 func _show_detail(item_id: String) -> void:
 	if _detail_name == null:
@@ -580,15 +591,15 @@ func _show_detail(item_id: String) -> void:
 	var item := ItemDB.get_item(item_id)
 	_detail_name.text = str(item.get("name", item_id))
 	_detail_desc.text = str(item.get("description", ""))
-	var stats := ItemDB.stat_line(item_id)
+	var stats := GameState.item_stat_line(item_id)
 	var slot := str(item.get("slot", ""))
 	if slot != "" and ItemDB.is_equipment(item_id):
 		# Before/after compare against what is currently equipped in that slot.
 		var equipped_id := GameState.equipped_item(slot)
 		var equipped_item := ItemDB.get_item(equipped_id) if equipped_id != "" else {}
 		var is_attack := int(item.get("attack", 0)) > 0
-		var mine := int(equipped_item.get("attack", 0)) if is_attack else int(equipped_item.get("defense", 0))
-		var theirs := int(item.get("attack", 0)) if is_attack else int(item.get("defense", 0))
+		var mine := GameState.weapon_attack(equipped_id) if is_attack else int(equipped_item.get("defense", 0))
+		var theirs := GameState.weapon_attack(item_id) if is_attack else int(item.get("defense", 0))
 		var base := GameState.attack_power() if is_attack else GameState.defense()
 		var delta := theirs - mine
 		var label := "ATK" if is_attack else "DEF"

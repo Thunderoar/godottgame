@@ -60,7 +60,7 @@ func _rebuild() -> void:
 		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		hbox.add_child(info)
 		info.add_child(GameUI.label("%s  x%d" % [str(item.get("name", item_id)), count], 16))
-		var stat := ItemDB.stat_line(str(item_id))
+		var stat := GameState.item_stat_line(str(item_id))
 		if stat != "":
 			info.add_child(GameUI.label(stat, 12, GameUI.GREEN))
 		var actions := HBoxContainer.new()
