@@ -753,6 +753,7 @@ func try_urchin_introduction(home: Lobby, fire_count: int, points: PackedVector2
 	if points.is_empty() and fire_points.is_empty(): return false
 	var pending := GameState.stage_home_arrival(fire_count, points, false, fire_points)
 	if pending.is_empty(): return false
+	if not pending.resolved_fire.is_empty() or not pending.resolved_shore.is_empty(): return false
 	_urchin_world_mode = home.process_mode
 	_urchin_hud_visible = hud.visible
 	_story_active = true

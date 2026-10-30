@@ -1619,6 +1619,7 @@ func advance_world_clock(delta: float) -> void:
 	var after := before + delta
 	data.world_time = after
 	if int(before / DAY_PHASE_SECONDS) != int(after / DAY_PHASE_SECONDS):
+		_close_old_home_arrivals()
 		day_phase_changed.emit(is_night())
 
 
@@ -1642,7 +1643,7 @@ func pending_home_arrival(reinforcement: bool = false) -> Dictionary:
 	var pending: Dictionary = data.get("home_fire_arrival" if reinforcement else "home_arrival", {})
 	return pending.duplicate(true) if is_night() and int(pending.get("night", -1)) == night_number() else {}
 
-func stage_home_arrival(fires: int, points: PackedVector2Array, forest_delivered: bool = false, fire_points: PackedVector2Array = PackedVector2Array(), reinforcement: bool = false) -> Dictionary:
+func stage_home_arrival(fires: int, points: PackedVector2Array, forest_delivered: bool = false, fire_points: PackedVector2Array = PackedVector2Array(), reinforcement: bool = false, raid: bool = false) -> Dictionary:
 	if not is_night() or game_over_active: return {}
 	var key := "home_fire_arrival" if reinforcement else "home_arrival"
 	var accepted := fire_points.slice(0, clampi(fires, 0, 30 if reinforcement else 24))
@@ -1652,6 +1653,11 @@ func stage_home_arrival(fires: int, points: PackedVector2Array, forest_delivered
 		if int(pending.fires) > 0 and not pending.has("fire_points"):
 			pending.fire_points = _saved_arrival_points(accepted)
 			pending.fires = accepted.size()
+			pending = _arrival_progress(pending, reinforcement)
+			data[key] = pending
+			_save_if_needed()
+		elif not pending.has("fire_times"):
+			pending = _arrival_progress(pending, reinforcement)
 			data[key] = pending
 			_save_if_needed()
 		return pending
@@ -1659,9 +1665,99 @@ func stage_home_arrival(fires: int, points: PackedVector2Array, forest_delivered
 	for point in points: saved_points.append([point.x, point.y])
 	data.home_arrival_serial = int(data.get("home_arrival_serial", 0)) + 1
 	data[key] = {"id": str(data.home_arrival_serial), "night": night_number(), "fires": accepted.size(), "points": saved_points, "fire_points": _saved_arrival_points(accepted), "started": float(data.world_time)}
+	data[key].raid = raid
+	data[key] = _arrival_progress(data[key], reinforcement)
 	if forest_delivered: data.home_wave = night_number()
 	_save_if_needed()
 	return pending_home_arrival(reinforcement)
+
+func _arrival_progress(pending: Dictionary, reinforcement: bool) -> Dictionary:
+	var timing := ArrivalDB.times(pending.get("fire_points", []).size(), pending.points.size(), reinforcement)
+	pending.fire_times = timing.fire
+	pending.shore_times = timing.shore
+	for species in ["fire", "shore"]:
+		var count: int = pending.fire_points.size() if species == "fire" else pending.points.size()
+		var resolved: Array = []
+		var raw: Variant = pending.get("resolved_" + species, [])
+		if raw is Array:
+			for index in raw.slice(0, count):
+				if (index is int or index is float) and is_finite(float(index)) and int(index) == float(index) and int(index) >= 0 and int(index) < count and int(index) not in resolved: resolved.append(int(index))
+		pending["resolved_" + species] = resolved
+	pending.raid = pending.get("raid", false) is bool and pending.get("raid", false) == true
+	var last: Variant = pending.get("last_delivery", -1000.0)
+	pending.last_delivery = clampf(float(last), -1000.0, float(data.world_time)) if (last is float or last is int) and is_finite(float(last)) else -1000.0
+	return pending
+
+func resolve_home_arrival_member(batch_id: String, reinforcement: bool, species: String, index: int, monsters: Array, delivered: bool, introduced: bool = false) -> bool:
+	var key := "home_fire_arrival" if reinforcement else "home_arrival"
+	var pending := pending_home_arrival(reinforcement)
+	if pending.is_empty() or str(pending.get("id", "")) != batch_id or species not in ["fire", "shore"] or game_over_active: return false
+	var points: Array = pending.fire_points if species == "fire" else pending.points
+	if index < 0 or index >= points.size() or index in pending["resolved_" + species]: return false
+	pending["resolved_" + species].append(index)
+	var quota_changed := _discard_pending_raiders(1) if bool(pending.raid) and species == "shore" and not delivered else false
+	if delivered:
+		pending.last_delivery = float(data.world_time)
+		if introduced: data.campaign["fire_intro_seen" if species == "fire" else "urchin_intro_seen"] = true
+	data[key] = pending
+	store_home_monsters(monsters)
+	if pending.resolved_fire.size() == pending.fire_points.size() and pending.resolved_shore.size() == pending.points.size():
+		if not reinforcement: data.home_wave = night_number()
+		data[key] = {}
+	_save_if_needed()
+	data_changed.emit()
+	if quota_changed: emergency_changed.emit(emergency_active(), emergency_monsters(), emergency_damage())
+	return true
+
+func expire_home_arrival_members(reinforcement: bool, monsters: Array) -> void:
+	var key := "home_fire_arrival" if reinforcement else "home_arrival"
+	var pending := pending_home_arrival(reinforcement)
+	if pending.is_empty() or not pending.has("fire_times"): return
+	var elapsed := float(data.world_time) - float(pending.started)
+	var changed := false
+	var skipped_raiders := 0
+	for species in ["fire", "shore"]:
+		var times: Array = pending[species + "_times"]
+		for i in times.size():
+			if i not in pending["resolved_" + species] and elapsed > float(times[i]) + ArrivalDB.LATE_GRACE:
+				pending["resolved_" + species].append(i)
+				if bool(pending.raid) and species == "shore": skipped_raiders += 1
+				changed = true
+	if not changed: return
+	data[key] = pending
+	var quota_changed := _discard_pending_raiders(skipped_raiders)
+	store_home_monsters(monsters)
+	if pending.resolved_fire.size() == pending.fire_points.size() and pending.resolved_shore.size() == pending.points.size():
+		if not reinforcement: data.home_wave = night_number()
+		data[key] = {}
+	_save_if_needed()
+	data_changed.emit()
+	if quota_changed: emergency_changed.emit(emergency_active(), emergency_monsters(), emergency_damage())
+
+func _discard_pending_raiders(count: int) -> bool:
+	if count <= 0 or not emergency_active(): return false
+	data.emergency_monsters = maxi(0, emergency_monsters() - count)
+	if emergency_monsters() == 0: data.emergency_active = false
+	return true
+
+func discard_unarrived_raiders(count: int) -> void:
+	if not _discard_pending_raiders(count): return
+	_save_if_needed()
+	data_changed.emit()
+	emergency_changed.emit(emergency_active(), emergency_monsters(), emergency_damage())
+
+func _close_old_home_arrivals() -> void:
+	var changed := false
+	var quota_changed := false
+	for key in ["home_arrival", "home_fire_arrival"]:
+		var pending: Dictionary = data.get(key, {})
+		if pending.is_empty() or (is_night() and int(pending.get("night", -1)) == night_number()): continue
+		if bool(pending.get("raid", false)):
+			quota_changed = _discard_pending_raiders(pending.get("points", []).size() - pending.get("resolved_shore", []).size()) or quota_changed
+		data[key] = {}
+		changed = true
+	if changed: _save_if_needed()
+	if quota_changed: emergency_changed.emit(emergency_active(), emergency_monsters(), emergency_damage())
 
 func _saved_arrival_points(points: PackedVector2Array) -> Array:
 	var result: Array = []
@@ -1696,7 +1792,11 @@ func _sanitize_home_arrival(raw: Variant, reinforcement: bool) -> Dictionary:
 	started = clampf(started, float(night_number()) * DAY_PHASE_SECONDS * 2 + DAY_PHASE_SECONDS, float(data.world_time))
 	var result := {"id": str(raw.get("id", "legacy-fire" if reinforcement else "legacy-home")).left(64), "night": night_number(), "fires": fires, "points": points, "started": started}
 	if raw.has("fire_points"): result.fire_points = fire_points
-	return result
+	result.raid = raw.get("raid", false)
+	result.resolved_fire = raw.get("resolved_fire", [])
+	result.resolved_shore = raw.get("resolved_shore", [])
+	result.last_delivery = raw.get("last_delivery", -1000.0)
+	return _arrival_progress(result, reinforcement) if result.has("fire_points") else result
 
 
 func store_home_monsters(monsters: Array) -> void:

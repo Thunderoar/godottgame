@@ -37,6 +37,10 @@ var _caption: Label
 var _voice: AudioStreamPlayer
 var _sound_beat := -1
 var _curtain: ColorRect
+var fire_times: Array = []
+var shore_times: Array = []
+var resolved_fire: Array = []
+var resolved_shore: Array = []
 
 func configure(pending: Dictionary) -> void:
 	night = int(pending.night)
@@ -46,9 +50,17 @@ func configure(pending: Dictionary) -> void:
 	warning_started = float(pending.started)
 	for at in pending.points: points.append(Vector2(float(at[0]), float(at[1])))
 	for at in pending.get("fire_points", []): fire_points.append(Vector2(float(at[0]), float(at[1])))
+	fire_times = pending.get("fire_times", [])
+	shore_times = pending.get("shore_times", [])
+	resolved_fire = pending.get("resolved_fire", []).duplicate()
+	resolved_shore = pending.get("resolved_shore", []).duplicate()
 
 func duration() -> float:
-	if not full_intro or not introduce_fire: return DURATION
+	if not full_intro:
+		var end := DURATION
+		for time in fire_times + shore_times: end = maxf(end, float(time))
+		return end + ArrivalDB.LATE_GRACE + 0.1
+	if not introduce_fire: return DURATION
 	return COMBINED_DURATION if introduce_shore else FIRE_DURATION
 
 func _ready() -> void:
@@ -71,6 +83,8 @@ func _ready() -> void:
 		_fire.home = home
 		_fire.points = fire_points
 		_fire.full_intro = full_intro and introduce_fire
+		for time in fire_times: _fire.offsets.append(float(time) - ArrivalDB.WARNING)
+		_fire.resolved = resolved_fire
 		add_child(_fire)
 	if full_intro:
 		_previous_camera = get_viewport().get_camera_2d()
@@ -147,7 +161,33 @@ func _process(delta: float) -> void:
 	if full_intro: elapsed += maxf(0, delta)
 	else: elapsed = maxf(0, float(GameState.data.world_time) - _started_at)
 	sample(elapsed)
+	if not full_intro:
+		GameState.expire_home_arrival_members(reinforcement, home.capture_monsters())
+		var pending := GameState.pending_home_arrival(reinforcement)
+		if pending.is_empty(): finish(); return
+		resolved_fire = pending.resolved_fire.duplicate()
+		resolved_shore = pending.resolved_shore.duplicate()
+		# At most one actual creature per tick, with saved spacing between ticks.
+		var member := next_member(pending)
+		if not member.is_empty() and elapsed >= float(member.time):
+			home.deliver_arrival_member(self, str(member.species), int(member.index))
+			pending = GameState.pending_home_arrival(reinforcement)
+			if pending.is_empty(): finish(); return
+			resolved_fire = pending.resolved_fire.duplicate()
+			resolved_shore = pending.resolved_shore.duplicate()
+		sample(elapsed)
 	if elapsed >= duration(): finish()
+
+func next_member(pending: Dictionary) -> Dictionary:
+	var result := {}
+	var earliest := INF
+	for species in ["fire", "shore"]:
+		var times: Array = pending[species + "_times"]
+		for i in times.size():
+			if i not in pending["resolved_" + species] and float(times[i]) < earliest:
+				earliest = float(times[i])
+				result = {"species": species, "index": i, "time": earliest}
+	return result
 
 func sample(time: float) -> void:
 	elapsed = clampf(time, 0, duration())
@@ -158,10 +198,10 @@ func sample(time: float) -> void:
 	if full_intro and introduce_fire and introduce_shore: visible_time = minf(8.0, elapsed * 8.0 / 7.0)
 	for i in _sprites.size():
 		var actor := _sprites[i]
-		var delay := 0.0 if i == 0 else 3.7 + float(i - 1) * 0.18
-		var t := visible_time - delay
+		var local_time := elapsed - (float(shore_times[i]) - ArrivalDB.WARNING if not full_intro and i < shore_times.size() else 0.0)
+		var t := visible_time if full_intro else (minf(1.99, local_time * 0.25) if local_time < 6.6 else lerpf(2.0, 3.2, clampf((local_time - 6.6) / 1.4, 0, 1)))
 		var show_spines := t >= 0.8 and t < 2.0
-		actor.visible = t >= 0.8
+		actor.visible = t >= 0.8 and i not in resolved_shore and (not full_intro or i == 0)
 		var land := home.to_global(points[i])
 		var water := land + Vector2(0, 1.8)
 		var progress := smoothstep(2.0, 3.2, t)
@@ -175,7 +215,9 @@ func sample(time: float) -> void:
 		actor.modulate.a = 1.0 if reduced else smoothstep(0.8, 1.2, t)
 	var fire_time := elapsed
 	if full_intro and introduce_fire and introduce_shore: fire_time = (elapsed - 7.0) * 9.2 / 6.5
-	if is_instance_valid(_fire): _fire.sample(fire_time)
+	if is_instance_valid(_fire):
+		_fire.resolved = resolved_fire
+		_fire.sample(fire_time)
 	if full_intro and is_instance_valid(_camera):
 		var close_zoom := Vector2.ONE * minf(64, get_viewport_rect().size.y / 6.0)
 		var focus_progress := smoothstep(0.0, 0.8, elapsed)
@@ -187,7 +229,7 @@ func sample(time: float) -> void:
 		var shot := _focus
 		if introduce_fire and is_instance_valid(_fire) and (not introduce_shore or elapsed >= 7.15):
 			shot = _fire.focus()
-			close_zoom = Vector2.ONE * minf(76, get_viewport_rect().size.y / 7.0) * lerpf(1.0, 0.78, smoothstep(6.6, 8.4, fire_time))
+			close_zoom = Vector2.ONE * minf(76, get_viewport_rect().size.y / 7.0) * lerpf(1.0, 0.90, smoothstep(6.6, 8.4, fire_time))
 		# Bridge distant shore and forest with a brief covered cut, one camera owner.
 		var cover := smoothstep(6.85, 7.15, elapsed) * (1.0 - smoothstep(7.15, 7.5, elapsed)) if introduce_fire and introduce_shore else 0.0
 		_curtain.visible = cover > 0
@@ -201,16 +243,36 @@ func sample(time: float) -> void:
 		else: _caption.text = "Spines in the foam..." if elapsed < 4.6 else "Sea Urchins · A stubborn visitor from the tide"
 	else:
 		_fit()
-		if points.is_empty() and is_instance_valid(_fire): _caption.text = "Embers in the forest · " + _bearing(_fire.focus())
-		elif not fire_points.is_empty() and is_instance_valid(_fire): _caption.text = "Spines · %s   /   Embers · %s" % [_bearing(_focus), _bearing(_fire.focus())]
-		else: _caption.text = "Spines at the shoreline · " + _bearing(_focus)
+		var fire_cue := false
+		var shore_cue := false
+		var fire_focus := Vector2.ZERO
+		var shore_focus := _focus
+		for i in fire_times.size():
+			if i not in resolved_fire and elapsed >= float(fire_times[i]) - ArrivalDB.WARNING and elapsed <= float(fire_times[i]) + ArrivalDB.LATE_GRACE:
+				if not fire_cue: fire_focus = home.to_global(fire_points[i])
+				fire_cue = true
+		for i in shore_times.size():
+			if i not in resolved_shore and elapsed >= float(shore_times[i]) - ArrivalDB.WARNING and elapsed <= float(shore_times[i]) + ArrivalDB.LATE_GRACE:
+				if not shore_cue: shore_focus = home.to_global(points[i])
+				shore_cue = true
+		_caption.visible = fire_cue or shore_cue
+		if fire_cue and shore_cue: _caption.text = "Spines · %s   /   Embers · %s" % [_bearing(shore_focus), _bearing(fire_focus)]
+		elif fire_cue: _caption.text = "Embers in the forest · " + _bearing(fire_focus)
+		elif shore_cue: _caption.text = "Spines at the shoreline · " + _bearing(shore_focus)
 	var game := get_tree().get_first_node_in_group("game") as Game
 	_ui.visible = full_intro or (is_instance_valid(game) and not game.hud.any_modal_open() and not game._story_active and not is_instance_valid(game.home_interior))
-	var beat := 0 if elapsed < 2 else (1 if elapsed < 3.4 else 2)
-	if beat != _sound_beat and not points.is_empty():
+	var beat := -1
+	if full_intro and introduce_shore: beat = 0 if visible_time < 2 else (1 if visible_time < 3.4 else 2)
+	elif not full_intro:
+		for i in shore_times.size():
+			var local_time := elapsed - float(shore_times[i]) + ArrivalDB.WARNING
+			if i not in resolved_shore and local_time >= 0 and local_time <= ArrivalDB.WARNING:
+				beat = i * 3 + (0 if local_time < 6.6 else (1 if local_time < 7.3 else 2))
+				break
+	if beat != _sound_beat and beat >= 0:
 		_sound_beat = beat
 		if _voice != null and not GameSettings.mute_all() and GameSettings.effects_volume() > 0 and GameSettings.master_volume() > 0:
-			_voice.stream = Sfx.urchin_arrival_sound(["surf", "sand", "rattle"][beat])
+			_voice.stream = Sfx.urchin_arrival_sound(["surf", "sand", "rattle"][beat % 3])
 			_voice.play()
 	if full_intro and introduce_fire and introduce_shore and elapsed >= 7.0: _voice.stop()
 	queue_redraw()
@@ -223,6 +285,8 @@ func _draw() -> void:
 	if not is_instance_valid(home): return
 	var reduced := GameSettings.reduce_motion()
 	for i in _feet.size():
+		if i in resolved_shore or (full_intro and i > 0): continue
+		if not full_intro and (elapsed < float(shore_times[i]) - ArrivalDB.WARNING or elapsed > float(shore_times[i])): continue
 		if full_intro and _sprites[i].visible:
 			var at := _feet[i]
 			draw_ellipse_shadow(at)
