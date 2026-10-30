@@ -4,6 +4,16 @@
 The project/application name is still **Save The World**; the player-facing title is
 **PB (Protect BESUT)**. Tidesworn is also the name of the editor workspace.
 
+**2026-10-30 reunion dialogue:** after both rescues and a safe return to BESUT,
+the former ending is now a player-paced conversation among Adam, Arjun and Mei
+Ling, followed by an illustrated dock-preparation tag. The stable `ending_seen`
+flag remains its one-time completion owner. The tag does not move live actors,
+board the ship or change ocean checkpoints. Game defers the reunion while return,
+modal, recovery or nearby danger owns play, then retries safely. Windows review:
+`tools/test_isolated.ps1 -Godot <console-executable> -Reunion`, optionally
+`-Capture -Resolution 832x480` or `1280x720`. See the newest acceptance section
+and `docs/FRIENDS_REUNION_DIALOGUE_PLAN.md`.
+
 **2026-10-30 Mei Ling rescue presentation:** Shadow & Chaos Fiend's defeat still
 commits her rescue before presentation. A visible nonblocking citadel prison now
 leads into seven authored animatic beats: defeat, seal fracture, release, meeting,

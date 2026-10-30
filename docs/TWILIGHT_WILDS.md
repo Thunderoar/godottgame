@@ -170,3 +170,10 @@ Run `tools/test_isolated.ps1 -Godot <console-executable> -MeiRescue`, with optio
 `-Capture -Resolution 832x480` or `1280x720`. The focused scene includes saved-state
 compatibility, all skip positions, natural completion, replacement, live settings,
 actual pointer/keyboard input, consecutive movement frames and both Arjun states.
+
+When both friends are safe and Adam returns to BESUT, the pending reunion now
+uses a thirty-turn conversation followed by a quiet dock-preparation illustration.
+It waits for a safe world context and real ship disembarkation, keeps the existing
+`ending_seen` completion flag and leaves normal village play available afterward.
+See `FRIENDS_REUNION_DIALOGUE_PLAN.md` and the latest acceptance evidence. The dock
+image hints at their next journey without starting a new sailing route.

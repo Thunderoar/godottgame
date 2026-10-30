@@ -2518,3 +2518,65 @@ Evidence below `C:/Users/LUQMAN/AppData/Local/Temp/`:
 - Twilight: `tidesworn-tests-f51c7bb2cc39454cafc994341168b66b`.
 - Fire: `tidesworn-tests-69d02a0909514043b8c4b1d144bd808b`.
 - Import: `tidesworn-tests-dee056d0ef64435db6cd568f1938199d`.
+
+## Three friends, one table - reunion dialogue (2026-10-30)
+
+The former three-caption ending is replaced by thirty named dialogue turns across
+seven animatic beats: recognition, Arjun's apology, their separation, a shared
+plan, thanks to BESUT, practical preparation and familiar company. An eighth,
+wordless dock tag shows the moored UNISZA ship, a supply bag and the friends
+checking a rope. It hints at another journey without selecting a destination.
+
+- Readers control the pace. Text reveals gradually; Next first reveals the line
+  and a fresh activation advances it. Primary touch/emulated mouse is debounced.
+  Skip conversation preserves the two-second dock tag before Continue completes.
+- Copied finite unarmed poses support sitting, listening, gestures, cups, rising
+  and preparation. The benches remain after the group stands. Courtyard/dock day
+  and night art follow the captured shared clock. Reduced motion and low effects
+  retain essential events, speakers and legible text.
+- The active dialogue owns its procedural voice. New turns, complete reveals,
+  mute/zero volume, focus loss, Skip and cancellation stop it. No recorded voice
+  acting is required; muted pictures and captions carry the complete conversation.
+- Game owns a safe retry for the pending reunion. One missing friend, sailing,
+  Arjun still returning, transitions, defeat/recovery, modals and nearby enemies
+  prevent entry. A safe retry starts it without consuming its completion early.
+- Existing `ending_seen` persistence remains. Finishing saves it; cancellation
+  does not. Already-completed saves do not repeat it. The dock illustration cannot
+  move live actors, board the ship, award rewards or change ocean checkpoints.
+- Both rescue orders retain the shared conversation and independent defender IDs.
+  Campaign/Field Guide copy now describes the reunion and next preparations rather
+  than a permanent-settlement promise or THE END card.
+
+`tools/reunion_checks.gd` is part of the canonical gameplay gate and the focused
+`tools/reunion_test.tscn`. Windows uses `-Reunion`, with optional `-Capture` and
+`-Resolution 832x480` / `1280x720` under `tools/test_isolated.ps1`. Review output
+stays in its printed isolated temporary directory. Initial fixture input injection
+was corrected to release at a stored pointer coordinate after the final button
+freed itself, and to refresh button state after manually sampled dock shots.
+
+Windows Godot 4.7.2 verification:
+
+- Canonical isolated gameplay: **6,410 checks, PASS, exit 0**. The earlier full
+  attempt exposed four fixture input failures: without captures, pointer injection
+  reached the first button before its container layout settled. The helper now
+  waits for that layout in both native and headless modes; the assertions remain.
+- Focused reunion headless: **62 checks, PASS, exit 0**.
+- Native reunion at **832x480** and **1280x720**: **62 checks, PASS, exit 0** each.
+  Inspected all conversation beats, the named-speaker layout, day/night variants,
+  consecutive walking/settling/rising frames and dock preparation. Real mouse,
+  primary touch and keyboard events cover reveal-first and fresh-turn activation.
+- Full/focused runtime stderr files are empty and contain no failure/error markers.
+  The final full gate also covers the real sea disembarkation, both rescue orders,
+  saved ending compatibility, unique village defenders and the citadel rescue.
+- Isolated import passes, retaining the existing `Unable to open Android
+  'build-tools' directory` warning. `git diff --check` passes. Captures use the
+  native Windows Compatibility renderer on AMD Radeon Vega 3. No Android export,
+  physical-phone validation or new sailing destination is claimed here.
+
+Evidence below `C:/Users/LUQMAN/AppData/Local/Temp/`:
+
+- Full gate: `tidesworn-tests-c74ae44a19934cc08d5ce19ff169dc94`.
+- Headless reunion: `tidesworn-tests-93adad76d5fe4d728b8ea1449441959b`.
+- Final 832x480: `tidesworn-tests-0742bacc367c4b98a44d7a2ed7241d51`.
+- Final 1280x720: `tidesworn-tests-4072490838634c28a8f07fcc5c187336`.
+- Import: `tidesworn-tests-0f6d007219ca4fc1ae2c11ca125d38da`.

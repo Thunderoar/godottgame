@@ -2475,7 +2475,7 @@ func campaign_objective() -> String:
 	var story := campaign()
 	if not portal_opened(): return "Search for Arjun and Mei Ling. Meet your neighbours and investigate the old waystone."
 	if friends_reunited():
-		return "Three friends reunited. BESUT is your new home."
+		return "Three friends reunited in BESUT. Prepare for what comes next, together."
 	var goals: Array[String] = []
 	if not bool(story.get("arjun_rescued", false)):
 		goals.append("Rescue Arjun: ship > sea route %d/3 > Kraken Island" % int(story.get("ocean_stage", 1)))

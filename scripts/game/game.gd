@@ -35,6 +35,7 @@ var _urchin_world_mode := Node.PROCESS_MODE_INHERIT
 var _urchin_hud_visible := true
 var _arjun_returning := false
 var _arjun_walk: Tween
+var _reunion_check_timer := 0.0
 
 const EMERGENCY_DELAY := 14.0
 const SETTLEMENT_DAMAGE_TICK := 5.0
@@ -62,6 +63,10 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	_reunion_check_timer += delta
+	if _reunion_check_timer >= 0.75:
+		_reunion_check_timer = 0.0
+		_check_campaign_ending()
 	_side_quest_timer += delta
 	if _side_quest_auto_enabled and _side_quest_timer >= 0.3:
 		_side_quest_timer = 0.0
@@ -997,7 +1002,20 @@ func _rescue_mei_ling() -> void:
 
 func _check_campaign_ending() -> void:
 	if not world is Lobby or _sailing or _transitioning or _story_active or not GameState.friends_reunited() or bool(GameState.campaign().get("ending_seen", false)): return
+	if not _reunion_context_safe(): return
 	await play_story("ending")
+
+func _reunion_context_safe() -> bool:
+	if _arjun_returning or _input_locked or _game_over or _defeat_pending or hud.any_modal_open() or is_instance_valid(home_interior) or is_instance_valid(_dock_conversation) or is_instance_valid(_urchin_arrival): return false
+	if not world is Lobby or world.journey_serial != GameState.journey_serial or world._settlement_editor.active: return false
+	if GameState.recovery_active() or GameState.emergency_active(): return false
+	var actor := player()
+	if not is_instance_valid(actor) or actor.dead or actor.sleeping or actor.attacking or actor.controls_locked or Input.is_action_pressed("attack"): return false
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if is_instance_valid(enemy) and not enemy.is_queued_for_deletion() and enemy.get_parent() == world and not enemy.dead and enemy.global_position.distance_to(actor.global_position) < 10.0: return false
+	for tree in get_tree().get_nodes_in_group("forest_tree"):
+		if is_instance_valid(tree) and tree.get_parent() == world and tree.burning and tree.global_position.distance_to(actor.global_position) < 10.0: return false
+	return true
 
 func _land_arjun(boarding: ShipDeparture) -> void:
 	var home := world as Lobby
