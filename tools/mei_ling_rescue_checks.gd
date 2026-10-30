@@ -54,10 +54,11 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(GameState.load_game() and not bool(GameState.campaign().mei_ling_rescued), "loading an uncleared save does not rescue Mei Ling")
 	# Real first-boss signal, player-paced story and peaceful continuation: Mei Ling first.
 	GameState.data = GameState._make_default("adam")
+	GameState.data.portal_origin.opened = true # Rescue fixture begins after the separately tested waystone restoration.
 	GameState.data.campaign.intro_seen = true
 	GameState.data.campaign.dock_welcome_seen = true
 	GameState._emit_all()
-	check.call(GameState.start_expedition(PortalDB.MEI_LING_PORTAL), "Mei Ling's rescue is accessible at level one")
+	check.call(GameState.start_expedition(PortalDB.MEI_LING_PORTAL), "Mei Ling's rescue is accessible at level one after restoring the waystone")
 	await game._load_dungeon(PortalDB.MEI_LING_PORTAL, false)
 	var realm := game.world as TwilightRealm
 	realm.player.invulnerable = 1000

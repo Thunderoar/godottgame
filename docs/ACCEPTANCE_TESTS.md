@@ -2452,3 +2452,32 @@ Evidence below C:/Users/ayiz/AppData/Local/Temp/:
 Reproduce with tools/test_isolated.ps1 -Godot <console-executable>, or add
 -PortalOrigin for the focused scene and -Capture -Resolution 832x480 / 1280x720
 for native review. See docs/PORTAL_AWAKENING.md for the runtime contract.
+
+## Decorated waystone discovery cue (2026-10-30)
+
+The fallen waystone now has a chipped pale-stone ring, moss, engraved stepping
+stones curving toward the cottage gap, moonblooms and weathered wayfarer ribbons.
+A small socket glimmer gives the unopened site a readable focus; it warms after
+Rahim lends the lantern and retires when the road opens. The stone/flower/cloth
+silhouettes and one steady glimmer remain under low effects and Reduce Motion.
+The dressing adds no collision, terrain changes, gameplay RNG, progression writes,
+extra light sources, rewards or new interactions.
+
+- Native focused origin reviews: **39 checks, PASS, exit 0** at **1280x720** and
+  **832x480**, including actual discovery taps, nearby E, Rahim's conversation,
+  the reveal/Skip, save/reload, optional replay, world replacement and portal entry.
+  Inspected the wider approach, low-motion/low-effects cue, quiet night-lighting
+  fixture and completed gate. This is native Windows evidence, not a phone test.
+- Focused objective tracker: **106 checks, PASS, exit 0**. Integration fixtures
+  now retain waystone discovery when Hide tips removes training, reconcile legacy
+  rescued-friend flags as loading does, and start rescue-only combat after the
+  already-tested awakening prerequisite. Production rescue/quest rules are unchanged.
+- Evidence in C:/Users/ayiz/AppData/Local/Temp/: native 1280x720
+  tidesworn-tests-bf96f1f0dc0c424e80ddbb919eaab306; native 832x480
+  tidesworn-tests-0bb635c6b3584cbebd9b2400011bedb0; objective tracker
+  tidesworn-tests-5748be5572044e0e851289c38db79b96.
+- Canonical gameplay on the combined current checkout: **6,297 checks, PASS,
+  exit 0**. Evidence: tidesworn-tests-392a646fb733426785cd18dafb7199eb below the
+  same external temporary directory. Final full/focused error logs are empty,
+  with no FAIL, SCRIPT ERROR or ERROR markers. git diff --check passes with
+  existing LF/CRLF notices. All runs isolate player data; no device export was run.

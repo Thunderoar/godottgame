@@ -36,6 +36,27 @@ tableaux; low effects and mute preserve the explanatory visuals and captions.
 No player/pet repositioning, terrain editing, new monster spawning or rewards
 are part of opening the road.
 
+## Decoration and discovery cues
+
+The unopened site reads as an old roadside landmark: a chipped oval of pale
+stone, moss and fragments surrounds the fallen marker. Engraved stepping stones
+curve toward the gap between the nearby cottages. Pale moonblooms and two
+weathered wayfarer ribbons frame the edges while leaving the central approach
+and lantern socket readable. The dressing follows the resolved portal anchor;
+it introduces no collision, terrain paint, tree changes or new interactables.
+
+A small glimmer draws attention to the empty socket. Extra quiet glimmers and
+slight ribbon movement are available at medium/high effects; low effects and
+Reduce Motion retain a steady socket cue and all essential stone/flower/cloth
+silhouettes. Rahim's prepared stage warms the glimmer, and opening the portal
+retires it so the completed landmark no longer looks like an unfinished task.
+Ambient presentation never writes discovery or progression and uses no gameplay
+RNG, particles or extra light sources.
+
+The focused native review includes a wider approach, a low-effects/Reduce Motion
+view and a quiet night-lighting fixture, as well as the discovery conversation
+and full reveal. This keeps visual verification separate from attack scheduling.
+
 ## Guidance and persistence
 
 `GameState.portal_origin` stores schema 1 plus `site_examined`, `rahim_consulted`,

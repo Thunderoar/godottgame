@@ -284,10 +284,11 @@ static func _quest_sections(game: Game, check: Callable, capture: Callable) -> v
 	check.call(_entry_index(tracker, "workshop") < 0 and not bool(GameState.project_status().eligible), "side quest presentation never bypasses the first-clear workshop prerequisite")
 	GameSettings.set_value("tutorial_hidden", true, false)
 	game.hud._refresh_objectives()
-	check.call(tracker.section_count(main) == 2 and not tracker._entries.any(func(row: Dictionary) -> bool: return str(row.id).begins_with("lesson_") or row.id == "phase"), "Hide tips still removes training while preserving the new main quest section")
+	check.call(tracker.section_count(main) == 3 and _entry_index(tracker, "waystone") >= 0 and not tracker._entries.any(func(row: Dictionary) -> bool: return str(row.id).begins_with("lesson_") or row.id == "phase"), "Hide tips removes training while preserving both rescues and the undiscovered waystone")
 	check.call(not GameState.tutorial_complete() and GameState.completed_mission_count() == 0, "hidden training and section browsing do not complete the tutorial")
 	GameState.data.campaign.arjun_rescued = true
 	GameState.data.campaign.mei_ling_rescued = true
+	GameState._sanitize() # Reconcile legacy rescued-friend flags with portal access, as loading does.
 	game.hud._refresh_objectives()
 	check.call(tracker.section_count(main) == 0 and tracker._section_empty[main].visible, "completed rescue arcs leave an explicit empty main-quest section")
 	check.call(tracker._entries[0].id == "home" and tracker._entries[0].section == side, "peaceful post-story village care belongs to side guidance")
