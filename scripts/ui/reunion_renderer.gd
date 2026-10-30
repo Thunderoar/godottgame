@@ -1,96 +1,166 @@
 class_name ReunionRenderer
 extends RefCounted
-## Player-paced three-person conversation; all state is sampled, never persisted here.
-const HOMES := {"adam":Vector2(184,197),"arjun":Vector2(251,172),"mei_ling":Vector2(316,197)}
-var _yard: Array[Texture2D] = []
+## Deterministic dock conversation and seven authored departure shots.
+const HOMES := {"adam":Vector2(168,204),"arjun":Vector2(248,198),"mei_ling":Vector2(116,187)}
+const DECK := {"mei_ling":Vector2(66,83),"arjun":Vector2(111,83),"adam":Vector2(153,83)}
 var _dock: Array[Texture2D] = []
+var _sea: Array[Texture2D] = []
 var _actors: Dictionary = {}
-var _table: Texture2D
 var _ship: Texture2D
+var _rahim: Texture2D
 var _villager: Texture2D
+var _companion: Texture2D
+var _companion_id := ""
 
-func _init() -> void:
+func _init(pet_id: String = "") -> void:
+	if not pet_id.is_empty():
+		_companion_id = pet_id
+		_companion = PixelArt.pet_texture(pet_id)
 	for night in [false,true]:
-		_yard.append(ReunionArt.courtyard(night))
-		_dock.append(ReunionArt.dock(night))
+		_dock.append(ReunionArt.departure_backdrop(night,false))
+		_sea.append(ReunionArt.departure_backdrop(night,true))
 	for id in HOMES:
 		for mood in ReunionArt.MOODS:
-			for posture in 5:
+			for posture in [2,3,4]:
 				for left in [false,true]: _actors["%s/%s/%d/%s" % [id,mood,posture,left]] = ReunionArt.actor(id,mood,posture,left)
-	_table = ReunionArt.table()
 	_ship = PixelArt.ship_texture()
-	_villager = OpeningRescueArt.villager("water_keeper",false)
+	_rahim = DockHost.texture()
+	_villager = OpeningRescueArt.villager("water_keeper",true)
 
 static func _ease(t: float, start: float, end: float) -> float:
 	var u := clampf((t-start)/(end-start),0,1)
 	return u*u*(3-2*u)
 
+static func boarding_position(id: String, progress: float, at: Vector2, scale: float) -> Vector2:
+	var foot := Vector2(276,189)
+	var top := at+Vector2(51,82)*scale
+	if progress < 0.45: return HOMES[id].lerp(foot,progress/0.45)
+	if progress < 0.8: return foot.lerp(top,(progress-0.45)/0.35)
+	return top.lerp(at+DECK[id]*scale,(progress-0.8)/0.2)
+
 static func sample(turn_index: int, elapsed: float, reduced: bool, quality: String, night: bool) -> Dictionary:
 	var row := ReunionDialogueDB.turn(turn_index)
-	var beat := int(row.beat)
+	var stage := turn_index-ReunionDialogueDB.TURNS.size()
 	var t := maxf(0,elapsed)
-	var adam: Vector2 = HOMES.adam
-	var posture := 0
-	if beat == 0:
-		adam = Vector2(140,197).lerp(HOMES.adam,1.0 if reduced else _ease(t,0,1.4)).round()
-		if not reduced: posture = 3+int(t*5)%2 if t < 1.4 else (1 if t < 1.7 else 0)
-	var rising := beat == 6 and turn_index == ReunionDialogueDB.TURNS.size()-1
-	var rise := 2 if reduced and rising else (mini(2,floori(maxf(0,t-0.4)*2)) if rising else 0)
-	return {"beat":beat,"speaker":str(row.speaker),"mood":str(row.mood),"time":t,
-		"adam":adam,"adam_posture":posture,"rise":rise,"dock":beat == 7,"night":night,
-		"bag":1.0 if reduced else _ease(t,0.3,1.4),"detail":quality != "low","reduced":reduced,
-		"zoom":1.3 if beat in [1,2,3] else 1.0}
+	var beat := int(row.beat)
+	var time := float(ReunionDialogueDB.DEPARTURE_DURATIONS[clampi(stage,0,6)]) if reduced and stage >= 0 else t
+	var ship_at := Vector2(230,31)
+	var ship_scale := 1.25
+	if stage == 3:
+		ship_at += Vector2(38,-4)*_ease(time,1.4,4)
+	elif stage == 4:
+		var progress := _ease(time,0,5)
+		ship_at += Vector2(38,-4)+Vector2(34,-20)*progress
+		ship_scale = lerpf(1.25,0.8,progress)
+	elif stage >= 5:
+		ship_at = Vector2(76,18) if stage == 5 else Vector2(185,44)
+		ship_scale = 1.6 if stage == 5 else 0.55
+		if not reduced: ship_at.y += roundf(sin(t*1.2))
+	var boarded := 0
+	var boarding: Dictionary = {}
+	var feet: Dictionary = {}
+	for i in 3:
+		var id: String = ["mei_ling","arjun","adam"][i]
+		var progress := _ease(time,i*1.7,i*1.7+2.0) if stage == 2 else (1.0 if stage >= 3 else 0.0)
+		if progress >= 1: boarded += 1
+		boarding[id] = progress
+		feet[id] = boarding_position(id,progress,ship_at,ship_scale)
+	return {"beat":beat,"stage":stage,"speaker":str(row.speaker),"mood":str(row.mood),"time":time,
+		"adam":Vector2(143,216).lerp(HOMES.adam,1.0 if reduced else _ease(t,0,1.4)).round(),
+		"adam_posture":3+int(t*5)%2 if beat == 0 and t < 1.4 and not reduced else 2,
+		"rise":2,"dock":true,"night":night,"detail":quality != "low","reduced":reduced,
+		"bag":_ease(time,0.3,2),"ship_at":ship_at,"ship_scale":ship_scale,
+		"boarding":boarding,"feet":feet,"boarded":boarded,"rope_released":stage > 3 or (stage == 3 and time >= 1.4),
+		"zoom":1.22 if stage < 0 and beat in [1,2,3] else 1.0}
 
-func draw(canvas: CanvasItem, available: Rect2, state: Dictionary) -> void:
+func draw(canvas: CanvasItem, available: Rect2, state: Dictionary, pet_id: String = "") -> void:
 	var fitted := OpeningCaptureRenderer.fit_rect(available)
 	canvas.draw_set_transform(Vector2.ZERO)
 	canvas.draw_rect(available,Color("#172830"))
 	var zoom: float = state.zoom
-	var offset := Vector2(240,112)-Vector2(250,145)*zoom
-	if is_equal_approx(zoom,1): offset = Vector2.ZERO
-	offset = offset.clamp(Vector2(480,224)*(1-zoom),Vector2.ZERO)
+	var offset := (Vector2(240,112)-Vector2(210,137)*zoom).clamp(Vector2(480,224)*(1-zoom),Vector2.ZERO) if zoom > 1 else Vector2.ZERO
 	var factor := fitted.size.x/480.0
 	canvas.draw_set_transform(fitted.position+offset*factor,0,Vector2.ONE*factor*zoom)
-	if state.dock:
-		_draw_dock(canvas,state)
+	var stage := int(state.stage)
+	canvas.draw_texture((_sea if stage >= 5 else _dock)[1 if state.night else 0],Vector2.ZERO)
+	_draw_water(canvas,state)
+	if stage in [1,2,3,4]:
+		canvas.draw_texture_rect(_rahim,Rect2(21,127,35,48),false)
+		canvas.draw_texture_rect(_villager,Rect2(61,136,31,40),false)
+		canvas.draw_texture_rect(_villager,Rect2(96,140,28,36),false,Color("#c4d0b0"))
+		if not state.reduced:
+			canvas.draw_line(Vector2(48,147),Vector2(52,139+sin(float(state.time)*2)*3),Color("#dba880"),3)
+	var at: Vector2 = state.ship_at
+	var ship_scale: float = state.ship_scale
+	canvas.draw_texture_rect(_ship,Rect2(at,_ship.get_size()*ship_scale),false,Color("#b3c4ce") if state.night else Color.WHITE)
+	if stage == 2:
+		var top := at+Vector2(51,82)*ship_scale
+		canvas.draw_colored_polygon(PackedVector2Array([Vector2(268,191),Vector2(284,191),top+Vector2(8,0),top-Vector2(8,0)]),Color("#b49564"))
+		for i in 9:
+			var board := Vector2(276,189).lerp(top,float(i)/8)
+			canvas.draw_line(board-Vector2(7,0),board+Vector2(7,0),Color("#705b43"),1)
+	if stage < 3 or not state.rope_released:
+		canvas.draw_line(Vector2(283,171),at+Vector2(45,84)*ship_scale,Color("#d1ba87"),2)
 	else:
-		canvas.draw_texture(_yard[1 if state.night else 0],Vector2.ZERO)
-		if int(state.beat) == 4:
-			var passing := Vector2(349,156).lerp(Vector2(407,156),0.5 if state.reduced else _ease(float(state.time),0,4)).round()
-			canvas.draw_texture(_villager,passing-Vector2(20,52),Color("#b7bda8") if state.night else Color.WHITE)
-		for id in ["arjun","adam","mei_ling"]:
-			var feet: Vector2 = state.adam if id == "adam" else HOMES[id]
-			var posture: int = state.rise
-			if id == "adam" and int(state.beat) == 0: posture = int(state.adam_posture)
+		# Coil aboard: the shore line visibly disappears before the ship moves.
+		canvas.draw_arc(at+Vector2(49,83)*ship_scale,4*ship_scale,0,TAU,16,Color("#d1ba87"),ship_scale)
+	if stage < 0:
+		for id in ["arjun","mei_ling","adam"]:
+			var feet: Vector2 = state.adam if id == "adam" and int(state.beat) == 0 else HOMES[id]
 			var mood: String = state.mood if state.speaker == id else "soft"
-			if int(state.beat) == 2 and id == "mei_ling" and state.speaker != id: mood = "cup"
-			var bench: Vector2 = HOMES[id]
-			canvas.draw_rect(Rect2(bench+Vector2(-18,-8),Vector2(36,5)),Color("#8f754f"))
-			for x in [-13,11]: canvas.draw_rect(Rect2(bench+Vector2(x,-3),Vector2(3,5)),Color("#64523e"))
-			_actor(canvas,id,mood,posture,feet,id == "mei_ling" or (id == "arjun" and state.speaker != "mei_ling"))
-		canvas.draw_texture(_table,Vector2(207,178))
-		# The lantern's steady core survives low effects, mute and reduced motion.
-		if state.night:
-			if state.detail: canvas.draw_circle(Vector2(278,171),22,Color(0.94,0.72,0.38,0.10))
-			canvas.draw_rect(Rect2(274,162,8,15),Color("#594936"))
-			canvas.draw_rect(Rect2(276,164,4,9),Color("#ffe1a1"))
+			_actor(canvas,id,mood,int(state.adam_posture) if id == "adam" else 2,feet,id == "arjun",1)
+		_bag(canvas,Vector2(95,193),1)
+	elif stage <= 2:
+		for id in ["mei_ling","arjun","adam"]:
+			var progress: float = state.boarding[id]
+			var feet: Vector2 = state.feet[id]
+			var walking: bool = progress > 0 and progress < 1 and not state.reduced
+			_actor(canvas,id,"resolved" if stage == 0 else "smile",3+int(float(state.time)*6)%2 if walking else 2,feet,id == "arjun",lerpf(1,ship_scale*0.57,clampf((progress-0.45)/0.55,0,1)))
+		var bag_progress: float = state.boarding.mei_ling if stage == 2 else 0.0
+		var bag_at := Vector2(95,193).lerp(at+Vector2(55,81)*ship_scale,bag_progress)
+		if stage == 2:
+			bag_at = Vector2(95,193).lerp(state.feet.mei_ling+Vector2(-11,-6),clampf(bag_progress*6,0,1))
+			bag_at = bag_at.lerp(at+Vector2(55,81)*ship_scale,clampf((bag_progress-0.9)*10,0,1))
+		if stage == 0: bag_at.y -= sin(float(state.bag)*PI)*7
+		_bag(canvas,bag_at,lerpf(1,0.6,bag_progress))
+	elif stage <= 6:
+		for id in ["mei_ling","arjun","adam"]:
+			_actor(canvas,id,"smile",2,at+DECK[id]*ship_scale,false,ship_scale*0.57)
+	if stage >= 2:
+		if not pet_id.is_empty() and is_instance_valid(_companion):
+			var pet_progress: float = state.boarding.adam
+			var pet_at: Vector2 = state.feet.adam+Vector2(18,-2)
+			if stage >= 3: pet_at = at+Vector2(173,81)*ship_scale
+			var pet_size := Vector2(19,17)*lerpf(1,ship_scale*0.7,pet_progress)
+			canvas.draw_texture_rect(_companion,Rect2(pet_at-Vector2(pet_size.x/2,pet_size.y),pet_size),false)
+		# Redraw the near hull after people so feet sit behind the gunwale.
+		canvas.draw_texture_rect_region(_ship,Rect2(at+Vector2(0,84)*ship_scale,Vector2(208,28)*ship_scale),Rect2(0,84,208,28),Color("#b3c4ce") if state.night else Color.WHITE)
+	if stage == 6:
+		canvas.draw_rect(Rect2(0,0,480,224),Color(0.025,0.07,0.10,0.5))
+		canvas.draw_line(Vector2(164,116),Vector2(316,116),GameUI.GOLD,1)
+		canvas.draw_string(ThemeDB.fallback_font,Vector2(120,146),"PB · PROTECT BESUT",HORIZONTAL_ALIGNMENT_CENTER,240,20,GameUI.GOLD)
+		canvas.draw_string(ThemeDB.fallback_font,Vector2(65,174),"Together, wherever the tide leads.",HORIZONTAL_ALIGNMENT_CENTER,350,16,Color("#e7e6cf"))
+		canvas.draw_string(ThemeDB.fallback_font,Vector2(100,200),"Adam · Arjun · Mei Ling",HORIZONTAL_ALIGNMENT_CENTER,280,12,Color("#b6ccca"))
+	# A short dissolve softens every shot change without altering world time.
+	var veil := 1.0-_ease(float(state.time),0,0.35)
+	if state.reduced: veil = 0
+	if veil > 0: canvas.draw_rect(Rect2(0,0,480,224),Color(0.06,0.14,0.18,veil))
 	canvas.draw_set_transform(Vector2.ZERO)
 
-func _actor(canvas: CanvasItem, id: String, mood: String, posture: int, feet: Vector2, left: bool) -> void:
-	canvas.draw_rect(Rect2(feet+Vector2(-12,-1),Vector2(24,2)),Color("#4a4b3e"))
-	canvas.draw_texture(_actors["%s/%s/%d/%s" % [id,mood,posture,left]],feet-Vector2(24,60))
+func _actor(canvas: CanvasItem, id: String, mood: String, posture: int, feet: Vector2, left: bool, scale: float) -> void:
+	canvas.draw_rect(Rect2(feet+Vector2(-10,-1)*scale,Vector2(20,2)*scale),Color(0.1,0.17,0.18,0.3))
+	canvas.draw_texture_rect(_actors["%s/%s/%d/%s" % [id,mood,posture,left]],Rect2(feet-Vector2(24,60)*scale,Vector2(48,60)*scale),false)
 
-func _draw_dock(canvas: CanvasItem, state: Dictionary) -> void:
-	canvas.draw_texture(_dock[1 if state.night else 0],Vector2.ZERO)
-	canvas.draw_texture_rect(_ship,Rect2(249,48,220,135),false,Color("#adb8ba") if state.night else Color.WHITE)
-	# Fixed mooring lines: this is preparation, never an automatic sailing transition.
-	canvas.draw_line(Vector2(294,168),Vector2(323,151),Color("#d1ba87"),2,false)
-	canvas.draw_polyline(PackedVector2Array([Vector2(229,183),Vector2(250,185),Vector2(279,176),Vector2(294,168)]),Color("#d1ba87"),1,false)
-	_actor(canvas,"mei_ling","resolved" if float(state.bag) < 1 else "soft",2,Vector2(133,203),float(state.bag) < 1)
-	_actor(canvas,"adam","resolved",2,Vector2(211,204),false)
-	_actor(canvas,"arjun","resolved",2,Vector2(261,197),false)
-	var bag := Vector2(115,181).lerp(Vector2(97,171),float(state.bag)).round()
-	canvas.draw_rect(Rect2(bag-Vector2(7,7),Vector2(14,13)),Color("#74604b"))
-	canvas.draw_rect(Rect2(bag-Vector2(6,6),Vector2(12,10)),Color("#bea77b"))
-	canvas.draw_line(bag+Vector2(-3,-7),bag+Vector2(3,-7),Color("#e4c58a"),2,false)
-	canvas.draw_rect(Rect2(bag+Vector2(-1,-3),Vector2(3,4)),Color("#80613d"))
+func _bag(canvas: CanvasItem, at: Vector2, scale: float) -> void:
+	canvas.draw_rect(Rect2(at+Vector2(-7,-12)*scale,Vector2(14,12)*scale),Color("#b89b69"))
+	canvas.draw_line(at+Vector2(-4,-13)*scale,at+Vector2(4,-13)*scale,Color("#ead5a2"),2*scale)
+	canvas.draw_rect(Rect2(at+Vector2(-1,-10)*scale,Vector2(3,8)*scale),Color("#6a5341"))
+
+func _draw_water(canvas: CanvasItem, state: Dictionary) -> void:
+	if not state.detail: return
+	for i in 18:
+		var x := float(posmod(i*71,470))
+		var y := 111.0+posmod(i*17,99)
+		if int(state.stage) < 5 and x < 300 and y > 170: continue
+		var drift: float = 0 if state.reduced else roundf(sin(float(state.time)*0.8+i)*3)
+		canvas.draw_line(Vector2(x+drift,y),Vector2(x+drift+8+i%5,y),Color(0.72,0.85,0.80,0.28),1)

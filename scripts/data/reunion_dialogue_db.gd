@@ -1,7 +1,7 @@
 class_name ReunionDialogueDB
 extends RefCounted
 ## One shared conversation for either rescue order. Completion remains campaign.ending_seen.
-const TITLES := ["COUNTING THREE", "THE FISHING TRIP", "WHAT THEY COULDN'T SAY", "A PLAN TOGETHER", "WHO HELPED THEM", "THE NEXT STEP", "FAMILIAR COMPANY", "WHEN THEY'RE READY"]
+const TITLES := ["TOGETHER AT THE DOCK", "THE FISHING TRIP", "WHAT THEY COULDN'T SAY", "A PLAN TOGETHER", "WHO HELPED THEM", "THE NEXT STEP", "FAMILIAR COMPANY", "WHEN THEY'RE READY"]
 const TURNS := [
 	{"beat":0,"speaker":"adam","mood":"soft","text":"You're both here."},
 	{"beat":0,"speaker":"arjun","mood":"smile","text":"Still counting?"},
@@ -34,7 +34,13 @@ const TURNS := [
 	{"beat":6,"speaker":"arjun","mood":"smile","text":"Who else would put up with us?"},
 	{"beat":6,"speaker":"mei_ling","mood":"resolved","text":"Come on. Let's see what needs doing."},
 ]
-const DOCK_TEXT := "Together, when they're ready."
+const DOCK_TEXT := "Together, wherever the tide leads."
+const DEPARTURE_TITLES := ["READY TOGETHER", "THANK YOU, BESUT", "ALL ABOARD", "CASTING OFF", "UNTIL WE MEET AGAIN", "THE OPEN HORIZON", "TOGETHER"]
+const DEPARTURE_TEXT := ["Water, food, a route. This time, they prepare together.", "For shelter. For kindness. For helping them find each other. Thank you, BESUT.", "Mei Ling brings the supplies. Arjun lends a hand. Adam joins them aboard.", "Three friends aboard. One last rope, and a new journey begins.", "BESUT grows smaller behind them. Its kindness goes with them.", "Adam, Arjun and Mei Ling face the open sea. Together.", DOCK_TEXT]
+const DEPARTURE_DURATIONS := [3.0,4.0,6.0,4.0,5.0,4.0,2.0]
+
+static func final_page() -> int:
+	return TURNS.size()+DEPARTURE_TEXT.size()-1
 
 static func turn(index: int) -> Dictionary:
 	if index >= TURNS.size(): return {"beat":7,"speaker":"","mood":"resolved","text":DOCK_TEXT}
@@ -43,5 +49,5 @@ static func turn(index: int) -> Dictionary:
 static func lines() -> Array:
 	var result: Array = []
 	for row in TURNS: result.append(str(row.text))
-	result.append(DOCK_TEXT)
+	result.append_array(DEPARTURE_TEXT)
 	return result

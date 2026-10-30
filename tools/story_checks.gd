@@ -265,16 +265,17 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(game.world == dungeon and not dungeon.player.controls_locked, "Mei Ling rescue preserves peaceful first-realm exploration")
 	dungeon.exit_to_lobby(true)
 	for i in 180:
-		if game.world is Lobby and _story(game) != null: break
+		if game.world is Lobby and not game._transitioning and not game._sailing: break
 		await game.get_tree().create_timer(0.025).timeout
-	check.call(game.world is Lobby and _story(game) != null and _story(game).kind == "ending", "returning with both friends triggers the reunion ending")
+	check.call(game.world is Lobby and _story(game) == null and GameState.final_departure_available(), "returning with both friends prepares the voluntary dock ending")
 	if capture.is_valid(): await capture.call("07_friends_reunited")
 	_finish_story(game)
 	await game.get_tree().process_frame
-	check.call(GameState.friends_reunited() and bool(GameState.campaign().get("ending_seen")) and _hero_count(game.world) == 2, "the ending persists with both friends protecting BESUT")
+	check.call(GameState.friends_reunited() and not bool(GameState.campaign().get("departure_seen",false)) and _hero_count(game.world) == 2, "both rescued friends remain available before departure")
 	var archer: VillageHero
 	for friend_node in game.world.get_children():
 		if friend_node is VillageHero and friend_node.hero_id == "mei_ling": archer = friend_node
+	archer.dock_waiting = false
 	archer.position = game.player().position + Vector2(0, 2)
 	var archer_target := Enemy.new()
 	archer_target.kind = "fire"

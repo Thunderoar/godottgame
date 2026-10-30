@@ -97,6 +97,28 @@ func dialogue_voice(speaker: String, syllable: int = 0) -> AudioStreamWAV:
 func urchin_arrival_sound(beat: String) -> AudioStreamWAV:
 	return _get_stream("urchin_" + (beat if beat in ["surf", "sand", "rattle"] else "sand"))
 
+func ending_sound(kind: String) -> AudioStreamWAV:
+	if kind != "bed": return _get_stream("step" if kind == "board" else "ending_creak")
+	if _cache.has("ending_bed"): return _cache.ending_bed
+	# A quiet original major chord bed and soft surf; the story owns playback.
+	var count := MIX_RATE*8
+	var bytes := PackedByteArray()
+	bytes.resize(count*2)
+	for i in count:
+		var t := float(i)/MIX_RATE
+		var chord := sin(TAU*130.8125*t)*0.18+sin(TAU*164.8125*t)*0.10+sin(TAU*196*t)*0.08
+		var swell := 0.5-0.5*cos(TAU*t/8)
+		var surf := sin(TAU*1731*t)*sin(TAU*2387*t)*(0.025+0.02*cos(TAU*t/4))
+		bytes.encode_s16(i*2,int((chord*swell+surf)*10000))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = MIX_RATE
+	stream.data = bytes
+	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	stream.loop_end = count
+	_cache.ending_bed = stream
+	return stream
+
 
 func _get_stream(kind: String) -> AudioStreamWAV:
 	if _cache.has(kind):
@@ -114,6 +136,11 @@ func _build_stream(kind: String) -> AudioStreamWAV:
 	var end_freq := 140.0
 	var noise_amount := 0.35
 	match kind:
+		"ending_creak":
+			duration = 0.55
+			start_freq = 105.0
+			end_freq = 65.0
+			noise_amount = 0.22
 		"urchin_surf":
 			duration = 0.42
 			start_freq = 210.0

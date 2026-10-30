@@ -1,5 +1,7 @@
 # Three friends, one table - BESUT reunion dialogue plan
 
+**2026-10-30 dock departure update:** the conversation now happens at the dock after an explicit nearby Embark interaction. Arjun and Mei Ling wait in the live world. Boarding and actual sailing replace the preparation-only tag, followed by an ending card and title. Continue becomes Explore BESUT (Before departure). `departure_seen` distinguishes this ending from older completed reunions. See [DOCK_DEPARTURE_ENDING_PLAN.md](DOCK_DEPARTURE_ENDING_PLAN.md) for current ownership and flow. Cottage staging and automatic-entry details below record the earlier implementation.
+
 Planning date: 2026-10-30. This records the approved dialogue and staging. The scene is now implemented; the newest `docs/ACCEPTANCE_TESTS.md` section records actual validation separately from the originally proposed checks below.
 
 ## Confirmed direction

@@ -2,14 +2,15 @@
 
 Implemented 2026-10-25 for Godot 4.7.2.
 
+**2026-10-30 dock ending:** after both rescues, Arjun and Mei Ling gather at the live dock. Approach and choose Embark together to start the player-paced reunion, then watch preparation, farewell, boarding, cast-off and sailing. The destination remains open. An ending card returns to title; Explore BESUT explicitly restores Before departure free play. `departure_seen` saves final completion independently of old reunion records. See [DOCK_DEPARTURE_ENDING_PLAN.md](DOCK_DEPARTURE_ENDING_PLAN.md).
+
 **2026-10-30 completed sea journey:** once Arjun is freed, the return ship still
 brings Adam and Arjun home, but future boarding and sea/island entry are closed.
 The ship remains moored as village scenery. Closure follows the saved
 `arjun_rescued` flag, including older completed saves; it needs no extra save field.
 A new journey reopens the route. Defeating the Kraken without freeing Arjun and
 rescuing Mei Ling alone leave the unfinished sea rescue available. This supersedes
-earlier replay descriptions. The reunion's illustrated dock tag remains a story
-hint; it does not reopen the completed sea game.
+earlier replay descriptions. The final departure is a separate cinematic interaction; it does not reopen the completed sea game.
 
 **2026-10-30 Kraken Island guards:** ten armoured crab monsters guard the fortress
 approaches, away from Adam's arrival and the pillars. They skitter, telegraph a
@@ -51,7 +52,7 @@ The ship leads to two sea levels, each lasting 45 seconds. Level 1 has bombs, ru
 
 Mei Ling is held by Abyss Monarch in Abyssal Throne, the third and last Monster Portal (level 5). The shortened chain is Chaos Citadel (level 1) → Tempest Spire (level 3) → Abyssal Throne (level 5). Defeating that boss frees her. She walks out through the portal alongside Adam. Both rescued friends become village defenders: Arjun uses his scythe and Mei Ling fires arrows at fire monsters and sea urchins.
 
-When both friends have returned, the saved reunion conversation leads into an illustrated dock-preparation hint. Village play continues afterward. Arjun's completed rescue keeps the playable sea journey closed, including after save/load.
+When both friends have returned, they wait at the dock for Adam to choose Embark together. The reunion conversation leads into boarding and sailing. The final card returns to title; Explore BESUT offers earlier-time village play. Arjun's completed rescue keeps the playable sea journey closed, including after save/load.
 
 ## Turtle controls and rules
 
@@ -76,7 +77,7 @@ Tap villagers, workers, rescued friends, guardians, the coastal guard and guide 
 
 ## Ownership and saves
 
-GameState alone persists the campaign dictionary: intro_seen, ocean_stage, arjun_rescued, mei_ling_rescued and ending_seen. Defaults and load sanitization support older saves without discarding currency, equipment, pets, portal progress or settlement layout. New journeys start a new rescue story; existing saves retain their previous hero and progression. Temporary ocean health, items and mid-run position do not persist.
+GameState alone persists the campaign dictionary: intro_seen, ocean_stage, arjun_rescued, mei_ling_rescued, ending_seen and departure_seen. Defaults and load sanitization support older saves without discarding currency, equipment, pets, portal progress or settlement layout. New journeys start a new rescue story; existing saves retain their previous hero and progression. Temporary ocean health, items and mid-run position do not persist.
 
 Game owns world transitions and story overlays. Story sequences temporarily suspend their current world and restore it afterward; normal menus retain existing village-time behavior. Friends are rebuilt from stable IDs, with arrival staging and duplicate guards. All tests use temporary user data. Forest IDs, placement RNG and the all-trees-lost rule are unchanged.
 

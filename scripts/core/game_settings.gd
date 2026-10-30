@@ -80,6 +80,30 @@ var _values: Dictionary = DEFAULTS.duplicate(true)
 var _active_visual_style := "pixel"
 
 
+# Volatile access, deliberately excluded from DEFAULTS/settings.cfg.
+var _developer_unlocked := false
+var _developer_next_attempt_ms := 0
+
+func is_developer_unlocked() -> bool:
+        return _developer_unlocked
+
+func unlock_developer(code: String) -> bool:
+        if Time.get_ticks_msec() < _developer_next_attempt_ms: return false
+        if not DeveloperAccess.matches(code):
+                _developer_next_attempt_ms = Time.get_ticks_msec()+750
+                return false
+        _developer_unlocked = true
+        _developer_next_attempt_ms = 0
+        changed.emit("developer_access")
+        return true
+
+func lock_developer() -> void:
+        var was_unlocked := _developer_unlocked
+        _developer_unlocked = false
+        _developer_next_attempt_ms = 0
+        if was_unlocked: changed.emit("developer_access")
+
+
 func _ready() -> void:
         load_settings()
         _active_visual_style = visual_style()
@@ -88,6 +112,7 @@ func _ready() -> void:
 # --------------------------------------------------------------- load / persist
 
 func load_settings() -> void:
+        lock_developer()
         _values = DEFAULTS.duplicate(true)
         var config := ConfigFile.new()
         var load_error := config.load(config_path)
@@ -115,6 +140,7 @@ func save_settings() -> void:
 
 
 func reset_to_defaults() -> void:
+        lock_developer()
         var touched: Array[String] = []
         for key in DEFAULTS.keys():
                 var previous: Variant = _values.get(key, DEFAULTS[key])

@@ -71,6 +71,30 @@ See `docs/PORTAL_AWAKENING.md`; Windows focused review uses `-PortalOrigin`, wit
 optional `-Capture -Resolution 832x480` or `1280x720`. Keep ordinary later Rahim
 chats non-pausing and distinguish opening the road from starting an expedition.
 
+**2026-10-30 dock departure ending:** rescued Arjun and Mei Ling now gather at the
+live dock. Nearby E/direct tap on the invitation or ship starts the reunion only
+after an explicit Embark choice. The conversation is staged at the dock and leads
+through preparation, farewell, boarding, cast-off, sailing and an ending card.
+`campaign.departure_seen` owns final completion; old `ending_seen` saves can choose
+the new ending voluntarily. The card saves and returns to title; Explore BESUT
+explicitly offers Before departure free play with ordinary defenders. The turtle
+rescue route stays closed after Arjun is freed. `FinalDeparture` is separate from
+`ShipDeparture`; Game owns readiness, suspension, cancellation and title handoff.
+Use `-Reunion` and `-OceanLevels`. See `docs/DOCK_DEPARTURE_ENDING_PLAN.md`. This
+supersedes the earlier automatic cottage reunion and preparation-only tag.
+
+**2026-10-30 developer mode:** Settings on title, land and ocean now expose a
+masked developer-code entry. Only the digest is stored; access is volatile for
+this app process. Game-owned DeveloperPanel deliberately suspends its world and
+shared clock. Actions require an unlocked separate test session; GameState routes
+save/load/Continue/delete to `user://developer_test_save.json` while it is active.
+End/Lock restores the normal checkpoint, preferring a newer externally changed
+normal save. Failed or unreadable restore paths must never overwrite normal
+progress. Game owns travel and story actions; GameState owns test progression.
+Do not add arbitrary console evaluation or persist the unlock phrase. Review uses
+`-Developer`, optional captures at 832x480/1280x720; the full tide gate includes it.
+See `docs/DEVELOPER_MODE.md`. The phrase is supplied privately, not in docs/tests.
+
 ## 1. Ground truth and scope
 
 - This checkout is `/home/roku/Documents/ChatGPT/game`; `project.godot` is at its root.
@@ -272,7 +296,7 @@ Do not run `tools/setup_input.gd` (rewrites project config) or
   (`tidebound_grotto`). The boss-clear transaction saves her flag before the rescue
   story; closing it preserves peaceful realm exploration. Old first-clear saves
   receive her rescue on load without rewards. Later bosses remain optional.
-  Both flags trigger a one-time saved reunion ending; normal village play continues.
+  Both flags prepare a nearby dock invitation; explicit Embark starts the final ending. Completed saves offer Before departure village exploration.
   Replays must not duplicate friends, rewards or rescue transitions.
 - Three active Monster Portal definitions live in PortalDB (Chaos Citadel → Tempest Spire → Abyssal Throne, levels 1/3/5). Prerequisites and attempts go
   through `portal_clear_reason()` / `start_expedition()`. Unbanked expedition loot

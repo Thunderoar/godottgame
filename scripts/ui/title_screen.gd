@@ -194,7 +194,7 @@ func _build_home(parent: Control) -> void:
 	_start_button.name = "StartGame"
 	_style_home_action(_start_button, not save_available)
 	_home_actions.add_child(_start_button)
-	_continue_button = _button("Continue Journey   →", _request_continue, save_available)
+	_continue_button = _button("Explore BESUT   →" if bool(GameState.campaign().get("departure_seen", false)) else "Continue Journey   →", _request_continue, save_available)
 	_continue_button.name = "ContinueJourney"
 	_continue_button.disabled = not save_available
 	_style_home_action(_continue_button, save_available)
@@ -623,7 +623,7 @@ func _saved_journey_text() -> String:
 	if GameState.data.is_empty():
 		return "Saved journey  ·  Details unavailable"
 	var character := CharacterDB.get_character(str(GameState.data.get("character_id", "adam")))
-	var place := "Besut Village"
+	var place := "BESUT · Before departure" if bool(GameState.campaign().get("departure_seen", false)) else "Besut Village"
 	if GameState.expedition_active():
 		place = str(PortalDB.get_portal(GameState.expedition_portal()).get("name", "Expedition"))
 	return "%s  ·  Level %d  ·  %s" % [str(character.get("name", "Hero")), int(GameState.data.get("level", 1)), place]
@@ -692,6 +692,7 @@ func _close_overlay() -> void:
 func _open_settings() -> void:
 	_open_overlay("Make yourself at home")
 	_overlay_body.add_child(_paragraph("SETTINGS", 12, GOLD))
+	_overlay_body.add_child(DeveloperAccessControl.new())
 	_overlay_body.add_child(VisualStyleSettings.new())
 	var volume_row := VBoxContainer.new()
 	var volume_text := _label("Master volume  ·  %d%%" % GameSettings.master_volume(), 17, CREAM)

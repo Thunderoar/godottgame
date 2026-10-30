@@ -116,6 +116,8 @@ func map_icons(world: Node2D) -> Array[Dictionary]:
 		icons.append({"id": "prison", "position": world.cage.position, "texture": PixelArt.icon("lock"), "priority": 3, "theme": ""})
 		if is_instance_valid(world.boss) and not world.boss.dead:
 			icons.append({"id": "kraken", "position": world.boss.position, "texture": CampaignArt.kraken_texture(), "priority": 4, "theme": ""})
+	if world is Lobby and GameState.final_departure_available() and is_instance_valid(world.final_departure):
+		icons.append({"id":"final_departure", "position":world.final_departure.position, "texture":PixelArt.icon("spark"), "priority":5, "theme":"", "departure":true})
 	icons.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a.priority) < int(b.priority))
 	return icons
 
@@ -132,6 +134,9 @@ func _picture(icon: Dictionary, at: Vector2) -> void:
 		var scale := fitted / dimensions
 		draw_texture_rect(swirl, Rect2(rect.position + Vector2(16, 20) * scale, swirl.get_size() * scale), false)
 	draw_texture_rect(texture, rect, false)
+	if bool(icon.get("departure", false)):
+		draw_arc(at, extent*0.65,0,TAU,24,GameUI.GOLD,2)
+		if expanded: draw_string(ThemeDB.fallback_font,at+Vector2(-32,extent*0.95),"Embark",HORIZONTAL_ALIGNMENT_LEFT,-1,13,GameUI.GOLD)
 	if not str(icon.get("project_state", "")).is_empty():
 		var color := Color("#a3ebc5") if str(icon.project_state) == "complete" else Color("#f2c45a")
 		draw_arc(at, extent * 0.57, 0, TAU, 20, color, 2)

@@ -32,6 +32,7 @@ var map_panel: WorldMapPanel
 var mission_panel: MissionPanel
 var tutorial_guide: TutorialGuide
 var menu_panel: MenuPanel
+var developer_panel: DeveloperPanel
 var settings_panel: SettingsPanel
 var dialogue_panel: DialoguePanel
 var game_over_panel: GameOverPanel
@@ -955,7 +956,7 @@ func set_build_mode(active: bool) -> void:
 func any_modal_open() -> bool:
 	if village_services_panel != null and village_services_panel.visible:
 		return true
-	for panel in [map_panel, field_guide_panel, mission_panel, shop_panel, inventory_panel, portal_panel, pet_battle_panel, sea_cleaning_panel, house_panel, victory_panel, defeat_panel, menu_panel, settings_panel, dialogue_panel, game_over_panel]:
+	for panel in [map_panel, field_guide_panel, mission_panel, shop_panel, inventory_panel, portal_panel, pet_battle_panel, sea_cleaning_panel, house_panel, victory_panel, defeat_panel, menu_panel, settings_panel, developer_panel, dialogue_panel, game_over_panel]:
 		if panel != null and panel.visible:
 			return true
 	return false
@@ -964,7 +965,7 @@ func any_modal_open() -> bool:
 func hide_modals() -> void:
 	if village_services_panel != null and village_services_panel.visible:
 		village_services_panel.close_panel()
-	for panel in [map_panel, field_guide_panel, mission_panel, shop_panel, inventory_panel, portal_panel, pet_battle_panel, sea_cleaning_panel, house_panel, victory_panel, defeat_panel, menu_panel, settings_panel, dialogue_panel, game_over_panel]:
+	for panel in [map_panel, field_guide_panel, mission_panel, shop_panel, inventory_panel, portal_panel, pet_battle_panel, sea_cleaning_panel, house_panel, victory_panel, defeat_panel, menu_panel, settings_panel, developer_panel, dialogue_panel, game_over_panel]:
 		if panel != null and panel.visible:
 			panel.close_panel()
 

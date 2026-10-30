@@ -36,6 +36,8 @@ var player: Player
 var pet: Pet
 var camera: FollowCamera
 var ship_boarding: ShipDeparture
+var final_departure: FinalDeparture
+var _departure_posts: Dictionary = {}
 var background: Sprite2D
 var house_sprite: Sprite2D
 var house_glow: PointLight2D
@@ -1029,6 +1031,9 @@ func _build_dock_and_ship() -> void:
 	boarding.position = _layout.approach("jetty_deck")
 	ship_boarding = boarding
 	add_child(boarding)
+	final_departure = FinalDeparture.new()
+	final_departure.position = boarding.position + Vector2(-0.6, 0.15)
+	add_child(final_departure)
 	var host := DockHost.new()
 	host.name = "PakRahim"
 	host.position = _layout.approach("jetty_deck") + Vector2(1.7, -0.65)
@@ -1940,6 +1945,8 @@ func toggle_build_mode() -> bool:
 # ------------------------------------------------------------------ API for HUD / Game
 
 func get_guidance_targets() -> Array:
+	if GameState.final_departure_available() and is_instance_valid(final_departure) and not GameState.emergency_active():
+		return [{"label":"EMBARK TOGETHER", "position":final_departure.position, "color":GameUI.GOLD}]
 	var lesson := MissionDB.step(GameState.mission_step())
 	if not lesson.is_empty():
 		var destination := _player_spawn + Vector2(3.5, 0)
@@ -2084,8 +2091,10 @@ func resident_routes_revision() -> int:
 
 
 func invalidate_resident_routes() -> void:
+	_departure_posts.clear()
 	if _resident_routes != null:
 		_resident_routes.invalidate()
+	if is_node_ready(): call_deferred("_sync_rescued_friends")
 
 
 func _fresh_foliage(path: String) -> Texture2D:
@@ -2239,19 +2248,60 @@ func _sync_village_pets() -> void:
 		add_child(guardian)
 
 
+func departure_post(id: String) -> Vector2:
+	if _departure_posts.has(id): return _departure_posts[id]
+	var base := _layout.approach("jetty_deck")
+	var preferred := base + Vector2(-1.7 if id == "arjun" else 0.65, -0.55)
+	var query := PhysicsShapeQueryParameters2D.new()
+	var circle := CircleShape2D.new()
+	circle.radius = 0.32
+	query.shape = circle
+	query.collision_mask = 1
+	for offset in [Vector2.ZERO, Vector2(0,0.6), Vector2(0,-0.4), Vector2(-0.6,0), Vector2(0.6,0), Vector2(1.0,0), Vector2(-1.0,0), Vector2(0,0.9), Vector2(1.0,0.6), Vector2(-1.0,0.6), Vector2(0,1.2)]:
+		var at: Vector2 = preferred + offset
+		query.transform = Transform2D(0,at)
+		if not get_world_2d().direct_space_state.intersect_shape(query,1).is_empty(): continue
+		if not _layout.world_footprint("jetty_deck").grow(-0.3).has_point(at) and WorldTerrain.is_sea(at): continue
+		var separated := true
+		for other in _departure_posts:
+			if other != id and at.distance_to(_departure_posts[other]) < 1.0: separated = false
+		if not separated: continue
+		var path := resident_path(_player_spawn,at,false)
+		if path.is_empty() or path[path.size()-1].distance_to(at) > 0.5: continue
+		_departure_posts[id] = at
+		return at
+	# Keep defenders on safe land if every dock post is obstructed. Retry later.
+	return _house_position + Vector2(-3 if id == "arjun" else 3, 3)
+
+func departure_friends_ready() -> bool:
+	if not _departure_posts.has("arjun") or not _departure_posts.has("mei_ling"): return false
+	var count := 0
+	for friend in get_children():
+		if friend is VillageHero and friend.dock_waiting and friend.position.distance_to(friend.home) < 0.55 and not is_instance_valid(friend._target): count += 1
+	return count == 2
+
 func _sync_rescued_friends() -> void:
 	if not is_node_ready(): return
 	var story := GameState.campaign()
+	var waiting := GameState.final_departure_available()
 	for id in ["arjun", "mei_ling"]:
 		if not bool(story.get(id + "_rescued", false)): continue
 		var game := get_tree().get_first_node_in_group("game") as Game
 		if id == "arjun" and is_instance_valid(game) and game._arjun_returning: continue
-		var exists := false
+		var friend: VillageHero
 		for child in get_children():
-			if child is VillageHero and child.hero_id == id: exists = true
-		if exists: continue
-		var friend := VillageHero.new()
+			if child is VillageHero and child.hero_id == id: friend = child
+		var post := departure_post(id) if waiting else _house_position + Vector2(-3 if id == "arjun" else 3, 3)
+		var dock_duty := waiting and _departure_posts.has(id)
+		if is_instance_valid(friend):
+			if friend.home != post or friend.dock_waiting != dock_duty:
+				friend.home = post
+				friend.dock_waiting = dock_duty
+				friend._route_timer = 0
+			continue
+		friend = VillageHero.new()
 		friend.hero_id = id
-		friend.home = _house_position + Vector2(-3 if id == "arjun" else 3, 3)
-		friend.position = friend.home
+		friend.home = post
+		friend.position = post
+		friend.dock_waiting = dock_duty
 		add_child(friend)

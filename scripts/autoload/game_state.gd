@@ -23,6 +23,7 @@ signal emergency_changed(active: bool, remaining: int, damage: int)
 signal game_over_triggered(reason: String)
 
 const SAVE_PATH := "user://tidesworn_save.json"
+const DEVELOPER_SAVE_PATH := "user://developer_test_save.json"
 const SAVE_VERSION := 6
 const INVENTORY_STACK_DEFAULT := 9
 const DEFAULT_CHARACTER := "adam"
@@ -41,9 +42,149 @@ var _purchase_serial := 0
 var _project_work_frames: Dictionary = {}
 
 
+var _developer_active := false
+var _developer_return_data: Dictionary = {}
+var _developer_return_has_save := false
+var _developer_return_autosave := true
+var _developer_return_game_over := false
+var _developer_return_save_hash := ""
+var _developer_restore_requires_title := false
+var _developer_options := {"invulnerable":false,"freeze_time":false}
+
+func save_path() -> String:
+	return DEVELOPER_SAVE_PATH if _developer_active else SAVE_PATH
+
+func developer_session_active() -> bool:
+	return _developer_active
+
+func developer_restore_requires_title() -> bool:
+	return _developer_restore_requires_title
+
+func developer_option(id: String) -> bool:
+	return _developer_active and bool(_developer_options.get(id,false))
+
+func set_developer_option(id: String, enabled: bool) -> bool:
+	if not _developer_active or not GameSettings.is_developer_unlocked() or not _developer_options.has(id): return false
+	_developer_options[id] = enabled
+	return true
+
+func begin_developer_session() -> bool:
+	if _developer_active or not GameSettings.is_developer_unlocked(): return false
+	var original_serial := journey_serial
+	for game in get_tree().get_nodes_in_group("game"):
+		if is_instance_valid(game.world) and game.world is Lobby and game.world.journey_serial == journey_serial:
+			store_home_monsters(game.world.capture_monsters())
+	_developer_return_data = data.duplicate(true)
+	_developer_return_has_save = has_existing_save
+	_developer_return_autosave = autosave_enabled
+	_developer_return_game_over = game_over_active
+	_developer_return_save_hash = FileAccess.get_sha256(SAVE_PATH) if FileAccess.file_exists(SAVE_PATH) else ""
+	_developer_restore_requires_title = false
+	_developer_active = true
+	journey_serial += 1
+	autosave_enabled = true
+	game_over_active = false
+	if data.is_empty(): data = _make_default("adam")
+	if not _save_now():
+		end_developer_session()
+		# No world handoff happened; keep the existing world's ownership valid.
+		journey_serial = original_serial
+		return false
+	return true
+
+func end_developer_session() -> bool:
+	if not _developer_active: return false
+	_developer_active = false
+	journey_serial += 1
+	data = _developer_return_data.duplicate(true)
+	has_existing_save = _developer_return_has_save
+	autosave_enabled = _developer_return_autosave
+	game_over_active = _developer_return_game_over
+	_developer_return_data.clear()
+	_developer_options = {"invulnerable":false,"freeze_time":false}
+	# Another live game may have saved while this process was testing. Prefer
+	# its current record, and never autosave over an unreadable replacement.
+	var current_hash := FileAccess.get_sha256(SAVE_PATH) if FileAccess.file_exists(SAVE_PATH) else ""
+	if current_hash != _developer_return_save_hash:
+		if not load_game():
+			autosave_enabled = false
+			has_existing_save = FileAccess.file_exists(SAVE_PATH)
+			_developer_restore_requires_title = true
+	_emit_all()
+	return true
+
+func developer_prepare(id: String) -> bool:
+	if not _developer_active or not GameSettings.is_developer_unlocked() or DeveloperDB.action(id).is_empty(): return false
+	if id in ["progress_heal","progress_supplies","progress_arjun","progress_mei","progress_day","progress_night"]:
+		match id:
+			"progress_heal":
+				data.hp = health_max()
+				data.recovery_active = false
+				revive_active_pet()
+			"progress_supplies":
+				data.gold = gold()+5000
+				data.diamonds = diamonds()+100
+				data.inventory.health_potion = item_count("health_potion")+50
+			"progress_arjun", "progress_mei":
+				data.campaign.arjun_rescued = true if id == "progress_arjun" else bool(data.campaign.arjun_rescued)
+				data.campaign.mei_ling_rescued = true if id == "progress_mei" else bool(data.campaign.mei_ling_rescued)
+				_clear_expedition()
+				data.realm_progress.visit_active = false
+			"progress_day", "progress_night":
+				var target_night := id == "progress_night"
+				if is_night() != target_night:
+					data.world_time = (floorf(float(data.world_time)/DAY_PHASE_SECONDS)+1)*DAY_PHASE_SECONDS+0.1
+					_close_old_home_arrivals()
+					day_phase_changed.emit(is_night())
+	else:
+		# A configured test destination must not be overwritten by a retiring world.
+		journey_serial += 1
+		_clear_expedition()
+		data.realm_progress.visit_active = false
+		data.recovery_active = false
+		data.emergency_active = false
+		data.emergency_monsters = 0
+		data.hp = health_max()
+		data.campaign.intro_seen = true
+		data.campaign.dock_welcome_seen = id != "scene_welcome"
+		data.portal_origin.opened = true
+		data.portal_origin.reveal_seen = true
+		if id in ["travel_sea_1","travel_sea_2","travel_kraken","travel_prison","progress_reset"]:
+			data.campaign.arjun_rescued = false
+			data.campaign.ocean_stage = 2 if id == "travel_sea_2" else 1
+		if id in ["travel_twilight","travel_citadel","progress_reset"]:
+			data.campaign.mei_ling_rescued = false
+			data.portals[PortalDB.MEI_LING_PORTAL].cleared = false
+		if id in ["progress_dock","scene_ending"]:
+			data.campaign.arjun_rescued = true
+			data.campaign.mei_ling_rescued = true
+			data.home_monsters = []
+			data.world_time = (floorf(float(data.world_time)/(DAY_PHASE_SECONDS*2))+1)*DAY_PHASE_SECONDS*2+0.1
+		data.campaign.ending_seen = false
+		data.campaign.departure_seen = false
+		var portal := ""
+		match id:
+			"travel_twilight", "travel_citadel": portal = RealmDB.PORTAL
+			"travel_tempest": portal = "sunken_crypt"
+			"travel_abyss": portal = "drowned_throne"
+		if not portal.is_empty():
+			data.portals[portal].cleared = false
+			data.portals[portal].unlocked = true
+			data.level = maxi(int(data.level),int(PortalDB.get_portal(portal).level_required))
+			data.xp_next = xp_for_level(int(data.level))
+			data.expedition = {"active":true,"portal_id":portal,"gold":0,"diamonds":0,"items":{},"pending_caches":[]}
+			data.realm_progress.visit_active = portal == RealmDB.PORTAL
+			if portal == RealmDB.PORTAL:
+				data.realm_progress.checkpoint = "arrival"
+	_sanitize_campaign()
+	_save_if_needed()
+	_emit_all()
+	return true
+
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	has_existing_save = FileAccess.file_exists(SAVE_PATH)
+	has_existing_save = FileAccess.file_exists(save_path())
 	if has_existing_save:
 		load_game()
 	else:
@@ -82,7 +223,7 @@ func _make_default(character_id: String) -> Dictionary:
 		"portal_origin": {"schema": 1, "site_examined": false, "rahim_consulted": false, "opened": false, "reveal_seen": false},
 		"village_progression": VillageProjectDB.default_progression(),
 		"side_quest_intros_seen": [],
-		"campaign": {"intro_seen": false, "dock_welcome_seen": false, "urchin_intro_seen": false, "fire_intro_seen": false, "ocean_stage": 1, "arjun_rescued": false, "mei_ling_rescued": false, "ending_seen": false},
+		"campaign": {"intro_seen": false, "dock_welcome_seen": false, "urchin_intro_seen": false, "fire_intro_seen": false, "ocean_stage": 1, "arjun_rescued": false, "mei_ling_rescued": false, "ending_seen": false, "departure_seen": false},
 		"character_id": str(character.id),
 		"character_name": str(character.name),
 		"character_title": str(character.title),
@@ -160,6 +301,7 @@ func _make_default(character_id: String) -> Dictionary:
 
 
 func new_game(character_id: String = DEFAULT_CHARACTER) -> void:
+	_finish_developer_restore()
 	_wild_session.clear()
 	journey_serial += 1
 	_project_work_frames.clear()
@@ -176,8 +318,14 @@ func new_game(character_id: String = DEFAULT_CHARACTER) -> void:
 func continue_game() -> bool:
 	if not has_existing_save or not load_game():
 		return false
+	_finish_developer_restore()
 	game_over_active = false
 	return not data.is_empty()
+
+func _finish_developer_restore() -> void:
+	if not _developer_active and _developer_restore_requires_title:
+		autosave_enabled = _developer_return_autosave
+		_developer_restore_requires_title = false
 
 
 func _emit_all() -> void:
@@ -474,6 +622,7 @@ func add_shield(amount: int) -> void:
 
 
 func damage_player(amount: int) -> void:
+	if developer_option("invulnerable"): return
 	if amount <= 0:
 		return
 	var reduced := maxi(1, amount - defense())
@@ -1613,6 +1762,7 @@ func night_number() -> int:
 
 
 func advance_world_clock(delta: float) -> void:
+	if developer_option("freeze_time"): return
 	if data.is_empty() or game_over_active or delta <= 0.0:
 		return
 	var before := float(data.get("world_time", 0.0))
@@ -1844,28 +1994,31 @@ func _save_if_needed() -> void:
 		_save_now()
 
 
-func _save_now() -> void:
+func _save_now() -> bool:
 	if data.is_empty():
-		return
+		return false
 	# Capture living home enemies before any transaction saves, including kills.
 	for game in get_tree().get_nodes_in_group("game"):
 		if is_instance_valid(game) and is_instance_valid(game.world) and game.world is Lobby and game.world.is_node_ready() and game.world.journey_serial == journey_serial:
 			store_home_monsters(game.world.capture_monsters())
 			break
 	data.version = SAVE_VERSION
-	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	var file := FileAccess.open(save_path(), FileAccess.WRITE)
 	if file == null:
 		push_warning("Could not save game: %s" % FileAccess.get_open_error())
-		return
+		return false
 	file.store_string(JSON.stringify(data, "\t"))
+	file.flush()
+	var saved_ok := file.get_error() == OK
 	file.close()
-	has_existing_save = true
+	if saved_ok: has_existing_save = true
+	return saved_ok
 
 
 func load_game() -> bool:
-	if not FileAccess.file_exists(SAVE_PATH):
+	if not FileAccess.file_exists(save_path()):
 		return false
-	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	var file := FileAccess.open(save_path(), FileAccess.READ)
 	if file == null:
 		return false
 	var text := file.get_as_text()
@@ -1917,8 +2070,8 @@ func load_game() -> bool:
 
 
 func delete_save() -> void:
-	if FileAccess.file_exists(SAVE_PATH):
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	if FileAccess.file_exists(save_path()):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path()))
 	has_existing_save = false
 
 
@@ -2433,6 +2586,7 @@ func _sanitize_campaign() -> void:
 	var raw: Variant = data.get("campaign", {})
 	var clean: Dictionary = raw if raw is Dictionary else {}
 	data.campaign = {"intro_seen": bool(clean.get("intro_seen", false)), "dock_welcome_seen": bool(clean.get("dock_welcome_seen", clean.get("intro_seen", false))), "ocean_stage": clampi(int(clean.get("ocean_stage", 1)), 1, OCEAN_STAGES), "arjun_rescued": bool(clean.get("arjun_rescued", false)), "mei_ling_rescued": bool(clean.get("mei_ling_rescued", false)), "ending_seen": bool(clean.get("ending_seen", false))}
+	data.campaign.departure_seen = clean.get("departure_seen", false) is bool and clean.get("departure_seen", false) == true
 	# Cleared first realms are peaceful and cannot respawn their boss. Credit
 	# the moved rescue on load, without granting XP, currency, pets or a story.
 	if bool(portal_state(PortalDB.MEI_LING_PORTAL).get("cleared", false)):
@@ -2441,6 +2595,23 @@ func _sanitize_campaign() -> void:
 	data.campaign.fire_intro_seen = clean.get("fire_intro_seen", false) is bool and clean.get("fire_intro_seen", false) == true
 	if not bool(data.campaign.arjun_rescued) or not bool(data.campaign.mei_ling_rescued):
 		data.campaign.ending_seen = false
+		data.campaign.departure_seen = false
+	if bool(data.campaign.departure_seen): data.campaign.ending_seen = true
+
+func final_departure_available() -> bool:
+	return friends_reunited() and not bool(campaign().get("departure_seen", false))
+
+func complete_final_departure() -> bool:
+	if not final_departure_available() or game_over_active: return false
+	var was_seen := bool(campaign().get("ending_seen", false))
+	data.campaign.ending_seen = true
+	data.campaign.departure_seen = true
+	if not _save_now():
+		data.campaign.ending_seen = was_seen
+		data.campaign.departure_seen = false
+		return false
+	data_changed.emit()
+	return true
 
 func mark_story_seen(which: String) -> void:
 	if which not in ["intro_seen", "dock_welcome_seen", "ending_seen"]:
@@ -2478,7 +2649,7 @@ func campaign_objective() -> String:
 	var story := campaign()
 	if not portal_opened(): return "Search for Arjun and Mei Ling. Meet your neighbours and investigate the old waystone."
 	if friends_reunited():
-		return "Three friends reunited in BESUT. Prepare for what comes next, together."
+		return "Explore BESUT before departure. Your friends are safe." if bool(story.get("departure_seen", false)) else "Arjun and Mei Ling are waiting at the dock. Join them when you're ready."
 	var goals: Array[String] = []
 	if not bool(story.get("arjun_rescued", false)):
 		goals.append("Rescue Arjun: ship > sea level %d/%d > Kraken Island" % [int(story.get("ocean_stage", 1)), OCEAN_STAGES])

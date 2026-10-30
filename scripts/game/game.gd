@@ -37,6 +37,17 @@ var _arjun_returning := false
 var _arjun_walk: Tween
 var _reunion_check_timer := 0.0
 
+var _developer_layer: CanvasLayer
+var _developer_bar: HBoxContainer
+var _developer_label: Label
+var _developer_paused := false
+var _developer_world: Node2D
+var _developer_world_mode := Node.PROCESS_MODE_INHERIT
+var _developer_action_busy := false
+var _developer_restore_title := false
+var _developer_restore_ocean := false
+var _developer_sidequests_before := true
+
 const EMERGENCY_DELAY := 14.0
 const SETTLEMENT_DAMAGE_TICK := 5.0
 
@@ -56,6 +67,7 @@ func _ready() -> void:
 	loading_screen = LoadingScreen.new()
 	add_child(loading_screen)
 	add_child(NpcInfo.new())
+	_build_developer_tools()
 	_connect_hud()
 	GameState.player_defeated.connect(_on_player_defeated)
 	GameState.game_over_triggered.connect(_on_game_over)
@@ -63,6 +75,8 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	_refresh_developer_overlay()
+	if _developer_paused: return
 	_reunion_check_timer += delta
 	if _reunion_check_timer >= 0.75:
 		_reunion_check_timer = 0.0
@@ -584,7 +598,7 @@ func player() -> Player:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_APPLICATION_FOCUS_OUT:
-		if GameState.autosave_enabled:
+		if GameState.autosave_enabled and (is_instance_valid(world) or GameState.has_existing_save or GameState.developer_session_active()):
 			GameState.save_game()
 
 
@@ -955,9 +969,13 @@ func play_story(kind: String, from_title: bool = false) -> void:
 	if _active_story != story: return
 	_active_story = null
 	_story_active = false
-	if world != story_world or GameState.journey_serial != story_journey or story.cancelled: return
-	if kind == "intro": GameState.mark_story_seen("intro_seen")
-	if kind == "ending": GameState.mark_story_seen("ending_seen")
+	if world != story_world or GameState.journey_serial != story_journey: return
+	if kind == "intro" and not story.cancelled: GameState.mark_story_seen("intro_seen")
+	if kind == "ending" and story.departure_committed and not story.cancelled:
+		_story_active = true
+		await return_to_title()
+		_story_active = false
+		return
 	if is_instance_valid(story_world): story_world.process_mode = old_mode
 	hud.visible = was_visible
 	_input_locked = hud.any_modal_open() or _sailing or _transitioning or _defeat_pending
@@ -1001,21 +1019,41 @@ func _rescue_mei_ling() -> void:
 	_apply_input_lock()
 
 func _check_campaign_ending() -> void:
-	if not world is Lobby or _sailing or _transitioning or _story_active or not GameState.friends_reunited() or bool(GameState.campaign().get("ending_seen", false)): return
-	if not _reunion_context_safe(): return
-	await play_story("ending")
+	# Refresh the invitation; embarking always needs fresh input.
+	if world is Lobby and world.journey_serial == GameState.journey_serial:
+		world._sync_rescued_friends()
+
+func final_departure_reason(invitation: Node2D, require_near: bool = true) -> String:
+	if not GameState.final_departure_available(): return ""
+	if not world is Lobby or not is_instance_valid(invitation) or invitation.get_parent() != world or invitation != world.final_departure or world.journey_serial != GameState.journey_serial: return ""
+	if _sailing or _transitioning or _portal_fx_active or _story_active or _arjun_returning or _input_locked or _game_over or _defeat_pending or hud.any_modal_open() or is_instance_valid(home_interior) or is_instance_valid(_dock_conversation) or is_instance_valid(_urchin_arrival) or is_instance_valid(_portal_awakening) or is_instance_valid(world._fire_cue) or is_instance_valid(world._urchin_cue) or world._settlement_editor.active: return ""
+	var actor := player()
+	if not is_instance_valid(actor) or actor.dead or actor.sleeping or actor.attacking or actor.controls_locked or Input.is_action_pressed("attack"): return ""
+	if require_near and actor.global_position.distance_to(invitation.global_position) > invitation.interact_radius: return ""
+	if GameState.recovery_active() or GameState.emergency_active(): return "Finish helping BESUT first."
+	if world.ship_boarding.departing or world.ship_boarding.returning or world.ship_boarding.disembarking: return ""
+	if not world.departure_friends_ready(): return "Your friends are gathering at the dock."
+	var places: Array[Vector2] = [actor.global_position, invitation.global_position]
+	for friend in world.get_children():
+		if friend is VillageHero: places.append(friend.global_position)
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion() or enemy.get_parent() != world or enemy.dead: continue
+		for at in places:
+			if enemy.global_position.distance_to(at) < 8.0: return "Clear the nearby danger first."
+	for tree in get_tree().get_nodes_in_group("forest_tree"):
+		if not is_instance_valid(tree) or tree.get_parent() != world or not tree.burning: continue
+		for at in places:
+			if tree.global_position.distance_to(at) < 8.0: return "Put out the nearby fire first."
+	return "Embark together"
+
+func begin_final_departure(invitation: Node2D) -> bool:
+	if final_departure_reason(invitation) != "Embark together": return false
+	GameState.save_game()
+	play_story("ending")
+	return true
 
 func _reunion_context_safe() -> bool:
-	if _arjun_returning or _input_locked or _game_over or _defeat_pending or hud.any_modal_open() or is_instance_valid(home_interior) or is_instance_valid(_dock_conversation) or is_instance_valid(_urchin_arrival): return false
-	if not world is Lobby or world.journey_serial != GameState.journey_serial or world._settlement_editor.active: return false
-	if GameState.recovery_active() or GameState.emergency_active(): return false
-	var actor := player()
-	if not is_instance_valid(actor) or actor.dead or actor.sleeping or actor.attacking or actor.controls_locked or Input.is_action_pressed("attack"): return false
-	for enemy in get_tree().get_nodes_in_group("enemies"):
-		if is_instance_valid(enemy) and not enemy.is_queued_for_deletion() and enemy.get_parent() == world and not enemy.dead and enemy.global_position.distance_to(actor.global_position) < 10.0: return false
-	for tree in get_tree().get_nodes_in_group("forest_tree"):
-		if is_instance_valid(tree) and tree.get_parent() == world and tree.burning and tree.global_position.distance_to(actor.global_position) < 10.0: return false
-	return true
+	return world is Lobby and is_instance_valid(world.final_departure) and final_departure_reason(world.final_departure) == "Embark together"
 
 func _land_arjun(boarding: ShipDeparture) -> void:
 	var home := world as Lobby
@@ -1026,7 +1064,7 @@ func _land_arjun(boarding: ShipDeparture) -> void:
 		actor.scale = actor.base_scale
 		actor.set_meta("passenger_onboard", false)
 		var landing := boarding.global_position + Vector2(0.6, 0)
-		var destination := home._house_position + Vector2(-3, 3)
+		var destination := home.departure_post("arjun") if GameState.final_departure_available() else home._house_position + Vector2(-3, 3)
 		var route := home.resident_path(landing, destination)
 		_arjun_walk = actor.create_tween()
 		var from := actor.global_position
@@ -1041,6 +1079,8 @@ func _land_arjun(boarding: ShipDeparture) -> void:
 			_arjun_walk.tween_property(actor, "global_position", point, direction.length() / Resident.WALK_SPEED)
 			from = point
 		await _arjun_walk.finished
+		if not is_instance_valid(home) or world != home or not is_instance_valid(actor): return
+		actor.hide()
 		actor.queue_free()
 	if is_instance_valid(home) and world == home:
 		_arjun_returning = false
@@ -1052,3 +1092,228 @@ func open_map() -> void:
 	_apply_input_lock()
 	hud.release_world_controls()
 	hud.map_panel.open_map()
+
+
+func _build_developer_tools() -> void:
+	_developer_layer = CanvasLayer.new()
+	_developer_layer.name = "DeveloperLayer"
+	_developer_layer.layer = 400
+	add_child(_developer_layer)
+	var root := Control.new()
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.theme = GameUI.theme()
+	_developer_layer.add_child(root)
+	_developer_bar = HBoxContainer.new()
+	_developer_bar.anchor_left = 0.5
+	_developer_bar.anchor_right = 0.5
+	_developer_bar.offset_left = -200
+	_developer_bar.offset_right = 200
+	_developer_bar.offset_top = 48
+	_developer_bar.offset_bottom = 84
+	_developer_bar.add_theme_constant_override("separation",12)
+	root.add_child(_developer_bar)
+	_developer_label = GameUI.label("DEVELOPER ACCESS",13,GameUI.GOLD)
+	_developer_bar.add_child(_developer_label)
+	var open := GameUI.button("Dev tools",Vector2(98,36))
+	open.pressed.connect(open_developer_tools)
+	_developer_bar.add_child(open)
+	hud.developer_panel = DeveloperPanel.new()
+	hud.developer_panel.name = "DeveloperPanel"
+	root.add_child(hud.developer_panel)
+	hud.developer_panel.closed.connect(_on_developer_panel_closed)
+	GameSettings.changed.connect(_on_developer_setting_changed)
+	_refresh_developer_overlay()
+
+func _refresh_developer_overlay() -> void:
+	if not is_instance_valid(_developer_bar): return
+	_developer_bar.visible = GameSettings.is_developer_unlocked() and (is_instance_valid(world) or GameState.developer_session_active()) and not _story_active and not _transitioning and not _sailing and not _defeat_pending and not hud.any_modal_open()
+	_developer_label.text = "TEST JOURNEY · Save protected" if GameState.developer_session_active() else "DEVELOPER ACCESS"
+
+func _on_developer_setting_changed(key: String) -> void:
+	if key != "developer_access": return
+	if not GameSettings.is_developer_unlocked():
+		if GameState.developer_session_active(): end_developer_test()
+		elif hud.developer_panel.visible: hud.developer_panel.close_panel()
+	_refresh_developer_overlay()
+
+func open_developer_tools() -> bool:
+	if not GameSettings.is_developer_unlocked() or _transitioning or _sailing or _story_active or _portal_fx_active or _defeat_pending or _developer_action_busy or is_instance_valid(_dock_conversation) or is_instance_valid(_urchin_arrival) or is_instance_valid(_portal_awakening): return false
+	if world is TwilightRealm:
+		if world._camp_resting: return false
+		world.close_reading()
+	if is_instance_valid(title_screen): title_screen._close_overlay()
+	hud.hide_modals()
+	if world is OceanJourney:
+		world._ocean_settings.close_panel()
+		world._pickup.cancel()
+		world._ocean_joystick.cancel()
+		Input.action_release("ocean_pickup")
+	hud.release_world_controls()
+	_developer_world = world
+	_developer_world_mode = world.process_mode if is_instance_valid(world) else Node.PROCESS_MODE_INHERIT
+	_developer_paused = true
+	if is_instance_valid(world): world.process_mode = Node.PROCESS_MODE_DISABLED
+	_input_locked = true
+	_apply_input_lock()
+	hud.developer_panel.open_panel("Developer tools")
+	return true
+
+func _on_developer_panel_closed() -> void:
+	if _developer_paused and is_instance_valid(_developer_world) and world == _developer_world:
+		world.process_mode = _developer_world_mode
+	_developer_world = null
+	_developer_paused = false
+	_on_modal_closed()
+
+func start_developer_test() -> bool:
+	if not GameSettings.is_developer_unlocked() or GameState.developer_session_active() or _transitioning or _story_active or _sailing or _developer_action_busy or _game_over: return false
+	_developer_action_busy = true
+	_developer_restore_title = not is_instance_valid(world)
+	_developer_restore_ocean = world is OceanJourney
+	_developer_sidequests_before = _side_quest_auto_enabled
+	if not GameState.begin_developer_session():
+		_developer_action_busy = false
+		hud.developer_panel._message = "Could not create the separate test save. Normal journey unchanged."
+		hud.developer_panel._rebuild()
+		return false
+	hud.hide_modals()
+	_remove_title()
+	_side_quest_auto_enabled = false
+	hud.developer_panel._message = "Test journey started. Normal save protected."
+	GameState.developer_prepare("travel_village")
+	var test_serial := GameState.journey_serial
+	await _load_lobby(true)
+	_developer_action_busy = false
+	if not GameState.developer_session_active() or GameState.journey_serial != test_serial: return false
+	open_developer_tools()
+	return true
+
+func end_developer_test(lock_after: bool = false) -> bool:
+	if not GameState.developer_session_active() or _developer_action_busy or _transitioning: return false
+	var test_serial := GameState.journey_serial
+	_developer_action_busy = true
+	hud.hide_modals()
+	_transitioning = true
+	_input_locked = true
+	_apply_input_lock()
+	await loading_screen.begin("Restoring normal journey")
+	if not GameState.developer_session_active() or GameState.journey_serial != test_serial: return false
+	_clear_world()
+	GameState.end_developer_session()
+	_game_over = GameState.game_over_active
+	_defeat_pending = false
+	_return_to_harbour = false
+	_side_quest_auto_enabled = _developer_sidequests_before
+	_remove_title()
+	_transitioning = false
+	if _developer_restore_title or GameState.developer_restore_requires_title():
+		hud.visible = false
+		_show_title()
+	elif bool(GameState.realm_progress().get("visit_active",false)):
+		await _load_dungeon(RealmDB.PORTAL,false)
+	elif GameState.expedition_active():
+		await _load_dungeon(GameState.expedition_portal(),false)
+	elif _developer_restore_ocean and GameState.sea_journey_available():
+		await _load_developer_world("ocean")
+	else:
+		await _load_lobby(false)
+	await loading_screen.finish()
+	_developer_action_busy = false
+	if lock_after: GameSettings.lock_developer()
+	_refresh_developer_overlay()
+	return true
+
+func run_developer_action(id: String) -> Dictionary:
+	if not GameSettings.is_developer_unlocked() or not GameState.developer_session_active(): return {"ok":false,"message":"Start an unlocked test session first."}
+	if DeveloperDB.action(id).is_empty() or _developer_action_busy or _transitioning or _sailing or _story_active or _portal_fx_active or _defeat_pending or _game_over or is_instance_valid(_dock_conversation) or is_instance_valid(_urchin_arrival) or is_instance_valid(_portal_awakening): return {"ok":false,"message":"Finish the current transition or story first."}
+	_developer_action_busy = true
+	hud.hide_modals()
+	if id == "progress_boss":
+		var boss: Node = world.get("boss") if is_instance_valid(world) else null
+		if not is_instance_valid(boss) or boss.dead or (world is TwilightRealm and not world._boss_arrived):
+			_developer_action_busy = false
+			open_developer_tools()
+			return {"ok":false,"message":"Enter a living boss's arena first."}
+		boss.take_damage(boss.max_hp,Vector2.ZERO,player())
+	elif id.begins_with("scene_") and id != "scene_ending":
+		if not world is Lobby or id == "scene_welcome":
+			if not GameState.developer_prepare("scene_welcome" if id == "scene_welcome" else "travel_village"): return _developer_action_failed()
+			var serial := GameState.journey_serial
+			await _load_lobby(true)
+			if not _developer_action_owned(serial): return _developer_action_failed()
+		if id == "scene_welcome": play_dock_conversation(true)
+		else: play_story({"scene_intro":"intro","scene_arjun":"arjun","scene_mei":"mei"}[id])
+	elif id in ["progress_heal","progress_supplies","progress_day","progress_night"]:
+		if not GameState.developer_prepare(id): return _developer_action_failed()
+		if id == "progress_heal" and is_instance_valid(player()):
+			player().dead = false
+			if player().sleeping: player().cancel_sleep("Developer recovery")
+		if id == "progress_heal" and world is OceanJourney:
+			if world.phase == OceanJourney.Phase.FINISHED: world.restart()
+			else:
+				world.health = OceanJourney.MAX_HEALTH
+				world.fullness = OceanJourney.FULLNESS_MAX
+				world._refresh_ui()
+	else:
+		if not GameState.developer_prepare(id): return _developer_action_failed()
+		var serial := GameState.journey_serial
+		if id in ["travel_twilight","travel_citadel","travel_tempest","travel_abyss"]:
+			var portal := RealmDB.PORTAL if id in ["travel_twilight","travel_citadel"] else ("sunken_crypt" if id == "travel_tempest" else "drowned_throne")
+			await _load_dungeon(portal,true)
+			if not _developer_action_owned(serial): return _developer_action_failed()
+			if id == "travel_citadel":
+				player().position = RealmDB.BOSS_THRESHOLD
+				world._physics_process(0)
+		elif id in ["travel_sea_1","travel_sea_2"]:
+			await _load_developer_world("ocean")
+		elif id in ["travel_kraken","travel_prison"]:
+			await _load_developer_world("kraken")
+			if not _developer_action_owned(serial): return _developer_action_failed()
+			if id == "travel_prison":
+				world.boss.take_damage(world.boss.max_hp,Vector2.ZERO,player())
+				player().position = world.cage.position+Vector2(0,2)
+		else:
+			await _load_lobby(true)
+			if not _developer_action_owned(serial): return _developer_action_failed()
+			if id in ["travel_dock","progress_dock","scene_ending"]:
+				player().position = world.final_departure.position+Vector2(0,0.7)
+				_place_home_pet(player().position)
+				player().reset_physics_interpolation()
+				world.camera.position = player().position
+				world.camera.reset_physics_interpolation()
+				world.camera.force_update_scroll()
+				await get_tree().physics_frame
+				await get_tree().physics_frame
+				if not _developer_action_owned(serial): return _developer_action_failed()
+				_check_campaign_ending()
+				if id == "scene_ending" and not begin_final_departure(world.final_departure): return _developer_action_failed("The dock is not ready. Open Dev tools and try the ending setup again.")
+	_developer_action_busy = false
+	_refresh_developer_overlay()
+	return {"ok":true,"message":"Applied to the test journey only."}
+
+func _developer_action_owned(serial: int) -> bool:
+	return GameState.developer_session_active() and GameSettings.is_developer_unlocked() and GameState.journey_serial == serial and is_instance_valid(world) and not _defeat_pending and not _game_over
+
+func _developer_action_failed(message: String = "The test action was interrupted.") -> Dictionary:
+	_developer_action_busy = false
+	return {"ok":false,"message":message}
+
+func _load_developer_world(kind: String) -> void:
+	var serial := GameState.journey_serial
+	var previous := world
+	_transitioning = true
+	_input_locked = true
+	_apply_input_lock()
+	await loading_screen.begin("Developer test · " + ("Turtle journey" if kind == "ocean" else "Kraken Island"))
+	if GameState.journey_serial != serial or world != previous: return
+	_clear_world()
+	world = OceanJourney.new() if kind == "ocean" else KrakenIsland.new()
+	_world_holder.add_child(world)
+	hud.set_world(world)
+	hud.visible = not world is OceanJourney
+	_input_locked = world is OceanJourney
+	_apply_input_lock()
+	var loaded := world
+	await loading_screen.finish()
+	if GameState.journey_serial == serial and world == loaded: _transitioning = false

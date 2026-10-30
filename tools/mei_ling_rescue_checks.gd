@@ -102,10 +102,10 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	game.world._sync_rescued_friends()
 	game._check_campaign_ending()
 	story = _story(game)
-	check.call(story != null and story.kind == "ending", "rescuing Arjun second triggers the same reunion ending")
+	check.call(story == null and GameState.final_departure_available(), "rescuing Arjun second prepares the voluntary dock ending")
 	if story != null: story.finish()
 	await game.get_tree().process_frame
-	check.call(bool(GameState.campaign().ending_seen) and _heroes(game.world, "mei_ling") == 1 and _heroes(game.world, "arjun") == 1, "Mei Ling-first ending persists with exactly two village defenders")
+	check.call(not bool(GameState.campaign().get("departure_seen",false)) and _heroes(game.world, "mei_ling") == 1 and _heroes(game.world, "arjun") == 1, "Mei Ling-first ending persists with exactly two village defenders")
 	game._check_campaign_ending()
 	check.call(_story(game) == null, "completed reunion never replays")
 	GameState.data = saved

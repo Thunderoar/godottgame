@@ -28,6 +28,7 @@ func _rebuild() -> void:
 		add_body_text("HUD is not available.", GameUI.RED, 16)
 		return
 
+	content.add_child(DeveloperAccessControl.new())
 	add_section("APPEARANCE", GameUI.GOLD)
 	content.add_child(VisualStyleSettings.new())
 

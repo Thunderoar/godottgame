@@ -2763,3 +2763,132 @@ markers and empty runtime stderr. This final gate includes the ten-crab immediat
 encounter, both rescue orders, reunion, real incoming ship/disembarkation and the
 completed sea lock. `git diff --check` passes. Full evidence:
 `tidesworn-tests-41a21660380e4c2fbd5366a1910831ff`.
+
+
+## Dock waiting, deliberate Embark and final voyage (2026-10-30)
+
+The cottage auto-ending and preparation-only dock tag are superseded. After both
+rescues, Arjun and Mei Ling gather at clear dock posts as existing VillageHero
+actors. Adam can keep playing; proximity reveals a contextual, tappable Embark
+banner and the existing keyboard/touch prompt. E, nearby ship taps and the banner
+share a guarded Game-owned entry. Distant clicks, danger, recovery, modals,
+editing, arrivals and incomplete rescue returns cannot start the ending.
+
+Thirty player-paced reunion turns are restaged at the dock. Seven departure
+beats show supplies, gratitude to Rahim/villagers, an ordered gangplank crossing,
+mooring release, visible sailing, all three friends at the open horizon, and the
+final card. Ship hull layering and the living companion remain consistent across
+boarding. Day/night palettes follow entry time; low effects, mute, live Reduce
+Motion and focus loss preserve essential information. Sequence-owned warm audio
+and voices are released on cancellation and exit.
+
+GameState owns the new boolean `campaign.departure_seen`. Older completed
+reunions retain `ending_seen` and gain optional dock departure. Completion sets
+both flags and saves once; a file-open failure rolls back the flags and retains
+the final card for retry. The covered title transition keeps the world suspended.
+Completed saves offer Explore BESUT / Before departure with ordinary village
+defenders. The turtle rescue route stays closed after Arjun is freed.
+
+Fresh native Windows Godot 4.7.2 results:
+
+- Canonical isolated gameplay: **6,527 checks, PASS, exit 0**.
+- Focused ending headless: **133 checks, PASS, exit 0**.
+- Native ending at **832x480** and **1280x720**: **133 checks, PASS, exit 0**
+  each. Thirty captures per size include live waiting, dialogue, consecutive
+  boarding/sailing positions, day/night, reduced motion, final card, and the
+  actual Mei Ling-first incoming-rescue passenger handoff. Captures were inspected.
+- Focused completed-sea regression: **54 checks, PASS, exit 0**. This covers
+  the real prison rescue, incoming ship, all sea-entry closures and fresh journeys.
+- Final isolated import: exit 0 with the existing Android build-tools directory
+  warning. No script failures were present in the successful import.
+- Final runtime logs contain no `[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers.
+  The ending/full fixtures intentionally provoke one `Could not save game: 12`
+  warning by replacing only their isolated save path with a directory; successful
+  rollback, final-card retry and subsequent durable reload are asserted. This is
+  expected negative-test output, not a claim of warning-free logs.
+- `git diff --check` passes. No player save was edited, no export was made,
+  and no physical Android-device test is claimed. Pointer tests use actual Godot
+  mouse/touch/key event dispatch with isolated data.
+
+Coverage includes both rescue orders; no automatic start on proximity, reload or
+cleared danger; unique live friend identities; physical walking and blocked-post
+fallback; bounded local defense; nearby E/mouse/touch/banner entry; ownership
+locks; unchanged world time while reading; natural progression and Skip at every
+turn; cancellation in every departure phase; continuous gangplank and ship
+positions; old/malformed saves; inventory, pet, structure, portal, forest and
+layout preservation; real save-failure retry; title wording; and earlier-time
+free play. StoryChecks and the citadel-rescue fixture now assert voluntary dock
+readiness rather than the superseded auto-ending.
+
+Final evidence under `%LOCALAPPDATA%/Temp/`:
+
+- Full gameplay: `tidesworn-tests-b04525ef67ae4bf18c5668ca93c9c373`.
+- Headless ending: `tidesworn-tests-94d2eb0fe23d461aacc8e50f70240c69`.
+- Native 832x480: `tidesworn-tests-acd27fdfb55340ad8661c0f40bd06b69`.
+- Native 1280x720: `tidesworn-tests-d55c00bf3cb5471ea194eb8f42cb92db`.
+- Completed-sea regression: `tidesworn-tests-f05bbf9529c64bbca1b11a75426afc81`.
+- Successful final import: `tidesworn-tests-4d3b9cdb8a7e4d338683722052b6835b`.
+
+See `DOCK_DEPARTURE_ENDING_PLAN.md` for the approved flow and implementation map.
+
+
+## Code-locked developer tools and protected test journeys (2026-10-30)
+
+Settings now offers masked developer access on title, land and ocean. Only the
+phrase digest is stored; unlock is not part of the journey or settings file and
+locks on a new app process. Input is cleared after submission and failed attempts
+have a short retry delay. The private phrase is supplied separately to the owner;
+positive acceptance input comes through `PB_DEVELOPER_TEST_CODE`, never test source.
+
+DeveloperPanel offers Travel, Scenes and Progress: village/dock, both turtle
+levels, Twilight exploration, all three portal arenas, Kraken/prison, the opening
+and both rescue previews, Rahim's welcome, manual dock-ending setup and the full
+reunion/voyage. Additional actions restore health/supplies, mark/reset rescues,
+finish the real current boss, set day/night, protect Adam and freeze the clock.
+Game owns transitions and story entry; GameState owns every progression mutation.
+The registered workbench explicitly suspends its current world/clock and remains
+usable above the independent ocean and title HUDs.
+
+Actions require a code-unlocked test session. GameState routes save, load,
+Continue and deletion to `user://developer_test_save.json`; New Journey, game over,
+rescue transactions, boss loot and ending completion stay there. End/Lock restores
+the normal checkpoint and its prior autosave/save-availability state. A failed
+fork cannot leave the current normal world's journey ownership invalid. Newer
+normal saves written by another process are preferred on restore. An unreadable
+replacement is preserved at title, with autosaving withheld until a valid Continue
+or deliberate New Journey. A title-started test before any normal journey exists
+cannot create a normal save on completion or focus loss.
+
+Fresh native Windows Godot 4.7.2 validation:
+
+- Canonical isolated gameplay: **6,615 checks, PASS, exit 0**.
+- Native `-Developer -Capture` at **832x480** and **1280x720**:
+  **88 checks, PASS, exit 0** each. Both use the real positive code entry and
+  dispatched mouse/touch input. Four settled captures per size were inspected:
+  locked Settings, Travel workbench, ocean overlay and Progress workbench.
+- No `[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers in the final runtime logs.
+  Each developer fixture intentionally provokes one `Could not save game: 12`
+  warning with a directory at its isolated test-save path, asserting rollback
+  and a usable retry. The full gate also retains the ending's separate expected
+  failed-save warning. These are negative-test outputs, not warning-free logs.
+- Successful isolated import exits 0 with the pre-existing Android build-tools
+  directory warning. `git diff --check` passes. No export or physical-device
+  certification was performed.
+
+Checks cover locked direct APIs, incorrect/empty/valid code, masking, field
+clearing, non-persistence, test fork failure, clock/process restoration, health
+protection, supplies, every travel family, both real friend rescues, optional
+boss completion, all listed previews, the complete dock ending and title return,
+new/deleted test journeys, restoration and relocking, Settings reload, newer and
+unreadable normal records, repaired Continue and no-save title behavior. The normal
+save is checked byte-for-byte throughout the test actions. All fixtures use
+isolated user data and restore their own original fixture files.
+
+Evidence under `%LOCALAPPDATA%/Temp/`:
+
+- Full gate: `tidesworn-tests-faca731ffe41444d950cc1c3ed676b7d`.
+- Native 832x480: `tidesworn-tests-3ad79c9743d34c7abaa10f51ee1169fc`.
+- Native 1280x720: `tidesworn-tests-311e683f33f24ac0b6311137cb65efce`.
+- Final import: `tidesworn-tests-62df91a7f9534082ad12ecf98aa0ff44`.
+
+See `DEVELOPER_MODE.md` for usage, ownership and checkpoint behavior.

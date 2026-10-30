@@ -38,7 +38,7 @@ static func courtyard(night: bool) -> Texture2D:
 		return img)
 
 static func actor(id: String, mood: String, posture: int, left: bool) -> Texture2D:
-	return PixelArt.cached_texture("reunion/actor/%s/%s/%d/%s/v1" % [id,mood,posture,left],func() -> Image:
+	return PixelArt.cached_texture("reunion/actor/%s/%s/%d/%s/v2" % [id,mood,posture,left],func() -> Image:
 		var img := PixelArt.image(48,60)
 		var pose := MeiLingRescueArt.Pose.IDLE
 		if posture >= 3: pose = MeiLingRescueArt.Pose.WALK_A if posture == 3 else MeiLingRescueArt.Pose.WALK_B
@@ -60,8 +60,8 @@ static func actor(id: String, mood: String, posture: int, left: bool) -> Texture
 			PixelArt.line(img,33,33+offset,hand.x+1,hand.y+1,shirt)
 			PixelArt.rect(img,hand.x-1,hand.y,4,3,c.tint)
 			if mood == "cup":
-				PixelArt.rect(img,hand.x-2,hand.y-3,6,5,Color("#e0d3ac"))
-				PixelArt.hline(img,hand.x-2,hand.y-3,6,Color("#fff0ce"))
+				PixelArt.rect(img,hand.x-2,hand.y-5,6,8,Color("#81a8a1"))
+				PixelArt.rect(img,hand.x-1,hand.y-7,4,2,Color("#d6bd87"))
 		if mood == "smile":
 			PixelArt.hline(img,27,24+offset,4,c.tint)
 			PixelArt.hline(img,27,25+offset,3,Color("#855744"))
@@ -100,4 +100,49 @@ static func dock(night: bool) -> Texture2D:
 		PixelArt.rect(img,81,177,32,28,Color("#937147"))
 		for y in [180,192]: PixelArt.hline(img,83,y,28,Color("#c6a16b"))
 		PixelArt.line(img,83,179,110,203,Color("#d0ac75"))
+		return img)
+
+static func departure_backdrop(night: bool, open_sea: bool) -> Texture2D:
+	return PixelArt.cached_texture("reunion/departure/%s/%s/v1" % [night,open_sea],func() -> Image:
+		var img := PixelArt.image(480,224)
+		var sky: Array = ["#182b43","#223c53","#345467","#54717a"] if night else ["#93b9bc","#abc9c1","#c8d8bf","#e5ddbc"]
+		for i in 4: PixelArt.rect(img,0,i*25,480,25,Color(sky[i]))
+		if night:
+			for i in 22: PixelArt.px(img,16+posmod(i*83,450),8+posmod(i*19,60),Color("#d9e2cc"))
+			PixelArt.ellipse(img,395,31,12,12,Color("#ece1b8"))
+		else:
+			PixelArt.ellipse(img,395,64,19,18,Color("#f6e8bc"))
+			for x in [32,168,282]:
+				PixelArt.ellipse(img,x,24,34,5,Color("#dbe5d5"))
+				PixelArt.ellipse(img,x+21,21,23,6,Color("#dbe5d5"))
+		PixelArt.rect(img,0,100,480,124,Color("#224553") if night else Color("#4c898a"))
+		PixelArt.hline(img,0,100,480,Color("#8da7a1"))
+		for i in 76:
+			var y := 103+posmod(i*17,119)
+			PixelArt.hline(img,posmod(i*67,478),y,3+i%12,Color("#386374") if night else Color("#76aaa3"))
+		if open_sea: return img
+		PixelArt._fill_polygon(img,[Vector2i(0,71),Vector2i(38,43),Vector2i(75,66),Vector2i(112,47),Vector2i(179,81),Vector2i(210,101),Vector2i(0,122)],Color("#35574e") if night else Color("#688c6a"))
+		PixelArt._fill_polygon(img,[Vector2i(0,122),Vector2i(91,112),Vector2i(153,141),Vector2i(184,181),Vector2i(0,210)],Color("#82795e") if night else Color("#c3b38a"))
+		# Small warm BESUT homes remain visible behind the farewell party.
+		for x in [11,73]:
+			PixelArt.rect(img,x,89,37,32,Color("#786044"))
+			PixelArt._fill_polygon(img,[Vector2i(x-5,91),Vector2i(x+18,69),Vector2i(x+43,91)],Color("#3a5449"))
+			PixelArt.rect(img,x+13,102,9,19,Color("#e9cd8a"))
+		# Timber jetty, alternating board lengths, nails and rails.
+		PixelArt.rect(img,0,181,302,43,Color("#564838"))
+		for y in range(176,224,7):
+			PixelArt.rect(img,0,y,302,5,Color("#8a7757") if night else Color("#b59866"))
+			PixelArt.hline(img,0,y,302,Color("#c2a778") if not night else Color("#a18f6c"))
+			for x in range(8,302,38): PixelArt.px(img,x+(y%3)*4,y+2,Color("#65513b"))
+		for x in [10,72,283]:
+			PixelArt.rect(img,x,162,6,62,Color("#66523e"))
+			PixelArt.rect(img,x-2,160,10,4,Color("#cfad76"))
+		PixelArt.rect(img,82,178,28,26,Color("#896641"))
+		PixelArt.line(img,84,180,107,200,Color("#d1ad72"))
+		for y in [181,200]: PixelArt.hline(img,83,y,26,Color("#c8a16b"))
+		# A steady lantern remains readable at low effects and at night.
+		PixelArt.rect(img,31,105,3,70,Color("#5a4b39"))
+		PixelArt.rect(img,25,110,15,19,Color("#423e36"))
+		PixelArt.rect(img,28,113,9,12,Color("#ffdc8c"))
+		PixelArt.hline(img,28,119,9,Color("#a38351"))
 		return img)
