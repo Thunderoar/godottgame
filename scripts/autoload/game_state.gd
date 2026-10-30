@@ -80,6 +80,7 @@ func _make_default(character_id: String) -> Dictionary:
 	return {
 		"version": SAVE_VERSION,
 		"village_progression": VillageProjectDB.default_progression(),
+		"side_quest_intros_seen": [],
 		"campaign": {"intro_seen": false, "dock_welcome_seen": false, "urchin_intro_seen": false, "ocean_stage": 1, "arjun_rescued": false, "mei_ling_rescued": false, "ending_seen": false},
 		"character_id": str(character.id),
 		"character_name": str(character.name),
@@ -1354,6 +1355,7 @@ func complete_portal(portal_id: String) -> Dictionary:
 		"diamonds": int(rewards.get("diamonds", 0)),
 		"xp": int(rewards.get("xp", 0)),
 		"pet": "",
+		"rescued_friend": "",
 	}
 	bank_expedition_loot()
 	data.gold = gold() + summary.gold
@@ -1361,6 +1363,11 @@ func complete_portal(portal_id: String) -> Dictionary:
 	state.cleared = true
 	data.portals[portal_id] = state
 	data.bosses = int(data.get("bosses", 0)) + 1
+	# Rescue belongs to the same clear transaction, before XP/save/signals.
+	# It is independent of first rewards so compatible older clears remain safe.
+	if portal_id == PortalDB.MEI_LING_PORTAL and not bool(campaign().get("mei_ling_rescued", false)):
+		data.campaign.mei_ling_rescued = true
+		summary.rescued_friend = "mei_ling"
 	if portal_id == PortalDB.ordered_ids()[0]:
 		record_mission_event("boss")
 	if first:
@@ -1744,9 +1751,29 @@ func _sanitize_portals() -> void:
 	data.portals = states
 
 
+func side_quest_intro_seen(id: String) -> bool:
+	return id in (data.get("side_quest_intros_seen", []) as Array)
+
+func mark_side_quest_intro_seen(id: String) -> bool:
+	if id not in SideQuestDB.IDS or side_quest_intro_seen(id): return false
+	var seen: Array = (data.get("side_quest_intros_seen", []) as Array).duplicate()
+	seen.append(id)
+	data.side_quest_intros_seen = seen
+	data_changed.emit()
+	_save_if_needed()
+	return true
+
+func _sanitize_side_quest_intros() -> void:
+	var seen: Array[String] = []
+	var raw: Variant = data.get("side_quest_intros_seen", [])
+	if raw is Array:
+		for id in raw:
+			if id is String and id in SideQuestDB.IDS and id not in seen: seen.append(id)
+	data.side_quest_intros_seen = seen
+
 func _sanitize() -> void:
+	_sanitize_side_quest_intros()
 	_sanitize_realm_progress()
-	_sanitize_campaign()
 	_sanitize_village_progression()
 	# Mana was retired; legacy saves keep all remaining progression.
 	data.erase("mana")
@@ -1816,6 +1843,7 @@ func _sanitize() -> void:
 	if not (data.get("portals", {}) is Dictionary):
 		data.portals = {}
 	_sanitize_portals()
+	_sanitize_campaign()
 	if not (data.get("settlement_layout", {}) is Dictionary):
 		data.settlement_layout = {}
 	if not (data.get("pet_battles", {}) is Dictionary):
@@ -2197,6 +2225,10 @@ func _sanitize_campaign() -> void:
 	var raw: Variant = data.get("campaign", {})
 	var clean: Dictionary = raw if raw is Dictionary else {}
 	data.campaign = {"intro_seen": bool(clean.get("intro_seen", false)), "dock_welcome_seen": bool(clean.get("dock_welcome_seen", clean.get("intro_seen", false))), "ocean_stage": clampi(int(clean.get("ocean_stage", 1)), 1, OCEAN_STAGES), "arjun_rescued": bool(clean.get("arjun_rescued", false)), "mei_ling_rescued": bool(clean.get("mei_ling_rescued", false)), "ending_seen": bool(clean.get("ending_seen", false))}
+	# Cleared first realms are peaceful and cannot respawn their boss. Credit
+	# the moved rescue on load, without granting XP, currency, pets or a story.
+	if bool(portal_state(PortalDB.MEI_LING_PORTAL).get("cleared", false)):
+		data.campaign.mei_ling_rescued = true
 	data.campaign.urchin_intro_seen = clean.get("urchin_intro_seen", false) is bool and clean.get("urchin_intro_seen", false) == true
 	if not bool(data.campaign.arjun_rescued) or not bool(data.campaign.mei_ling_rescued):
 		data.campaign.ending_seen = false
@@ -2241,5 +2273,5 @@ func campaign_objective() -> String:
 	if not bool(story.get("arjun_rescued", false)):
 		goals.append("Rescue Arjun: ship > sea route %d/3 > Kraken Island" % int(story.get("ocean_stage", 1)))
 	if not bool(story.get("mei_ling_rescued", false)):
-		goals.append("Rescue Mei Ling: defeat the final portal boss")
+		goals.append("Rescue Mei Ling: defeat Shadow & Chaos Fiend in Chaos Citadel")
 	return "\n".join(goals)

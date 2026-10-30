@@ -20,9 +20,9 @@ const INTRO := [
 	"Arjun's hook caught the arm of an enormous Kraken. The sea king awoke in fury!",
 	"The Kraken smashed their ship into three pieces. The three friends were separated.",
 	"Clinging to the broken bow, Mei Ling washed ashore at a guarded ruin.",
-	"The Kraken imprisoned Arjun. The ruin's guards captured Mei Ling alive: \"Our ruler will want answers.\"",
+	"The Kraken imprisoned Arjun. The ruin's guards captured Mei Ling alive for Shadow & Chaos Fiend: \"Our ruler will want answers.\"",
 	"A brave turtle rescued Adam and brought him to the villagers of BESUT.",
-	"To repay their kindness, Adam protects BESUT and searches the sea for Arjun and the final portal for Mei Ling.",
+	"To repay their kindness, Adam protects BESUT and searches the sea for Arjun and Chaos Citadel for Mei Ling.",
 	"\"Welcome to BESUT, Adam. Come, rest and make yourself at home.\" The villagers lead him in from the shore."
 ]
 var kind := "intro"
@@ -173,7 +173,7 @@ func _on_arrival_setting_changed(key: String) -> void:
 func lines() -> Array:
 	match kind:
 		"arjun": return ["The sea king is defeated. Adam unlocks Arjun's prison!", "Arjun runs aboard the UNISZA ship. Together they sail back to BESUT."]
-		"mei": return ["The final portal guardian falls. Mei Ling is free!", "Mei Ling follows Adam through the portal, back to BESUT Village."]
+		"mei": return ["Shadow & Chaos Fiend falls. His hold over Mei Ling is broken. She is free!", "Mei Ling returns safely to BESUT Village. Adam can explore the peaceful wilds or return through the rift to meet her."]
 		"ending": return ["Adam, Arjun and Mei Ling are reunited in BESUT Village.", "Their fishing voyage crossed into another dimension. This island is now their home.", "With their friends and the villagers, they choose a peaceful new life in BESUT. THE END · Village life continues."]
 	return INTRO
 

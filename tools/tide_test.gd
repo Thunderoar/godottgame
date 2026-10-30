@@ -16,6 +16,7 @@ func _ready() -> void:
 	GameState.delete_save()
 	game = load("res://scenes/game.tscn").instantiate()
 	add_child(game)
+	game._side_quest_auto_enabled = false
 	await get_tree().process_frame
 	await get_tree().process_frame
 	_check(game.title_screen != null, "title screen exists")
@@ -196,6 +197,7 @@ func _ready() -> void:
 	await preload("res://tools/kraken_hunger_checks.gd").run(game, _check)
 	# Includes dock word pacing/reveal input, owned voices, layout and save migration.
 	await StoryChecks.run(game, _check)
+	await preload("res://tools/mei_ling_rescue_checks.gd").run(game, _check)
 	await MapUnlockChecks.run(game, _check)
 	await preload("res://tools/elemental_checks.gd").run(game, _check)
 	# Includes authored-size combat poses and interrupted tween regression checks.
@@ -203,6 +205,7 @@ func _ready() -> void:
 	await StatusStripChecks.run(game, _check)
 	# Includes main/side grouping, untruncated rescue goals and shared Hide tips rules.
 	await preload("res://tools/objective_tracker_checks.gd").run(game, _check)
+	await preload("res://tools/side_quest_intro_checks.gd").run(game, _check)
 	# Includes blocked repair recovery and the real Twilight -> village reward handoff.
 	await VillageProjectChecks.run(game, _check)
 	# Compact realm: living habitats, memories/cache transactions and three owned combat encounters.
@@ -927,6 +930,10 @@ func _test_boss_and_progression() -> void:
 	game.world._physics_process(0.1)
 	boss.call("take_damage", 999999, Vector2.ZERO, game.call("player"))
 	await get_tree().create_timer(0.8).timeout
+	_check(bool(GameState.campaign().get("mei_ling_rescued", false)), "Shadow & Chaos Fiend defeat immediately rescues Mei Ling")
+	for child in game.get_children():
+		if child is StorySequence and child.kind == "mei": child.finish()
+	await get_tree().process_frame
 	_check(GameState.portal_state("tidebound_grotto").cleared, "boss victory permanently clears portal")
 	_check(GameState.portal_state("sunken_crypt").unlocked, "boss victory unlocks next portal")
 	_check(not GameState.get_pet("luma").is_empty(), "first clear grants unique companion")

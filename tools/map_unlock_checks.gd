@@ -49,7 +49,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	await game.get_tree().process_frame
 	check.call(title._hero_available("adam") and not title._hero_available("arjun") and not title._hero_available("mei_ling"), "Choose Your Road begins with only Adam available")
 	check.call(title._card_locks[1].visible and title._card_locks[2].visible and title._card_status[1].text == "LOCKED", "missing friends have visible lock art and locked status")
-	check.call(title._card_unlock_text[1].text.contains("Kraken") and title._card_unlock_text[2].text.contains(str(PortalDB.get_portal("drowned_throne").get("name",""))), "each locked card explains its own rescue condition")
+	check.call(title._card_unlock_text[1].text.contains("Kraken") and title._card_unlock_text[2].text.contains(str(PortalDB.get_portal(PortalDB.MEI_LING_PORTAL).get("name", ""))), "each locked card explains its own rescue condition")
 	if capture.is_valid(): await capture.call("03_locked_friends")
 	title._card_buttons[1].pressed.emit()
 	await game.get_tree().process_frame
@@ -64,7 +64,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	title._select_character("arjun")
 	check.call(title.selected_character_id == "arjun" and title._card_buttons[1].button_pressed, "rescued Arjun can be viewed as an unlocked village defender")
 	GameState.rescue_friend("mei_ling")
-	check.call(title._hero_available("mei_ling") and not title._card_locks[2].visible, "the final-portal rescue unlocks Mei Ling's card")
+	check.call(title._hero_available("mei_ling") and not title._card_locks[2].visible, "the Chaos Citadel rescue unlocks Mei Ling's card")
 	GameState.save_game()
 	check.call(GameState.load_game() and title._hero_available("arjun") and title._hero_available("mei_ling"), "both card unlocks survive save reload")
 	if capture.is_valid(): await capture.call("05_rescued_friend_cards")

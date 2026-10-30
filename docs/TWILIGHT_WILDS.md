@@ -109,9 +109,9 @@ The expanded map reveals terrain and pet locations as cells are explored. The bo
 
 ## Campaign compatibility and scope
 
-The stable first-stage ID is still `tidebound_grotto`; its ruler remains Shadow & Chaos Fiend and its first-clear Luma reward remains distinct from Dusk Moth. The later nine stages are physical onward passages east of the citadel, with their actual unlock/level requirements. They retain their existing arena combat and rescue progression. They have not been rebuilt as exploration dimensions.
+The stable first-stage ID is still `tidebound_grotto`; its ruler remains Shadow & Chaos Fiend and its first-clear Luma reward remains distinct from Dusk Moth. The two later stages are optional physical onward passages east of the citadel, with their actual unlock/level requirements. They retain their existing arena combat, but no longer gate Mei Ling's rescue. They have not been rebuilt as exploration dimensions.
 
-This is the complete first exploration slice. The proposed three-dimension campaign compression remains a future migration: no seven legacy stages, earned rewards, pets or rescue flags were deleted. Arjun's ocean/Kraken rescue and the Abyss Monarch/Mei Ling rescue remain separate. A 10–15-minute visit is not claimed without player pacing measurements.
+This is the complete first exploration slice. The proposed three-dimension campaign compression remains a future migration: no seven legacy stages, earned rewards, pets or rescue flags were deleted. Arjun's ocean/Kraken rescue remains separate. Shadow & Chaos Fiend holds Mei Ling in Chaos Citadel: his defeat immediately saves her rescue flag and shows her rescue story. She returns to BESUT as a bow defender, while Adam can keep exploring the peaceful realm or choose the return rift. Both rescue orders lead to the same one-time village reunion. Earlier first-clear saves credit her rescue on load without repeating rewards or respawning the boss. A 10–15-minute visit is not claimed without player pacing measurements.
 
 ## Ownership and verification
 

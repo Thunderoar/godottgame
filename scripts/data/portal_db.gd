@@ -1,7 +1,9 @@
 class_name PortalDB
 extends RefCounted
 ## Three stable campaign stages. Twilight Wilds authors six local encounters for
-## stage 1; the two later arenas retain the level-three/five rescue unlock chain.
+## stage 1; the two later arenas retain their optional level-three/five unlock chain.
+
+const MEI_LING_PORTAL := "tidebound_grotto"
 
 ## Retained only for save migration; these realms cannot be entered.
 const RETIRED_IDS := ["reef_hollow", "brine_cavern", "kelp_maze", "bone_gallery", "storm_shrine", "coral_throne", "abyss_gate"]
@@ -31,7 +33,7 @@ const PORTALS := {
 		"unlocks": "sunken_crypt",
 		"rewards_first": {"gold": 160, "diamonds": 8, "xp": 90, "pet": "luma"},
 		"rewards_repeat": {"gold": 100, "diamonds": 3, "xp": 40},
-		"lore": "Demon Pembunuh Bayangan. Three powers guard this realm: Dark Blaze, Mirage Assault, Chaos Crossfire.",
+		"lore": "Shadow & Chaos Fiend holds Mei Ling captive in Chaos Citadel. Defeat him to free her. Three powers guard this realm: Dark Blaze, Mirage Assault, Chaos Crossfire.",
 	},
 	"sunken_crypt": {
 		"name": "Tempest Spire",

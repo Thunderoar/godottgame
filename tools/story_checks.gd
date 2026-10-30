@@ -248,17 +248,20 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	friend._physics_process(1.2)
 	check.call(foe.hp < foe.max_hp, "rescued Arjun deals real damage defending BESUT")
 	foe.queue_free()
-	GameState.data.level = 5
-	GameState.data.portals["drowned_throne"].unlocked = true
-	check.call(GameState.start_expedition("drowned_throne"), "the shortened campaign final boss is enterable at level five")
-	await game._load_dungeon("drowned_throne", false)
-	var dungeon := game.world as Dungeon
+	check.call(GameState.start_expedition(PortalDB.MEI_LING_PORTAL), "Mei Ling rescue requires only the first dimension, not later boss gates")
+	await game._load_dungeon(PortalDB.MEI_LING_PORTAL, false)
+	var dungeon := game.world as TwilightRealm
+	dungeon.player.position = RealmDB.BOSS_THRESHOLD
+	dungeon._physics_process(0.1)
 	dungeon.boss.take_damage(dungeon.boss.max_hp, Vector2.ZERO, dungeon.player)
 	for i in 60:
 		if _story(game) != null: break
 		await game.get_tree().create_timer(0.025).timeout
-	check.call(bool(GameState.campaign().get("mei_ling_rescued")) and _story(game) != null and _story(game).kind == "mei", "the final portal boss frees Mei Ling and starts her exit sequence")
+	check.call(bool(GameState.campaign().get("mei_ling_rescued")) and _story(game) != null and _story(game).kind == "mei", "Shadow & Chaos Fiend frees Mei Ling and starts her rescue story")
 	_finish_story(game)
+	await game.get_tree().process_frame
+	check.call(game.world == dungeon and not dungeon.player.controls_locked, "Mei Ling rescue preserves peaceful first-realm exploration")
+	dungeon.exit_to_lobby(true)
 	for i in 180:
 		if game.world is Lobby and _story(game) != null: break
 		await game.get_tree().create_timer(0.025).timeout

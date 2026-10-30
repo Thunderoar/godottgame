@@ -74,7 +74,7 @@ static func _rescue_entries() -> Array[Dictionary]:
 	if not bool(story.get("arjun_rescued", false)):
 		out.append(_entry("arjun", "Rescue Arjun", "Board the ship. Sea route %d of 3 leads toward Kraken Island." % int(story.get("ocean_stage", 1)), "STORY"))
 	if not bool(story.get("mei_ling_rescued", false)):
-		out.append(_entry("mei_ling", "Rescue Mei Ling", "Follow the onward passages beyond the restored citadel to the final ruler.", "STORY"))
+		out.append(_entry("mei_ling", "Rescue Mei Ling", "Enter the Dimension Portal. Defeat Shadow & Chaos Fiend in Chaos Citadel to free her.", "STORY"))
 	return out
 
 static func _twilight(realm: TwilightRealm) -> Array[Dictionary]:
@@ -83,10 +83,9 @@ static func _twilight(realm: TwilightRealm) -> Array[Dictionary]:
 	var landmarks: Array = progress.get("landmarks", [])
 	if realm._boss_defeated:
 		out.append(_entry("restored", "Explore the restored Wilds", "The citadel is peaceful. Return through a rift whenever you are ready.", "EXPLORE", false, SIDE))
-		if not bool(GameState.campaign().get("mei_ling_rescued", false)):
-			out.append(_entry("onward", "Continue Mei Ling's rescue", "The onward passages have level requirements. Check the signs before entering.", "STORY"))
+		out.append_array(_rescue_entries())
 	elif realm._boss_arrived:
-		out.append(_entry("citadel_boss", "Defeat Shadow & Chaos Fiend", "Dodge his marked attacks. Leaving the arena resets this encounter.", "BOSS"))
+		out.append(_entry("citadel_boss", "Defeat Shadow & Chaos Fiend", "Defeat him to free Mei Ling. Dodge his marked attacks; leaving the arena resets this encounter.", "BOSS"))
 	elif "citadel" in landmarks or "approach" in landmarks:
 		if str(progress.get("checkpoint", "arrival")) != "camp":
 			out.append(_entry("checkpoint", "Rest at the lantern", "Use the lantern to recover and save your checkpoint before the citadel.", "PREPARE"))

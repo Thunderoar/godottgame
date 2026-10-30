@@ -391,6 +391,23 @@ static func cottage_ground() -> Image:
 	return img
 
 
+# Compatibility frames are fresh images; never resize a shared texture image.
+static func authored_bench_texture() -> Texture2D:
+	return PixelArt.cached_texture("monsoon/authored_bench/v1", func() -> Image:
+		var source := workspace("bench")
+		source.resize(48, 36, Image.INTERPOLATE_NEAREST)
+		var image := PixelArt.image(48, 48)
+		image.blit_rect(source, Rect2i(0, 0, 48, 36), Vector2i(0, 3))
+		return image)
+
+
+static func gatherable_wood_texture() -> Texture2D:
+	return PixelArt.cached_texture("monsoon/gatherable_wood/v1", func() -> Image:
+		var image := PixelArt.image(64, 64)
+		image.blit_rect(workspace("driftwood"), Rect2i(0, 0, 64, 48), Vector2i(0, 8))
+		return image)
+
+
 static func prop(kind: String) -> Texture2D:
 	return PixelArt.cached_texture("monsoon/props/" + kind, func() -> Image: return _work_prop(kind))
 

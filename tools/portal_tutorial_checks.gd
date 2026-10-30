@@ -17,7 +17,7 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(GameState.tutorial_complete() and GameState.mission_step() == MissionDB.STEPS.size(), "first portal clear completes tutorial after clock changes to day")
 	check.call("boss" in GameState.data.completed_missions and not game.hud.tutorial_guide.visible, "daytime victory records boss lesson and hides tutorial")
 	check.call(bool(GameState.portal_state("sunken_crypt").get("unlocked")) and not bool(GameState.portal_state("sunken_crypt").get("cleared")), "Portal 2 unlocks without being required for tutorial completion")
-	check.call(not bool(GameState.portal_state("drowned_throne").get("cleared")) and not bool(GameState.campaign().get("mei_ling_rescued")), "tutorial victory preserves final boss and Mei Ling rescue campaign")
+	check.call(not bool(GameState.portal_state("drowned_throne").get("cleared")) and bool(GameState.campaign().get("mei_ling_rescued")), "tutorial victory rescues Mei Ling without requiring the optional final boss")
 	GameState.advance_world_clock(180)
 	game.hud.start_tutorial()
 	check.call(GameState.tutorial_complete() and not game.hud.tutorial_guide.visible, "next night and show-tips cannot restart finished tutorial")
@@ -28,7 +28,7 @@ static func run(game: Game, check: Callable) -> void:
 	GameState.data = GameState._make_default("adam")
 	GameState.complete_portal("sunken_crypt")
 	check.call(not GameState.tutorial_complete(), "later portal clear cannot substitute for Portal 1")
-	# The shorter campaign preserves its tutorial, final rescue and old save progress.
+	# The campaign preserves training, optional later challenges and old save progress.
 	var active := PortalDB.ordered_ids()
 	check.call(active == ["tidebound_grotto", "sunken_crypt", "drowned_throne"] and PortalDB.PORTALS.size() == 3, "exactly three portal bosses remain in campaign order")
 	check.call(FieldGuideDB.entries(2).size() == 3, "the field guide contains only the three active portal bosses")

@@ -66,6 +66,8 @@ func _ready() -> void:
 							pack.enemy.take_damage(99999, Vector2.ZERO, realm.player)
 				elif phase == 4 and is_instance_valid(realm.boss):
 					realm.boss.take_damage(99999, Vector2.ZERO, realm.player)
+					for child in game.get_children():
+						if child is StorySequence and child.kind == "mei": child.finish()
 			if elapsed >= next_sample:
 				var sample := _sample("phase_%d_second_%d" % [phase, int(elapsed)])
 				if phase == 3 and elapsed >= 30 and boss_warm.is_empty(): boss_warm = sample

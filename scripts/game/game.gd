@@ -22,6 +22,9 @@ var loading_screen: LoadingScreen
 var _sailing := false
 var _return_to_harbour := false
 var _story_active := false
+var _side_quest_intro: Dictionary = {}
+var _side_quest_timer := 0.0
+var _side_quest_auto_enabled := true # Fixtures can isolate unrelated gameplay paths.
 var _dock_conversation: DockConversation
 var _urchin_arrival: UrchinArrival
 var _urchin_world_mode := Node.PROCESS_MODE_INHERIT
@@ -55,6 +58,10 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	_side_quest_timer += delta
+	if _side_quest_auto_enabled and _side_quest_timer >= 0.3:
+		_side_quest_timer = 0.0
+		_try_side_quest_introduction()
 	if is_instance_valid(world) and not _game_over and not _story_active and not hud.pet_battle_panel.is_wild_challenge():
 		GameState.advance_world_clock(delta)
 	if world is Dungeon and not world is TwilightRealm and GameState.expedition_active():
@@ -166,6 +173,9 @@ func _remove_title_if_owner(expected: CanvasLayer) -> void:
 # ------------------------------------------------------------------ world switching
 
 func _clear_world() -> void:
+	if not _side_quest_intro.is_empty():
+		_side_quest_intro.cancelled = true
+		hud.dialogue_panel.close_panel()
 	if is_instance_valid(_urchin_arrival): _urchin_arrival.cancel()
 	if is_instance_valid(_dock_conversation): _dock_conversation.cancel()
 	if hud.pet_battle_panel.is_wild_challenge(): hud.pet_battle_panel.close_panel()
@@ -382,8 +392,8 @@ func handle_home_defeat() -> void:
 
 
 func show_victory(summary: Dictionary, portal_id: String) -> void:
-	if portal_id == PortalDB.ordered_ids().back() and not bool(GameState.campaign().get("mei_ling_rescued", false)):
-		GameState.rescue_friend("mei_ling")
+	if portal_id == PortalDB.MEI_LING_PORTAL and str(summary.get("rescued_friend", "")) == "mei_ling":
+		if not world is Dungeon or world.portal_id != portal_id or not bool(GameState.campaign().get("mei_ling_rescued", false)): return
 		await _rescue_mei_ling()
 		return
 	hud.victory_panel.show_victory(summary, portal_id)
@@ -766,6 +776,52 @@ func _on_urchin_introduction_completed(arrival: UrchinArrival) -> void:
 		_input_locked = hud.any_modal_open() or _sailing or _transitioning
 		_apply_input_lock()
 
+func _side_quest_context_safe() -> bool:
+	if not is_instance_valid(world) or world.is_queued_for_deletion() or not (world is Lobby or world is TwilightRealm): return false
+	if _transitioning or _story_active or _sailing or _input_locked or _game_over or _defeat_pending or is_instance_valid(title_screen): return false
+	if not _side_quest_intro.is_empty() or hud.any_modal_open() or is_instance_valid(home_interior): return false
+	var actor := player()
+	if not is_instance_valid(actor) or actor.dead or actor.sleeping or actor.controls_locked or actor.attacking or Input.is_action_pressed("attack"): return false
+	if GameState.recovery_active() or GameState.emergency_active(): return false
+	if world is Lobby and (GameState.is_night() or world._settlement_editor.active or world.journey_serial != GameState.journey_serial): return false
+	if world is TwilightRealm and (world._boss_arrived or world._camp_resting or world._reading_panel.visible or not world.combat.active_id.is_empty()): return false
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion() or enemy.get_parent() != world or enemy.dead: continue
+		if world is TwilightRealm and not world.can_target_actor(enemy): continue
+		if enemy.global_position.distance_to(actor.global_position) < 10.0: return false
+	for tree in get_tree().get_nodes_in_group("forest_tree"):
+		if is_instance_valid(tree) and tree.get_parent() == world and tree.burning and tree.global_position.distance_to(actor.global_position) < 10.0: return false
+	return true
+
+func _try_side_quest_introduction() -> bool:
+	if not _side_quest_context_safe(): return false
+	var entry := SideQuestDB.nearby(world, player())
+	if entry.is_empty() or GameState.side_quest_intro_seen(str(entry.id)): return false
+	# This is an owned story beat, not a globally pausing menu or quest acceptance.
+	_side_quest_intro = {"id": str(entry.id), "world": world, "serial": GameState.journey_serial, "mode": world.process_mode, "cancelled": false}
+	_input_locked = true
+	_story_active = true
+	hud.release_world_controls()
+	player().velocity = Vector2.ZERO
+	_apply_input_lock()
+	world.process_mode = Node.PROCESS_MODE_DISABLED
+	hud.dialogue_panel.closed.connect(_finish_side_quest_introduction, CONNECT_ONE_SHOT)
+	hud.dialogue_panel.open_dialogue(str(entry.speaker), entry.lines)
+	return true
+
+func _finish_side_quest_introduction() -> void:
+	if _side_quest_intro.is_empty(): return
+	var record := _side_quest_intro
+	_side_quest_intro = {}
+	var expected: Node = record.world
+	var owned := is_instance_valid(expected) and world == expected and int(record.serial) == GameState.journey_serial
+	if is_instance_valid(expected): expected.process_mode = int(record.mode)
+	_story_active = false
+	if owned:
+		if not bool(record.cancelled): GameState.mark_side_quest_intro_seen(str(record.id))
+		_input_locked = hud.any_modal_open() or _sailing or _transitioning
+		_apply_input_lock()
+
 func play_dock_conversation(introduction: bool = false) -> void:
 	if not world is Lobby or is_instance_valid(home_interior) or _transitioning or _story_active or _sailing or hud.any_modal_open() or is_instance_valid(_dock_conversation): return
 	if _game_over or _defeat_pending or world._settlement_editor.active or not is_instance_valid(player()) or player().dead or player().sleeping: return
@@ -856,25 +912,20 @@ func _handle_island_defeat() -> void:
 func _rescue_mei_ling() -> void:
 	var dungeon := world as Dungeon
 	if not is_instance_valid(dungeon): return
+	var journey := GameState.journey_serial
 	hud.hide_modals()
 	var companion := Sprite2D.new()
+	companion.name = "RescuedMeiLing"
 	companion.texture = PixelArt.character_texture("mei_ling", 0)
 	companion.scale = Vector2.ONE * PixelArt.PX
 	companion.position = dungeon.player.position + Vector2(-2, 0)
 	dungeon.add_child(companion)
-	for enemy in dungeon.get_children():
-		if enemy is Enemy or enemy is DungeonHazard: enemy.process_mode = Node.PROCESS_MODE_DISABLED
 	await play_story("mei")
-	if world != dungeon: return
-	# Both friends walk toward the same gate under a shared transition lock.
-	_input_locked = true
+	if is_instance_valid(companion): companion.queue_free()
+	if world != dungeon or GameState.journey_serial != journey: return
+	# Mei Ling returns home in the story. Keep the restored exploration realm,
+	# its wildlife and optional passages available until Adam chooses to leave.
 	_apply_input_lock()
-	var walk := create_tween().set_parallel(true)
-	walk.tween_property(dungeon.player, "position", Vector2(24, 29), 1.6)
-	walk.tween_property(companion, "position", Vector2(22.8, 29), 1.6)
-	await walk.finished
-	await _load_lobby(true)
-	_check_campaign_ending()
 
 func _check_campaign_ending() -> void:
 	if not world is Lobby or _sailing or _transitioning or _story_active or not GameState.friends_reunited() or bool(GameState.campaign().get("ending_seen", false)): return

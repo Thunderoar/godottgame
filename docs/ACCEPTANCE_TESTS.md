@@ -2244,3 +2244,94 @@ Verification:
   art edits are preserved and never included in that patch.
 
 Evidence: `/tmp/tidesworn-objectives-left-B63fCJtC/VERIFICATION.txt`.
+
+
+## Proximity side-quest introductions (2026-10-30)
+
+Three concrete optional objectives currently exist: the West Workshop restoration
+(`west_workshop`, introduced as `workshop`), Bramble Cat at Bramble Grove and Dusk
+Moth at Moonpool Hollow. Restored-Wilds exploration and Care for BESUT are ongoing
+guidance, not additional authored quest arcs.
+
+Implemented the overheard/discovery variant, not NPC walk-up choreography. Near
+Bram's actual Construction Shop counter, the player overhears his workshop idea;
+near the workshop, Adam notices Bram's posted invitation. Near each unowned,
+unbonded habitat companion, a short ambient discovery conversation introduces
+its optional manual challenge. No introduction teleports or repositions an NPC,
+starts construction, starts a pet battle, purchases equipment or grants rewards.
+The actual shop/workbench/pet interactions keep their existing authority.
+
+Game polls proximity on a bounded 0.3-second cadence and checks current world,
+journey, ownership, player locks/attack/sleep, menus, story, transition, sailing,
+defeat/game-over, home interior, settlement editing, recovery/emergency and local
+danger. Village introductions defer at night. Nearby living threats and burning
+trees defer interruption; active realm combat/boss/rest/reading ownership does
+likewise. Authored world actors/positions drive detection; moved shops/workshops
+are not replaced with canonical coordinates.
+
+A discovery is an explicit story exception: Game releases held world controls,
+zeros player velocity, locks the player, suspends only its current world and
+holds the authoritative clock. It reuses the existing readable DialoguePanel,
+including its close button, keyboard close and compact layout. Closing/early
+leaving restores the original process mode and input ownership. Normal shop and
+NPC dialogue menus retain their ordinary non-pausing rules. World replacement
+cancels the introduction without recording it or unlocking a replacement world.
+
+GameState alone writes `side_quest_intros_seen`: a default-empty, sanitized,
+allow-listed array of three stable introduction IDs. Successful/early close
+records heard status once per journey, not quest completion. Actual JSON save/load
+preserves it; duplicates, unknown IDs and invalid containers are normalized. New
+journeys reset it. Completed workshop work and already-owned/bonded companions
+do not receive recruitment/project invitations. Existing legacy working projects
+are not reintroduced as pending commissions.
+
+Verification:
+
+- Canonical isolated gameplay gate: **6,185 checks, PASS, exit 0**, with no
+  `[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers on the updated checkout.
+- Focused rendered suite: **36 checks, PASS, exit 0**, including workshop/counter
+  variants, real automatic proximity polling, immediate stop/held-input release,
+  non-global world/clock suspension and restoration, no nested/repeated dialogue,
+  no quest acceptance/rewards, actual save/load, malformed persistence, nearby
+  enemies/fires, night/menus/attacks/other locks, cancelled world handoff and both
+  habitat companions. Captures at 1280x720 and 832x480 were inspected.
+- Ordinary acceptance fixtures explicitly disable unsolicited introduction
+  polling to isolate their existing scenarios; the dedicated checks exercise the
+  enabled polling path and real map actors. Existing gameplay gate includes those
+  dedicated checks without capture-only layout assertions.
+- Same-input baseline/modified/rollback probe: baseline/rollback do not trigger
+  a proximity dialogue; modified locks the player and owns the story dialogue,
+  then records only `workshop` heard status and restores controls on Close. The
+  project status stays identical in all three. Four original files and seven
+  originally absent paths are restored/removed by the scoped rollback.
+- Linux Godot 4.7.2, Xvfb/llvmpipe and Dummy audio only. Input-method/V-Sync warnings
+  remain. No voiced dialogue, native Windows, phone or export validation claimed.
+
+The same four artifact roles are extended in place; the previous stage is saved
+under `history/quest-sections`. Default rollback undoes only these introductions;
+`--previous` delegates to the older section rollback. Evidence:
+`/tmp/tidesworn-objectives-left-B63fCJtC/VERIFICATION.txt`.
+
+
+## 2026-10-30 — Mei Ling held by Shadow & Chaos Fiend
+
+This supersedes the earlier Abyss Monarch/final-portal rescue requirement.
+
+- `PortalDB.MEI_LING_PORTAL` binds her captor to Chaos Citadel / `tidebound_grotto`.
+  `GameState.complete_portal()` records `campaign.mei_ling_rescued` with the clear
+  rewards, before saves/signals, and reports the one-time rescue in its summary.
+- Defeating the actual first boss shows Mei Ling's player-paced rescue scene.
+  Its close restores peaceful exploration, not a forced exit or victory modal.
+  She is already saved and joins BESUT once as a bow defender on return.
+- Old first-clear saves credit the moved rescue during sanitization, with no
+  extra currency, XP, pets, attempts, story replay or boss respawn. Existing
+  rescued flags persist. Uncleared saves do not gain a rescue.
+- Later bosses retain rewards and progression gates as optional challenges;
+  neither owns her rescue. Arjun still requires the Kraken/prison route.
+- Dedicated isolated `tools/mei_ling_rescue_test.tscn` and its shared checks cover
+  transactions, migrations, repeats, actual boss/story/input lifecycle, peaceful
+  revisit, one village archer and Mei Ling-first reunion. `StoryChecks` covers
+  Arjun-first reunion through the actual first-realm boss. The full gate invokes
+  both; tutorial/title/guide/objective fixtures use the new rescue ownership.
+
+Validation results are recorded after execution in the external verification ledger.

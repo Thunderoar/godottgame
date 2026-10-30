@@ -23,7 +23,7 @@ const LANDMARKS := {
 	"grove": {"name": "Bramble Grove", "at": Vector2(12, 35), "hint": "A watchful cat guards this quiet clearing. Approach to challenge."},
 	"watchpost": {"name": "Broken Watchpost", "at": Vector2(35, 31), "hint": "An old winch opens the path back through the roots."},
 	"pool": {"name": "Moonpool Hollow", "at": Vector2(44, 27), "hint": "Pale wings gather over the water. A gentle rival awaits."},
-	"approach": {"name": "Ashen Approach", "at": Vector2(26, 25), "hint": "Rest at the lantern. The fiend waits beyond the citadel arch."},
+	"approach": {"name": "Ashen Approach", "at": Vector2(26, 25), "hint": "Rest at the lantern. Shadow & Chaos Fiend holds Mei Ling beyond the citadel arch."},
 	"citadel": {"name": "Chaos Citadel", "at": Vector2(26, 12), "hint": "Cross the inner threshold when you are ready."},
 }
 const ENCOUNTERS := {

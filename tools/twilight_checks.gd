@@ -230,9 +230,13 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 		await capture.call("03_citadel")
 	realm.boss.take_damage(999999,Vector2.ZERO,realm.player)
 	await game.get_tree().process_frame
+	check.call(bool(GameState.campaign().mei_ling_rescued), "fiend defeat rescues Mei Ling before any story is dismissed")
+	for child in game.get_children():
+		if child is StorySequence and child.kind == "mei": child.finish()
+	await game.get_tree().process_frame
 	check.call(realm._boss_defeated and bool(GameState.portal_state(RealmDB.PORTAL).cleared) and not game.hud.victory_panel.visible, "boss victory restores the realm without forcing a results modal")
 	check.call(bool(GameState.realm_progress().visit_active) and not GameState.expedition_active() and not realm.player.controls_locked, "post-victory exploration has explicit saved presence after loot is banked")
-	check.call(bool(GameState.portal_state("sunken_crypt").unlocked) and not bool(GameState.campaign().mei_ling_rescued), "first dimension victory preserves later progression and separate final rescue")
+	check.call(bool(GameState.portal_state("sunken_crypt").unlocked) and bool(GameState.campaign().mei_ling_rescued), "first dimension victory frees Mei Ling and preserves optional later progression")
 	check.call(GameState.realm_pet_bonded("bramble_cat") and not GameState.get_pet("luma").is_empty(), "wild bonds and the distinct legacy boss reward coexist")
 	check.call(RealmContentDB.CACHE in GameState.realm_progress().banked_caches and not bool(GameState.claim_realm_cache(RealmContentDB.CACHE).ok), "actual boss victory banks the hollow's pending claim without a duplicate payout")
 	var stone := realm.interests.memory_road_lights as RealmInterest

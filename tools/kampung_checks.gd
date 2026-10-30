@@ -85,6 +85,15 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(old.activity_points(old.activity("Rami")) == layout.activity_points(layout.activity("Rami")), "kampung: old custom layouts inherit semantic routines")
 	for kind in KampungArt.KINDS:
 		check.call(KampungArt.texture(kind) != null and KampungArt.texture(kind) == KampungArt.texture(kind), "kampung: bounded cached artwork: " + kind)
+	for kind in KampungArt.COMPOUND_KINDS:
+		var image := KampungArt.draw(kind)
+		check.call(image.get_size()==Vector2i(128,112) and image.get_used_rect().end.x<128 and image.get_used_rect().end.y<112, "kampung: compound retains frame and unclipped bounds: "+kind)
+		check.call(image.get_data()==KampungArt.draw(kind).get_data(), "kampung: compound artwork is deterministic without placement RNG: "+kind)
+	for kind in ["wakaf","garden_shed"]:
+		var image := KampungArt.draw(kind)
+		check.call(image.get_pixel(64,15).a>0.9 and image.get_pixel(64,37).a>0.9 and image.get_pixel(37,34)!=image.get_pixel(91,34), "kampung: compound ridge recedes in screen Y with two lit roof planes: "+kind)
+		check.call(is_zero_approx(image.get_pixel(110,80).a), "kampung: compound has no extruded right wall: "+kind)
+	check.call(is_zero_approx(KampungArt.draw("wakaf").get_pixel(64,72).a) and KampungArt.draw("garden_shed").get_pixel(64,72).a>0.9, "kampung: shelter keeps open centre while garden store has a closed shutter")
 	await _walk_workers(lobby, check)
 	# Exercise the same completion hook used by mouse and touch drags. No actor
 	# assignment: replanning starts from the resident's existing fractional position.

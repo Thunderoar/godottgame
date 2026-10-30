@@ -25,6 +25,11 @@ static func run(game: Game, check: Callable) -> void:
 		check.call(bounds.position.x > 0 and bounds.position.y > 0 and bounds.end.x < 64 and bounds.end.y < height, "workspace %s has unclipped transparent clearance" % kind)
 		prop_hashes[image.get_data().hex_encode().sha256_text()] = true
 	check.call(prop_hashes.size() == work_props.size(), "eleven work props remain visually distinct")
+	var native_bench := WorldComposition.texture("bench").get_image().get_data()
+	var inventory_wood := PixelArt.icon("wood",16).get_image().get_data()
+	check.call(AuthoredMapRenderer.object_texture("bench").get_size()==Vector2(48,48), "compatibility: authored bench keeps its48x48 frame")
+	check.call(MonsoonArt.gatherable_wood_texture().get_size()==Vector2(64,64), "compatibility: world wood owns a square native frame")
+	check.call(WorldComposition.texture("bench").get_image().get_data()==native_bench and PixelArt.icon("wood",16).get_image().get_data()==inventory_wood, "compatibility: adapters never resize shared bench or inventory artwork")
 	var silhouettes := {}
 	for species in MonsoonArt.TREE_SIZES.size():
 		var full := MonsoonArt.tree_texture(species).get_image()
@@ -109,9 +114,23 @@ static func run(game: Game, check: Callable) -> void:
 	var legacy_upper := "res://assets/sprites/TX Plant__TX Tree T1 Upper.tres"
 	replacement.entries["foliage/" + legacy_upper] = catalog.entries["coastal/planter"].duplicate(true)
 	for kind in work_props: replacement.entries["village/" + kind] = catalog.entries["coastal/planter"].duplicate(true)
+	replacement.entries["bench"] = {"path":"res://icon.svg"}
+	replacement.entries["coastal/bench"] = catalog.entries["coastal/planter"].duplicate(true)
+	replacement.entries["monsoon/gatherable_wood/v1"] = catalog.entries["coastal/planter"].duplicate(true)
 	AssetRegistry.catalog = replacement
 	AssetRegistry.invalidate()
 	for kind in work_props: check.call(WorldComposition.texture(kind) == AssetRegistry.get_texture("village/" + kind), "workspace %s explicit imported override remains authoritative" % kind)
+	check.call(AuthoredMapRenderer.object_texture("bench")==AssetRegistry.get_texture("bench"), "compatibility: direct authored bench override retains first priority")
+	replacement.entries.erase("bench")
+	AssetRegistry.invalidate()
+	check.call(AuthoredMapRenderer.object_texture("bench")==AssetRegistry.get_texture("coastal/bench"), "compatibility: existing coastal bench override retains second priority")
+	var wood_fixture := ResourcePile.new()
+	game.add_child(wood_fixture)
+	var wood_art: Sprite2D
+	for child in wood_fixture.get_children():
+		if child is Sprite2D and child.texture!=null and child.texture.get_width()>9: wood_art=child
+	check.call(wood_art!=null and wood_art.texture==AssetRegistry.get_texture("monsoon/gatherable_wood/v1") and (wood_art.texture.get_size()*wood_art.scale).is_equal_approx(Vector2(1.28,1.28)), "compatibility: world wood override preserves the1.28x1.28 logical draw rectangle")
+	wood_fixture.free()
 	lobby._add_window_lights(lobby.house_sprite, 1)
 	lobby._refresh_shop_ground(potion_shop,"potion")
 	check.call(PixelArt.stall_texture("potion")==AssetRegistry.get_texture("stall_potion") and not yard.visible and not potion_shop.get_node("StallFront").visible,"explicit stall replacement owns its art, foreground and yard")

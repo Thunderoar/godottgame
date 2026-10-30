@@ -351,7 +351,10 @@ func _on_boss_finished(_enemy: Enemy) -> void:
 	_place("exit", "citadel", RealmDB.BOSS, "Citadel restored\nReturn to BESUT")
 	for child in get_children():
 		if child is RealmInteractable: child.refresh()
-	set_message("Citadel restored · +%d Gold · +%d diamonds · Luma joined. Return to BESUT for Bram's free workshop." % [int(summary.gold), int(summary.diamonds)])
+	set_message("Mei Ling is safe · Citadel restored · +%d Gold · +%d diamonds · Luma joined. Return to BESUT for Bram's free workshop." % [int(summary.gold), int(summary.diamonds)])
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if is_instance_valid(game) and game.world == self and str(summary.get("rescued_friend", "")) == "mei_ling":
+		game.show_victory(summary, portal_id)
 
 func challenge_pet(encounter: RealmInteractable) -> void:
 	var game := get_tree().get_first_node_in_group("game") as Game

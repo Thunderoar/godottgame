@@ -153,9 +153,10 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(ObjectiveTrackerData.entries(realm)[0].id == "citadel_boss", "crossing the boss threshold changes the immediate objective")
 	realm._boss_arrived = false
 	realm._boss_defeated = true
+	GameState.data.campaign.mei_ling_rescued = true
 	GameState.data.realm_progress.landmarks.append("grove")
 	rows = ObjectiveTrackerData.entries(realm)
-	check.call(rows[0].id == "onward" and rows.any(func(row: Dictionary) -> bool: return row.id == "restored" and row.section == ObjectiveTrackerData.SIDE) and rows.any(func(row: Dictionary) -> bool: return row.id == "companions" and row.tag == "OPTIONAL"), "a restored realm offers peaceful exploration and discovered optional companions")
+	check.call(rows[0].id == "arjun" and rows.any(func(row: Dictionary) -> bool: return row.id == "restored" and row.section == ObjectiveTrackerData.SIDE) and rows.any(func(row: Dictionary) -> bool: return row.id == "companions" and row.tag == "OPTIONAL"), "a restored realm offers peaceful exploration and discovered optional companions")
 	GameState.data.realm_progress.bonded.append("bramble_cat")
 	check.call(not ObjectiveTrackerData.entries(realm).any(func(row: Dictionary) -> bool: return row.id == "companions"), "bonded pets leave optional guidance without requiring tournament clears")
 	realm.free()
@@ -295,8 +296,9 @@ static func _quest_sections(game: Game, check: Callable, capture: Callable) -> v
 	rows = ObjectiveTrackerData.entries(realm)
 	check.call(rows[0].id == "explore" and rows[0].section == main and rows[-1].id == "companions" and rows[-1].section == side, "realm exploration is main and a discovered wild companion is optional side content")
 	realm._boss_defeated = true
+	GameState.data.campaign.mei_ling_rescued = true
 	rows = ObjectiveTrackerData.entries(realm)
-	check.call(rows[0].id == "onward" and rows[0].section == main and rows.any(func(row: Dictionary) -> bool: return row.id == "restored" and row.section == side), "post-clear rescue progression stays main while peaceful exploration becomes side content")
+	check.call(rows[0].id == "arjun" and rows[0].section == main and rows.any(func(row: Dictionary) -> bool: return row.id == "restored" and row.section == side), "post-clear Arjun rescue stays main while peaceful exploration becomes side content")
 	GameState.data.realm_progress.bonded.append("bramble_cat")
 	check.call(not ObjectiveTrackerData.entries(realm).any(func(row: Dictionary) -> bool: return row.id == "companions"), "bonded companions retire their side objective without duplicate rewards")
 	realm.free()

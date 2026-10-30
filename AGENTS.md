@@ -215,7 +215,10 @@ Do not run `tools/setup_input.gd` (rewrites project config) or
   Three 45-second ocean routes lead to Vorath, the Kraken King. Kill the boss,
   then separately approach/tap the prison through `free_arjun()`; a kill alone
   does not rescue him. Arjun returns visibly aboard the ship, then joins the village.
-- Mei Ling is rescued after Abyss Monarch in `drowned_throne`, the final Monster Portal.
+- Mei Ling is rescued immediately when Shadow & Chaos Fiend falls in Chaos Citadel
+  (`tidebound_grotto`). The boss-clear transaction saves her flag before the rescue
+  story; closing it preserves peaceful realm exploration. Old first-clear saves
+  receive her rescue on load without rewards. Later bosses remain optional.
   Both flags trigger a one-time saved reunion ending; normal village play continues.
   Replays must not duplicate friends, rewards or rescue transitions.
 - Three active Monster Portal definitions live in PortalDB (Chaos Citadel → Tempest Spire → Abyssal Throne, levels 1/3/5). Prerequisites and attempts go
@@ -229,7 +232,7 @@ Do not run `tools/setup_input.gd` (rewrites project config) or
 - Ten tutorial events are phase-aware (`MissionDB.DAY_STEPS` / `NIGHT_STEPS`).
   `tutorial_complete()` also recognises Portal 1 already cleared in an old save.
   Portal-entry/boss events survive a clock-phase change during the fight. Clearing
-  Tidebound Grotto ends training immediately; Portals 2–3 are Mei Ling's rescue arc.
+  Tidebound Grotto ends training immediately; Portals 2–3 are optional onward challenges, not Mei Ling rescue requirements.
   Tutorial Skip hides the overlay; do not assume it completes progression.
 
 ### Village ecology, enemies and defenses
@@ -350,8 +353,8 @@ Do not run `tools/setup_input.gd` (rewrites project config) or
   legacy `smith_hammer` IDs are scythes now. Blank style bypasses discipline filters,
   so specify it for weapons. Vendor sale needs explicit `sellable: true` (wood).
 - **Portals:** update `scripts/data/portal_db.gd` / `PORTALS` AND `ordered_ids()`,
-  predecessor `unlocks`, requirements/rewards, art/guide/tests. Last ordered portal
-  owns Mei Ling's rescue; changing order affects campaign code, not just menus.
+  predecessor `unlocks`, requirements/rewards, art/guide/tests. `PortalDB.MEI_LING_PORTAL`
+  owns Mei Ling's rescue independently of ordering; preserve it in save migration.
 - **House:** `scripts/data/house_db.gd` / ordered LEVELS, level/index alignment,
   diamond costs and recovery. **Pets:** `scripts/data/pet_db.gd` / PETS + LEVEL_XP;
   duel LEVELS + ORDER in `scripts/data/pet_battle_db.gd`. Keep unique backdrop paths.

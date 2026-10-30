@@ -174,3 +174,30 @@ collision, world RNG, light budgets and all interactions are unchanged. The lant
 uses painted glass, not a new light node. Approved cottages, market stalls, foliage
 and actor artwork remain untouched. Larger compounds, fences, jetty/ship/crates and
 terrain/coast continuity are subsequent batches, not included in this pass.
+
+
+## Route compatibility and compound family (2026-10-30)
+
+Classic Pixel authored benches now use `MonsoonArt.authored_bench_texture()`:
+a fresh48×48 compatibility image derived from the existing64×48 work-bench image,
+not a resize of any shared cached texture. `AuthoredMapRenderer.object_texture()`
+preserves direct `bench` and legacy `coastal/bench` overrides before the new fallback.
+Modern Illustrated keeps the previous coastal route. Existing map object frames,
+scales,pivots,placements and collision remain unchanged.
+
+Classic Pixel `ResourcePile._ready()` now selects a world-only64×64 wood-pile image
+through `monsoon/gatherable_wood/v1`,normalised to its original1.28×1.28-world-unit
+rectangle. Inventory icons,Modern art,interact radius1.7,yield2,14-second cooldown,
+mission events and transaction code remain unchanged. Overrides are normalised too.
+
+`KampungArt` now shares the approved elevated material language across wakaf,
+garden_shed,veranda,clothesline,drying_rack,trough and herbs. Roof ridges run away
+in screen Y,two roof slopes remain visible,and no right-side wall is extruded.
+Porch/seat surfaces show top planes; linen,wood,clay,metal and water are restrained
+and grounded. Existing128×112 frames,scenery anchors/visibility and physical routes
+are retained. Imported `village/<kind>` and Modern atlas ownership still win.
+
+The six other Kampung families,approved cottages/stalls/trees/work props and all
+actor art are unchanged. This pass adds no collision,live lights,terrain bake,
+save field,new interaction or gameplay rule. Street lamps,furniture,shop bands,
+fences,harbour/ship,realm/fortress and terrain continuity remain subsequent batches.

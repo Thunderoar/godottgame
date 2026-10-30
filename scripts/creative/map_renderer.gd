@@ -157,7 +157,11 @@ static func object_texture(id: String) -> Texture2D:
 		"monsoon/planter": return MonsoonArt.prop("planter")
 		"house": return PixelArt.house_texture(1)
 		"shop": return PixelArt.stall_texture("potion")
-		"flowers", "bush", "bench", "rock": return PixelArt.coastal_prop(id)
+		"bench":
+			var coastal_override := AssetRegistry.get_texture("coastal/bench")
+			if coastal_override: return coastal_override
+			return MonsoonArt.authored_bench_texture() if VisualStyle.is_pixel() else PixelArt.coastal_prop(id)
+		"flowers", "bush", "rock": return PixelArt.coastal_prop(id)
 		"fence": return PixelArt.fence_texture()
 		"garden": return PixelArt.garden_texture()
 		"sign": return PixelArt.besut_sign_texture()

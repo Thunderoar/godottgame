@@ -18,6 +18,12 @@ func _ready() -> void:
 	var icon := Sprite2D.new()
 	icon.texture = PixelArt.icon("wood", 16)
 	icon.scale = Vector2(0.08, 0.08)
+	if VisualStyle.is_pixel():
+		icon.texture = MonsoonArt.gatherable_wood_texture()
+		# Preserve the original 16px × 0.08 = 1.28-world-unit rectangle,
+		# including when an explicit world-art override uses another frame.
+		var size := icon.texture.get_size()
+		icon.scale = Vector2(1.28 / maxf(1.0, size.x), 1.28 / maxf(1.0, size.y))
 	icon.position = Vector2(0, -0.32)
 	icon.z_index = 5
 	add_child(icon)

@@ -530,7 +530,7 @@ func _select_character(character_id: String) -> void:
 		return
 	selected_character_id = character_id
 	_refresh_hero_locks()
-	_hero_summary.text = "Adam · Sword · Rescue Arjun at sea and Mei Ling in the final portal"
+	_hero_summary.text = "Adam · Sword · Rescue Arjun at sea and Mei Ling in Chaos Citadel"
 
 func _hero_available(id: String) -> bool:
 	return id == "adam" or bool(GameState.campaign().get(id + "_rescued", false))
@@ -538,7 +538,7 @@ func _hero_available(id: String) -> bool:
 func _unlock_requirement(id: String) -> String:
 	match id:
 		"arjun": return "Complete all 3 sea routes. Defeat the Kraken King, then open Arjun's prison to rescue him."
-		"mei_ling": return "Defeat %s in %s, the final Monster Portal, to rescue Mei Ling." % [PortalDB.get_portal("drowned_throne").get("boss_name","Abyss Monarch"),PortalDB.get_portal("drowned_throne").get("name","Abyssal Throne")]
+		"mei_ling": return "Defeat %s in %s, through the Dimension Portal, to rescue Mei Ling." % [PortalDB.get_portal(PortalDB.MEI_LING_PORTAL).get("boss_name", "Shadow & Chaos Fiend"), PortalDB.get_portal(PortalDB.MEI_LING_PORTAL).get("name", "Chaos Citadel")]
 	return "Available from the start. Begin Adam's story and find your missing friends."
 
 func _refresh_hero_locks() -> void:
