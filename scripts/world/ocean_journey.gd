@@ -18,6 +18,7 @@ const INITIAL_SPEED := 3.2
 const SPEED_PER_SECOND := 0.035
 const MAX_SPEED := 27.5
 const ACTION_REACH := 2.2
+const SHARK_LEVEL := 2
 const TURTLE_AT := Vector2(9.2, 12.8)
 var zone_name := "Turtle Ocean Journey"
 var phase := Phase.DIVE
@@ -32,7 +33,10 @@ var trash_collected := 0
 var food_eaten := 0
 var mistakes := 0
 var items: Array[Dictionary] = []
-var stage := 1
+var stage := 1:
+	set(value):
+		stage = clampi(value,1,GameState.OCEAN_STAGES)
+		if is_instance_valid(scenery): scenery.refresh_stage(stage)
 var stage_cleared := false
 var _turtle_x := TURTLE_AT.x
 var _turtle_y := TURTLE_AT.y
@@ -136,7 +140,7 @@ func _build_sea_guide() -> void:
 	var lessons := [
 		["gather","PICK UP RUBBISH","Swim close to rubbish, then tap Pick Up or press E. Collect every piece."],
 		["food","FISH FEED THE TURTLE","Swim near fish: the turtle eats automatically. No Eat button needed."],
-		["bomb","DODGE BOMBS & SHARKS","Use WASD or the joystick to move around both hazards. Pick Up cannot remove them."],
+		["bomb","TWO SEA LEVELS","Level 1 has bombs, rubbish, hearts and fish. Level 2 adds sharks. Dodge hazards with WASD or the joystick."],
 		["heart","WATCH HEALTH & FULLNESS","Pink hearts restore lives. Below 50% fullness you slow down; at 0% the turtle dies."]]
 	for lesson in lessons:
 		var row := HBoxContainer.new()
@@ -172,11 +176,17 @@ func dismiss_sea_guide() -> void:
 	_tutorial_done = true
 	_sea_guide.hide()
 	phase = Phase.RUNNING
-	_status.text = "Pick Up every piece of rubbish · Fish feed automatically · Dodge bombs and sharks"
+	_status.text = swim_instruction()
 	_refresh_ui()
 
 func get_player() -> Player:
 	return player
+
+func sharks_enabled() -> bool:
+	return stage >= SHARK_LEVEL
+
+func swim_instruction() -> String:
+	return "Sea level %d/%d · Pick Up all rubbish · Fish feed automatically · %s" % [stage,GameState.OCEAN_STAGES,"Dodge bombs and sharks" if sharks_enabled() else "Dodge bombs"]
 
 func speed() -> float:
 	return minf(MAX_SPEED, INITIAL_SPEED * START_MULTIPLIER + elapsed * SPEED_PER_SECOND + (stage - 1) * 0.8) * fullness_speed_multiplier()
@@ -324,7 +334,7 @@ func _advance_intro(delta: float) -> void:
 		turtle.reset_physics_interpolation()
 		phase = Phase.RUNNING
 		if not _tutorial_done: show_sea_guide()
-		_status.text = "Pick Up rubbish · Swim near fish to eat automatically · Dodge sharks and bombs."
+		_status.text = swim_instruction()
 
 func _update_run(delta: float) -> void:
 	if phase != Phase.RUNNING or (is_instance_valid(_ocean_settings) and _ocean_settings.visible): return
@@ -340,10 +350,11 @@ func _update_run(delta: float) -> void:
 	_spawn_clock -= delta
 	_heart_clock -= delta
 	_bomb_clock -= delta
-	_shark_clock -= delta
-	if _shark_clock <= 0:
-		spawn_item("shark")
-		_shark_clock = _rng.randf_range(7.0, 10.0) - stage * 0.5
+	if sharks_enabled():
+		_shark_clock -= delta
+		if _shark_clock <= 0:
+			spawn_item("shark")
+			_shark_clock = _rng.randf_range(7.0, 10.0) - stage * 0.5
 	if _spawn_clock <= 0:
 		var trash_clear_time := (visible_right()-visible_left()+8.0) / maxf(0.1,speed()) + 1.0
 		spawn_item("trash" if _rng.randf() < 0.5 and elapsed < STAGE_SECONDS-trash_clear_time else "food")
@@ -386,6 +397,7 @@ func _update_run(delta: float) -> void:
 		_complete_stage()
 
 func spawn_item(kind: String, at_x: float = INF) -> Dictionary:
+	if kind == "shark" and not sharks_enabled(): return {}
 	if is_inf(at_x): at_x = visible_right() + 5.0
 	var sprite := Sprite2D.new()
 	match kind:
@@ -523,7 +535,7 @@ func _refresh_ui() -> void:
 	_progress.progress = clampf((stage - 1 + minf(elapsed / STAGE_SECONDS, 1.0)) / float(GameState.OCEAN_STAGES), 0, 1)
 	_progress.queue_redraw()
 	_vitals.text = "TURTLE HEALTH  %s  %d/%d" % ["♥".repeat(health) + "♡".repeat(MAX_HEALTH - health), health, MAX_HEALTH]
-	_score.text = "Sea route %d/3 · %ds / %ds · Speed %.1fx · Gold %d · Rubbish %d · Missed %d" % [stage, mini(int(elapsed), int(STAGE_SECONDS)), int(STAGE_SECONDS), speed() / INITIAL_SPEED, GameState.gold(),trash_collected,missed_trash]
+	_score.text = "Sea level %d/%d · %ds / %ds · Speed %.1fx · Gold %d · Rubbish %d · Missed %d" % [stage, GameState.OCEAN_STAGES, mini(int(elapsed), int(STAGE_SECONDS)), int(STAGE_SECONDS), speed() / INITIAL_SPEED, GameState.gold(),trash_collected,missed_trash]
 	_fullness_label.text = "FULLNESS %d%%" % roundi(fullness)
 	_fullness_bar.value = fullness
 	_fullness_fill.bg_color = Color("#ef9273") if fullness < FAST_FULLNESS_THRESHOLD else Color("#78d4af")
@@ -582,7 +594,7 @@ func _complete_stage() -> void:
 	_travel_start = turtle.position
 	_travel_end = Vector2(visible_right()+5,TURTLE_AT.y)
 	_destination_requested = false
-	_status.text = "Route %d complete! Swimming ahead to sea route %d..." % [stage,stage+1] if stage < GameState.OCEAN_STAGES else "Kraken Island ahead! The turtle carries Adam ashore..."
+	_status.text = "Level %d complete! Swimming ahead to sea level %d..." % [stage,stage+1] if stage < GameState.OCEAN_STAGES else "Kraken Island ahead! The turtle carries Adam ashore..."
 	_refresh_ui()
 
 func _advance_route_exit(delta: float) -> void:
@@ -627,7 +639,7 @@ func _begin_next_route() -> void:
 	player.position = turtle.position + Vector2(-0.55,-1.0)
 	_travel_start = turtle.position
 	_travel_end = TURTLE_AT
-	_status.text = "Sea route %d / %d" % [stage,GameState.OCEAN_STAGES]
+	_status.text = "Sea level %d/%d · Sharks ahead!" % [stage,GameState.OCEAN_STAGES]
 	scenery.modulate = Color("#d1f0f1") if stage == 2 else Color("#d5cdec")
 	_refresh_ui()
 
@@ -641,7 +653,7 @@ func _advance_route_entry(delta: float) -> void:
 	phase = Phase.RUNNING
 	_turtle_x = turtle.position.x
 	_turtle_y = turtle.position.y
-	_status.text = "Sea route %d · Pick Up ALL rubbish · Fish are eaten automatically nearby · Dodge hazards." % stage
+	_status.text = swim_instruction()
 
 func _build_ocean_controls() -> void:
 	var root := _pickup.get_parent() as Control

@@ -2421,10 +2421,13 @@ func village_npc_lines(speaker: String) -> Array:
 	if str(status.state) == "working": return ["The western workshop is underway. Meet the builders there by day, or lend a hand yourself. We will keep the work safe until morning."]
 	return VillageProjectDB.npc_lines(speaker) + [status.message]
 
-const OCEAN_STAGES := 3
+const OCEAN_STAGES := 2
 
 func campaign() -> Dictionary:
 	return (data.get("campaign", {}) as Dictionary).duplicate(true)
+
+func sea_journey_available() -> bool:
+	return not bool(data.get("campaign", {}).get("arjun_rescued", false))
 
 func _sanitize_campaign() -> void:
 	var raw: Variant = data.get("campaign", {})
@@ -2449,7 +2452,7 @@ func mark_story_seen(which: String) -> void:
 	_save_if_needed()
 
 func advance_ocean_stage(stage: int) -> bool:
-	if stage != int(campaign().get("ocean_stage", 1)) or stage >= OCEAN_STAGES:
+	if not sea_journey_available() or stage != int(campaign().get("ocean_stage", 1)) or stage >= OCEAN_STAGES:
 		return false
 	data.campaign.ocean_stage = stage + 1
 	data_changed.emit()
@@ -2478,7 +2481,7 @@ func campaign_objective() -> String:
 		return "Three friends reunited in BESUT. Prepare for what comes next, together."
 	var goals: Array[String] = []
 	if not bool(story.get("arjun_rescued", false)):
-		goals.append("Rescue Arjun: ship > sea route %d/3 > Kraken Island" % int(story.get("ocean_stage", 1)))
+		goals.append("Rescue Arjun: ship > sea level %d/%d > Kraken Island" % [int(story.get("ocean_stage", 1)), OCEAN_STAGES])
 	if not bool(story.get("mei_ling_rescued", false)):
 		goals.append("Rescue Mei Ling: defeat Shadow & Chaos Fiend in Chaos Citadel")
 	return "\n".join(goals)

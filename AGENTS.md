@@ -4,6 +4,32 @@
 The project/application name is still **Save The World**; the player-facing title is
 **PB (Protect BESUT)**. Tidesworn is also the name of the editor workspace.
 
+**2026-10-30 completed sea journey:** freeing Arjun permanently closes outbound
+sea travel for that journey. `GameState.sea_journey_available()` derives this from
+the existing saved `arjun_rescued` flag. Ship availability, nearby/direct boarding,
+low-level departure and Game's ocean/island transition gates all enforce it.
+The incoming rescue ship and disembarkation still complete normally. Reloaded
+completed saves stay closed; fresh journeys reopen the route. Boss defeat alone
+and rescuing Mei Ling alone do not close it. Review uses `-OceanLevels`.
+
+**2026-10-30 Kraken Island crabs:** ten `KrakenCrab` guards occupy fixed clear
+posts around the fortress. They reuse Enemy's melee warnings, stagger, collision,
+XP and collectible Gold flow. Entering the arena immediately engages all ten
+guards and the Kraken; his first tentacle warning starts after 0.6 seconds.
+Active-world guards prevent attacks after a world
+handoff. Surviving crabs withdraw without rewards when the Kraken falls; the boss
+still unlocks Arjun's cage for the separate interaction. The focused `-OceanLevels`
+route also checks crab combat, reward deduplication and safe prison access.
+
+**2026-10-30 two sea levels:** the turtle journey now has exactly two 45-second
+levels. Level 1 contains bombs, rubbish, heart pickups and fish; level 2 retains
+them and adds sharks. Shark hazards and background megalodon silhouettes are
+absent from level 1. Completing level 2 travels directly to Kraken Island.
+GameState owns the shared stage count and clamps old stage-3 checkpoints to 2
+without removing rescue flags or possessions. Windows review uses
+`tools/test_isolated.ps1 -Godot <console-executable> -OceanLevels`, optionally
+`-Capture -Resolution 832x480` or `1280x720`. See the newest acceptance section.
+
 **2026-10-30 reunion dialogue:** after both rescues and a safe return to BESUT,
 the former ending is now a player-paced conversation among Adam, Arjun and Mei
 Ling, followed by an illustrated dock-preparation tag. The stable `ending_seen`
@@ -237,9 +263,11 @@ Do not run `tools/setup_input.gd` (rewrites project config) or
   unlocked friend preview does not change the Adam story start.
 - `campaign` owns `intro_seen`, `ocean_stage`, `arjun_rescued`, `mei_ling_rescued`,
   `ending_seen`. Defaults + `_sanitize_campaign()` preserve older progression.
-  Three 45-second ocean routes lead to Vorath, the Kraken King. Kill the boss,
+  Two 45-second sea levels lead to Vorath, the Kraken King. Level 1 has bombs,
+  rubbish, hearts and fish; level 2 adds sharks. Kill the boss,
   then separately approach/tap the prison through `free_arjun()`; a kill alone
   does not rescue him. Arjun returns visibly aboard the ship, then joins the village.
+  His saved rescue flag closes outbound sea/ship access for the rest of that journey.
 - Mei Ling is rescued immediately when Shadow & Chaos Fiend falls in Chaos Citadel
   (`tidebound_grotto`). The boss-clear transaction saves her flag before the rescue
   story; closing it preserves peaceful realm exploration. Old first-clear saves
@@ -341,8 +369,8 @@ Do not run `tools/setup_input.gd` (rewrites project config) or
 - Game owns sailing locks/HUD visibility; ShipDeparture owns deck placement and
   departure/return motion. Yellow UNISZA ship docks before passenger disembarkation.
   Preserve collision restoration, pet repositioning and held-action cleanup.
-- Ocean phases: `DIVE → RESCUE → RUNNING → TRAVELLING → ARRIVING` for routes 1/2;
-  route 3 travels into KrakenIsland. `FINISHED` is the death/retry state, not a
+- Ocean phases: `DIVE → RESCUE → RUNNING → TRAVELLING → ARRIVING` into level 2;
+  level 2 then travels into KrakenIsland. `FINISHED` is the death/retry state, not a
   successful Next-button stop. Save the next route checkpoint before departure;
   retries/shore return retain completed-route checkpoints and earned cleanup Gold.
 - Ocean uses normalised four-direction steering, its own camera/settings/joystick,
@@ -360,6 +388,9 @@ Do not run `tools/setup_input.gd` (rewrites project config) or
   penalties deliberately bypass it. Fatal damage sinks/flips rider+turtle before
   showing Ride Again. Retry/new route resets lives, fullness and missed counters.
 - KrakenKing alternates telegraphed slam/hook/drag; the other arm grips the cage.
+  Ten crab guards and the Kraken pursue Adam as soon as he enters the arena,
+  without a proximity trigger. Crabs still telegraph their pincer attacks.
+  They can be defeated for normal loot; surviving guards retreat on boss defeat.
   Pull uses `move_and_collide()`, never teleporting through arena pillars. Boss death
   unlocks, but does not itself open, RescueCage. Preserve separate tap-to-free and
   repeat-rescue guards, full arena/cage framing, and human-scale returning Arjun.
@@ -533,3 +564,33 @@ actually rerun. Do not modify gameplay merely to make the documentation true.
 - This update changes guidance only; gameplay/resources and live saves were not
   edited. Documentation paths and selected current-contract coverage were checked;
   a reconstruction patch and executable pristine-byte rollback were verified.
+
+### Two sea levels validation — 2026-10-30
+
+- Windows Godot 4.7.2 canonical isolated gameplay: **6,424 checks, PASS, exit 0**,
+  empty runtime stderr and no failure/error markers. Final native `-OceanLevels`
+  reviews at **832x480** and **1280x720** each pass **22 checks**, exit 0; guide,
+  both object catalogs, progress and actual Kraken arrival captures were inspected.
+- Isolated import exits 0 with the existing Android build-tools directory warning.
+  `git diff --check` passes. See the newest `docs/ACCEPTANCE_TESTS.md` section for
+  evidence paths and the corrected legacy presentation fixture. No export was run.
+
+### Kraken Island crab validation — 2026-10-30
+
+- Canonical isolated Windows gameplay: **6,438 checks, PASS, exit 0**, empty
+  runtime stderr and no failure/error markers. Focused native `-OceanLevels`
+  reviews at **832x480** and **1280x720** each pass **36 checks**, exit 0.
+  Arrival and post-defeat captures were inspected; the new checks cover real
+  crab attacks, stagger, one-drop rewards, world ownership and retreat cleanup.
+- Isolated import exits 0 with the existing Android build-tools warning;
+  `git diff --check` passes. Evidence is in the newest acceptance section.
+
+### Ten-crab encounter and completed sea lock validation — 2026-10-30
+
+- Final isolated Windows gameplay: **6,456 checks, PASS, exit 0**, empty runtime
+  stderr and no failure/error markers. Focused native `-OceanLevels` at **832x480**
+  and **1280x720** each passes **54 checks**, exit 0. Captures and actual pointer
+  tests cover ten crabs, immediate pursuit and the unboardable completed ship.
+- Actual rescue return, disembarkation, saved closure, fresh-journey eligibility,
+  both rescue orders and reunion pass. Import retains the existing Android
+  build-tools warning. `git diff --check` passes; no export was performed.

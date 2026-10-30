@@ -277,6 +277,7 @@ static func _quest_sections(game: Game, check: Callable, capture: Callable) -> v
 	for i in 4: game.hud._refresh_objectives()
 	check.call(GameState.data == before, "grouping and counting quests is read-only with no reward or completion mutation")
 	GameState.data = GameState._make_default("adam")
+	GameState.data.portal_origin.opened = true # This grouping fixture starts after awakening the road.
 	GameSettings.set_value("tutorial_hidden", false, false)
 	game.hud._refresh_objectives()
 	check.call(tracker.section_count(main) == 3 and _entry_index(tracker, "lesson_move") >= 0, "visible training prepares the story without suppressing either rescue arc")

@@ -87,6 +87,7 @@ static func _record(key: String) -> Array:
 		if "wardrobe" in key: return ["details",6,Vector2i(64,64)]
 		return ["household",0 if "chest" in key else (1 if "weapons" in key else 2),Vector2i(64,64)]
 	if key.begins_with("enemy_urchin_"): return ["ocean",13,Vector2i(32,32)]
+	if key.begins_with("enemy_crab_"): return ["ocean",10,Vector2i(32,32)]
 	if key.begins_with("enemy_fire_"): return ["fire-demon",0,Vector2i(32,32)]
 	if key.begins_with("portal_frame_"): return ["gates",1 if "pet" in key else 0,Vector2i(80,112)]
 	if key.begins_with("portal_") and not key.begins_with("portal_swirl_") and not key.begins_with("portal_emblem_"): return ["gates",0,Vector2i(80,112)]

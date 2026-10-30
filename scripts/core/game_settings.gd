@@ -19,6 +19,8 @@ extends Node
 ##   reduce_motion            bool                     default false
 ##   visual_style             String modern|pixel     default "pixel" (restart)
 ##   effects_quality          String low|med|high     default "high"
+##   target_fps               int    30|60           default 60 (Android)
+##   render_resolution        String native|balanced default "native" (Android)
 ##   objectives_collapsed     bool                     default true
 ##   tutorial_hidden          bool                     default false
 ##
@@ -46,6 +48,8 @@ const CAMERA_ZOOM_MAX := 64
 const CAMERA_ZOOM_DEFAULT := 38
 const TOUCH_MODES := ["auto", "always", "hidden"]
 const EFFECT_QUALITIES := ["low", "med", "high"]
+const FRAME_RATES := [60, 30]
+const RENDER_RESOLUTIONS := ["balanced", "native"]
 const VISUAL_STYLES := ["modern", "pixel"]
 const VISUAL_STYLE_LABELS := ["Modern Illustrated", "Classic Pixel"]
 
@@ -61,6 +65,8 @@ const DEFAULTS := {
         "auto_pause_on_focus_loss": true,
         "reduce_motion": false,
         "effects_quality": "high",
+        "target_fps": 60,
+        "render_resolution": "native",
         "visual_style": "pixel",
         "objectives_collapsed": true,
         "tutorial_hidden": false,
@@ -146,6 +152,10 @@ func _sanitize_value(key: String, value: Variant) -> Variant:
                         return clampi(int(value), 0, 100)
                 "camera_zoom":
                         return clampi(int(value), CAMERA_ZOOM_MIN, CAMERA_ZOOM_MAX)
+                "target_fps":
+                        return int(value) if value is int and int(value) in FRAME_RATES else 60
+                "render_resolution":
+                        return str(value) if str(value) in RENDER_RESOLUTIONS else str(DEFAULTS["render_resolution"])
                 "ui_scale":
                         return clampi(int(value), UI_SCALE_MIN, UI_SCALE_MAX)
                 "touch_controls":
@@ -177,6 +187,7 @@ func _as_bool(value: Variant, fallback: bool) -> bool:
 func _apply_all() -> void:
         apply_audio()
         apply_display()
+        apply_android_rendering()
 
 
 func _apply_key(key: String) -> void:
@@ -185,6 +196,17 @@ func _apply_key(key: String) -> void:
                         apply_audio()
                 "fullscreen":
                         apply_display()
+                "target_fps", "render_resolution":
+                        apply_android_rendering()
+
+
+func apply_android_rendering() -> void:
+        if not OS.has_feature("android") or DisplayServer.get_name() == "headless":
+                return
+        Engine.max_fps = target_fps()
+        # Keep the logical design size/aspect and all world/input units unchanged.
+        # Viewport mode bounds pixel work; canvas_items renders at display resolution.
+        get_tree().root.content_scale_mode = Window.CONTENT_SCALE_MODE_VIEWPORT if render_resolution() == "balanced" else Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
 
 
 func apply_audio() -> void:
@@ -286,6 +308,14 @@ func set_reduce_motion(value: bool, persist: bool = true) -> void:
 
 func effects_quality() -> String:
         return str(_values.get("effects_quality", "high"))
+
+
+func target_fps() -> int:
+        return int(_values.get("target_fps", 60))
+
+
+func render_resolution() -> String:
+        return str(_values.get("render_resolution", DEFAULTS["render_resolution"]))
 
 
 func set_effects_quality(value: String, persist: bool = true) -> void:

@@ -537,7 +537,7 @@ func _hero_available(id: String) -> bool:
 
 func _unlock_requirement(id: String) -> String:
 	match id:
-		"arjun": return "Complete all 3 sea routes. Defeat the Kraken King, then open Arjun's prison to rescue him."
+		"arjun": return "Complete both sea levels. Defeat the Kraken King, then open Arjun's prison to rescue him."
 		"mei_ling": return "Defeat %s in %s, through the Dimension Portal, to rescue Mei Ling." % [PortalDB.get_portal(PortalDB.MEI_LING_PORTAL).get("boss_name", "Shadow & Chaos Fiend"), PortalDB.get_portal(PortalDB.MEI_LING_PORTAL).get("name", "Chaos Citadel")]
 	return "Available from the start. Begin Adam's story and find your missing friends."
 

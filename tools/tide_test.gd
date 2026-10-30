@@ -198,6 +198,7 @@ func _ready() -> void:
 	GameSettings.set_value("tutorial_hidden", false, false)
 	await preload("res://tools/portal_tutorial_checks.gd").run(game, _check)
 	await preload("res://tools/control_ocean_checks.gd").run(game, _check)
+	await preload("res://tools/ocean_levels_checks.gd").run(game, _check)
 	# Includes fullness-based speed/death and the Kraken's moving combat AI.
 	await preload("res://tools/kraken_hunger_checks.gd").run(game, _check)
 	# Includes dock word pacing/reveal input, owned voices, layout and save migration.
@@ -486,6 +487,7 @@ func _test_shops() -> void:
 
 
 func _test_visual_overhaul_contracts() -> void:
+	AndroidRenderingChecks.run(_check)
 	# 3C: Strike icon follows the active hero's weapon discipline.
 	_check(str(hud.get("_attack_button").icon_kind) == GameState.character_weapon_style(), "strike icon follows the hero's weapon")
 	# 3C: the detailed 32px icon set generates for the key kinds.

@@ -684,7 +684,7 @@ func open_field_guide() -> void:
 
 
 func board_ship(boarding: ShipDeparture, direct_tap: bool = false) -> bool:
-	if not world is Lobby or _transitioning or _input_locked or _sailing or _game_over or is_instance_valid(home_interior) or GameState.recovery_active() or GameState.emergency_active():
+	if not GameState.sea_journey_available() or not world is Lobby or _transitioning or _input_locked or _sailing or _game_over or is_instance_valid(home_interior) or GameState.recovery_active() or GameState.emergency_active():
 		return false
 	var p := player()
 	if not is_instance_valid(boarding) or boarding.get_parent() != world or not is_instance_valid(p) or p.dead or p.sleeping or (not direct_tap and p.global_position.distance_to(boarding.global_position) > boarding.interact_radius):
@@ -705,7 +705,7 @@ func board_ship(boarding: ShipDeparture, direct_tap: bool = false) -> bool:
 	return true
 
 func enter_ocean(boarding: ShipDeparture) -> void:
-	if _transitioning or not _sailing or not is_instance_valid(boarding) or boarding.get_parent() != world or not boarding.arrived:
+	if not GameState.sea_journey_available() or _transitioning or not _sailing or not is_instance_valid(boarding) or boarding.get_parent() != world or not boarding.arrived:
 		return
 	_transitioning = true
 	_input_locked = true
@@ -964,7 +964,7 @@ func play_story(kind: String, from_title: bool = false) -> void:
 	_apply_input_lock()
 
 func enter_kraken_island() -> void:
-	if not world is OceanJourney or _transitioning: return
+	if not GameState.sea_journey_available() or not world is OceanJourney or _transitioning: return
 	_transitioning = true
 	await loading_screen.begin("Kraken King's Island")
 	_clear_world()

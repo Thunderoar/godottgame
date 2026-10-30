@@ -5,6 +5,7 @@ var zone_name := "Kraken King's Island"
 var player: Player
 var camera: Camera2D
 var boss: KrakenKing
+var crabs: Array[KrakenCrab] = []
 var cage: RescueCage
 var background: Sprite2D
 var canvas_modulate: CanvasModulate
@@ -14,6 +15,11 @@ var _hint: Label
 var _rune_clock := 0.0
 var _monster_routes: ResidentRoutes
 const RUNES := [Vector2(6,4.5),Vector2(34,4.5),Vector2(10,14.5),Vector2(30,14.5)]
+const CRAB_POSTS := [
+	Vector2(9,13),Vector2(31,13),Vector2(13,6),Vector2(27,5),
+	Vector2(5,16),Vector2(35,16),Vector2(14,10),Vector2(26,10),
+	Vector2(15,16),Vector2(25,16)]
+const OPENING_SPECIAL_DELAY := 0.6
 
 func _ready() -> void:
 	texture_filter=VisualStyle.texture_filter()
@@ -53,6 +59,11 @@ func _ready() -> void:
 	cage.interact_radius = 2.6
 	add_child(cage)
 	boss.prison = cage
+	for at in CRAB_POSTS:
+		var crab := KrakenCrab.new()
+		crab.position = at
+		add_child(crab)
+		crabs.append(crab)
 	var exit := IslandExit.new()
 	exit.position = Vector2(5,22)
 	exit.prompt = "Return to BESUT"
@@ -66,8 +77,23 @@ func _ready() -> void:
 	if bool(GameState.campaign().get("arjun_rescued",false)):
 		cage.opened = true
 		cage.friend.visible = false
-		_hint.text = "Arjun is safe in BESUT. Challenge the Kraken King or return to shore."
+		_hint.text = "Arjun is safe in BESUT. Return to shore."
+	_start_encounter()
 	Sfx.start_battle_music("kraken_island")
+
+func _start_encounter() -> void:
+	# Entering this world enters the arena: every defender pursues immediately,
+	# including guards outside the regular enemy's proximity-based alert radius.
+	var defenders: Array[Enemy] = [boss]
+	defenders.append_array(crabs)
+	for defender in defenders:
+		defender._player = player
+		defender._target = player
+		defender.active = true
+		defender.dungeon_alerted = true
+		defender._enter(Enemy.State.CHASE)
+		defender._notify_boss_start()
+	boss._special_timer = OPENING_SPECIAL_DELAY
 
 func _build_arena() -> void:
 	var painter := Dungeon.new()
@@ -171,6 +197,8 @@ func get_guidance_targets() -> Array:
 func _on_kraken_defeated(_enemy: Enemy) -> void:
 	if defeated: return
 	defeated = true
+	for crab in crabs:
+		if is_instance_valid(crab): crab.retreat()
 	cage.available = not bool(GameState.campaign().get("arjun_rescued",false))
 	_hint.text = "The Kraken King is defeated! Approach and tap Arjun's prison." if cage.available else "The Kraken King is defeated. Arjun is safe in BESUT; return to shore."
 	var drop := cage.create_tween()

@@ -95,6 +95,7 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(ocean.elapsed == 0 and ocean.fullness == fullness and ocean.items.is_empty(),"reading the sea guide cannot drain fullness or create hazards")
 	check.call(not ocean.choose_action("pickup"),"briefing cannot accidentally consume an item")
 	ocean.dismiss_sea_guide()
+	ocean.stage = 2 # Inspect the complete object catalog where sharks are enabled.
 	for kind in ["food","trash","heart","bomb","shark"]:
 		var item := ocean.spawn_item(kind,30)
 		check.call(item.node.get_child_count() == 0,"%s has no floating instruction label" % kind)

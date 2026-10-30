@@ -10,7 +10,7 @@ func _draw() -> void:
 	var at := a.lerp(b,clampf(progress,0,1))
 	draw_line(a,b,Color("#284c60"),9)
 	draw_line(a,at,Color("#76d8c7"),5)
-	for i in range(1,3): draw_circle(a.lerp(b,i/3.0),4,Color("#e7c77c"))
+	for i in range(1,GameState.OCEAN_STAGES): draw_circle(a.lerp(b,float(i)/GameState.OCEAN_STAGES),4,Color("#e7c77c"))
 	var arjun := PixelArt.portrait("arjun")
 	var adam := PixelArt.portrait(str(GameState.data.get("character_id","adam")))
 	draw_texture_rect_region(arjun,Rect2(b-Vector2(16,18),Vector2(32,32)),Rect2(24,24,48,48))

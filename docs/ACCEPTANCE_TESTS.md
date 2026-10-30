@@ -2580,3 +2580,157 @@ Evidence below `C:/Users/LUQMAN/AppData/Local/Temp/`:
 - Final 832x480: `tidesworn-tests-0742bacc367c4b98a44d7a2ed7241d51`.
 - Final 1280x720: `tidesworn-tests-4072490838634c28a8f07fcc5c187336`.
 - Import: `tidesworn-tests-0f6d007219ca4fc1ae2c11ca125d38da`.
+
+## Two sea levels and shark introduction (2026-10-30)
+
+The turtle journey contains exactly two 45-second levels. Level 1 supplies bombs,
+rubbish, heart pickups and fish. Level 2 retains all four and adds shark hazards;
+the decorative megalodon is also hidden until level 2. The shared stage count
+drives checkpoint sanitation, actual onward travel, the HUD portrait timeline,
+campaign objectives, the Field Guide and Arjun's locked title-card requirement.
+The first completion saves checkpoint 2 before departure. The second carries
+Adam straight into Kraken Island, where the boss and separate prison interaction
+remain required. Lives, fullness, rubbish penalties and retry reset rules retain
+their existing behavior.
+
+`tools/ocean_levels_checks.gd` runs in the canonical gameplay gate and the focused
+`tools/ocean_levels_test.tscn`. Windows supports `-OceanLevels`, with optional
+`-Capture -Resolution 832x480` or `1280x720`. Coverage exercises real timer-driven
+spawning in both levels, the shared shark-spawn guard, background visibility,
+seven-second initial shark delay, HUD progress, automatic level travel, checkpoint
+reload, retry and the actual Game-owned Kraken Island transition. An old level-3
+JSON save loads at level 2 while preserving currency, pets and rescued friends.
+The first review exposed a fixture comparison between pre-save integer values and
+JSON-loaded numeric values; comparing normalized JSON values fixes the assertion
+without altering production save handling.
+
+Windows Godot 4.7.2 verification:
+
+- Final canonical isolated gameplay: **6,424 checks, PASS, exit 0**, with no
+  `[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers and an empty runtime stderr file.
+- Native focused review at **832x480** and **1280x720**: **22 checks, PASS,
+  exit 0** each. Inspected the Sea Guide, level-one/four-object and
+  level-two/five-object layouts, two-part progress and actual Kraken arrival.
+  Both runtime stderr files are empty.
+- Isolated import: **exit 0**, retaining the existing `Unable to open Android
+  'build-tools' directory` warning. This is native Windows gameplay evidence;
+  no new Android export or physical-phone testing is claimed.
+- The first full attempt was correctly rejected despite its stdout PASS summary:
+  an older presentation fixture still requested a shark at level 1 and accessed
+  the rejected spawn's empty result. Presentation checks/review setups now place
+  their complete five-object catalog at level 2, retaining the assertions and
+  the production level-one shark guard.
+
+Evidence below `C:/Users/LUQMAN/AppData/Local/Temp/`:
+
+- Full gate: `tidesworn-tests-89d8ef58b80c4c7b8a8b68fb6ea9cb5d`.
+- Final 832x480: `tidesworn-tests-1dbeb1439c0f435b915d66986b3bf437`.
+- Final 1280x720: `tidesworn-tests-8c23f6a9736d487392e71ed8a55057f4`.
+- Import: `tidesworn-tests-9d69ada5a730439491b27ce337e5c4d1`.
+
+## Crab monsters at Kraken Island (2026-10-30)
+
+Four KrakenCrab enemies occupy clear fixed fortress posts. They use Enemy's
+movement, attack warning/active/recovery, stagger, collision, damage and loot
+systems, with a skittering personality, original cached crab pixel art and an
+existing illustrated crab atlas mapping. Guards have 48 HP, 7 base damage and
+a 1.6-second attack interval. They cannot act against a different current world.
+The Kraken's defeat makes surviving guards stop combat and retreat without kill
+or loot rewards, preserving the separate unlocked-prison interaction for Arjun.
+Each island visit constructs one fixed set; there is no mid-fight respawn loop.
+
+`tools/kraken_crab_checks.gd` extends the canonical gameplay and focused
+`-OceanLevels` routes with obstacle/arrival clearance, aggro/chase, warning before
+damage, one hit per swing, interruptible windup, world-ownership protection,
+one-payment loot, retreat cleanup and cage-state checks. A first fixture assertion
+looked for Gold after a nearby Adam had already collected it; the final assertion
+observes the actual drop entering the world, retaining the one-drop requirement.
+
+Windows Godot 4.7.2 focused native review at **832x480** and **1280x720** each
+reports **36 checks, PASS, exit 0**, with empty runtime stderr. The actual island
+arrival and post-defeat captures were inspected at both sizes. Isolated import
+exits 0 with the existing Android build-tools directory warning. No Android export
+or physical-phone test was performed for this change.
+
+Final canonical isolated gameplay: **6,438 checks, PASS, exit 0**. The wrapper
+confirms no failure/error markers; runtime stderr is empty. This also exercises
+the two-level sea journey, real Kraken combat, separate prison rescue, both
+friend-rescue orders and reunion. `git diff --check` passes.
+
+Evidence below `C:/Users/LUQMAN/AppData/Local/Temp/`:
+
+- Full gate: `tidesworn-tests-f9625ae006314c52a845de854f1b4f2d`.
+- Native 832x480: `tidesworn-tests-3d662f6d8b564a688887533713236890`.
+- Native 1280x720: `tidesworn-tests-800b9e059a964226957b4036c7668a4d`.
+- Import: `tidesworn-tests-a93b73798ad9438a8e082d2553c1149e`.
+
+## Ten crabs and immediate Kraken arena combat (2026-10-30)
+
+Kraken Island now constructs ten guards at fixed, obstacle-free posts. Entering
+the arena immediately sets all ten crabs and the Kraken to active pursuit of the
+current island player. Distant guards do not wait for a proximity trigger or
+return to wandering after losing range. The Kraken begins his first tentacle
+warning after 0.6 seconds; normal attack warnings, movement and dodge windows
+remain. The arrival space stays clear of overlapping monsters. Existing crab
+stats, loot, retreat on boss defeat and the separate prison interaction remain.
+Kraken attacks now also check active-world ownership before advancing.
+
+The focused `-OceanLevels` review checks all eleven active enemies at entry,
+distant-crab pursuit, automatic opening tentacle warnings, combat, one-payment
+loot, retreat and both kinds' world-ownership guards. The King's exact timing
+fixture suspends crab physics while testing his melee/tentacle damage in isolation;
+the combined encounter is covered by the focused crab checks.
+
+Windows Godot 4.7.2 native focused reviews at **832x480** and **1280x720** each
+report **38 checks, PASS, exit 0**, with empty runtime stderr. Both arrival
+captures were inspected: ten crabs plus the King are present and the arrival
+space remains clear. Isolated import exits 0 with the existing Android build-tools
+directory warning. `git diff --check` passes. No Android export was performed.
+
+Evidence below `C:/Users/LUQMAN/AppData/Local/Temp/`:
+
+- Native 832x480: `tidesworn-tests-21bd47f8b8cc472aafc870680cbe7944`.
+- Native 1280x720: `tidesworn-tests-0f7b6f74e1c34d489400ce0d1b000abf`.
+- Import: `tidesworn-tests-9b5d391aef5f45f7bc001b2a321b20e0`.
+
+The ten-crab/immediate-combat canonical gate also passed **6,440 checks, exit 0**,
+with empty runtime stderr, before the subsequent sea-completion change below.
+Evidence: `tidesworn-tests-5a3a1c0b0537422aa687cb13fac76b2d`.
+
+## Sea journey closes after Arjun's rescue (2026-10-30)
+
+Freeing Arjun permanently closes outbound ship boarding and ocean/Kraken entry
+for that saved journey. `GameState.sea_journey_available()` derives eligibility
+from the existing `campaign.arjun_rescued` flag; no new save field or reward is
+introduced. Ship availability refreshes on progression changes and after landing.
+Game's boarding/transition APIs and the low-level departure method enforce the
+same rule, including stale input or callbacks. Incoming rescue sailing still
+shows Arjun on deck and restores Adam's collision, controls, HUD and companion
+after disembarkation. The ship stays moored as scenery afterward. Existing rescued
+saves stay closed after reload. Fresh journeys reopen the route. A boss kill
+without opening the prison, and rescuing Mei Ling alone, leave it available.
+
+`tools/sea_journey_completion_checks.gd` extends `-OceanLevels` and the canonical
+gameplay gate with the actual prison/story/return-ship handoff, boarding rejection,
+real mouse/touch events even with stale availability, nearby cached interaction,
+delayed departure/island callbacks, checkpoint protection, save/load, village
+reconstruction and fresh-journey eligibility. The Field Guide and completed-island
+guidance now describe return/completion rather than another Kraken challenge.
+
+Windows Godot 4.7.2 native `-OceanLevels` reviews at **832x480** and **1280x720**
+each report **54 checks, PASS, exit 0**, with empty runtime stderr. Completed-ship
+captures were inspected at both sizes; real pointer tests confirm the moored hull
+cannot depart. Isolated import exits 0 with the existing Android build-tools
+directory warning. No Android export or physical-phone test was performed.
+
+Evidence below `C:/Users/LUQMAN/AppData/Local/Temp/`:
+
+- Native 832x480: `tidesworn-tests-00fb2be713c041ed867c04e7a8dd8609`.
+- Native 1280x720: `tidesworn-tests-b319135194f547679ac12840b866e053`.
+- Import: `tidesworn-tests-37d478c893104151915ef2773a4433db`.
+
+Final canonical isolated gameplay: **6,456 checks, PASS, exit 0**, no failure/error
+markers and empty runtime stderr. This final gate includes the ten-crab immediate
+encounter, both rescue orders, reunion, real incoming ship/disembarkation and the
+completed sea lock. `git diff --check` passes. Full evidence:
+`tidesworn-tests-41a21660380e4c2fbd5366a1910831ff`.

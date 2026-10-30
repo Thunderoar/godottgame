@@ -99,9 +99,11 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	ocean._update_run(0)
 	check.call(ocean.health == 1 and ocean.missed_trash == 3, "two rubbish items escaping together each subtract one life")
 	ocean.health = 3
+	ocean.stage = 2 # Exercise the shark hazard where it is now enabled.
 	for kind in ["food","heart","bomb","shark"]: ocean.spawn_item(kind,ocean.visible_left()-10)
 	ocean._update_run(0)
 	check.call(ocean.health == 3 and ocean.missed_trash == 3, "missed fish, hearts and avoided hazards do not count as missed rubbish")
+	ocean.stage = 1 # The following fixture still verifies the first-to-second transition.
 	var gold := GameState.gold()
 	ocean._hurt_time = 1.2
 	trash = ocean.spawn_item("trash",ocean.mouth_position().x)
@@ -154,6 +156,9 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	game._input_locked = false
 	game._apply_input_lock()
 	var king := island.boss
+	# This fixture isolates the King's exact damage/tentacle timing; guards have
+	# their own real combat and arena-entry coverage in KrakenCrabChecks.
+	for crab in island.crabs: crab.set_physics_process(false)
 	king.set_physics_process(false)
 	island.player.set_physics_process(false)
 	king._player = island.player

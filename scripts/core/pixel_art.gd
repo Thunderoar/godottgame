@@ -611,6 +611,27 @@ static func enemy_texture(kind: String, boss: bool = false, frame: int = 0) -> T
                 var img := image(size, size)
                 var bob := 1 if frame % 2 == 0 else 0
                 match kind:
+                        "crab":
+                                # Armoured shore crab: walking legs, raised pincers and eye stalks.
+                                for side in [-1, 1]:
+                                        for leg in 3:
+                                                var y := 21 + leg * 3
+                                                var tip := y + (bob if leg % 2 == 0 else -bob)
+                                                line(img, 16 + side * 7, y, 16 + side * 12, tip - 2, OUTLINE)
+                                                line(img, 16 + side * 12, tip - 2, 16 + side * 14, tip + 1, Color("#cb6744"))
+                                        line(img, 16 + side * 8, 19, 16 + side * 11, 13 + bob, Color("#bd5137"))
+                                        ellipse(img, 16 + side * 11, 10 + bob, 4, 5, OUTLINE)
+                                        ellipse(img, 16 + side * 11, 10 + bob, 3, 4, Color("#ed9153"))
+                                        rect(img, 16 + side * 11, 5 + bob, 1, 5, OUTLINE)
+                                ellipse(img, 16, 21, 10, 7, OUTLINE)
+                                ellipse(img, 16, 20, 9, 6, Color("#336e78"))
+                                ellipse(img, 14, 18, 6, 3, Color("#56999a"))
+                                hline(img, 11, 25, 10, Color("#21434f"))
+                                for x in [12,20]:
+                                        rect(img, x, 11 + bob, 2, 6, OUTLINE)
+                                        rect(img, x - 1, 11 + bob, 4, 3, Color("#ffe09a"))
+                                        px(img, x, 12 + bob, OUTLINE)
+                                hline(img, 13, 21, 7, OUTLINE)
                         "bogling":
                                 var body := Color("#5b8c48") if not boss else Color("#47705b")
                                 ellipse(img, 16, 22 + bob, 12, 8, Color("#1d2b21"))

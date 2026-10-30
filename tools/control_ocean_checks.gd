@@ -122,6 +122,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	ocean._update_run(0)
 	check.call(trash.resolved, "objects are removed only after fully leaving the screen")
 	ocean._hurt_time = 0
+	ocean.stage = 2 # Sharks are introduced only in the second sea level.
 	var shark := ocean.spawn_item("shark",ocean.turtle.position.x+0.5)
 	var hp := ocean.health
 	ocean._update_run(0.05)
@@ -133,7 +134,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	ocean.stage = 2
 	ocean.elapsed = OceanJourney.STAGE_SECONDS/2
 	ocean._refresh_ui()
-	check.call(is_equal_approx(ocean._progress.progress,0.5), "Adam-to-Arjun portrait timeline covers all three routes")
+	check.call(is_equal_approx(ocean._progress.progress,0.75), "halfway through level two is 75 percent of the two-level portrait timeline")
 	if capture.is_valid():
 		ocean._hurt_time = 0
 		ocean.spawn_item("shark",27)
