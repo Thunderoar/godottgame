@@ -205,7 +205,7 @@ func _ready() -> void:
 	await StoryChecks.run(game, _check)
 	# Seven-shot citadel rescue, real mouse/touch/keyboard input, save migration and both rescue orders.
 	await preload("res://tools/mei_ling_rescue_checks.gd").run(game, _check)
-	# Live dock waiting, nearby Embark, reunion/departure, and title/free-play persistence.
+	# Live Embark, three banter cards, continuous sailing/pause, and title/free-play persistence.
 	await preload("res://tools/reunion_checks.gd").run(game, _check)
 	# Code-gated tools, separate test saves, world travel and rescue/ending previews.
 	await preload("res://tools/developer_checks.gd").run(game, _check)

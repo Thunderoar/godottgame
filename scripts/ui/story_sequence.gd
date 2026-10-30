@@ -62,6 +62,10 @@ var _reunion_speaker: Label
 var _reunion_voice: AudioStreamPlayer
 var _reunion_voice_word := -1
 var _reunion_focus_out := false
+var _reunion_paused := false
+var _reunion_rows: VBoxContainer
+var _reunion_names: Array[Label] = []
+var _reunion_lines: Array[Label] = []
 
 func _ready() -> void:
 	layer = 350
@@ -103,8 +107,26 @@ func _ready() -> void:
 		_beat_label = GameUI.label("", 13, GameUI.GOLD)
 		box.add_child(_beat_label)
 	if kind == "ending":
-		_reunion_speaker = GameUI.label("",20,GameUI.GOLD)
+		_reunion_speaker = GameUI.label("",17,GameUI.GOLD)
 		box.add_child(_reunion_speaker)
+		_beat_label.hide()
+		_reunion_rows = VBoxContainer.new()
+		_reunion_rows.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_reunion_rows.add_theme_constant_override("separation",5)
+		box.add_child(_reunion_rows)
+		for index in 3:
+			var dialogue_row := HBoxContainer.new()
+			dialogue_row.add_theme_constant_override("separation",12)
+			_reunion_rows.add_child(dialogue_row)
+			var speaker := GameUI.label("",16,GameUI.GOLD)
+			speaker.custom_minimum_size.x = 90
+			dialogue_row.add_child(speaker)
+			_reunion_names.append(speaker)
+			var spoken := GameUI.label("",18,GameUI.TEXT)
+			spoken.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			spoken.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			dialogue_row.add_child(spoken)
+			_reunion_lines.append(spoken)
 	_caption = GameUI.label("", 22, GameUI.TEXT)
 	if kind in ["mei","ending"]: _caption.add_theme_font_size_override("font_size", 18)
 	_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -254,12 +276,15 @@ func _process(delta: float) -> void:
 		_apply_arrival()
 		_canvas.queue_redraw()
 		return
-	clock += delta
-	_page_time += delta
+	var elapsed := maxf(0,delta)
+	if kind == "ending" and (_reunion_focus_out or (page == ReunionDialogueDB.film_page() and _reunion_paused)):
+		elapsed = 0
+	clock += elapsed
+	_page_time += elapsed
 	if kind in ["mei","ending"]:
 		_mei_guard_time += delta
 		_mei_input_cooldown = maxf(0, _mei_input_cooldown - delta)
-		_mei_reduced = _mei_reduced or GameSettings.reduce_motion()
+		_mei_reduced = GameSettings.reduce_motion() if kind == "ending" else (_mei_reduced or GameSettings.reduce_motion())
 		if not _mei_input_armed:
 			var guarded := _mei_guard_time < 0.35 or Input.is_action_pressed("attack") or Input.is_action_pressed("interact") or Input.is_action_pressed("ui_accept") or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
 			_mei_input_armed = not guarded
@@ -267,7 +292,7 @@ func _process(delta: float) -> void:
 			_skip.disabled = guarded
 	_canvas.queue_redraw()
 	if kind == "ending":
-		_reunion_beat_time += delta
+		_reunion_beat_time += elapsed
 		_process_reunion()
 		return # Dialogue always waits for the reader, independently of animation time.
 	if _page_time >= (float(MeiLingRescueRenderer.DURATIONS[page]) if kind == "mei" else 6.0):
@@ -275,6 +300,7 @@ func _process(delta: float) -> void:
 
 func _render() -> void:
 	_canvas.prepare_page()
+	_canvas.queue_redraw()
 	_caption.text = str(lines()[page])
 	_caption.visible_characters = -1
 	_next.text = "Continue" if page == lines().size() - 1 else "Next"
@@ -290,6 +316,7 @@ func _render() -> void:
 			6: Sfx.play("victory", -16)
 
 func _on_next_pressed() -> void:
+	if kind == "ending" and _reunion_focus_out: return
 	if kind in ["mei","ending"]:
 		if not _mei_input_armed or _mei_input_cooldown > 0: return
 		# A primary touch can also deliver an emulated mouse press. Consume one gesture.
@@ -297,6 +324,7 @@ func _on_next_pressed() -> void:
 	advance()
 
 func _on_skip_pressed() -> void:
+	if kind == "ending" and _reunion_focus_out: return
 	if kind in ["mei","ending"] and (not _mei_input_armed or _mei_input_cooldown > 0): return
 	if kind == "ending":
 		_go_to_reunion_dock()
@@ -306,33 +334,28 @@ func _on_skip_pressed() -> void:
 func advance() -> void:
 	if _done: return
 	if kind == "ending":
-		if page >= ReunionDialogueDB.TURNS.size():
-			var beat := page-ReunionDialogueDB.TURNS.size()
-			if _page_time < float(ReunionDialogueDB.DEPARTURE_DURATIONS[beat]): return
-			if page == ReunionDialogueDB.final_page():
-				var game := get_tree().get_first_node_in_group("game") as Game
-				if not is_instance_valid(game) or game._active_story != self or not game.world is Lobby or game.world.journey_serial != GameState.journey_serial: return
-				if not GameState.complete_final_departure():
-					_caption.text = "Your ending could not be saved. Please try Return to title again."
-					return
-				departure_committed = true
-				finish()
+		if _reunion_focus_out: return
+		if page == ReunionDialogueDB.film_page():
+			_reunion_paused = not _reunion_paused
+			if _reunion_paused: _stop_reunion_audio()
+			_next.text = "Resume" if _reunion_paused else "Pause"
+			return
+		if page == ReunionDialogueDB.final_page():
+			if not _mei_input_armed or _page_time < ReunionDialogueDB.CARD_GUARD: return
+			var game := get_tree().get_first_node_in_group("game") as Game
+			if not is_instance_valid(game) or game._active_story != self or not game.world is Lobby or game.world.journey_serial != GameState.journey_serial: return
+			if not GameState.complete_final_departure():
+				_caption.text = "Your ending could not be saved. Please try Return to title again."
+				_caption.show()
+				_caption_panel.offset_top = -132
+				_canvas.offset_bottom = -142
 				return
-			page += 1
-			_page_time = 0
-			_reunion_beat_time = 0
-			_render()
+			departure_committed = true
+			finish()
 			return
-		if not _reunion_text_done:
-			_reunion_text_done = true
-			_caption.visible_characters = -1
-			if is_instance_valid(_reunion_voice): _reunion_voice.stop()
-			_next.text = "Next"
-			return
-		var old_beat := int(ReunionDialogueDB.turn(page).beat)
 		page += 1
 		_page_time = 0
-		if int(ReunionDialogueDB.turn(page).beat) != old_beat: _reunion_beat_time = 0
+		_reunion_beat_time = 0
 		_render()
 		return
 	_finish_arrival()
@@ -356,60 +379,91 @@ func cancel() -> void:
 	finish()
 
 func _render_reunion() -> void:
-	var dock := page >= ReunionDialogueDB.TURNS.size()
-	var row := ReunionDialogueDB.turn(page)
-	var beat := page-ReunionDialogueDB.TURNS.size() if dock else int(row.beat)
-	if is_instance_valid(_beat_label):
-		_beat_label.text = ("DEPARTURE · %d / 7 · %s" % [beat+1,ReunionDialogueDB.DEPARTURE_TITLES[beat]]) if dock else ("REUNION · %d / 7 · %s" % [beat+1,ReunionDialogueDB.TITLES[beat]])
-	if is_instance_valid(_reunion_speaker):
-		_reunion_speaker.text = "PB · PROTECT BESUT" if page == ReunionDialogueDB.final_page() else ("BESUT DOCK" if dock else str(CharacterDB.get_character(str(row.speaker)).name))
-		_reunion_speaker.add_theme_color_override("font_color",Color("#b8d9c2") if row.speaker == "mei_ling" else (Color("#e2b58a") if row.speaker == "arjun" else GameUI.GOLD))
-	_reunion_text_done = dock
-	_caption.visible_characters = -1 if dock else 0
+	# Generic story previews can inspect another kind after constructing intro UI.
+	if not is_instance_valid(_reunion_rows): return
+	var dialogue := page < ReunionDialogueDB.film_page()
+	var film := page == ReunionDialogueDB.film_page()
+	var card := page == ReunionDialogueDB.final_page()
+	if card:
+		_mei_input_armed = false
+		_mei_guard_time = 0
+	_reunion_speaker.visible = dialogue
+	_reunion_rows.visible = dialogue
+	_caption.hide()
+	_caption.visible_characters = -1
+	_reunion_text_done = true
 	_reunion_voice_word = -1
 	if is_instance_valid(_reunion_voice): _reunion_voice.stop()
-	_next.text = ("Return to title" if page == ReunionDialogueDB.final_page() else "Continue") if dock else "Show line"
-	_skip.text = "Skip ending" if dock else "Skip conversation"
-	_skip.visible = page != ReunionDialogueDB.final_page()
-	_next.disabled = dock or not _mei_input_armed
-	if dock and _departure_sound_page != page:
-		_departure_sound_page = page
-		if is_instance_valid(_departure_sound):
-			_departure_sound.stop()
-			if beat in [2,3] and not _reunion_focus_out and not GameSettings.mute_all() and GameSettings.effects_volume() > 0:
-				_departure_sound.stream = Sfx.ending_sound("board" if beat == 2 else "cast_off")
-				_departure_sound.play()
+	_caption_panel.offset_top = -210 if dialogue else -78
+	_canvas.offset_bottom = -220 if dialogue else -88
+	if dialogue:
+		_reunion_speaker.text = ReunionDialogueDB.TITLES[page]
+		var rows := ReunionDialogueDB.exchange(page)
+		for index in rows.size():
+			var row: Dictionary = rows[index]
+			_reunion_names[index].text = str(CharacterDB.get_character(str(row.speaker)).name)
+			_reunion_names[index].add_theme_color_override("font_color",Color("#b8d9c2") if row.speaker == "mei_ling" else (Color("#e2b58a") if row.speaker == "arjun" else GameUI.GOLD))
+			_reunion_lines[index].text = str(row.text)
+	_next.text = "Return to title" if card else (("Resume" if _reunion_paused else "Pause") if film else ("Set sail" if page == ReunionDialogueDB.film_page()-1 else "Next"))
+	_skip.text = "Skip conversation" if dialogue else "Skip ending"
+	_skip.visible = not card
+	_next.disabled = not _mei_input_armed or card
+	if film and _departure_sound_page < 0:
+		_departure_sound_page = 0
+		_play_departure_sound("board")
 
 func _process_reunion() -> void:
-	if is_instance_valid(_ending_bed) and not _ending_bed.playing and not _reunion_focus_out and not GameSettings.mute_all() and GameSettings.effects_volume() > 0 and GameSettings.master_volume() > 0:
+	if not is_instance_valid(_reunion_rows): return
+	var paused := _reunion_focus_out or (page == ReunionDialogueDB.film_page() and _reunion_paused)
+	if not paused and is_instance_valid(_ending_bed) and not _ending_bed.playing and not GameSettings.mute_all() and GameSettings.effects_volume() > 0 and GameSettings.master_volume() > 0:
 		_ending_bed.play()
-	if page >= ReunionDialogueDB.TURNS.size():
-		_next.disabled = not _mei_input_armed or _page_time < float(ReunionDialogueDB.DEPARTURE_DURATIONS[page-ReunionDialogueDB.TURNS.size()])
+	_next.disabled = not _mei_input_armed or _reunion_focus_out or (page == ReunionDialogueDB.final_page() and _page_time < ReunionDialogueDB.CARD_GUARD)
+	_skip.disabled = not _mei_input_armed or _reunion_focus_out
+	if paused: return
+	if page == ReunionDialogueDB.film_page():
+		if _reunion_beat_time >= 6.5 and _departure_sound_page < 1:
+			_departure_sound_page = 1
+			_play_departure_sound("cast_off")
+		if _reunion_beat_time >= ReunionDialogueDB.FILM_SECONDS:
+			page = ReunionDialogueDB.final_page()
+			_page_time = 0
+			_reunion_beat_time = 0
+			_mei_input_cooldown = 0.2
+			_render()
 		return
-	if not _reunion_text_done:
-		var total := _caption.get_total_character_count()
-		_caption.visible_characters = mini(total,maxi(0,int((_page_time-0.25)*34)))
-		if _caption.visible_characters >= total:
-			_reunion_text_done = true
-			_next.text = "Next"
-			if is_instance_valid(_reunion_voice): _reunion_voice.stop()
-		else:
-			var shown := _caption.text.left(_caption.visible_characters)
-			var word := shown.count(" ")
-			if shown.length() > 0 and word != _reunion_voice_word and not _reunion_focus_out and not GameSettings.mute_all() and GameSettings.effects_volume() > 0 and GameSettings.master_volume() > 0:
-				_reunion_voice_word = word
-				if is_instance_valid(_reunion_voice):
-					var speaker := str(ReunionDialogueDB.turn(page).speaker)
-					_reunion_voice.stream = Sfx.dialogue_voice(speaker,word%4)
-					_reunion_voice.pitch_scale = 0.88 if speaker == "arjun" else (1.15 if speaker == "mei_ling" else 1.0)
-					_reunion_voice.play()
+	if page >= ReunionDialogueDB.film_page(): return
+	var row_index := mini(2,int(_reunion_beat_time/1.8))
+	for index in 3:
+		# All words remain readable; only the speaker's name receives emphasis.
+		_reunion_names[index].modulate.a = 1.0 if index == row_index else 0.78
+	if _reunion_beat_time < 5.4 and row_index != _reunion_voice_word:
+		_reunion_voice_word = row_index
+		if not GameSettings.mute_all() and GameSettings.effects_volume() > 0 and GameSettings.master_volume() > 0:
+			var speaker := str(ReunionDialogueDB.exchange(page)[row_index].speaker)
+			_reunion_voice.stream = Sfx.dialogue_voice(speaker,row_index)
+			_reunion_voice.pitch_scale = 0.88 if speaker == "arjun" else (1.15 if speaker == "mei_ling" else 1.0)
+			_reunion_voice.play()
+
+func _play_departure_sound(id: String) -> void:
+	if not is_instance_valid(_departure_sound): return
+	_departure_sound.stop()
+	if _reunion_focus_out or _reunion_paused or GameSettings.mute_all() or GameSettings.effects_volume() <= 0 or GameSettings.master_volume() <= 0: return
+	_departure_sound.stream = Sfx.ending_sound(id)
+	_departure_sound.play()
+
+func _stop_reunion_audio() -> void:
+	if is_instance_valid(_reunion_voice): _reunion_voice.stop()
+	if is_instance_valid(_ending_bed): _ending_bed.stop()
+	if is_instance_valid(_departure_sound): _departure_sound.stop()
 
 func _go_to_reunion_dock() -> void:
 	if _done or page == ReunionDialogueDB.final_page(): return
-	page = ReunionDialogueDB.final_page() if page >= ReunionDialogueDB.TURNS.size() else ReunionDialogueDB.TURNS.size()
+	page = ReunionDialogueDB.final_page() if page == ReunionDialogueDB.film_page() else ReunionDialogueDB.film_page()
 	_page_time = 0
 	_reunion_beat_time = 0
+	_reunion_paused = false
 	_mei_input_cooldown = 0.2
+	_stop_reunion_audio()
 	_render()
 	_canvas.queue_redraw()
 

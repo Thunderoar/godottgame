@@ -146,121 +146,197 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(story != null and story.kind == "ending", "nearby E starts the dock conversation")
 	if story == null: return
 	story.set_process(false)
+	var entry_snapshot := GameState.data.duplicate(true)
 	check.call(not game.begin_final_departure(dock) and game.world.process_mode == Node.PROCESS_MODE_DISABLED and not game.hud.visible, "one ending owns the suspended world, HUD and duplicate entry guard")
+	for action in ["interact","attack","ui_accept"]:
+		story._mei_input_armed = false
+		Input.action_press(action)
+		story._process(1)
+		story._on_next_pressed()
+		check.call(story.page == 0 and not story._mei_input_armed, "held %s cannot consume the first exchange" % action)
+		Input.action_release(action)
+		story._process(0.4)
 	story._process(120)
 	game._process(20)
 	check.call(story.page == 0 and story._reunion_text_done and GameState.data.world_time == before.world_time, "long reading pauses never advance dialogue or village time")
-	var copy := ReunionDialogueDB.turn(0)
-	copy.text = "changed"
-	check.call(ReunionDialogueDB.turn(0).text == "You're both here.", "dialogue accessors protect the authored script")
-	if capture.is_valid():
-		for page in [0,6,9,14,18,27,29]:
-			story.page = page
-			story._page_time = 3
-			story._reunion_beat_time = 2
-			story._render()
-			story._caption.visible_characters = -1
-			story._reunion_text_done = true
-			story._canvas.queue_redraw()
-			await capture.call("dock_reunion_%02d" % page)
-		for beat in 7:
-			for elapsed in ([0.5,2.2,3.8,5.8] if beat == 2 else [0.6,float(ReunionDialogueDB.DEPARTURE_DURATIONS[beat])]):
-				story.page = ReunionDialogueDB.TURNS.size()+beat
-				story._page_time = elapsed
-				story._reunion_beat_time = elapsed
-				story._render()
-				story._process(0)
-				story._canvas.queue_redraw()
-				await capture.call("departure_%d_%02d" % [beat,int(elapsed*10)])
-		story.reunion_night = true
-		story._mei_reduced = true
-		for beat in [0,2,4,5,6]:
-			story.page = ReunionDialogueDB.TURNS.size()+beat
-			story._page_time = 8
-			story._reunion_beat_time = 8
-			story._render()
-			story._process(0)
-			story._canvas.queue_redraw()
-			await capture.call("departure_night_reduced_%d" % beat)
-		story.reunion_night = false
-		story._mei_reduced = false
+	var copy := ReunionDialogueDB.exchange(0)
+	copy[0].text = "changed"
+	check.call(ReunionDialogueDB.exchange(0)[0].id == "finally" and ReunionDialogueDB.exchange(0)[0].text != "changed", "exchange accessors protect the authored script")
+	var word_count := 0
+	var speaker_counts := {"adam":0,"arjun":0,"mei_ling":0}
+	for row in ReunionDialogueDB.TURNS:
+		word_count += str(row.text).split(" ",false).size()
+		speaker_counts[row.speaker] += 1
+	check.call(ReunionDialogueDB.TURNS.size() == 9 and word_count <= 60 and speaker_counts.values().all(func(n): return n == 3), "short banter gives each friend three lines within the reading budget")
 	var motion := GameSettings.reduce_motion()
 	var quality := GameSettings.effects_quality()
 	var mute := GameSettings.mute_all()
-	story.page = 9
+	if capture.is_valid():
+		for id in ReunionDialogueDB.EXCHANGES:
+			story.page = ReunionDialogueDB.exchange_page(id)
+			story._page_time = 2.2
+			story._reunion_beat_time = 2.2
+			story._render()
+			story._canvas.queue_redraw()
+			await capture.call("banter_"+id)
+			var contained := true
+			for label in story._reunion_lines:
+				contained = contained and story._caption_panel.get_global_rect().encloses(label.get_global_rect()) and label.get_global_rect().end.y <= story._next.get_global_rect().position.y
+			check.call(contained, "%s dialogue rows fit above the controls at this resolution" % id)
+		for elapsed in [0.0,0.5,2.2,3.3,3.7,5.8,6.5,8.0,10.5,13.0,15.0,16.8]:
+			story.page = ReunionDialogueDB.film_page()
+			story._page_time = elapsed
+			story._reunion_beat_time = elapsed
+			story._render()
+			story._canvas.queue_redraw()
+			await capture.call("sailing_%03d" % int(elapsed*10))
+		GameSettings.set_value("reduce_motion",true,false)
+		GameSettings.set_value("effects_quality","low",false)
+		story.reunion_night = true
+		story._mei_reduced = true
+		for elapsed in [0.5,3.3,5.8,10.5,15.0]:
+			story.page = ReunionDialogueDB.film_page()
+			story._reunion_beat_time = elapsed
+			story._render()
+			story._canvas.queue_redraw()
+			await capture.call("sailing_night_reduced_%03d" % int(elapsed*10))
+		story.ending_pet = ""
+		story.page = ReunionDialogueDB.film_page()
+		story._reunion_beat_time = 10.5
+		story._render()
+		await capture.call("sailing_without_companion")
+		story.ending_pet = GameState.active_pet_id() if GameState.has_living_pet() else ""
+		story.page = ReunionDialogueDB.final_page()
+		story._render()
+		await capture.call("ending_card_night")
+		story.reunion_night = false
+		story._render()
+		await capture.call("ending_card_day")
+	story.page = ReunionDialogueDB.exchange_page("captain_snacks")
 	story._page_time = 0
+	story._reunion_beat_time = 0
 	story._render()
 	GameSettings.set_value("reduce_motion",true,false)
 	GameSettings.set_value("effects_quality","low",false)
 	GameSettings.set_value("mute_all",true,false)
 	story._process(1)
-	check.call(story.page == 9 and story._mei_reduced and not story._reunion_voice.playing, "live motion, low effects and mute preserve the full conversation")
+	check.call(story.page == ReunionDialogueDB.exchange_page("captain_snacks") and story._mei_reduced and not story._reunion_voice.playing and story._reunion_text_done, "live motion, low effects and mute preserve fully readable banter")
 	GameSettings.set_value("reduce_motion",motion,false)
 	GameSettings.set_value("effects_quality",quality,false)
 	GameSettings.set_value("mute_all",mute,false)
+	story._process(0)
+	check.call(story._mei_reduced == motion, "Reduce Motion can also be turned off during the ending")
 	story._notification(Node.NOTIFICATION_WM_WINDOW_FOCUS_OUT)
 	check.call(not story._reunion_voice.playing and not story._ending_bed.playing and not story._departure_sound.playing, "focus loss stops all story-owned audio")
 	story._notification(Node.NOTIFICATION_WM_WINDOW_FOCUS_IN)
 	story.page = 0
 	story._page_time = 0
+	story._reunion_beat_time = 0
 	story._render()
 	await _pointer(game,story._next,false)
-	check.call(story.page == 0 and story._reunion_text_done, "mouse Next reveals the line first")
+	check.call(story.page == 1 and story._reunion_text_done, "one mouse Next advances a full exchange without a reveal-text press")
+	story._on_next_pressed()
+	check.call(story.page == 1, "a repeated press in the same gesture cannot skip an exchange")
 	story._process(0.25)
 	await _pointer(game,story._next,true)
-	check.call(story.page == 1, "touch and emulated mouse advance exactly one turn")
+	check.call(story.page == 2 and story._next.text == "Set sail", "touch and emulated mouse advance exactly one exchange")
 	story._process(0.25)
 	story._next.grab_focus()
 	await _enter(game)
-	check.call(story.page == 1 and story._reunion_text_done, "keyboard activation reveals the current line")
-	story._process(0.25)
-	await _enter(game)
-	check.call(story.page == 2, "fresh keyboard activation advances one turn")
+	check.call(story.page == ReunionDialogueDB.film_page() and story._next.text == "Pause", "fresh keyboard Set sail starts the continuous film")
 	story._next.release_focus()
-	# Every turn skips to the actual departure; never consumes completion.
-	for index in ReunionDialogueDB.TURNS.size():
+	# Skip every exchange and every film shot, without committing completion.
+	for index in ReunionDialogueDB.EXCHANGES.size():
 		story.page = index
 		story._render()
 		story._process(0.3)
 		story._on_skip_pressed()
-		check.call(story.page == ReunionDialogueDB.TURNS.size() and not bool(GameState.campaign().get("departure_seen",false)), "Skip conversation at turn %d reaches departure without completion" % (index+1))
-	# Inspect sampled continuity in addition to rendered consecutive frames.
-	for beat in 6:
-		var page := ReunionDialogueDB.TURNS.size()+beat
-		var a := ReunionRenderer.sample(page,0,false,"high",false)
-		var b := ReunionRenderer.sample(page,float(ReunionDialogueDB.DEPARTURE_DURATIONS[beat]),false,"high",false)
-		if beat == 2: check.call(int(a.boarded) == 0 and int(b.boarded) == 3, "boarding moves all three from dock posts onto the deck")
-		if beat == 3: check.call(not a.rope_released and b.rope_released and b.ship_at.x > a.ship_at.x, "cast off releases mooring before visible sailing")
-		if beat == 4: check.call(b.ship_at.x > a.ship_at.x and b.ship_scale < a.ship_scale, "ship separates from BESUT and recedes")
-	var cast_off := ReunionRenderer.sample(33,4,false,"high",false)
-	var departing := ReunionRenderer.sample(34,0,false,"high",false)
-	check.call(cast_off.ship_at == departing.ship_at, "wide sailing shot continues from the cast-off position without jumping backward")
-	for id in ["adam","arjun","mei_ling"]:
-		var previous: Vector2 = ReunionRenderer.sample(32,0,false,"high",false).feet[id]
-		var continuous := true
-		for frame in range(1,361):
-			var at: Vector2 = ReunionRenderer.sample(32,float(frame)/60,false,"high",false).feet[id]
-			if at.distance_to(previous) > 8: continuous = false
-			previous = at
-		check.call(continuous, "%s follows continuous dock, gangplank and deck positions" % id)
+		check.call(story.page == ReunionDialogueDB.film_page() and not bool(GameState.campaign().departure_seen), "Skip conversation at exchange %d starts the film without completion" % index)
+	for index in ReunionDialogueDB.SHOTS.size():
+		story.page = ReunionDialogueDB.film_page()
+		story._reunion_beat_time = float(ReunionDialogueDB.SHOT_STARTS[index])+0.3
+		story._render()
+		story._process(0.4)
+		story._on_skip_pressed()
+		check.call(story.page == ReunionDialogueDB.final_page() and not bool(GameState.campaign().departure_seen), "Skip ending in %s reaches the card without completion" % ReunionDialogueDB.SHOTS[index])
+	var film := ReunionDialogueDB.film_page()
+	var start := ReunionRenderer.sample(film,0,false,"high",false)
+	var aboard := ReunionRenderer.sample(film,5.8,false,"high",false)
+	var released := ReunionRenderer.sample(film,6.5,false,"high",false)
+	var away := ReunionRenderer.sample(film,13,false,"high",false)
+	check.call(int(start.boarded) == 0 and int(aboard.boarded) == 3 and not aboard.rope_released and released.rope_released, "all three board before the mooring releases")
+	check.call(released.ship_at == start.ship_at and away.ship_at.x > released.ship_at.x and away.ship_scale < released.ship_scale, "the mooring releases before the ship visibly departs and recedes")
+	check.call(ReunionRenderer.sample(film,3.3,false,"low",false).steady and ReunionRenderer.sample(film,3.3,false,"low",false).bag_wobble != 0, "Mei's steadying gesture accompanies Arjun's bag gag even at low quality")
+	check.call(ReunionRenderer.sample(film,3.3,true,"low",true).bag_wobble == 0 and ReunionRenderer.sample(film,3.3,true,"low",true).steady, "Reduce Motion preserves the teamwork without wobble")
+	for reduced in [false,true]:
+		for id in ["adam","arjun","mei_ling"]:
+			var previous: Vector2 = ReunionRenderer.sample(film,0,reduced,"high",false).feet[id]
+			var continuous := true
+			for frame in range(1,1021):
+				var at: Vector2 = ReunionRenderer.sample(film,float(frame)/60,reduced,"high",false).feet[id]
+				if at.distance_to(previous) > 8: continuous = false
+				previous = at
+			check.call(continuous, "%s has continuous gangplank and sailing positions (reduced=%s)" % [id,reduced])
+	var on_water := true
+	for frame in range(402,1021):
+		var state := ReunionRenderer.sample(film,float(frame)/60,false,"high",false)
+		# The authored hull is 112px high and the sea begins at y=100.
+		on_water = on_water and float(state.ship_at.y)+112.0*float(state.ship_scale) >= 100
+	check.call(on_water, "the receding hull stays on the sea through the final horizon")
+	# Named shot boundaries share one clock: no cast-off or horizon reset.
+	for boundary in [6.0,9.0,13.0]:
+		var a := ReunionRenderer.sample(film,boundary-0.001,false,"high",false)
+		var b := ReunionRenderer.sample(film,boundary+0.001,false,"high",false)
+		check.call(a.ship_at.distance_to(b.ship_at) < 0.1 and absf(a.ship_scale-b.ship_scale) < 0.01, "ship position and scale remain continuous at %.0fs" % boundary)
 	story.page = 0
+	story._reunion_beat_time = 0
 	story._render()
-	for index in ReunionDialogueDB.TURNS.size():
+	for index in ReunionDialogueDB.EXCHANGES.size():
+		story._process(4.5)
 		story.advance()
-		story.advance()
-	check.call(story.page == ReunionDialogueDB.TURNS.size(), "natural reading reaches the departure sequence")
-	for beat in 6:
-		var previous := story.page
-		story.advance()
-		check.call(story.page == previous, "departure beat %d holds until its motion is complete" % beat)
-		story._process(float(ReunionDialogueDB.DEPARTURE_DURATIONS[beat])+0.1)
-		story.advance()
-	check.call(story.page == ReunionDialogueDB.final_page() and not bool(GameState.campaign().get("departure_seen",false)), "sailing reaches the final card without premature save completion")
+	check.call(story.page == film and story._reunion_beat_time == 0, "three natural advances reach the film after comfortable reading")
+	story._process(3.3)
+	var paused_at := story._reunion_beat_time
+	story.advance()
+	story._process(30)
+	check.call(story._reunion_paused and story._reunion_beat_time == paused_at and story._next.text == "Resume", "Pause freezes the ship and bag gag indefinitely")
+	story._notification(Node.NOTIFICATION_WM_WINDOW_FOCUS_OUT)
+	story._process(30)
+	story._notification(Node.NOTIFICATION_WM_WINDOW_FOCUS_IN)
+	story._process(1)
+	check.call(story._reunion_paused and story._reunion_beat_time == paused_at, "focus return respects an existing manual pause")
+	story.advance()
+	story._process(1)
+	paused_at = story._reunion_beat_time
+	story._notification(Node.NOTIFICATION_WM_WINDOW_FOCUS_OUT)
+	story._process(30)
+	story.advance()
+	check.call(story._reunion_beat_time == paused_at and not story._reunion_paused and not bool(GameState.campaign().departure_seen), "focus loss freezes running film and blocks activation without changing manual pause")
+	story._notification(Node.NOTIFICATION_WM_WINDOW_FOCUS_IN)
+	story._process(ReunionDialogueDB.FILM_SECONDS-paused_at-0.01)
+	check.call(story.page == film, "continuous film remains active until its final frame")
+	story._process(0.02)
+	check.call(story.page == ReunionDialogueDB.final_page() and not bool(GameState.campaign().departure_seen), "film automatically reaches the card at 17 seconds without saving")
+	story.advance()
+	check.call(game._active_story == story and not story.departure_committed, "arrival input cannot immediately dismiss the final card")
+	Input.action_press("ui_accept")
+	story._process(1)
+	story._on_next_pressed()
+	check.call(game._active_story == story and not story._mei_input_armed, "held arrival input remains blocked after the final-card time guard")
+	Input.action_release("ui_accept")
+	story._process(0.4)
+	var owned_serial := GameState.journey_serial
+	GameState.journey_serial += 1
+	story.advance()
+	check.call(game._active_story == story and not story.departure_committed and not bool(GameState.campaign().departure_seen), "a stale journey cannot commit from the ending card")
+	GameState.journey_serial = owned_serial
+	for field in ["inventory","pets","structures","portals","forest_health","settlement_layout","gold"]:
+		check.call(JSON.parse_string(JSON.stringify(GameState.data.get(field))) == JSON.parse_string(JSON.stringify(entry_snapshot.get(field))), "long reading, capture, pause and skip preserve entry %s" % field)
 	# A cancelled ending preserves progress and restores normal controls.
 	story.cancel()
 	await game.get_tree().process_frame
 	check.call(not game._story_active and not bool(GameState.campaign().get("departure_seen",false)) and not game.player().controls_locked and game.hud.visible, "cancel at final card restores the world without consuming departure")
-	for phase in [0,30,31,32,33,34,35,36]:
+	for phase in range(ReunionDialogueDB.final_page()+1):
 		check.call(game.begin_final_departure(dock), "ending can start fresh after cancellation")
 		var interrupted := game._active_story
 		interrupted.set_process(false)
@@ -269,6 +345,17 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 		interrupted.cancel()
 		await game.get_tree().process_frame
 		check.call(not game._story_active and not game.player().controls_locked and game.world.process_mode != Node.PROCESS_MODE_DISABLED and not bool(GameState.campaign().get("departure_seen",false)), "cancellation at phase %d restores controls and preserves pending departure" % phase)
+	for elapsed in ReunionDialogueDB.SHOT_STARTS:
+		check.call(game.begin_final_departure(dock), "each film shot can start a cancellation fixture")
+		var interrupted := game._active_story
+		interrupted.set_process(false)
+		interrupted.page = ReunionDialogueDB.film_page()
+		interrupted._reunion_beat_time = float(elapsed)+0.2
+		interrupted._render()
+		interrupted.advance() # Cancel while manually paused.
+		interrupted.cancel()
+		await game.get_tree().process_frame
+		check.call(not game._story_active and not game.player().controls_locked and not bool(GameState.campaign().departure_seen), "cancelling paused film at %.1fs preserves the pending ending" % float(elapsed))
 	# Actual pointer entry, skip ending, durable save and covered title transition.
 	await _pointer(game,dock._hint,true)
 	check.call(game._active_story != null, "the visible contextual Embark banner also accepts a nearby touch")
@@ -277,6 +364,9 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	await _world_pointer(game,dock.position,false)
 	story = game._active_story
 	check.call(story != null, "nearby mouse starts the same guarded ending")
+	# Cancellation deliberately resumes village simulation between fixtures. Compare
+	# each ending to its own entry, so legitimate intervening repairs are not failures.
+	var completion_snapshot := GameState.data.duplicate(true)
 	if story != null:
 		story.set_process(false)
 		story._process(0.4)
@@ -303,7 +393,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(GameState.gold() == int(before.gold) and GameState.data.campaign.ocean_stage == before.campaign.ocean_stage and GameState.data.expedition == before.expedition and not GameState.sea_journey_available(), "ending pays no rewards and preserves the completed sea lock and checkpoints")
 	for field in ["inventory","pets","structures","portals","forest_health","settlement_layout"]:
 		# JSON numbers load as floats; compare both sides in the persisted format.
-		check.call(JSON.parse_string(JSON.stringify(GameState.data.get(field))) == JSON.parse_string(JSON.stringify(before.get(field))), "departure preserves saved %s" % field)
+		check.call(JSON.parse_string(JSON.stringify(GameState.data.get(field))) == JSON.parse_string(JSON.stringify(completion_snapshot.get(field))), "departure preserves its entry %s" % field)
 	game._remove_title()
 	await game._load_lobby(false)
 	check.call(_heroes(game).size() == 2 and not _heroes(game)[0].dock_waiting and not game.world.final_departure.is_interactable_available(), "earlier-time free play restores defenders without another departure")
@@ -320,9 +410,23 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	game._check_campaign_ending()
 	await _world_pointer(game,game.world.final_departure.position,true)
 	check.call(game._active_story != null, "nearby touch starts the ending once in the opposite rescue order (context: %s)" % game.final_departure_reason(game.world.final_departure))
-	game._clear_world()
+	game._active_story.cancel()
 	await game.get_tree().process_frame
-	check.call(not game._story_active and not bool(GameState.campaign().departure_seen), "world replacement cancels the ending without completion")
+	for phase in range(ReunionDialogueDB.final_page()+1):
+		await game._load_lobby(false)
+		var invitation := (game.world as Lobby).final_departure
+		game.player().position = invitation.position
+		check.call(game.begin_final_departure(invitation), "world-handoff fixture starts phase %d" % phase)
+		var interrupted := game._active_story
+		if interrupted == null: continue
+		interrupted.set_process(false)
+		interrupted.page = phase
+		interrupted._reunion_beat_time = 10.5 if phase == ReunionDialogueDB.film_page() else 0.0
+		interrupted._render()
+		game._clear_world()
+		await game.get_tree().process_frame
+		check.call(game._active_story == null and not game._story_active and not bool(GameState.campaign().departure_seen), "world replacement cancels phase %d without saving completion" % phase)
+
 	# Mei Ling-first, then the real incoming Arjun passenger-to-dock handoff.
 	game._arjun_returning = true
 	game._return_to_harbour = true

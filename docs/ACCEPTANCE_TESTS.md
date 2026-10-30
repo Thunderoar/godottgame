@@ -2892,3 +2892,77 @@ Evidence under `%LOCALAPPDATA%/Temp/`:
 - Final import: `tidesworn-tests-62df91a7f9534082ad12ecf98aa0ff44`.
 
 See `DEVELOPER_MODE.md` for usage, ownership and checkpoint behavior.
+
+
+## 2026-10-30 - Short, playful dock ending
+
+Replaces the 30-turn / 204-word reunion and seven manually advanced departure
+pages with nine lines / 40 words on three fully readable cards. Next advances one
+whole exchange; Set sail starts a continuous 17-second film. The timeline runs
+boarding (0-6s), cast-off (6-9s), farewell (9-13s), then open horizon (13-17s).
+There are no intermediate Continue stops, narrated departure captions or repeated
+final inscriptions. The final card still requires deliberate Return to title.
+
+Original cached salute, proud, wave and steady poses accompany the Captain Snacks
+banter. Arjun reveals three leaf-wrapped lunches; Mei Ling steadies his wobbling
+bag while boarding. All three and the optional living companion board before the
+mooring releases. Ship motion/scale share one cumulative clock, stay continuous
+across shot boundaries, and keep the receding hull on the sea. BESUT dissolves into
+open water without changing the destination or the live journey's sea checkpoint.
+
+Pause/Resume freezes film time, actors, water and owned audio. Focus loss also
+freezes playback; focus return respects manual pause. Reduce Motion suppresses
+bag wobble/ambient drift while preserving the essential boarding and helping
+poses. Every card remains readable indefinitely, and voices never gate input.
+The final card uses released fresh input plus a 0.6-second guard. Game and
+GameState retain their existing world suspension, cancellation, save-failure
+retry, completion flags, title handoff and Before departure free-play ownership.
+Generic story previews can still inspect a different kind after constructing the
+intro interface without trying to access absent ending-only controls.
+
+Fresh Windows Godot 4.7.2 verification:
+
+| Route | Result |
+| --- | --- |
+| Canonical isolated gameplay | **6,621 checks, PASS, exit 0** |
+| Native Reunion / 832x480 | **144 checks, PASS, exit 0** |
+| Native Reunion / 1280x720 | **144 checks, PASS, exit 0** |
+| Native Developer / 832x480 | **86 checks, PASS, exit 0** |
+| Native Developer / 1280x720 | **86 checks, PASS, exit 0** |
+
+Final runtime logs have no `[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers. The ending
+fixture intentionally makes its isolated save path unwritable once and verifies
+rollback plus retry. The developer fixture independently tests a failed test-save
+fork. Those `Could not save game: 12` warnings are expected negative-test evidence;
+the full gate contains both. Isolated import also succeeds with the pre-existing
+Android build-tools directory warning. `git diff --check` passes.
+
+The focused fixture covers held E/F/Enter, repeated activation, actual dispatched
+mouse/touch/keyboard input, fully visible text, indefinite reading, every exchange
+and shot's Skip path, manual/focus pause, live settings, muted and pet-free
+presentation, 60Hz actor-path continuity, waterline continuity, cancelled/retired
+worlds in every phase, stale journey ownership, both rescue orders, real incoming
+Arjun docking, old completed reunions, save retry, JSON reload, completion title
+and earlier-time exploration. Persistence comparisons use each story's own entry
+snapshot: village repair may legitimately proceed between cancelled fixtures.
+Developer reviews finish the real ending on the protected test save and verify
+normal-save bytes stay unchanged.
+
+Native captures inspected at both sizes include all three banter cards, multiple
+gangplank/boarding positions, the bag/helping gesture, all-three-aboard, cast-off,
+farewell, horizon and day/night final cards. Night/Reduce Motion/low-quality and
+no-companion frames were also captured. The natural-reading fixture allocates
+4.5 seconds per card plus 17 seconds of film (30.5 simulated seconds); this is not
+a measured human reading time. No physical phone, audio-listening session or
+export certification is claimed by the synthetic input/silent native reviews.
+
+Final evidence under `%LOCALAPPDATA%/Temp/`:
+
+- Full gate: `tidesworn-tests-a0dcbdee65144eea896d1c30b213a2d8`.
+- Reunion 832x480: `tidesworn-tests-f8a5304d052c4d75a3bcb43fdfc66a23`.
+- Reunion 1280x720: `tidesworn-tests-ef22787b14ca44699db4be3f8cd38c57`.
+- Developer 832x480: `tidesworn-tests-3e2104c2da584c4a90f6c9cf623b5ba8`.
+- Developer 1280x720: `tidesworn-tests-44bcf4afd76146d8a6f5f26c2784cfbc`.
+- Final isolated import: `tidesworn-tests-509e02b46158401c9f406d8269e42c16`.
+
+See `SHORT_FUN_DOCK_ENDING_PLAN.md` for the approved script and implemented pacing.

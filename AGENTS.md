@@ -83,6 +83,17 @@ rescue route stays closed after Arjun is freed. `FinalDeparture` is separate fro
 Use `-Reunion` and `-OceanLevels`. See `docs/DOCK_DEPARTURE_ENDING_PLAN.md`. This
 supersedes the earlier automatic cottage reunion and preparation-only tag.
 
+**2026-10-30 shorter playful ending:** Embark now opens three fully readable
+banter cards (nine lines / 40 words), then Set sail starts one continuous 17-second
+film: boarding, cast-off, farewell and open horizon. No typewriter reveal presses
+or intermediate Continue pages. Original salute/food-bag/helping-hand poses carry
+the humor; all three board before mooring release. Pause/Resume and focus loss
+freeze cinematic time/audio; focus return preserves manual pause. The final card
+requires fresh input and keeps the existing departure transaction/title/free-play
+contract. `ReunionDialogueDB` owns named exchanges/shots; use `film_page()` and
+`final_page()` instead of former turn offsets. Review uses `-Reunion` and
+`-Developer`; see `docs/SHORT_FUN_DOCK_ENDING_PLAN.md` and latest acceptance.
+
 **2026-10-30 developer mode:** Settings on title, land and ocean now expose a
 masked developer-code entry. Only the digest is stored; access is volatile for
 this app process. Game-owned DeveloperPanel deliberately suspends its world and

@@ -1,7 +1,7 @@
 class_name ReunionArt
 extends RefCounted
 ## Finite original pixels; courtyard, listening poses and a moored dock epilogue.
-const MOODS := ["soft", "smile", "neck", "down", "cup", "resolved"]
+const MOODS := ["soft", "smile", "neck", "down", "cup", "resolved", "proud", "salute", "wave", "steady"]
 
 static func courtyard(night: bool) -> Texture2D:
 	return PixelArt.cached_texture("reunion/courtyard/%s/v1" % night, func() -> Image:
@@ -38,7 +38,7 @@ static func courtyard(night: bool) -> Texture2D:
 		return img)
 
 static func actor(id: String, mood: String, posture: int, left: bool) -> Texture2D:
-	return PixelArt.cached_texture("reunion/actor/%s/%s/%d/%s/v2" % [id,mood,posture,left],func() -> Image:
+	return PixelArt.cached_texture("reunion/actor/%s/%s/%d/%s/v3" % [id,mood,posture,left],func() -> Image:
 		var img := PixelArt.image(48,60)
 		var pose := MeiLingRescueArt.Pose.IDLE
 		if posture >= 3: pose = MeiLingRescueArt.Pose.WALK_A if posture == 3 else MeiLingRescueArt.Pose.WALK_B
@@ -52,17 +52,20 @@ static func actor(id: String, mood: String, posture: int, left: bool) -> Texture
 				PixelArt.rect(img,x-2,58,9,2,Color("#594938"))
 		var c := CharacterDB.get_character(id)
 		var shirt: Color = Color("#4e7667") if id == "mei_ling" else c.accent
-		if mood in ["cup","neck","resolved"]:
+		if mood in ["cup","neck","resolved","proud","salute","wave","steady"]:
 			PixelArt.rect(img,31,31+offset,12,14,Color.TRANSPARENT)
 			var hand := Vector2i(38,31+offset)
-			if mood == "neck": hand = Vector2i(34,21+offset)
+			if mood in ["neck","salute"]: hand = Vector2i(34,20+offset)
+			if mood == "wave": hand = Vector2i(42,17+offset)
+			if mood == "proud": hand = Vector2i(40,34+offset)
+			if mood == "steady": hand = Vector2i(46,30+offset)
 			PixelArt.line(img,32,32+offset,hand.x,hand.y,shirt.lightened(0.18))
 			PixelArt.line(img,33,33+offset,hand.x+1,hand.y+1,shirt)
 			PixelArt.rect(img,hand.x-1,hand.y,4,3,c.tint)
 			if mood == "cup":
 				PixelArt.rect(img,hand.x-2,hand.y-5,6,8,Color("#81a8a1"))
 				PixelArt.rect(img,hand.x-1,hand.y-7,4,2,Color("#d6bd87"))
-		if mood == "smile":
+		if mood in ["smile","proud","salute","wave","steady"]:
 			PixelArt.hline(img,27,24+offset,4,c.tint)
 			PixelArt.hline(img,27,25+offset,3,Color("#855744"))
 		if mood == "down":

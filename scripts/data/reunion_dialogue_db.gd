@@ -1,53 +1,56 @@
 class_name ReunionDialogueDB
 extends RefCounted
-## One shared conversation for either rescue order. Completion remains campaign.ending_seen.
-const TITLES := ["TOGETHER AT THE DOCK", "THE FISHING TRIP", "WHAT THEY COULDN'T SAY", "A PLAN TOGETHER", "WHO HELPED THEM", "THE NEXT STEP", "FAMILIAR COMPANY", "WHEN THEY'RE READY"]
+## Three reader-paced exchanges, one continuous film, one deliberate completion.
+const EXCHANGES := ["three_again", "captain_snacks", "time_to_go"]
+const TITLES := ["Three again", "Captain Snacks", "Time to go"]
 const TURNS := [
-	{"beat":0,"speaker":"adam","mood":"soft","text":"You're both here."},
-	{"beat":0,"speaker":"arjun","mood":"smile","text":"Still counting?"},
-	{"beat":0,"speaker":"adam","mood":"soft","text":"Just making sure."},
-	{"beat":0,"speaker":"mei_ling","mood":"soft","text":"Take your time. We're not going anywhere yet."},
-	{"beat":1,"speaker":"arjun","mood":"neck","text":"About that fishing trip..."},
-	{"beat":1,"speaker":"mei_ling","mood":"smile","text":"Please don't tell me you nearly caught it."},
-	{"beat":1,"speaker":"arjun","mood":"down","text":"I was going to say I'm sorry."},
-	{"beat":1,"speaker":"adam","mood":"soft","text":"You couldn't have known what was down there."},
-	{"beat":1,"speaker":"mei_ling","mood":"soft","text":"None of us could."},
-	{"beat":2,"speaker":"mei_ling","mood":"cup","text":"When the fighting stopped outside my cell, I thought the fiend had won."},
-	{"beat":2,"speaker":"adam","mood":"soft","text":"I was still there."},
-	{"beat":2,"speaker":"mei_ling","mood":"soft","text":"I know that now."},
-	{"beat":2,"speaker":"arjun","mood":"down","text":"I thought I was the only one left."},
-	{"beat":2,"speaker":"adam","mood":"down","text":"I didn't know where to look. I just couldn't stop."},
-	{"beat":3,"speaker":"mei_ling","mood":"resolved","text":"Next time, we keep each other in sight."},
-	{"beat":3,"speaker":"arjun","mood":"soft","text":"And if we get separated?"},
-	{"beat":3,"speaker":"mei_ling","mood":"resolved","text":"We find a place to meet. We leave a sign. Something."},
-	{"beat":3,"speaker":"adam","mood":"resolved","text":"Then we make a plan before we go."},
-	{"beat":4,"speaker":"adam","mood":"soft","text":"Rahim gave me a place to rest. Everyone here helped me keep looking."},
-	{"beat":4,"speaker":"mei_ling","mood":"soft","text":"They were waiting when I came through the rift."},
-	{"beat":4,"speaker":"arjun","mood":"resolved","text":"Then we thank them properly. All three of us."},
-	{"beat":5,"speaker":"mei_ling","mood":"soft","text":"What do we do now?"},
-	{"beat":5,"speaker":"adam","mood":"resolved","text":"We work out where to go. Together."},
-	{"beat":5,"speaker":"arjun","mood":"smile","text":"First, I want a proper look at that boat."},
-	{"beat":5,"speaker":"mei_ling","mood":"resolved","text":"Water. Food. A route. Then the boat."},
-	{"beat":5,"speaker":"arjun","mood":"smile","text":"You've already made a list?"},
-	{"beat":5,"speaker":"mei_ling","mood":"smile","text":"Someone has to."},
-	{"beat":6,"speaker":"adam","mood":"smile","text":"I'm glad it's you two."},
-	{"beat":6,"speaker":"arjun","mood":"smile","text":"Who else would put up with us?"},
-	{"beat":6,"speaker":"mei_ling","mood":"resolved","text":"Come on. Let's see what needs doing."},
+	{"id":"finally","beat":0,"speaker":"adam","mood":"soft","text":"All three. Finally."},
+	{"id":"no_fishing","beat":0,"speaker":"arjun","mood":"smile","text":"New rule: no fishing."},
+	{"id":"tentacles","beat":0,"speaker":"mei_ling","mood":"smile","text":"A plan with fewer tentacles. I like it."},
+	{"id":"snacks","beat":1,"speaker":"arjun","mood":"proud","text":"I brought snacks instead."},
+	{"id":"captain","beat":1,"speaker":"mei_ling","mood":"salute","text":"Captain Snacks. A much safer career."},
+	{"id":"missed_this","beat":1,"speaker":"adam","mood":"smile","text":"You two... I missed this."},
+	{"id":"thanks","beat":2,"speaker":"adam","mood":"wave","text":"Thanks for everything, BESUT."},
+	{"id":"aboard","beat":2,"speaker":"mei_ling","mood":"salute","text":"All aboard, Captain."},
+	{"id":"promotion","beat":2,"speaker":"arjun","mood":"proud","text":"Best promotion ever."},
 ]
 const DOCK_TEXT := "Together, wherever the tide leads."
-const DEPARTURE_TITLES := ["READY TOGETHER", "THANK YOU, BESUT", "ALL ABOARD", "CASTING OFF", "UNTIL WE MEET AGAIN", "THE OPEN HORIZON", "TOGETHER"]
-const DEPARTURE_TEXT := ["Water, food, a route. This time, they prepare together.", "For shelter. For kindness. For helping them find each other. Thank you, BESUT.", "Mei Ling brings the supplies. Arjun lends a hand. Adam joins them aboard.", "Three friends aboard. One last rope, and a new journey begins.", "BESUT grows smaller behind them. Its kindness goes with them.", "Adam, Arjun and Mei Ling face the open sea. Together.", DOCK_TEXT]
-const DEPARTURE_DURATIONS := [3.0,4.0,6.0,4.0,5.0,4.0,2.0]
+const FILM_SECONDS := 17.0
+const CARD_GUARD := 0.6
+const SHOTS := ["boarding", "cast_off", "farewell", "horizon"]
+const SHOT_STARTS := [0.0, 6.0, 9.0, 13.0]
+const SHOT_ENDS := [6.0, 9.0, 13.0, FILM_SECONDS]
+
+static func film_page() -> int:
+	return EXCHANGES.size()
 
 static func final_page() -> int:
-	return TURNS.size()+DEPARTURE_TEXT.size()-1
+	return film_page()+1
+
+static func exchange_page(id: String) -> int:
+	return EXCHANGES.find(id)
+
+static func exchange(index: int) -> Array:
+	var result: Array = []
+	for row in TURNS:
+		if int(row.beat) == index: result.append(row.duplicate(true))
+	return result
 
 static func turn(index: int) -> Dictionary:
-	if index >= TURNS.size(): return {"beat":7,"speaker":"","mood":"resolved","text":DOCK_TEXT}
 	return TURNS[clampi(index,0,TURNS.size()-1)].duplicate(true)
+
+static func shot_at(elapsed: float) -> int:
+	for index in SHOT_ENDS.size():
+		if elapsed < float(SHOT_ENDS[index]): return index
+	return SHOTS.size()-1
 
 static func lines() -> Array:
 	var result: Array = []
-	for row in TURNS: result.append(str(row.text))
-	result.append_array(DEPARTURE_TEXT)
+	for index in EXCHANGES.size():
+		var text := ""
+		for row in exchange(index):
+			text += "%s: %s\n" % [CharacterDB.get_character(str(row.speaker)).name,row.text]
+		result.append(text.strip_edges())
+	result.append("") # Film tells the story through action, without narration.
+	result.append("") # Renderer owns the inscription; caption is for save errors.
 	return result

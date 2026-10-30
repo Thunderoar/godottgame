@@ -1,6 +1,6 @@
 # Dock departure ending plan
 
-Planning date: 2026-10-30. Status: implemented; see the newest dock-departure section in `ACCEPTANCE_TESTS.md` for current validation. The following records the approved design.
+Planning date: 2026-10-30. Status: implemented; see the newest dock-departure section in `ACCEPTANCE_TESTS.md` for current validation. The following records the original approved design. The later `SHORT_FUN_DOCK_ENDING_PLAN.md` supersedes its long conversation and seven manually advanced departure pages: current playback uses three short banter cards and one continuous 17-second film.
 
 ## Confirmed experience
 
