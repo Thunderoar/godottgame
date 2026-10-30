@@ -9,6 +9,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	game.set_process(false)
 	GameState.autosave_enabled = false
 	GameState.data = GameState._make_default("adam")
+	GameState.data.portal_origin.opened = true # Already-open exploration fixture.
 	GameState.data.equipped.armor = ""
 	GameState._emit_all()
 	GameState.start_expedition(RealmDB.PORTAL)

@@ -8,6 +8,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	GameState.autosave_enabled = false
 	game.set_process(false)
 	GameState.data = GameState._make_default("adam")
+	GameState.data.portal_origin.opened = true # Exploration fixture; origin has its own end-to-end suite.
 	GameState._emit_all()
 	await game._load_lobby(false)
 	await game.get_tree().process_frame

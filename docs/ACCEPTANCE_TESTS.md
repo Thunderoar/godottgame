@@ -2335,3 +2335,120 @@ This supersedes the earlier Abyss Monarch/final-portal rescue requirement.
   both; tutorial/title/guide/objective fixtures use the new rescue ownership.
 
 Validation results are recorded after execution in the external verification ledger.
+
+## Individual fire portals and coordinated shore/forest reveal (2026-10-30)
+
+Every newly allocated village fire monster, including emergency additions, now
+has its own small ember portal at a separately validated land position. Cached
+pixel poses show ember, opening seam, core, narrow crossing, low reformation and
+tree attention. Portals seal behind their individual occupants. Saved survivors
+restore directly without replaying an entrance. Fire combat and burning remain
+silent, with existing stats, targeting, collision, damage timing and rewards.
+
+Game coordinates one first-arrival presentation: shore-only remains eight seconds,
+fire-only lasts 10.5 seconds, and both first introductions share 14.5 seconds with
+a covered shore-to-forest cut, one Skip control and one return to Adam. Both species
+stay cosmetic until the final delivery. All shore followers finish landing before
+handoff; fire feet, facing, rest textures and opacity match their real bodies.
+Later arrivals and reinforcements use an eight-world-second environmental warning
+without taking controls or camera. Mixed captions show separate species bearings
+and reserve space clear of the objectives.
+
+GameState owns independent seen flags, stable pending batch identities, fixed
+numeric fire points and warning origins. The ordinary wave and emergency fire
+reservations save independently. Exact-batch delivery captures survivors and
+completion in one synchronous transaction. Legacy saves/pending waves migrate;
+blocked points, duplicate callbacks, dawn and replaced worlds cannot duplicate
+enemies or mark unsuccessful introductions seen. The historical 64-tree forest
+fixture and construction RNG remain unchanged. Variable night profiles are still
+a separate proposal.
+
+The canonical gate now includes `tools/fire_arrival_checks.gd`. The Windows
+`-Fire` review runs both the existing sea-urchin suite and new fire/combined checks;
+`-Capture -Resolution 832x480` / `1280x720` produce consecutive storyboard samples,
+the bridge, follower reveal, repeat warning, low effects and live Reduce Motion.
+Coverage includes one/three/eight/24 fires, six reinforcements, Skip across both
+chapters, actual file save/load, legacy/malformed records, pending reinforcement
+restoration, blocked handoff, world replacement, dawn, one real ignition, continued
+burning after the attacker dies, watering and exactly one death payment.
+
+Verification results for the completed implementation are recorded below.
+See `docs/FIRE_MONSTER_ARRIVAL.md` for runtime ownership and review commands.
+
+- Canonical isolated gameplay on the combined checkout completed **6,153 checks,
+  PASS, exit 0**, with an empty error log and no failure/error markers. Evidence:
+  `C:/Users/ayiz/AppData/Local/Temp/tidesworn-tests-03533bc05371478294e5ca8eae39bd5f`.
+  This includes the concurrent Dimension Portal origin work as well as both
+  sea-urchin and fire/combined arrival suites.
+- Native Windows Godot 4.7.2 Compatibility/OpenGL captures at **832x480** and
+  **1280x720** each completed **111 checks, PASS, exit 0**, with empty error logs.
+  Consecutive samples were inspected for the crossing, sealed lead portal,
+  individually staggered followers, camera return, low/Reduce Motion and the
+  nonoverlapping, separately directed repeat warning.
+- Focused evidence: `C:/Users/ayiz/AppData/Local/Temp/tidesworn-tests-891d42ea69084154a181d8f114f2a09f`
+  (832x480), `C:/Users/ayiz/AppData/Local/Temp/tidesworn-tests-3ead33ce2853457eafd5c28267f04c64`
+  (1280x720). These runs include the final all-shore-followers-landed handoff check.
+- An isolated import completed with exit 0. The existing Android build-tools
+  directory diagnostic remains; no release export or physical-phone validation
+  is claimed. Reviews use Dummy audio; no listening-quality claim is made.
+- Initial focused attempts exposed a test type-inference error, overly exact JSON
+  float comparison and an injected collider removed by suspended-parent ownership.
+  Those fixtures were corrected and rerun. Render inspection also corrected the
+  lead canopy overlap, warning placement/bearings and completed shore-group pose.
+- Earlier full-suite runs overlapped unfinished Dimension Portal changes. After
+  their compile/fixture corrections, the final run above passed. Existing village
+  combat fixtures explicitly complete the new warning before examining live
+  attackers; the day/night cleanup also captures its removed shore threats so a
+  later fixture cannot resurrect them from an older snapshot. `git diff --check`
+  passes; Git reports existing LF/CRLF conversion notices in other modified files.
+
+## The road remembers — portal awakening (2026-10-30)
+
+New journeys now begin with a fallen waystone instead of an already usable
+Dimension Portal. Nearby tap/E records its broken road and empty lantern socket;
+Rahim's contextual dock conversation lends a village lantern freely. Completing
+or explicitly skipping the exchange prepares a nearby repair interaction. A
+single eight-second, Game-owned reveal aligns the marker, lights its carving,
+shows an answering forest road and forms the portal. Opening leaves Adam in the
+village and does not start an expedition or award/spend currency, items or XP.
+
+- Origin state is owned by GameState and saved before the presentation. Old raw
+  saves without origin fields retain access. Active expeditions/realm presence
+  reconcile contradictory closed flags; future numeric schemas are rejected
+  without writing. Interrupted reveals leave the road usable with optional replay.
+- The actual dock welcome is unchanged. Later discovery/ready/open conversations
+  remain non-pausing; cancelled chats cannot grant the lantern. The reveal alone
+  suspends world/clock and owns camera, HUD, overhead-vital visibility and inputs.
+- Hidden gate/map pictures, discovered-waystone markers, daytime tutorial entry,
+  Missions/objectives, early guide text and Wisp's first recognition agree with
+  the player's discovery. E/main gate input enters after opening; optional replay
+  has a separate button. Local danger and arrival ownership cannot compete with
+  the reveal. No monster kill or quiet-night outcome gates this progression.
+- The existing Twilight combat, manual pet arena, checkpoint, loot/defeat rules,
+  peaceful restoration, later campaign arenas and both rescues remain covered.
+
+Final Windows verification with Godot 4.7.2:
+
+- Canonical isolated gameplay: **6,153 checks, PASS, exit 0**.
+- Focused headless origin: **36 checks, PASS, exit 0**.
+- Native rendered origin: **36 checks, PASS, exit 0** at each of **1280x720** and
+  **832x480**. Inspected broken stones, dock dialogue, lantern, answering road,
+  forming arch and completed gate. Native input covers real discovery taps and
+  the actual Skip button; both modes cover nearby E, saved intermediate stages,
+  cancellation, optional replay/world replacement and entry into Twilight Wilds.
+- Final full/focused stderr files are empty, with no FAIL, SCRIPT ERROR or ERROR
+  markers. Isolated import passes with the existing Android build-tools warning.
+  git diff --check passes; existing checkout line-ending notices are unchanged.
+  Player saves are isolated; no Android export or physical-device test is claimed.
+
+Evidence below C:/Users/ayiz/AppData/Local/Temp/:
+
+- Full gate: tidesworn-tests-cbfbbf2aad9f4db28c985aa2d731a2b3.
+- Headless origin: tidesworn-tests-0f588243e4b54cb1ada260340b870bc5.
+- Native 1280x720: tidesworn-tests-944f6fe6ad5e4d5f8725836a75bf7c70.
+- Native 832x480: tidesworn-tests-0bc8f0816295443eb1eefa6d930c9e5d.
+- Isolated import: tidesworn-tests-b8784c2b03504968bf6d601ba756c22f.
+
+Reproduce with tools/test_isolated.ps1 -Godot <console-executable>, or add
+-PortalOrigin for the focused scene and -Capture -Resolution 832x480 / 1280x720
+for native review. See docs/PORTAL_AWAKENING.md for the runtime contract.

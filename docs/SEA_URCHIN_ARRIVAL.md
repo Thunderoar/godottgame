@@ -7,8 +7,11 @@ or remove the later-dungeon emergency rule.
 
 ## Presentation
 
-The first safe arrival after the dock welcome can play an eight-second in-world
-introduction. A small shoreline camera move reveals spines in the foam, the lead
+The first safe shore-only arrival after the dock welcome can play an eight-second
+in-world introduction. When fire monsters also need their first introduction,
+one 14.5-second sequence joins the shore chapter to the forest portal chapter,
+with one Skip and one return to Adam. See `FIRE_MONSTER_ARRIVAL.md`.
+A small shoreline camera move reveals spines in the foam, the lead
 urchin's emergence and wobble, a small can rattle, its inland glance, and the
 actual allocated followers. The camera returns before the real enemies take over
 at the validated preview landing positions. Skip/Space/Enter/Escape use the same
@@ -55,11 +58,11 @@ volume and mute; cancellation stops it without touching unrelated combat audio.
 ## Persistence and geography
 
 GameState owns defaulted/sanitized `campaign.urchin_intro_seen` and `home_arrival`.
-The pending record stores absolute night, remaining fire allocation, numeric
-landing positions and warning start time. The forest portion of an ordinary wave
-is acknowledged at warning creation, so reloading cannot refill killed fires
-while waiting for the shore group. A pending first introduction retains its
-undelivered forest allocation instead.
+The pending record stores its stable batch identity, absolute night, validated
+numeric shore and fire positions, and warning start time. Both species remain
+undelivered during the warning and are committed together at the final handoff.
+Separate emergency fire additions use `home_fire_arrival`. Restoring saved
+survivors never replays either entrance.
 
 Warning reconstruction uses its saved start time; it does not restart eight
 seconds or reroll positions. Completion captures live monsters, clears pending

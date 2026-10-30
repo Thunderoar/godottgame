@@ -19,6 +19,13 @@ the simulation; an accepted wild challenge explicitly suspends its realm until c
 `PetBattlePanel` arena, animations and manual turn engine. The separate
 WildPetChallenge/PetDuel implementation is removed. Habitat tokens/rewards remain
 owned by GameState; map actors and camera are not repositioned for a duel.
+**2026-10-30 portal awakening:** new journeys begin with a fallen `PortalOriginSite`,
+then examine it, consult Rahim and freely restore the carved road before the
+Dimension Portal exists. GameState owns `portal_origin` and traversal eligibility;
+Game owns the suspended `PortalAwakening` reveal. Existing saves retain access.
+See `docs/PORTAL_AWAKENING.md`; Windows focused review uses `-PortalOrigin`, with
+optional `-Capture -Resolution 832x480` or `1280x720`. Keep ordinary later Rahim
+chats non-pausing and distinguish opening the road from starting an expedition.
 
 ## 1. Ground truth and scope
 

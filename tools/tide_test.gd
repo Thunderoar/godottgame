@@ -133,6 +133,11 @@ func _ready() -> void:
 	await WorldChecks.run(game, _check)
 	await MonsoonChecks.run(game, _check)
 	await preload("res://tools/realistic_checks.gd").run(game, _check)
+	await preload("res://tools/portal_origin_checks.gd").run(game, _check)
+	# Subsequent combat/settlement fixtures represent an already discovered road.
+	GameState.data.portal_origin.opened = true
+	GameState.data.portal_origin.reveal_seen = true
+	GameState._emit_all()
 	await _test_day_night()
 	await _test_settlement_expansion()
 	var resident_count := 0
@@ -211,6 +216,7 @@ func _ready() -> void:
 	# Compact realm: living habitats, memories/cache transactions and three owned combat encounters.
 	await preload("res://tools/twilight_checks.gd").run(game, _check)
 	await preload("res://tools/urchin_arrival_checks.gd").run(game, _check)
+	await preload("res://tools/fire_arrival_checks.gd").run(game, _check)
 	await _test_forest_game_over()
 
 	GameState.delete_save()
@@ -281,6 +287,7 @@ func _test_day_night() -> void:
 	lobby._forest_monsters[0].take_damage(99999)
 	_check(lobby.capture_monsters().size() == count - 1, "killed monsters stay absent during the day")
 	GameState.advance_world_clock(180.0)
+	if is_instance_valid(lobby._urchin_cue): lobby._urchin_cue.finish()
 	_check(GameState.is_night() and lobby.capture_monsters().size() == count, "the next night replenishes killed monsters")
 	lobby._on_day_phase_changed(true, true)
 	_check(lobby.capture_monsters().size() == count, "a night wave cannot spawn twice during the same night")
@@ -289,6 +296,8 @@ func _test_day_night() -> void:
 		if enemy is Enemy and enemy.kind == "urchin":
 			enemy.queue_free()
 	await get_tree().process_frame
+	# Later suites reconstruct this snapshot; retain the cleanup across a reload.
+	GameState.store_home_monsters(lobby.capture_monsters())
 	for enemy in lobby.get_children():
 		if enemy is Enemy:
 			enemy.set_physics_process(false)
@@ -1147,6 +1156,10 @@ func _test_village_systems() -> void:
 	if not GameState.is_night():
 		GameState.advance_world_clock(GameState.DAY_PHASE_SECONDS)
 	var lobby := game.world as Lobby
+	# Entry timing has dedicated coverage; these fixtures exercise live combat.
+	if is_instance_valid(game._urchin_arrival): game._urchin_arrival.finish()
+	if is_instance_valid(lobby._urchin_cue): lobby._urchin_cue.finish()
+	if is_instance_valid(lobby._fire_cue): lobby._fire_cue.finish()
 	for gun in game.get_tree().get_nodes_in_group("house_defenses"):
 		gun.set_process(false)
 	for enemy in lobby._forest_monsters:
@@ -1286,6 +1299,9 @@ func _test_village_systems() -> void:
 
 func _test_forest_restoration() -> void:
 	var lobby := game.world as Lobby
+	if is_instance_valid(game._urchin_arrival): game._urchin_arrival.finish()
+	if is_instance_valid(lobby._urchin_cue): lobby._urchin_cue.finish()
+	if is_instance_valid(lobby._fire_cue): lobby._fire_cue.finish()
 	for gun in game.get_tree().get_nodes_in_group("house_defenses"):
 		gun.set_process(false)
 	var keepers: Array[Resident] = []

@@ -19,6 +19,9 @@ func _rebuild() -> void:
 	content.add_child(VillageProjectCard.new())
 	add_section("RESCUE YOUR FRIENDS", GameUI.GOLD)
 	add_body_text(GameState.campaign_objective(), GameUI.TEXT, 16)
+	if not GameState.portal_opened():
+		add_section("THE OLD WAYSTONE", GameUI.GOLD)
+		add_body_text(GameState.portal_origin_instruction(), GameUI.TEXT, 16)
 	var lesson := MissionDB.step(GameState.mission_step())
 	if GameState.tutorial_complete():
 		add_section("Tutorial complete", GameUI.PURPLE)

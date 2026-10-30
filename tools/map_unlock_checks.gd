@@ -8,6 +8,8 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	GameState.autosave_enabled = false
 	game.set_process(false)
 	game.hud.hide_modals()
+	GameState.data.portal_origin.opened = true # Map fixture represents a restored, usable entrance.
+	if game.world is Lobby: game.world.refresh_dimension_portal()
 	var minimap := game.hud._minimap
 	var map_button := game.hud._map_button
 	var icons := minimap.map_icons(game.world)

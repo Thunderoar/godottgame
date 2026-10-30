@@ -79,9 +79,10 @@ func _make_default(character_id: String) -> Dictionary:
 	}
 	return {
 		"version": SAVE_VERSION,
+		"portal_origin": {"schema": 1, "site_examined": false, "rahim_consulted": false, "opened": false, "reveal_seen": false},
 		"village_progression": VillageProjectDB.default_progression(),
 		"side_quest_intros_seen": [],
-		"campaign": {"intro_seen": false, "dock_welcome_seen": false, "urchin_intro_seen": false, "ocean_stage": 1, "arjun_rescued": false, "mei_ling_rescued": false, "ending_seen": false},
+		"campaign": {"intro_seen": false, "dock_welcome_seen": false, "urchin_intro_seen": false, "fire_intro_seen": false, "ocean_stage": 1, "arjun_rescued": false, "mei_ling_rescued": false, "ending_seen": false},
 		"character_id": str(character.id),
 		"character_name": str(character.name),
 		"character_title": str(character.title),
@@ -151,6 +152,8 @@ func _make_default(character_id: String) -> Dictionary:
 		"world_time": 0.0,
 		"home_wave": -1,
 		"home_arrival": {},
+		"home_fire_arrival": {},
+		"home_arrival_serial": 0,
 		"home_monsters": [],
 		"tutorial_seen": false,
 	}
@@ -1206,6 +1209,66 @@ func sleep_recovery_seconds() -> float:
 
 # --------------------------------------------------------------- portals
 
+func portal_origin() -> Dictionary:
+	var raw: Variant = data.get("portal_origin", {})
+	return raw.duplicate(true) if raw is Dictionary else {}
+
+
+func portal_opened() -> bool:
+	var value: Variant = portal_origin().get("opened", false)
+	return value is bool and value == true
+
+
+func examine_waystone() -> void:
+	if bool(data.portal_origin.site_examined): return
+	data.portal_origin.site_examined = true
+	_save_if_needed()
+	data_changed.emit()
+
+
+func consult_waystone() -> bool:
+	if not bool(data.portal_origin.site_examined) or bool(data.portal_origin.rahim_consulted): return false
+	data.portal_origin.rahim_consulted = true
+	_save_if_needed()
+	data_changed.emit()
+	return true
+
+
+func open_waystone() -> bool:
+	if portal_opened() or not bool(data.portal_origin.site_examined) or not bool(data.portal_origin.rahim_consulted): return false
+	if health() <= 0 or recovery_active() or emergency_active(): return false
+	data.portal_origin.opened = true
+	_save_if_needed() # Commit before presentation; an interrupted reveal cannot remove the road.
+	data_changed.emit()
+	return true
+
+
+func finish_portal_reveal() -> void:
+	if not portal_opened() or bool(data.portal_origin.reveal_seen): return
+	data.portal_origin.reveal_seen = true
+	_save_if_needed()
+	data_changed.emit()
+
+
+func portal_origin_instruction() -> String:
+	if portal_opened(): return "Enter Twilight Wilds through the Dimension Portal. The arrival rift leads home."
+	var origin := portal_origin()
+	if bool(origin.get("rahim_consulted", false)): return "Return to the old waystone. Set the marker and light the road with Rahim's lantern."
+	if bool(origin.get("site_examined", false)): return "Ask Pak Rahim at the dock about the old stones and their empty lantern socket."
+	return "Examine the fallen waystone in the northern clearing. An old road may still be waiting."
+
+
+func _sanitize_portal_origin() -> void:
+	var raw: Variant = data.get("portal_origin", {})
+	var origin: Dictionary = raw if raw is Dictionary else {}
+	var opened: bool = origin.get("opened", false) is bool and origin.get("opened", false) == true
+	if expedition_active() or bool(data.get("realm_progress", {}).get("visit_active", false)) or bool(data.get("campaign", {}).get("mei_ling_rescued", false)): opened = true
+	for id in PortalDB.ordered_ids():
+		if bool(portal_state(id).get("cleared", false)) or int(portal_state(id).get("attempts", 0)) > 0: opened = true
+	var examined: bool = opened or (origin.get("site_examined", false) is bool and origin.get("site_examined", false) == true)
+	var consulted: bool = opened or (examined and origin.get("rahim_consulted", false) is bool and origin.get("rahim_consulted", false) == true)
+	data.portal_origin = {"schema": 1, "site_examined": examined, "rahim_consulted": consulted, "opened": opened, "reveal_seen": opened and origin.get("reveal_seen", false) is bool and origin.get("reveal_seen", false) == true}
+
 func portal_state(portal_id: String) -> Dictionary:
 	return (data.get("portals", {}) as Dictionary).get(portal_id, {})
 
@@ -1214,6 +1277,8 @@ func portal_clear_reason(portal_id: String) -> Dictionary:
 	var def := PortalDB.get_portal(portal_id)
 	if def.is_empty():
 		return {"ok": false, "reason": "Unknown portal."}
+	if not portal_opened():
+		return {"ok": false, "reason": portal_origin_instruction()}
 	var state := portal_state(portal_id)
 	if state.is_empty() or not bool(state.get("unlocked", false)):
 		return {"ok": false, "reason": "Sealed until the previous guardian falls."}
@@ -1560,30 +1625,78 @@ func advance_world_clock(delta: float) -> void:
 func mark_home_wave() -> void:
 	data.home_wave = night_number()
 
-func complete_home_arrival(expected_night: int, monsters: Array, introduced: bool = false) -> bool:
+func complete_home_arrival(expected_night: int, monsters: Array, introduced: bool = false, fire_introduced: bool = false, batch_id: String = "", reinforcement: bool = false) -> bool:
 	if not is_night() or expected_night != night_number() or game_over_active: return false
-	data.home_wave = expected_night
-	data.home_arrival = {}
+	var key := "home_fire_arrival" if reinforcement else "home_arrival"
+	if not batch_id.is_empty() and str((data.get(key, {}) as Dictionary).get("id", "")) != batch_id: return false
+	if not reinforcement: data.home_wave = expected_night
+	data[key] = {}
 	store_home_monsters(monsters)
 	if introduced: data.campaign.urchin_intro_seen = true
+	if fire_introduced: data.campaign.fire_intro_seen = true
 	_save_if_needed()
 	data_changed.emit()
 	return true
 
-func pending_home_arrival() -> Dictionary:
-	var pending: Dictionary = data.get("home_arrival", {})
+func pending_home_arrival(reinforcement: bool = false) -> Dictionary:
+	var pending: Dictionary = data.get("home_fire_arrival" if reinforcement else "home_arrival", {})
 	return pending.duplicate(true) if is_night() and int(pending.get("night", -1)) == night_number() else {}
 
-func stage_home_arrival(fires: int, points: PackedVector2Array, forest_delivered: bool = false) -> Dictionary:
+func stage_home_arrival(fires: int, points: PackedVector2Array, forest_delivered: bool = false, fire_points: PackedVector2Array = PackedVector2Array(), reinforcement: bool = false) -> Dictionary:
 	if not is_night() or game_over_active: return {}
-	var pending := pending_home_arrival()
-	if not pending.is_empty(): return pending
+	var key := "home_fire_arrival" if reinforcement else "home_arrival"
+	var accepted := fire_points.slice(0, clampi(fires, 0, 30 if reinforcement else 24))
+	var pending := pending_home_arrival(reinforcement)
+	if not pending.is_empty():
+		# Upgrade a legacy count-only pending wave once, retaining its warning time.
+		if int(pending.fires) > 0 and not pending.has("fire_points"):
+			pending.fire_points = _saved_arrival_points(accepted)
+			pending.fires = accepted.size()
+			data[key] = pending
+			_save_if_needed()
+		return pending
 	var saved_points: Array = []
 	for point in points: saved_points.append([point.x, point.y])
-	data.home_arrival = {"night": night_number(), "fires": clampi(fires, 0, 24), "points": saved_points, "started": float(data.world_time)}
+	data.home_arrival_serial = int(data.get("home_arrival_serial", 0)) + 1
+	data[key] = {"id": str(data.home_arrival_serial), "night": night_number(), "fires": accepted.size(), "points": saved_points, "fire_points": _saved_arrival_points(accepted), "started": float(data.world_time)}
 	if forest_delivered: data.home_wave = night_number()
 	_save_if_needed()
-	return pending_home_arrival()
+	return pending_home_arrival(reinforcement)
+
+func _saved_arrival_points(points: PackedVector2Array) -> Array:
+	var result: Array = []
+	for point in points: result.append([point.x, point.y])
+	return result
+
+func _sanitize_arrival_points(raw: Variant, limit: int) -> Array:
+	var result: Array = []
+	if not raw is Array: return result
+	for point in raw.slice(0, limit):
+		if not point is Array or point.size() != 2: continue
+		if not (point[0] is float or point[0] is int) or not (point[1] is float or point[1] is int): continue
+		if not is_finite(float(point[0])) or not is_finite(float(point[1])): continue
+		if float(point[0]) < 1 or float(point[0]) > 63 or float(point[1]) < 1 or float(point[1]) > 39: continue
+		var clean := [float(point[0]), float(point[1])]
+		if clean not in result: result.append(clean)
+	return result
+
+func _sanitize_home_arrival(raw: Variant, reinforcement: bool) -> Dictionary:
+	if not raw is Dictionary: return {}
+	var value: Variant = raw.get("night", -1)
+	if not (value is int or value is float) or not is_finite(float(value)) or not is_night() or int(value) != night_number(): return {}
+	var points := _sanitize_arrival_points(raw.get("points", []), 6)
+	var fire_points := _sanitize_arrival_points(raw.get("fire_points", []), 30 if reinforcement else 24)
+	var count: Variant = raw.get("fires", 0)
+	var fires := clampi(int(count), 0, 30 if reinforcement else 24) if (count is int or count is float) and is_finite(float(count)) else 0
+	if raw.has("fire_points"): fires = fire_points.size()
+	if points.is_empty() and fires == 0: return {}
+	var started_raw: Variant = raw.get("started", data.world_time)
+	var started := float(started_raw) if started_raw is float or started_raw is int else float(data.world_time)
+	if not is_finite(started): started = float(data.world_time)
+	started = clampf(started, float(night_number()) * DAY_PHASE_SECONDS * 2 + DAY_PHASE_SECONDS, float(data.world_time))
+	var result := {"id": str(raw.get("id", "legacy-fire" if reinforcement else "legacy-home")).left(64), "night": night_number(), "fires": fires, "points": points, "started": started}
+	if raw.has("fire_points"): result.fire_points = fire_points
+	return result
 
 
 func store_home_monsters(monsters: Array) -> void:
@@ -1664,6 +1777,9 @@ func load_game() -> bool:
 	if not parsed is Dictionary:
 		return false
 	var loaded: Dictionary = parsed
+	var raw_origin: Variant = loaded.get("portal_origin", {})
+	if raw_origin is Dictionary and (raw_origin.get("schema", 1) is int or raw_origin.get("schema", 1) is float) and int(raw_origin.get("schema", 1)) > 1:
+		return false
 	# Inspect raw schema before defaults merge, preserving future saves unchanged.
 	var raw_progression: Variant = loaded.get("village_progression", {})
 	if raw_progression is Dictionary and (raw_progression.get("schema", 1) is int or raw_progression.get("schema", 1) is float) and int(raw_progression.get("schema", 1)) > 1:
@@ -1676,11 +1792,15 @@ func load_game() -> bool:
 		loaded_id = DEFAULT_CHARACTER
 	var fallback := _make_default(loaded_id)
 	data = _merge(fallback, loaded)
+	if not loaded.has("portal_origin"):
+		data.portal_origin = {"schema": 1, "site_examined": true, "rahim_consulted": true, "opened": true, "reveal_seen": true}
 	# Existing journeys have already arrived; a new interrupted opening retains
 	# its explicit false flag and resumes the dock conversation on Continue.
 	var saved_campaign: Variant = loaded.get("campaign", {})
 	if saved_campaign is Dictionary and not saved_campaign.has("dock_welcome_seen"):
 		data.campaign.dock_welcome_seen = bool(saved_campaign.get("intro_seen", false))
+	if saved_campaign is Dictionary and not saved_campaign.has("fire_intro_seen") and loaded.get("home_monsters", []) is Array:
+		data.campaign.fire_intro_seen = (loaded.get("home_monsters", []) as Array).any(func(record: Variant) -> bool: return record is Dictionary and str(record.get("kind", "")) == "fire")
 	if not loaded.has("village_progression"):
 		data.village_progression = VillageProjectDB.default_progression(true)
 	_project_work_frames.clear()
@@ -1787,26 +1907,10 @@ func _sanitize() -> void:
 	data.completed_missions = completed
 	data.world_time = maxf(0.0, float(data.get("world_time", 0.0)))
 	data.home_wave = clampi(int(data.get("home_wave", -1)), -1, night_number())
-	var pending: Variant = data.get("home_arrival", {})
-	data.home_arrival = {}
-	var pending_night: Variant = pending.get("night", -1) if pending is Dictionary else -1
-	if pending is Dictionary and (pending_night is int or pending_night is float) and is_finite(float(pending_night)) and is_night() and int(pending_night) == night_number():
-		var points: Array = []
-		var raw_points: Variant = pending.get("points", [])
-		if raw_points is Array:
-			for point in raw_points.slice(0, 6):
-				if not point is Array or point.size() != 2: continue
-				if not (point[0] is float or point[0] is int) or not (point[1] is float or point[1] is int): continue
-				if not is_finite(float(point[0])) or not is_finite(float(point[1])): continue
-				var clean_point := [clampf(float(point[0]), 1, 63), clampf(float(point[1]), 1, 39)]
-				if clean_point not in points: points.append(clean_point)
-		var started_raw: Variant = pending.get("started", data.world_time)
-		var started := float(started_raw) if started_raw is float or started_raw is int else float(data.world_time)
-		if not is_finite(started): started = float(data.world_time)
-		if not points.is_empty():
-			var raw_fires: Variant = pending.get("fires", 0)
-			var fires := clampi(int(raw_fires), 0, 24) if (raw_fires is int or raw_fires is float) and is_finite(float(raw_fires)) else 0
-			data.home_arrival = {"night": night_number(), "fires": fires, "points": points, "started": clampf(started, float(night_number()) * DAY_PHASE_SECONDS * 2 + DAY_PHASE_SECONDS, float(data.world_time))}
+	data.home_arrival = _sanitize_home_arrival(data.get("home_arrival", {}), false)
+	data.home_fire_arrival = _sanitize_home_arrival(data.get("home_fire_arrival", {}), true)
+	var arrival_serial: Variant = data.get("home_arrival_serial", 0)
+	data.home_arrival_serial = clampi(int(arrival_serial), 0, 2147483000) if (arrival_serial is int or arrival_serial is float) and is_finite(float(arrival_serial)) else 0
 	var monsters: Array = []
 	if data.get("home_monsters", []) is Array:
 		for record in data.get("home_monsters", []):
@@ -1844,6 +1948,7 @@ func _sanitize() -> void:
 		data.portals = {}
 	_sanitize_portals()
 	_sanitize_campaign()
+	_sanitize_portal_origin()
 	if not (data.get("settlement_layout", {}) is Dictionary):
 		data.settlement_layout = {}
 	if not (data.get("pet_battles", {}) is Dictionary):
@@ -2230,6 +2335,7 @@ func _sanitize_campaign() -> void:
 	if bool(portal_state(PortalDB.MEI_LING_PORTAL).get("cleared", false)):
 		data.campaign.mei_ling_rescued = true
 	data.campaign.urchin_intro_seen = clean.get("urchin_intro_seen", false) is bool and clean.get("urchin_intro_seen", false) == true
+	data.campaign.fire_intro_seen = clean.get("fire_intro_seen", false) is bool and clean.get("fire_intro_seen", false) == true
 	if not bool(data.campaign.arjun_rescued) or not bool(data.campaign.mei_ling_rescued):
 		data.campaign.ending_seen = false
 
@@ -2267,6 +2373,7 @@ func friends_reunited() -> bool:
 
 func campaign_objective() -> String:
 	var story := campaign()
+	if not portal_opened(): return "Search for Arjun and Mei Ling. Meet your neighbours and investigate the old waystone."
 	if friends_reunited():
 		return "Three friends reunited. BESUT is your new home."
 	var goals: Array[String] = []

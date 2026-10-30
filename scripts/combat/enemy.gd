@@ -113,7 +113,7 @@ func _ready() -> void:
 	_route_clock = float(get_instance_id()%23)*0.025
 	_build()
 	# A short spawn-in shimmer so monsters do not pop into the dark.
-	if not (kind == "urchin" and arrival_revealed):
+	if not (kind in ["urchin", "fire"] and arrival_revealed):
 		modulate.a = 0.0
 		var tween := create_tween()
 		tween.tween_property(self, "modulate:a", 1.0, 0.35)

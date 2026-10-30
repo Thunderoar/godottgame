@@ -77,6 +77,7 @@ var _tree_serial := 0
 var _emergency_fire: Sprite2D
 var _emergency_wall_toast := 0.0
 var _urchin_cue: UrchinArrival
+var _fire_cue: UrchinArrival
 
 const RECOVERY_CENTER := Vector2(34.0, 23.7)
 const RECOVERY_RADIUS := 4.3
@@ -151,6 +152,7 @@ func _ready() -> void:
 	GameState.emergency_changed.connect(_on_emergency_changed)
 	GameState.day_phase_changed.connect(_on_day_phase_changed)
 	_on_day_phase_changed(GameState.is_night(), true)
+	call_deferred("_resume_fire_reinforcements")
 	if GameState.recovery_active():
 		_recovery_ward.set_active(true)
 	if GameState.emergency_active():
@@ -613,6 +615,21 @@ func _build_special_npc() -> void:
 
 func _build_portals() -> void:
 	NorthernBoundary.build_north_wall(self)
+	var site := PortalOriginSite.new()
+	site.name = "OldWaystone"
+	site.position = _layout.position_of("monster_portal", MONSTER_GATE)
+	add_child(site)
+	refresh_dimension_portal()
+
+
+func refresh_dimension_portal() -> void:
+	var previous := get_node_or_null("MonsterBattlePortal")
+	if not GameState.portal_opened():
+		if is_instance_valid(previous):
+			remove_child(previous)
+			previous.queue_free()
+		return
+	if is_instance_valid(previous): return
 	# One physical dimension entrance; retain the original anchor for old saves.
 	var first := PortalEntrance.new()
 	first.name = "MonsterBattlePortal"
@@ -621,7 +638,6 @@ func _build_portals() -> void:
 	first.gate_title = "Dimension Portal"
 	first.position = _layout.position_of("monster_portal", MONSTER_GATE)
 	add_child(first)
-	_markers.append({"position": first.position, "color": Color("#a47be0"), "size": 4.0, "shape": "arch"})
 
 
 
@@ -654,8 +670,7 @@ func _build_forest_monsters() -> void:
 	for record in GameState.data.get("home_monsters", []):
 		var monster: Enemy
 		if str(record.get("kind", "")) == "fire":
-			_spawn_forest_monsters(1, true)
-			monster = _forest_monsters.back()
+			monster = _create_fire_monster(Vector2(float(record.get("x", 47)), float(record.get("y", 24))), true)
 		else:
 			monster = spawn_sea_urchin(Vector2(float(record.get("x", 17)), float(record.get("y", 29))), bool(record.get("raid", false)), true)
 		if is_instance_valid(monster):
@@ -664,34 +679,109 @@ func _build_forest_monsters() -> void:
 
 
 func _spawn_forest_monsters(count: int, restoring: bool = false) -> void:
-	if not restoring and (not GameState.is_night() or GameState.game_over_active):
-		return
+	if count <= 0 or not GameState.is_night() or GameState.game_over_active or restoring: return
+	if is_instance_valid(_fire_cue): return
+	var pending := GameState.pending_home_arrival(true)
+	if pending.is_empty():
+		var points := fire_entry_points(mini(count, FIRE_MONSTER_LIMIT - _live_fire_count()))
+		if points.is_empty(): return
+		GameState.stage_home_arrival(points.size(), PackedVector2Array(), false, points, true)
+	_resume_fire_reinforcements()
+
+func _resume_fire_reinforcements() -> void:
+	if is_queued_for_deletion() or journey_serial != GameState.journey_serial or is_instance_valid(_fire_cue): return
+	var pending := GameState.pending_home_arrival(true)
+	if pending.is_empty(): return
+	_fire_cue = UrchinArrival.new()
+	_fire_cue.home = self
+	_fire_cue.configure(pending)
+	_fire_cue.reinforcement = true
+	_fire_cue.completed.connect(_on_fire_cue_completed.bind(_fire_cue))
+	add_child(_fire_cue)
+
+func _on_fire_cue_completed(cue: UrchinArrival) -> void:
+	if _fire_cue != cue: return
+	_fire_cue = null
+	if not cue.cancelled: finish_urchin_arrival(cue)
+
+func _live_fire_count() -> int:
+	return capture_monsters().filter(func(record: Dictionary) -> bool: return str(record.kind) == "fire").size()
+
+func fire_entry_clear(at: Vector2, avoid_actors: bool = true) -> bool:
+	if _recovery_center.distance_to(at) < RECOVERY_RADIUS + 0.8 or not urchin_entry_clear(at): return false
+	for tree in _forest_trees:
+		if is_instance_valid(tree) and tree.is_alive() and at.distance_to(tree.position + Vector2(0, -0.2)) < 1.05: return false
+	for entry in _layout.anchors:
+		if entry.get("kind", "") in ["house", "shop", "residence", "ruin"] and _layout.world_footprint(str(entry.id)).grow(0.65).has_point(at): return false
+	if avoid_actors:
+		if is_instance_valid(player) and player.position.distance_to(at) < 2.5: return false
+		for child in get_children():
+			if child is Enemy and not child.dead and not child.is_queued_for_deletion() and child.position.distance_to(at) < 1.15: return false
+			if child is Resident and not child.dead and not child.sheltered and child.position.distance_to(at) < 1.3: return false
+	return true
+
+func fire_entry_points(count: int) -> PackedVector2Array:
+	if count <= 0: return PackedVector2Array()
 	var forest_spots := [
 		Vector2(47.4, 8.8), Vector2(50.8, 14.2), Vector2(49.0, 21.2),
 		Vector2(53.2, 26.0), Vector2(57.2, 18.0), Vector2(46.2, 30.2),
 		Vector2(54.0, 33.0), Vector2(59.0, 10.2), Vector2(51.8, 31.4),
 		Vector2(56.0, 6.7), Vector2(47.0, 15.0), Vector2(58.6, 27.0),
 	]
-	var offset := _forest_monsters.size()
-	for i in count:
-		var p: Vector2 = forest_spots[(offset + i) % forest_spots.size()]
-		var monster := Enemy.new()
-		monster.kind = "fire"
-		monster.monster_level = 2
-		monster.forest_mode = true
-		monster.sight_range = 11.5
-		monster.attack_interval = 1.6
-		monster.tutorial_raider = (offset + i) < 6
-		monster.max_hp = 40
-		monster.damage = 3
-		monster.speed = 1.62
-		monster.xp_reward = 9
-		monster.gold_reward = 6
-		monster.diamond_chance = 0.0
-		monster.body_radius = 0.4
-		monster.position = safe_spawn(p + Vector2(_rng.randf_range(-0.6, 0.6), _rng.randf_range(-0.5, 0.5)), monster.body_radius)
-		add_child(monster)
-		_forest_monsters.append(monster)
+	var result := PackedVector2Array()
+	var reserved := PackedVector2Array()
+	for extra in [false, true]:
+		for point in GameState.pending_home_arrival(extra).get("fire_points", []): reserved.append(Vector2(float(point[0]), float(point[1])))
+	# Separate deterministic candidates never consume the historical forest RNG.
+	for ring in 9:
+		for index in forest_spots.size():
+			if result.size() >= maxi(24, count): break
+			var anchor: Vector2 = forest_spots[index]
+			var at := anchor + Vector2.from_angle(float(index * 7 + ring * 3) * 0.67) * float(ring) * 0.55
+			if not fire_entry_clear(at): continue
+			if Array(reserved).any(func(other: Vector2) -> bool: return other.distance_to(at) < 1.3): continue
+			if Array(result).any(func(other: Vector2) -> bool: return other.distance_to(at) < 1.3): continue
+			if resident_path(to_global(at), to_global(at + Vector2(-1.5, 0)), false).is_empty(): continue
+			result.append(at)
+	# Frame the entrance on the village side; nearby allocated followers come next.
+	if not result.is_empty():
+		var ordered: Array = Array(result)
+		ordered.sort_custom(func(a: Vector2, b: Vector2) -> bool: return _fire_shot_score(a) < _fire_shot_score(b))
+		var lead: Vector2 = ordered[0]
+		ordered.sort_custom(func(a: Vector2, b: Vector2) -> bool: return a.distance_squared_to(lead) < b.distance_squared_to(lead))
+		result = PackedVector2Array(ordered.slice(0, count))
+	return result
+
+func _fire_shot_score(at: Vector2) -> float:
+	# Prefer a visible patch of ground so the lead does not appear atop a canopy.
+	var body_rect := Rect2(to_global(at) + Vector2(-0.5, -1.5), Vector2(1, 1.5))
+	for tree in _forest_trees:
+		if not is_instance_valid(tree) or not tree.is_alive(): continue
+		for visual in tree._visuals:
+			if visual is Sprite2D and (visual.global_transform * visual.get_rect()).intersects(body_rect):
+				return 10000.0 + at.distance_squared_to(_player_spawn)
+	return at.distance_squared_to(_player_spawn)
+
+func _create_fire_monster(at: Vector2, revealed: bool = false) -> Enemy:
+	var monster := Enemy.new()
+	monster.kind = "fire"
+	monster.arrival_revealed = revealed
+	monster.monster_level = 2
+	monster.forest_mode = true
+	monster.sight_range = 11.5
+	monster.attack_interval = 1.6
+	monster.tutorial_raider = _forest_monsters.size() < 6
+	monster.max_hp = 40
+	monster.damage = 3
+	monster.speed = 1.62
+	monster.xp_reward = 9
+	monster.gold_reward = 6
+	monster.diamond_chance = 0.0
+	monster.body_radius = 0.4
+	monster.position = at
+	add_child(monster)
+	_forest_monsters.append(monster)
+	return monster
 
 
 func capture_monsters() -> Array:
@@ -752,19 +842,19 @@ func _on_day_phase_changed(night: bool, _immediate: bool = false) -> void:
 		fire_count = int(pending.fires)
 		points.clear()
 		for point in pending.points: points.append(Vector2(float(point[0]), float(point[1])))
-	if not points.is_empty() and is_instance_valid(game) and game.try_urchin_introduction(self, fire_count, points): return
-	if pending.is_empty(): _spawn_forest_monsters(fire_count)
-	if points.is_empty():
+	var fire_points := PackedVector2Array()
+	if pending.has("fire_points"):
+		for point in pending.fire_points: fire_points.append(Vector2(float(point[0]), float(point[1])))
+	else: fire_points = fire_entry_points(fire_count)
+	if pending.is_empty() or not pending.has("fire_points"):
+		pending = GameState.stage_home_arrival(fire_points.size(), points, false, fire_points)
+	if points.is_empty() and fire_points.is_empty():
 		GameState.complete_home_arrival(GameState.night_number(), capture_monsters())
 		return
-	if pending.is_empty(): pending = GameState.stage_home_arrival(0, points, true)
+	if is_instance_valid(game) and game.try_urchin_introduction(self, fire_points.size(), points, fire_points): return
 	_urchin_cue = UrchinArrival.new()
 	_urchin_cue.home = self
-	_urchin_cue.points = points
-	_urchin_cue.night = GameState.night_number()
-	_urchin_cue.serial = journey_serial
-	_urchin_cue.fires = int(pending.fires)
-	_urchin_cue.warning_started = float(pending.started)
+	_urchin_cue.configure(pending)
 	_urchin_cue.completed.connect(_on_urchin_cue_completed.bind(_urchin_cue))
 	add_child(_urchin_cue)
 
@@ -804,14 +894,23 @@ func _on_urchin_cue_completed(cue: UrchinArrival) -> void:
 func finish_urchin_arrival(arrival: UrchinArrival) -> bool:
 	var game := get_tree().get_first_node_in_group("game") as Game
 	if not is_instance_valid(game) or game.world != self or is_queued_for_deletion() or arrival.serial != journey_serial or journey_serial != GameState.journey_serial: return false
-	if not GameState.is_night() or arrival.night != GameState.night_number() or GameState.pending_home_arrival().is_empty(): return false
-	_spawn_forest_monsters(arrival.fires)
+	var pending := GameState.pending_home_arrival(arrival.reinforcement)
+	if not GameState.is_night() or arrival.night != GameState.night_number() or pending.is_empty() or str(pending.get("id", "")) != arrival.batch_id: return false
+	var delivered_fires := 0
+	var fire_room := FIRE_MONSTER_LIMIT - _live_fire_count()
+	for i in arrival.fire_points.size():
+		var point := arrival.fire_points[i]
+		if delivered_fires >= fire_room: break
+		if fire_entry_clear(point):
+			var monster := _create_fire_monster(point, true)
+			if is_instance_valid(arrival._fire): monster.sprite.flip_h = arrival._fire._bodies[i].flip_h
+			delivered_fires += 1
 	var delivered := 0
 	for point in arrival.points:
 		if urchin_entry_clear(point) and is_instance_valid(spawn_sea_urchin(point, false, false, true, arrival.full_intro)): delivered += 1
-	if GameState.emergency_active(): _spawn_emergency_monsters(GameState.emergency_monsters())
-	GameState.complete_home_arrival(arrival.night, capture_monsters(), arrival.full_intro and delivered > 0)
-	return delivered > 0
+	GameState.complete_home_arrival(arrival.night, capture_monsters(), arrival.full_intro and arrival.introduce_shore and delivered > 0, arrival.full_intro and arrival.introduce_fire and delivered_fires > 0, arrival.batch_id, arrival.reinforcement)
+	if not arrival.reinforcement and GameState.emergency_active(): _spawn_emergency_monsters(GameState.emergency_monsters())
+	return delivered + delivered_fires > 0
 
 
 func spawn_sea_urchin(at: Vector2, raid: bool = false, restoring: bool = false, validated_entry: bool = false, revealed: bool = false) -> Enemy:
@@ -1305,6 +1404,7 @@ func _on_sleep_changed(active: bool, progress: float, label: String) -> void:
 func _on_data_changed() -> void:
 	if not is_node_ready() or GameState.game_over_active:
 		return
+	refresh_dimension_portal()
 	_build_water_keepers()
 	_sync_rescued_friends()
 	_reconcile_village_project()
@@ -1843,6 +1943,9 @@ func get_guidance_targets() -> Array:
 						destination = enemy.global_position
 			"portal", "boss":
 				destination = _layout.approach("monster_portal")
+				if not GameState.portal_opened() and bool(GameState.portal_origin().site_examined) and not bool(GameState.portal_origin().rahim_consulted):
+					var host := get_node_or_null("PakRahim") as DockHost
+					if is_instance_valid(host): destination = host.position
 			_:
 				return []
 		return [{"position": destination, "label": lesson.get("title", "Mission")}]
@@ -1851,6 +1954,11 @@ func get_guidance_targets() -> Array:
 		var raider := _emergency_monsters[0]
 		if is_instance_valid(raider):
 			targets.append({"label": "DEFEND", "position": raider.global_position, "color": Color("#e15b58")})
+	if targets.is_empty() and not GameState.portal_opened():
+		var origin := GameState.portal_origin()
+		var ask := bool(origin.site_examined) and not bool(origin.rahim_consulted)
+		var host := get_node_or_null("PakRahim") as DockHost
+		return [{"label": "ASK PAK RAHIM" if ask else ("LIGHT THE ROAD" if bool(origin.rahim_consulted) else "OLD WAYSTONE"), "position": host.position if ask and is_instance_valid(host) else _layout.approach("monster_portal"), "color": Color("#e8d69e")}]
 	var monster_pending := false
 	if targets.is_empty() and GameState.tracked_village_project() == VillageProjectDB.WORKSHOP and is_instance_valid(workshop) and str(GameState.project_status().state) != "complete":
 		return [{"label": "WEST WORKSHOP", "position": workshop.workpoint(), "color": Color("#f2c45a")}]

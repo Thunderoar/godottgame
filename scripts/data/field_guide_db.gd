@@ -45,6 +45,9 @@ static func entries(category: int) -> Array[Dictionary]:
 			{"name": "Twilight Wilds", "actor": "pet", "rows": [["portal", "path", "pet"], ["player", "boss:demon_chaos", "house"]], "description": "Enter the Dimension Portal directly. Follow old stones, pawprints and pool lights to explore. Challenge wild pets with Attack, Shield and Special; outside combat waits during the challenge, and losing is peaceful. First bonds persist even if a later expedition fails. The watchpost winch opens a shortcut. Rest at the citadel lantern to heal and save a checkpoint. The fiend awakens only after crossing the inner arch. Retreat to reset an unfinished fight. Victory restores the realm and opens onward passages. The arrival rift always banks carried loot and returns to BESUT. Wisp, the optional Waykeeper, notices your discoveries. Read three weathered stones to keep their memories in this Field Guide. A rootway hollow holds one small Gold gift: return safely to bank it."},
 		]
 		var lights: Array = []
+		if not GameState.portal_opened():
+			pages[3] = {"name": "Looking for Mei Ling", "actor": "hero:mei_ling", "rows": [["hero:adam","question","hero:mei_ling"]], "description": "Adam does not yet know where to search. Meet the villagers and examine the old stones in the northern clearing. Pak Rahim may recognize their markings."}
+			pages[4] = {"name": "The Old Waystone", "actor": "spark", "rows": [["question","path","spark"]], "description": GameState.portal_origin_instruction()}
 		for id in RealmContentDB.FRAGMENTS:
 			lights.append("spark" if id in GameState.realm_progress().get("read_fragments", []) else "question")
 		pages.append({"name": "Memories of Twilight", "actor": "portal", "rows": [lights], "memory_journal": true})
@@ -61,7 +64,7 @@ static func description(entry: Dictionary) -> String:
 	if actor.begins_with("npc:"): return NpcInfo.description(actor.get_slice(":", 1))
 	if actor == "hut": return "TOWER DEFENSE · Buy rooftop machine guns at the Weapons Shop. Choose an intact house. Each paid mount attacks fire monsters and sea urchins; the central house tier improves fire rate."
 	if actor == "pet": return "BONDED GUARDIANS · Explore Twilight Wilds through the Dimension Portal. Approach Bramble Cat or Dusk Moth and challenge them in their habitat. Win a manual duel to form a lasting bond. Recruits also defend BESUT from fire monsters and sea urchins; existing tournament recruits remain yours."
-	if actor == "enemy:fire": return "FIRE MONSTER · Ignites mature trees and can attack exposed residents or the player. Water Keepers extinguish fire. Fire-monster combat and burning-tree sound effects are silent."
+	if actor == "enemy:fire": return "FIRE MONSTER · Each new arrival crosses its own small ember portal, which seals behind it. Ignites mature trees and can attack exposed residents or the player. Defeating it does not extinguish a burning tree; Water Keepers do. Fire-monster combat and burning-tree sound effects are silent."
 	if actor == "enemy:urchin": return "SEA URCHIN · A physical attacker from the sea. It threatens trees, buildings, residents and the player. Intact houses shelter residents; defenders, guns and allies fight back."
 	if actor.begins_with("boss:"): return "PORTAL BOSS · Pursues you after its arrival warning. Dodge its marked special attack and the arena rune traps. Defeat it to bank rewards and unlock the next portal. Shadow & Chaos Fiend holds Mei Ling captive in Chaos Citadel."
 	return "Stay moving and attack with your basic weapon. Drops are collected automatically. Learn each warning and keep health potions ready."

@@ -9,6 +9,7 @@ static func run(game: Game, check: Callable) -> void:
 	GameState.autosave_enabled = false
 	for hero in CharacterDB.ids():
 		GameState.new_game(hero)
+		GameState.data.portal_origin.opened = true # Existing combat/UI fixture starts after waystone restoration.
 		game._load_lobby(false)
 		_freeze(game.world)
 		await game.get_tree().process_frame
@@ -55,6 +56,7 @@ static func run(game: Game, check: Callable) -> void:
 	GameState.save_game()
 	check.call(GameState.load_game() and not GameState.data.has("mana"), "mana removal survives a second save and load")
 	GameState.new_game("adam")
+	GameState.data.portal_origin.opened = true # Existing combat/UI fixture starts after waystone restoration.
 	game._load_lobby(false)
 	await game.get_tree().process_frame
 	await game.get_tree().process_frame

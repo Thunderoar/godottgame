@@ -1,9 +1,11 @@
 class_name UrchinArrival
 extends Node2D
-## Cosmetic shore preview. Game/Lobby own delivery; previews are never enemies.
+## Shared shore/forest arrival owner. Chapters are cosmetic; Lobby delivers once.
 signal completed
 
 const DURATION := 8.0
+const FIRE_DURATION := 10.5
+const COMBINED_DURATION := 14.5
 var home: Lobby
 var points := PackedVector2Array()
 var fires := 0
@@ -13,6 +15,12 @@ var full_intro := false
 var cancelled := false
 var elapsed := 0.0
 var warning_started := -1.0
+var fire_points := PackedVector2Array()
+var batch_id := ""
+var reinforcement := false
+var introduce_shore := true
+var introduce_fire := false
+var _fire: FireArrival
 var _done := false
 var _started_at := 0.0
 var _sprites: Array[Sprite2D] = []
@@ -28,6 +36,20 @@ var _skip: Button
 var _caption: Label
 var _voice: AudioStreamPlayer
 var _sound_beat := -1
+var _curtain: ColorRect
+
+func configure(pending: Dictionary) -> void:
+	night = int(pending.night)
+	serial = GameState.journey_serial
+	batch_id = str(pending.get("id", ""))
+	fires = int(pending.fires)
+	warning_started = float(pending.started)
+	for at in pending.points: points.append(Vector2(float(at[0]), float(at[1])))
+	for at in pending.get("fire_points", []): fire_points.append(Vector2(float(at[0]), float(at[1])))
+
+func duration() -> float:
+	if not full_intro or not introduce_fire: return DURATION
+	return COMBINED_DURATION if introduce_shore else FIRE_DURATION
 
 func _ready() -> void:
 	z_index = 45
@@ -44,6 +66,12 @@ func _ready() -> void:
 		_focus += home.to_global(at)
 	_focus /= maxf(1, points.size())
 	_focus += Vector2(0, -0.4)
+	if not fire_points.is_empty():
+		_fire = FireArrival.new()
+		_fire.home = home
+		_fire.points = fire_points
+		_fire.full_intro = full_intro and introduce_fire
+		add_child(_fire)
 	if full_intro:
 		_previous_camera = get_viewport().get_camera_2d()
 		_camera_start = _previous_camera.global_position if is_instance_valid(_previous_camera) else _focus
@@ -61,18 +89,25 @@ func _ready() -> void:
 	_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ui.add_child(_root)
+	_curtain = ColorRect.new()
+	_curtain.color = Color("#152b34")
+	_curtain.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_curtain.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_curtain.visible = false
+	_root.add_child(_curtain)
 	_caption = GameUI.label("", 22, Color("#f7e7bc"))
 	_caption.add_theme_color_override("font_outline_color", Color("#273b50"))
 	_caption.add_theme_constant_override("outline_size", 5)
 	_caption.position = Vector2(28, 28)
+	_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(_caption)
 	if full_intro:
 		_skip = GameUI.button("Skip introduction", Vector2(190, 64))
 		_skip.pressed.connect(finish)
 		_root.add_child(_skip)
-		_root.resized.connect(_fit)
-		_fit()
+	_root.resized.connect(_fit)
+	_fit()
 	_voice = AudioStreamPlayer.new()
 	_voice.bus = "Master"
 	add_child(_voice)
@@ -82,24 +117,45 @@ func _ready() -> void:
 
 func _fit() -> void:
 	var display_scale := float(get_window().size.y) / maxf(1, get_viewport_rect().size.y) if DisplayServer.get_name() != "headless" else 1.0
-	_skip.size = Vector2(190, maxf(48, 44 / maxf(0.1, display_scale)))
-	_skip.position = Vector2(_root.size.x - _skip.size.x - 24, 24)
+	if is_instance_valid(_skip):
+		_skip.size = Vector2(190, maxf(48, 44 / maxf(0.1, display_scale)))
+		_skip.position = Vector2(_root.size.x - _skip.size.x - 24, 24)
+	_caption.size = Vector2(maxf(1, _root.size.x - 56), 64)
+	_caption.position = Vector2(28, maxf(100, _root.size.y - 94)) if full_intro else Vector2(28, 100)
+	if not full_intro:
+		var game := get_tree().get_first_node_in_group("game") as Game
+		if is_instance_valid(game) and is_instance_valid(game.hud.objective_tracker):
+			var objective := game.hud.objective_tracker.get_global_rect()
+			# Reserve the objective column even before its next visibility/layout tick.
+			var left := maxf(objective.end.x + 16, _root.size.x * 0.38 + 28)
+			var right := game.hud._menu_button.get_global_rect().position.x - 16
+			var top := 90.0
+			if game.hud._progression_notice.visible: top = maxf(top, game.hud._progression_notice.get_global_rect().end.y + 12)
+			if right - left < 280:
+				left = 28
+				right = _root.size.x - 28
+				top = maxf(top, objective.end.y + 12)
+			_caption.position = Vector2(left, top)
+			_caption.size.x = maxf(1, right - left)
 
 func _process(delta: float) -> void:
 	if _done: return
 	var game := get_tree().get_first_node_in_group("game") as Game
-	if not is_instance_valid(home) or not is_instance_valid(game) or game.world != home or serial != GameState.journey_serial or not GameState.is_night() or GameState.night_number() != night:
+	if not is_instance_valid(home) or home.is_queued_for_deletion() or not is_instance_valid(game) or game.world != home or serial != GameState.journey_serial or GameState.game_over_active or not GameState.is_night() or GameState.night_number() != night:
 		cancel()
 		return
 	if full_intro: elapsed += maxf(0, delta)
 	else: elapsed = maxf(0, float(GameState.data.world_time) - _started_at)
 	sample(elapsed)
-	if elapsed >= DURATION: finish()
+	if elapsed >= duration(): finish()
 
 func sample(time: float) -> void:
-	elapsed = clampf(time, 0, DURATION)
+	elapsed = clampf(time, 0, duration())
 	var reduced := GameSettings.reduce_motion()
 	var visible_time := elapsed if full_intro else minf(1.99, elapsed * 0.25)
+	# Fit all six shore landings into the combined seven-second chapter, then
+	# hold their final poses while the forest is introduced. Shore-only stays 8 s.
+	if full_intro and introduce_fire and introduce_shore: visible_time = minf(8.0, elapsed * 8.0 / 7.0)
 	for i in _sprites.size():
 		var actor := _sprites[i]
 		var delay := 0.0 if i == 0 else 3.7 + float(i - 1) * 0.18
@@ -117,28 +173,51 @@ func sample(time: float) -> void:
 		actor.texture = UrchinArt.texture(pose, int(t * 5.0))
 		actor.rotation = sin((t - 3.2) * TAU) * 0.10 * (1.0 - smoothstep(3.2, 4.6, t)) if not reduced and t >= 3.2 else 0.0
 		actor.modulate.a = 1.0 if reduced else smoothstep(0.8, 1.2, t)
+	var fire_time := elapsed
+	if full_intro and introduce_fire and introduce_shore: fire_time = (elapsed - 7.0) * 9.2 / 6.5
+	if is_instance_valid(_fire): _fire.sample(fire_time)
 	if full_intro and is_instance_valid(_camera):
 		var close_zoom := Vector2.ONE * minf(64, get_viewport_rect().size.y / 6.0)
 		var focus_progress := smoothstep(0.0, 0.8, elapsed)
-		var return_progress := smoothstep(7.0, DURATION, elapsed)
+		var return_start := duration() - (1.3 if introduce_fire and not introduce_shore else 1.0)
+		var return_progress := smoothstep(return_start, duration(), elapsed)
 		if reduced:
 			focus_progress = 1
-			return_progress = 1 if elapsed >= 7 else 0
-		_camera.global_position = _camera_start.lerp(_focus, focus_progress).lerp(_camera_start, return_progress)
+			return_progress = 1 if elapsed >= return_start else 0
+		var shot := _focus
+		if introduce_fire and is_instance_valid(_fire) and (not introduce_shore or elapsed >= 7.15):
+			shot = _fire.focus()
+			close_zoom = Vector2.ONE * minf(76, get_viewport_rect().size.y / 7.0) * lerpf(1.0, 0.78, smoothstep(6.6, 8.4, fire_time))
+		# Bridge distant shore and forest with a brief covered cut, one camera owner.
+		var cover := smoothstep(6.85, 7.15, elapsed) * (1.0 - smoothstep(7.15, 7.5, elapsed)) if introduce_fire and introduce_shore else 0.0
+		_curtain.visible = cover > 0
+		_curtain.modulate.a = cover
+		_camera.global_position = _camera_start.lerp(shot, focus_progress).lerp(_camera_start, return_progress)
 		_camera.zoom = _zoom_start.lerp(close_zoom, focus_progress).lerp(_zoom_start, return_progress)
 		_camera.force_update_scroll()
-	var direction := _focus - home.player.global_position
-	var bearing := ("east" if direction.x > 0 else "west") if absf(direction.x) > absf(direction.y) else ("south" if direction.y > 0 else "north")
-	_caption.text = ("Spines in the foam..." if elapsed < 4.6 else "Sea Urchins · A stubborn visitor from the tide") if full_intro else "Spines at the shoreline · " + bearing
+	if full_intro:
+		if introduce_fire and (not introduce_shore or elapsed >= 7.15):
+			_caption.text = "An ember hangs between the trees..." if fire_time < 3 else ("Something is crossing into BESUT..." if fire_time < 5.4 else "Fire Monsters · Protect the forest")
+		else: _caption.text = "Spines in the foam..." if elapsed < 4.6 else "Sea Urchins · A stubborn visitor from the tide"
+	else:
+		_fit()
+		if points.is_empty() and is_instance_valid(_fire): _caption.text = "Embers in the forest · " + _bearing(_fire.focus())
+		elif not fire_points.is_empty() and is_instance_valid(_fire): _caption.text = "Spines · %s   /   Embers · %s" % [_bearing(_focus), _bearing(_fire.focus())]
+		else: _caption.text = "Spines at the shoreline · " + _bearing(_focus)
 	var game := get_tree().get_first_node_in_group("game") as Game
 	_ui.visible = full_intro or (is_instance_valid(game) and not game.hud.any_modal_open() and not game._story_active and not is_instance_valid(game.home_interior))
 	var beat := 0 if elapsed < 2 else (1 if elapsed < 3.4 else 2)
-	if beat != _sound_beat:
+	if beat != _sound_beat and not points.is_empty():
 		_sound_beat = beat
 		if _voice != null and not GameSettings.mute_all() and GameSettings.effects_volume() > 0 and GameSettings.master_volume() > 0:
 			_voice.stream = Sfx.urchin_arrival_sound(["surf", "sand", "rattle"][beat])
 			_voice.play()
+	if full_intro and introduce_fire and introduce_shore and elapsed >= 7.0: _voice.stop()
 	queue_redraw()
+
+func _bearing(at: Vector2) -> String:
+	var direction := at - home.player.global_position
+	return ("east" if direction.x > 0 else "west") if absf(direction.x) > absf(direction.y) else ("south" if direction.y > 0 else "north")
 
 func _draw() -> void:
 	if not is_instance_valid(home): return
@@ -179,7 +258,8 @@ func finish() -> void:
 	_voice.stop()
 	hide()
 	_ui.hide()
-	if is_instance_valid(_previous_camera): _previous_camera.make_current()
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if is_instance_valid(_previous_camera) and is_instance_valid(_camera) and get_viewport().get_camera_2d() == _camera and is_instance_valid(game) and game.world == home and serial == GameState.journey_serial: _previous_camera.make_current()
 	completed.emit()
 	queue_free()
 

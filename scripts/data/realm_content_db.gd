@@ -27,6 +27,7 @@ static func reserved(at: Vector2) -> bool:
 
 static func waykeeper_words(progress: Dictionary, restored: bool) -> String:
 	if restored: return "The road is breathing again. Some quiet places are still waiting to be found."
+	if not bool(progress.get("waykeeper_met", false)) and progress.get("read_fragments", []).is_empty(): return "A village lantern. I haven't seen that light on this road for a long time. Old stones lead toward the citadel; small lives still shelter beside the road."
 	if progress.get("read_fragments", []).size() == 3: return "Those lights belonged to the road. The citadel gathered what the forest lost."
 	if not progress.get("bonded", []).is_empty(): return "A little trust can travel farther than a bright lantern."
 	if not progress.get("read_fragments", []).is_empty(): return "The stones remember. You need only stop long enough to read them."

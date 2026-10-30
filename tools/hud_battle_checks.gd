@@ -32,9 +32,10 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(GameState.mission_step() == 8, "night tutorial advances to the monster portal")
 	GameState.advance_world_clock(180)
 	check.call(GameState.mission_step() == 2, "unfinished day tutorial resumes next day")
-	while GameState.mission_step() < MissionDB.STEPS.size():
+	while GameState.mission_step() < 8:
 		GameState.record_mission_event(str(MissionDB.step(GameState.mission_step()).get("event", "")))
 	check.call(GameState.completed_mission_count() == 8, "all seven day lessons complete separately from night training")
+	check.call(GameState.mission_step() == 8, "waystone and portal guidance are also available during daylight")
 	GameState.advance_world_clock(180)
 	_quiet(lobby)
 	GameState.record_mission_event("portal")

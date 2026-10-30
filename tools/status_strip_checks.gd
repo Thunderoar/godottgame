@@ -12,6 +12,7 @@ static func run(game: Game, check: Callable) -> void:
 	await game.get_tree().process_frame
 	var saved := GameState.data.duplicate(true)
 	GameState.data = GameState._make_default("adam")
+	GameState.data.portal_origin.opened = true # Existing combat/UI fixture starts after waystone restoration.
 	GameState._emit_all()
 	await game._load_lobby(false, true)
 	var lobby := game.world as Lobby
