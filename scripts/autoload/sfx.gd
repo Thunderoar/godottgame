@@ -280,5 +280,7 @@ func _build_battle_track(variant: int) -> AudioStreamWAV:
 	stream.data = bytes
 	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
 	stream.loop_begin = 0
-	stream.loop_end = count
+	# Godot's PCM mixer can decode the loop endpoint. Keep it inside the buffer;
+	# count itself is one sample past the allocation (crashes Android AudioTrack).
+	stream.loop_end = count - 1
 	return stream

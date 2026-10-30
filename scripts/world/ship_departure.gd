@@ -24,6 +24,11 @@ func _ready() -> void:
 	_build_front_hull()
 	super._ready()
 	add_to_group("ship_boarding")
+	GameState.data_changed.connect(_refresh_availability)
+	_refresh_availability()
+
+func _refresh_availability() -> void:
+	available = GameState.sea_journey_available() and not (departing or returning or disembarking)
 
 func _build_front_hull() -> void:
 	# Redraw only the near hull in front of the rider, keeping the mast behind.
@@ -41,7 +46,7 @@ func _build_front_hull() -> void:
 	ship.add_child(_front_hull)
 
 func interact(player: Node) -> void:
-	if not is_instance_valid(player) or player.global_position.distance_to(global_position) > interact_radius:
+	if not available or not is_instance_valid(player) or player.global_position.distance_to(global_position) > interact_radius:
 		return
 	var game := get_tree().get_first_node_in_group("game") as Game
 	if is_instance_valid(game):
@@ -68,7 +73,7 @@ func _carry_passenger() -> void:
 	passenger.global_position = ship.global_position + PASSENGER_OFFSET
 
 func begin(player: Player) -> bool:
-	if departing or returning or disembarking or not is_instance_valid(ship) or not is_instance_valid(player):
+	if not GameState.sea_journey_available() or departing or returning or disembarking or not is_instance_valid(ship) or not is_instance_valid(player):
 		return false
 	departing = true
 	landed = false
@@ -118,7 +123,7 @@ func _physics_process(delta: float) -> void:
 			landed = true
 			ship.set_meta("passenger_onboard", false)
 			_front_hull.visible = false
-			available = true
+			_refresh_availability()
 			passenger.collision_mask = _passenger_mask
 			passenger.velocity = Vector2.ZERO
 			passenger.reset_physics_interpolation()

@@ -110,6 +110,7 @@ func _capture_realms(game: Game, directory: String) -> void:
 	ocean._process(4)
 	await _capture(directory,"sea_tutorial")
 	ocean.dismiss_sea_guide()
+	ocean.stage = 2 # The complete hazard catalog belongs to the second sea level.
 	for pair in [["food",18],["trash",22],["bomb",26],["shark",31],["heart",35]]: ocean.spawn_item(str(pair[0]),float(pair[1]))
 	await _capture(directory,"sea_no_labels")
 	get_window().size = Vector2i(832,480)

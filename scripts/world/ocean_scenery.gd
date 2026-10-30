@@ -3,9 +3,18 @@ extends Node2D
 ## Non-colliding background life. Threatening sharks belong to OceanJourney.
 var clock := 0.0
 var life: Array[Dictionary] = []
+var _static_layer: Node2D
+var _animation_frame := 0
+var _pixel_seabed := true
 func _ready() -> void:
 	texture_filter = VisualStyle.texture_filter()
 	z_index = 1
+	_pixel_seabed = VisualStyle.is_pixel() or not ResourceLoader.exists("res://assets/authored/illustrated/ocean-background.png")
+	_static_layer = Node2D.new()
+	_static_layer.name = "StaticSeabed"
+	_static_layer.show_behind_parent = true
+	_static_layer.draw.connect(_draw_static)
+	add_child(_static_layer)
 	var specs := [
 		["whale",Vector2(30,8),0.12,0.42],["megalodon",Vector2(9,9),0.1,0.35],
 		["mermaid",Vector2(28,15.7),0.08,0.5],["diver",Vector2(18,8),0.06,0.45],
@@ -33,24 +42,38 @@ func _ready() -> void:
 	wreck.scale = Vector2.ONE * PixelArt.PX * 2.3
 	wreck.modulate = Color("#92b4b4")
 	add_child(wreck)
+	refresh_stage((get_parent() as OceanJourney).stage)
+
+func refresh_stage(stage: int) -> void:
+	# Keep stable actor indices (the diver owns bubbles), while level one has no shark silhouettes.
+	for actor in life:
+		if str(actor.kind) in ["shark","megalodon"]: (actor.sprite as Sprite2D).visible = stage >= OceanJourney.SHARK_LEVEL
+
 func _process(delta: float) -> void:
 	if GameSettings.reduce_motion(): return
 	var ocean := get_parent() as OceanJourney
 	if is_instance_valid(ocean._ocean_settings) and ocean._ocean_settings.visible: return
 	clock += delta
+	var next_frame := int(clock * 2) % 2
 	for actor in life:
 		var s := actor.sprite as Sprite2D
 		var base: Vector2 = actor.base
 		s.position = Vector2(fposmod(base.x-clock*float(actor.speed)+6,52)-6,base.y+sin(clock*0.65+base.x)*0.22)
-		s.texture = OceanArt.creature(str(actor.kind),int(clock*2)%2)
+		if next_frame != _animation_frame:
+			s.texture = OceanArt.creature(str(actor.kind), next_frame)
+	_animation_frame = next_frame
 	queue_redraw()
-func _draw() -> void:
-	if VisualStyle.is_pixel() or not ResourceLoader.exists("res://assets/authored/illustrated/ocean-background.png"):
-		draw_colored_polygon(PackedVector2Array([Vector2(-20,21),Vector2(5,20.6),Vector2(20,21.1),Vector2(32,20.6),Vector2(65,21),Vector2(65,30),Vector2(-20,30)]),Color("#758e8b"))
+
+func _draw_static() -> void:
+	if _pixel_seabed:
+		_static_layer.draw_colored_polygon(PackedVector2Array([Vector2(-20,21),Vector2(5,20.6),Vector2(20,21.1),Vector2(32,20.6),Vector2(65,21),Vector2(65,30),Vector2(-20,30)]),Color("#758e8b"))
 		for i in 75:
 			var x := fposmod(i*4.179,65)-10
 			var y := 21.2+fposmod(i*1.197,2.8)
-			draw_line(Vector2(x,y),Vector2(x+0.12,y),Color("#b3bfa3"),PixelArt.PX)
+			_static_layer.draw_line(Vector2(x,y),Vector2(x+0.12,y),Color("#b3bfa3"),PixelArt.PX)
+
+func _draw() -> void:
+	if _pixel_seabed:
 		for i in 35:
 			var x := i*1.7-10
 			var points := PackedVector2Array()

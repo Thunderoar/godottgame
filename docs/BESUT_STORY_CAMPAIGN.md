@@ -2,6 +2,38 @@
 
 Implemented 2026-10-25 for Godot 4.7.2.
 
+**2026-10-30 completed sea journey:** once Arjun is freed, the return ship still
+brings Adam and Arjun home, but future boarding and sea/island entry are closed.
+The ship remains moored as village scenery. Closure follows the saved
+`arjun_rescued` flag, including older completed saves; it needs no extra save field.
+A new journey reopens the route. Defeating the Kraken without freeing Arjun and
+rescuing Mei Ling alone leave the unfinished sea rescue available. This supersedes
+earlier replay descriptions. The reunion's illustrated dock tag remains a story
+hint; it does not reopen the completed sea game.
+
+**2026-10-30 Kraken Island guards:** ten armoured crab monsters guard the fortress
+approaches, away from Adam's arrival and the pillars. They skitter, telegraph a
+pincer strike, take normal weapon damage and drop collectible Gold when defeated.
+All ten crabs and the Kraken engage Adam immediately upon arena entry, including
+guards outside the normal proximity radius. The Kraken begins his first tentacle
+warning after 0.6 seconds; dodgeable warnings still precede damage.
+Hitting a winding-up crab interrupts it. When the Kraken King falls, surviving
+crabs retreat without kill rewards so Adam can approach Arjun's unlocked prison.
+The prison still requires a separate tap/E interaction to rescue him. The Field
+Guide includes the crab; `-OceanLevels` review covers the encounter too.
+
+**2026-10-30 two sea levels:** the current turtle journey has exactly two levels.
+Level 1 has bombs, rubbish, heart pickups and fish; level 2 adds sharks. Both last
+45 seconds. The first completion saves level 2 before its automatic forward-swim
+transition; the second carries Adam directly to Kraken Island. The Sea Guide,
+portrait timeline, objectives and Arjun's title-card requirement reflect two levels.
+Level 1 also hides the decorative megalodon so sharks are introduced in level 2.
+The three-life cap, fish/fullness rules, rubbish penalties and separate Kraken
+fight/prison interaction remain in force. Old stage-3 checkpoints load at level 2,
+preserving possessions and rescue flags. This supersedes the historical three-route
+notes below. Focused review: `tools/test_isolated.ps1 -Godot <console-executable>
+-OceanLevels`, with optional `-Capture -Resolution 832x480` or `1280x720`.
+
 **2026-10-30 dock welcome:** after the eight opening beats, Pak Rahim, the village
 water keeper, talks to Adam on the actual dock before movement lessons begin.
 He offers water and shelter without demanding repayment, listens to Adam's worry
@@ -15,11 +47,11 @@ See `docs/DOCK_WELCOME.md` for the dialogue owner, art prompt and review route.
 
 New journeys start as Adam. The title's other hero cards preview his missing friends. The skippable illustrated opening shows their fishing trip, Arjun hooking the Kraken, the ship breaking into three parts, Mei Ling drifting ashore on the broken bow at a guarded ruin, both friends being captured, and the turtle rescuing Adam. The ruin already has sentries; they take the unfamiliar survivor alive because their ruler wants answers. The Kraken remains an independent sea king, not their commander or servant. Adam repays BESUT's villagers by defending their island while searching for his friends.
 
-The ship leads to three sea routes, each lasting 45 seconds. Completed routes persist as checkpoints. Route three leads to Kraken Island: defeat Vorath, who pursues Adam around the stone pillars, uses telegraphed melee attacks and alternates tentacle slams and dragging hooks; approach the prison and press Use to open it. The rescue scene shows Arjun leaving the cage and boarding the ship. Arjun stands visibly on the rear deck, away from Adam and the mast, with the same foot alignment and human scale as the player. He disembarks and follows village walking routes at the normal resident pace (0.9 world units/second), instead of finishing the trip in a fixed few seconds.
+The ship leads to two sea levels, each lasting 45 seconds. Level 1 has bombs, rubbish, heart pickups and fish; level 2 adds sharks. Completed levels persist as checkpoints. Level 2 leads to Kraken Island: defeat Vorath, who pursues Adam around the stone pillars, uses telegraphed melee attacks and alternates tentacle slams and dragging hooks; approach the prison and tap it or press E to open it. The rescue scene shows Arjun leaving the cage and boarding the ship. Arjun stands visibly on the rear deck, away from Adam and the mast, with the same foot alignment and human scale as the player. He disembarks and follows village walking routes at the normal resident pace (0.9 world units/second), instead of finishing the trip in a fixed few seconds.
 
 Mei Ling is held by Abyss Monarch in Abyssal Throne, the third and last Monster Portal (level 5). The shortened chain is Chaos Citadel (level 1) → Tempest Spire (level 3) → Abyssal Throne (level 5). Defeating that boss frees her. She walks out through the portal alongside Adam. Both rescued friends become village defenders: Arjun uses his scythe and Mei Ling fires arrows at fire monsters and sea urchins.
 
-When both friends have returned, an illustrated reunion reveals that their fishing voyage crossed into another dimension. They choose BESUT as their new home. The ending is saved once; village play continues afterward. The sea king can be challenged again without imprisoning or recruiting Arjun twice.
+When both friends have returned, the saved reunion conversation leads into an illustrated dock-preparation hint. Village play continues afterward. Arjun's completed rescue keeps the playable sea journey closed, including after save/load.
 
 ## Turtle controls and rules
 

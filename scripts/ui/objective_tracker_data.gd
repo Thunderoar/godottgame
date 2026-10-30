@@ -30,7 +30,7 @@ static func entries(world: Node, counts: Dictionary = {}) -> Array[Dictionary]:
 		return [_entry("boss", "Defeat %s" % str(definition.get("boss_name", "the ruler")), "Dodge the marked attacks. Your companion fights beside you.", "EXPEDITION")]
 	if world is KrakenIsland:
 		if bool(GameState.campaign().get("arjun_rescued", false)):
-			return [_entry("shore", "Return to BESUT" if world.defeated else "Challenge the Kraken King", "Arjun is safe. You can return through the shore exit.", "ISLAND")]
+			return [_entry("shore", "Return to BESUT", "Arjun is safe. Return through the shore exit; the sea journey is complete.", "ISLAND")]
 		if world.defeated:
 			return [_entry("free_arjun", "Free Arjun", "Approach and tap his prison. Defeating the Kraken unlocks the cage.", "RESCUE")]
 		return [_entry("kraken", "Defeat the Kraken King", "Avoid his marked strikes to unlock Arjun's prison.", "RESCUE")]
@@ -74,7 +74,7 @@ static func _rescue_entries() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var story := GameState.campaign()
 	if not bool(story.get("arjun_rescued", false)):
-		out.append(_entry("arjun", "Rescue Arjun", "Board the ship. Sea route %d of 3 leads toward Kraken Island." % int(story.get("ocean_stage", 1)), "STORY"))
+		out.append(_entry("arjun", "Rescue Arjun", "Board the ship. Sea level %d of %d leads toward Kraken Island." % [int(story.get("ocean_stage", 1)),GameState.OCEAN_STAGES], "STORY"))
 	if not bool(story.get("mei_ling_rescued", false)):
 		out.append(_entry("mei_ling", "Rescue Mei Ling", "Enter the Dimension Portal. Defeat Shadow & Chaos Fiend in Chaos Citadel to free her.", "STORY"))
 	return out

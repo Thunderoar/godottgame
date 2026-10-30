@@ -2481,3 +2481,285 @@ extra light sources, rewards or new interactions.
   same external temporary directory. Final full/focused error logs are empty,
   with no FAIL, SCRIPT ERROR or ERROR markers. git diff --check passes with
   existing LF/CRLF notices. All runs isolate player data; no device export was run.
+
+## Mei Ling - the citadel opens (2026-10-30)
+
+Shadow & Chaos Fiend's arena now contains Mei Ling in a visible sealed stone
+prison. Defeat starts seven authored shots over 24 seconds: collapse, breaking
+seal, opening gate and grounded steps, Adam's reaching hand, an Arjun-aware
+exchange, Mei Ling arriving in BESUT, and Adam remaining in the restored citadel.
+The close shots share the prison's identity with the world scenery; the village
+insert is an illustration, not an active second world.
+
+- Rescue, clear and first rewards remain committed before presentation. Skip,
+  natural completion and repeated signals cannot revoke or duplicate them.
+  Old first-clear saves keep their rescue migration and peaceful revisits.
+- The real world/clock suspend during the story. Game owns a single StorySequence
+  and cancellation, with world/journey checks before restoring HUD and controls.
+  The ordinary boss corpse is hidden while its fade tween is suspended.
+- The gate clears before Mei Ling crosses it. Consecutive frames check release
+  continuity and hand contact. Both rescue orders use truthful Arjun dialogue;
+  he appears in the village insert only if already rescued. The normal ending
+  still waits for Adam's real return to BESUT, and defender IDs remain unique.
+- Essential action remains in low effects and Reduce Motion. Turning motion off
+  during a shot latches composed poses until the scene completes. Mute changes
+  no progression. Next/Skip require fresh input after the killing action; primary
+  touch and its emulated mouse press are debounced into one beat advance.
+- Stale "final portal boss" NPC copy and post-rescue Missions guidance are fixed.
+  The dedicated rescue fixture now explicitly starts after portal awakening.
+
+Validation also exposed two fixture issues: the opening art test temporarily
+changes an existing story's kind, so Mei-only caption decoration must be optional;
+and the full arrival suite can reach its late-return assertion before the first
+idle tick. Its setup now explicitly processes that cue once, as its earlier reload
+fixture already does, without changing arrival timing or weakening its checks.
+
+Windows review uses `tools/test_isolated.ps1 -Godot <console-executable>
+-MeiRescue`, with `-Capture -Resolution 832x480` or `1280x720` for actual-renderer
+captures. Full gameplay and Twilight validation use the same isolated wrapper.
+All review artifacts remain outside the repository; unrelated export/Android
+planning and objective-tracker edits belong to the existing workspace work.
+
+Windows Godot 4.7.2 verification:
+
+- Canonical isolated gameplay: **6,335 checks, PASS, exit 0**. Its first attempt exposed
+  the fixture issues described above; the corrected run has no failure/error markers.
+- Focused rescue headless: **65 checks, PASS, exit 0**.
+- Native rendered rescue: **65 checks, PASS, exit 0** at each of **832x480** and
+  **1280x720**, using the Compatibility renderer on AMD Radeon Vega 3. Inspected
+  captive arena placement, all seven beats, consecutive opening/step/contact/rift
+  frames, reduced motion and the Arjun-present arrival insert. Real mouse, primary
+  touch and focused keyboard events each advance one beat.
+- Focused Twilight: **197 checks, PASS, exit 0**; focused fire arrival:
+  **68 checks, PASS, exit 0**. The final full suite covers the deterministic
+  late-return setup fix and the boss-corpse cleanup as well.
+- Isolated import passes with the existing `Unable to open Android 'build-tools'
+  directory` warning. Final rescue/full runtime stderr files are empty.
+  `git diff --check` passes. This is native Windows evidence, not an Android
+  export or physical-phone test.
+
+Evidence below `C:/Users/LUQMAN/AppData/Local/Temp/`:
+
+- Full gate: `tidesworn-tests-20cdde42238a485aac3ae624a2e9200d`.
+- Rescue headless: `tidesworn-tests-17d94ab5242f4193abb47ed5351980f6`.
+- Final 832x480: `tidesworn-tests-b97171e19b5a473a91182b015ade734f`.
+- Final 1280x720: `tidesworn-tests-4134c56faa8d4b19b96f29e579f2dc00`.
+- Twilight: `tidesworn-tests-f51c7bb2cc39454cafc994341168b66b`.
+- Fire: `tidesworn-tests-69d02a0909514043b8c4b1d144bd808b`.
+- Import: `tidesworn-tests-dee056d0ef64435db6cd568f1938199d`.
+
+## Three friends, one table - reunion dialogue (2026-10-30)
+
+The former three-caption ending is replaced by thirty named dialogue turns across
+seven animatic beats: recognition, Arjun's apology, their separation, a shared
+plan, thanks to BESUT, practical preparation and familiar company. An eighth,
+wordless dock tag shows the moored UNISZA ship, a supply bag and the friends
+checking a rope. It hints at another journey without selecting a destination.
+
+- Readers control the pace. Text reveals gradually; Next first reveals the line
+  and a fresh activation advances it. Primary touch/emulated mouse is debounced.
+  Skip conversation preserves the two-second dock tag before Continue completes.
+- Copied finite unarmed poses support sitting, listening, gestures, cups, rising
+  and preparation. The benches remain after the group stands. Courtyard/dock day
+  and night art follow the captured shared clock. Reduced motion and low effects
+  retain essential events, speakers and legible text.
+- The active dialogue owns its procedural voice. New turns, complete reveals,
+  mute/zero volume, focus loss, Skip and cancellation stop it. No recorded voice
+  acting is required; muted pictures and captions carry the complete conversation.
+- Game owns a safe retry for the pending reunion. One missing friend, sailing,
+  Arjun still returning, transitions, defeat/recovery, modals and nearby enemies
+  prevent entry. A safe retry starts it without consuming its completion early.
+- Existing `ending_seen` persistence remains. Finishing saves it; cancellation
+  does not. Already-completed saves do not repeat it. The dock illustration cannot
+  move live actors, board the ship, award rewards or change ocean checkpoints.
+- Both rescue orders retain the shared conversation and independent defender IDs.
+  Campaign/Field Guide copy now describes the reunion and next preparations rather
+  than a permanent-settlement promise or THE END card.
+
+`tools/reunion_checks.gd` is part of the canonical gameplay gate and the focused
+`tools/reunion_test.tscn`. Windows uses `-Reunion`, with optional `-Capture` and
+`-Resolution 832x480` / `1280x720` under `tools/test_isolated.ps1`. Review output
+stays in its printed isolated temporary directory. Initial fixture input injection
+was corrected to release at a stored pointer coordinate after the final button
+freed itself, and to refresh button state after manually sampled dock shots.
+
+Windows Godot 4.7.2 verification:
+
+- Canonical isolated gameplay: **6,410 checks, PASS, exit 0**. The earlier full
+  attempt exposed four fixture input failures: without captures, pointer injection
+  reached the first button before its container layout settled. The helper now
+  waits for that layout in both native and headless modes; the assertions remain.
+- Focused reunion headless: **62 checks, PASS, exit 0**.
+- Native reunion at **832x480** and **1280x720**: **62 checks, PASS, exit 0** each.
+  Inspected all conversation beats, the named-speaker layout, day/night variants,
+  consecutive walking/settling/rising frames and dock preparation. Real mouse,
+  primary touch and keyboard events cover reveal-first and fresh-turn activation.
+- Full/focused runtime stderr files are empty and contain no failure/error markers.
+  The final full gate also covers the real sea disembarkation, both rescue orders,
+  saved ending compatibility, unique village defenders and the citadel rescue.
+- Isolated import passes, retaining the existing `Unable to open Android
+  'build-tools' directory` warning. `git diff --check` passes. Captures use the
+  native Windows Compatibility renderer on AMD Radeon Vega 3. No Android export,
+  physical-phone validation or new sailing destination is claimed here.
+
+Evidence below `C:/Users/LUQMAN/AppData/Local/Temp/`:
+
+- Full gate: `tidesworn-tests-c74ae44a19934cc08d5ce19ff169dc94`.
+- Headless reunion: `tidesworn-tests-93adad76d5fe4d728b8ea1449441959b`.
+- Final 832x480: `tidesworn-tests-0742bacc367c4b98a44d7a2ed7241d51`.
+- Final 1280x720: `tidesworn-tests-4072490838634c28a8f07fcc5c187336`.
+- Import: `tidesworn-tests-0f6d007219ca4fc1ae2c11ca125d38da`.
+
+## Two sea levels and shark introduction (2026-10-30)
+
+The turtle journey contains exactly two 45-second levels. Level 1 supplies bombs,
+rubbish, heart pickups and fish. Level 2 retains all four and adds shark hazards;
+the decorative megalodon is also hidden until level 2. The shared stage count
+drives checkpoint sanitation, actual onward travel, the HUD portrait timeline,
+campaign objectives, the Field Guide and Arjun's locked title-card requirement.
+The first completion saves checkpoint 2 before departure. The second carries
+Adam straight into Kraken Island, where the boss and separate prison interaction
+remain required. Lives, fullness, rubbish penalties and retry reset rules retain
+their existing behavior.
+
+`tools/ocean_levels_checks.gd` runs in the canonical gameplay gate and the focused
+`tools/ocean_levels_test.tscn`. Windows supports `-OceanLevels`, with optional
+`-Capture -Resolution 832x480` or `1280x720`. Coverage exercises real timer-driven
+spawning in both levels, the shared shark-spawn guard, background visibility,
+seven-second initial shark delay, HUD progress, automatic level travel, checkpoint
+reload, retry and the actual Game-owned Kraken Island transition. An old level-3
+JSON save loads at level 2 while preserving currency, pets and rescued friends.
+The first review exposed a fixture comparison between pre-save integer values and
+JSON-loaded numeric values; comparing normalized JSON values fixes the assertion
+without altering production save handling.
+
+Windows Godot 4.7.2 verification:
+
+- Final canonical isolated gameplay: **6,424 checks, PASS, exit 0**, with no
+  `[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers and an empty runtime stderr file.
+- Native focused review at **832x480** and **1280x720**: **22 checks, PASS,
+  exit 0** each. Inspected the Sea Guide, level-one/four-object and
+  level-two/five-object layouts, two-part progress and actual Kraken arrival.
+  Both runtime stderr files are empty.
+- Isolated import: **exit 0**, retaining the existing `Unable to open Android
+  'build-tools' directory` warning. This is native Windows gameplay evidence;
+  no new Android export or physical-phone testing is claimed.
+- The first full attempt was correctly rejected despite its stdout PASS summary:
+  an older presentation fixture still requested a shark at level 1 and accessed
+  the rejected spawn's empty result. Presentation checks/review setups now place
+  their complete five-object catalog at level 2, retaining the assertions and
+  the production level-one shark guard.
+
+Evidence below `C:/Users/LUQMAN/AppData/Local/Temp/`:
+
+- Full gate: `tidesworn-tests-89d8ef58b80c4c7b8a8b68fb6ea9cb5d`.
+- Final 832x480: `tidesworn-tests-1dbeb1439c0f435b915d66986b3bf437`.
+- Final 1280x720: `tidesworn-tests-8c23f6a9736d487392e71ed8a55057f4`.
+- Import: `tidesworn-tests-9d69ada5a730439491b27ce337e5c4d1`.
+
+## Crab monsters at Kraken Island (2026-10-30)
+
+Four KrakenCrab enemies occupy clear fixed fortress posts. They use Enemy's
+movement, attack warning/active/recovery, stagger, collision, damage and loot
+systems, with a skittering personality, original cached crab pixel art and an
+existing illustrated crab atlas mapping. Guards have 48 HP, 7 base damage and
+a 1.6-second attack interval. They cannot act against a different current world.
+The Kraken's defeat makes surviving guards stop combat and retreat without kill
+or loot rewards, preserving the separate unlocked-prison interaction for Arjun.
+Each island visit constructs one fixed set; there is no mid-fight respawn loop.
+
+`tools/kraken_crab_checks.gd` extends the canonical gameplay and focused
+`-OceanLevels` routes with obstacle/arrival clearance, aggro/chase, warning before
+damage, one hit per swing, interruptible windup, world-ownership protection,
+one-payment loot, retreat cleanup and cage-state checks. A first fixture assertion
+looked for Gold after a nearby Adam had already collected it; the final assertion
+observes the actual drop entering the world, retaining the one-drop requirement.
+
+Windows Godot 4.7.2 focused native review at **832x480** and **1280x720** each
+reports **36 checks, PASS, exit 0**, with empty runtime stderr. The actual island
+arrival and post-defeat captures were inspected at both sizes. Isolated import
+exits 0 with the existing Android build-tools directory warning. No Android export
+or physical-phone test was performed for this change.
+
+Final canonical isolated gameplay: **6,438 checks, PASS, exit 0**. The wrapper
+confirms no failure/error markers; runtime stderr is empty. This also exercises
+the two-level sea journey, real Kraken combat, separate prison rescue, both
+friend-rescue orders and reunion. `git diff --check` passes.
+
+Evidence below `C:/Users/LUQMAN/AppData/Local/Temp/`:
+
+- Full gate: `tidesworn-tests-f9625ae006314c52a845de854f1b4f2d`.
+- Native 832x480: `tidesworn-tests-3d662f6d8b564a688887533713236890`.
+- Native 1280x720: `tidesworn-tests-800b9e059a964226957b4036c7668a4d`.
+- Import: `tidesworn-tests-a93b73798ad9438a8e082d2553c1149e`.
+
+## Ten crabs and immediate Kraken arena combat (2026-10-30)
+
+Kraken Island now constructs ten guards at fixed, obstacle-free posts. Entering
+the arena immediately sets all ten crabs and the Kraken to active pursuit of the
+current island player. Distant guards do not wait for a proximity trigger or
+return to wandering after losing range. The Kraken begins his first tentacle
+warning after 0.6 seconds; normal attack warnings, movement and dodge windows
+remain. The arrival space stays clear of overlapping monsters. Existing crab
+stats, loot, retreat on boss defeat and the separate prison interaction remain.
+Kraken attacks now also check active-world ownership before advancing.
+
+The focused `-OceanLevels` review checks all eleven active enemies at entry,
+distant-crab pursuit, automatic opening tentacle warnings, combat, one-payment
+loot, retreat and both kinds' world-ownership guards. The King's exact timing
+fixture suspends crab physics while testing his melee/tentacle damage in isolation;
+the combined encounter is covered by the focused crab checks.
+
+Windows Godot 4.7.2 native focused reviews at **832x480** and **1280x720** each
+report **38 checks, PASS, exit 0**, with empty runtime stderr. Both arrival
+captures were inspected: ten crabs plus the King are present and the arrival
+space remains clear. Isolated import exits 0 with the existing Android build-tools
+directory warning. `git diff --check` passes. No Android export was performed.
+
+Evidence below `C:/Users/LUQMAN/AppData/Local/Temp/`:
+
+- Native 832x480: `tidesworn-tests-21bd47f8b8cc472aafc870680cbe7944`.
+- Native 1280x720: `tidesworn-tests-0f7b6f74e1c34d489400ce0d1b000abf`.
+- Import: `tidesworn-tests-9b5d391aef5f45f7bc001b2a321b20e0`.
+
+The ten-crab/immediate-combat canonical gate also passed **6,440 checks, exit 0**,
+with empty runtime stderr, before the subsequent sea-completion change below.
+Evidence: `tidesworn-tests-5a3a1c0b0537422aa687cb13fac76b2d`.
+
+## Sea journey closes after Arjun's rescue (2026-10-30)
+
+Freeing Arjun permanently closes outbound ship boarding and ocean/Kraken entry
+for that saved journey. `GameState.sea_journey_available()` derives eligibility
+from the existing `campaign.arjun_rescued` flag; no new save field or reward is
+introduced. Ship availability refreshes on progression changes and after landing.
+Game's boarding/transition APIs and the low-level departure method enforce the
+same rule, including stale input or callbacks. Incoming rescue sailing still
+shows Arjun on deck and restores Adam's collision, controls, HUD and companion
+after disembarkation. The ship stays moored as scenery afterward. Existing rescued
+saves stay closed after reload. Fresh journeys reopen the route. A boss kill
+without opening the prison, and rescuing Mei Ling alone, leave it available.
+
+`tools/sea_journey_completion_checks.gd` extends `-OceanLevels` and the canonical
+gameplay gate with the actual prison/story/return-ship handoff, boarding rejection,
+real mouse/touch events even with stale availability, nearby cached interaction,
+delayed departure/island callbacks, checkpoint protection, save/load, village
+reconstruction and fresh-journey eligibility. The Field Guide and completed-island
+guidance now describe return/completion rather than another Kraken challenge.
+
+Windows Godot 4.7.2 native `-OceanLevels` reviews at **832x480** and **1280x720**
+each report **54 checks, PASS, exit 0**, with empty runtime stderr. Completed-ship
+captures were inspected at both sizes; real pointer tests confirm the moored hull
+cannot depart. Isolated import exits 0 with the existing Android build-tools
+directory warning. No Android export or physical-phone test was performed.
+
+Evidence below `C:/Users/LUQMAN/AppData/Local/Temp/`:
+
+- Native 832x480: `tidesworn-tests-00fb2be713c041ed867c04e7a8dd8609`.
+- Native 1280x720: `tidesworn-tests-b319135194f547679ac12840b866e053`.
+- Import: `tidesworn-tests-37d478c893104151915ef2773a4433db`.
+
+Final canonical isolated gameplay: **6,456 checks, PASS, exit 0**, no failure/error
+markers and empty runtime stderr. This final gate includes the ten-crab immediate
+encounter, both rescue orders, reunion, real incoming ship/disembarkation and the
+completed sea lock. `git diff --check` passes. Full evidence:
+`tidesworn-tests-41a21660380e4c2fbd5366a1910831ff`.

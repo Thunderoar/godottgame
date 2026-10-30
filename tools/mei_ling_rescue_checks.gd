@@ -61,14 +61,19 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(GameState.start_expedition(PortalDB.MEI_LING_PORTAL), "Mei Ling's rescue is accessible at level one after restoring the waystone")
 	await game._load_dungeon(PortalDB.MEI_LING_PORTAL, false)
 	var realm := game.world as TwilightRealm
+	check.call(is_instance_valid(realm.mei_prison) and not realm.mei_prison.opened and realm.mei_prison.position == RealmDB.MEI_PRISON and realm.mei_prison.get_child_count() == 0, "fiend's arena contains a visible nonblocking captive prison")
 	realm.player.invulnerable = 1000
 	realm.player.position = RealmDB.BOSS_THRESHOLD
 	realm._physics_process(0.1)
+	if capture.is_valid(): await capture.call("00_captive_arena")
 	realm.boss.take_damage(999999, Vector2.ZERO, realm.player)
 	await game.get_tree().process_frame
 	var story := _story(game)
 	check.call(bool(GameState.campaign().mei_ling_rescued) and story != null and story.kind == "mei", "actual fiend defeat immediately frees Mei Ling and starts her rescue scene")
 	check.call(realm._boss_defeated and game._story_active and realm.process_mode == Node.PROCESS_MODE_DISABLED and realm.player.controls_locked, "rescue scene owns input and safely suspends the restored realm")
+	check.call(realm.mei_prison.opened, "boss-clear transaction immediately leaves an open empty prison in the restored world")
+	check.call(not realm.boss.visible, "suspended death tween cannot reveal the fiend's corpse after his animated defeat")
+	if story != null: await preload("res://tools/mei_ling_animatic_checks.gd").inspect_story(game, realm, story, check, capture)
 	if capture.is_valid(): await capture.call("01_mei_freed")
 	if story != null: story.finish()
 	await game.get_tree().process_frame
@@ -77,11 +82,14 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	var gold := GameState.gold()
 	realm._on_boss_finished(null)
 	check.call(GameState.gold() == gold and _story(game) == null, "duplicate boss-finished signals cannot duplicate rescue scenes or rewards")
+	await preload("res://tools/mei_ling_animatic_checks.gd").completion_paths(game, check)
+	realm = game.world as TwilightRealm
 	GameState.save_game()
 	check.call(GameState.load_game() and bool(GameState.campaign().mei_ling_rescued), "interrupted post-rescue visit retains the saved rescue")
 	await game._load_dungeon(PortalDB.MEI_LING_PORTAL, false)
 	realm = game.world as TwilightRealm
 	check.call(realm._boss_defeated and not is_instance_valid(realm.boss) and _story(game) == null, "revisiting the restored citadel respawns neither boss nor rescue scene")
+	check.call(realm.mei_prison.opened, "reloaded peaceful realm retains the open empty prison")
 	if capture.is_valid(): await capture.call("02_peaceful_revisit")
 	realm.exit_to_lobby(true)
 	for frame in 120:

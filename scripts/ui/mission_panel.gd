@@ -25,7 +25,7 @@ func _rebuild() -> void:
 	var lesson := MissionDB.step(GameState.mission_step())
 	if GameState.tutorial_complete():
 		add_section("Tutorial complete", GameUI.PURPLE)
-		add_body_text("Chaos Citadel completes training. Onward passages have level requirements: defend BESUT or replay cleared later stages to prepare. The restored Twilight Wilds stay peaceful. Continue to rescue Arjun and Mei Ling.", GameUI.TEXT, 17)
+		add_body_text("Chaos Citadel completes training. Onward passages have level requirements: defend BESUT or replay cleared later stages to prepare. The restored Twilight Wilds stay peaceful. " + ("Your friends are safe in BESUT." if GameState.friends_reunited() else ("Mei Ling is safe. Continue the sea journey to rescue Arjun." if bool(GameState.campaign().get("mei_ling_rescued", false)) else "Defeat Shadow & Chaos Fiend to free Mei Ling from his prison.")), GameUI.TEXT, 17)
 	elif lesson.is_empty():
 		add_section("Night training complete" if GameState.is_night() else "Day training complete", GameUI.PURPLE)
 		add_body_text("Training changes with the time of day. Protect the village and prepare for the next lesson.", GameUI.TEXT, 17)

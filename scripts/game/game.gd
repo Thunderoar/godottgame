@@ -22,6 +22,7 @@ var loading_screen: LoadingScreen
 var _sailing := false
 var _return_to_harbour := false
 var _story_active := false
+var _active_story: StorySequence
 var _side_quest_intro: Dictionary = {}
 var _side_quest_timer := 0.0
 var _side_quest_auto_enabled := true # Fixtures can isolate unrelated gameplay paths.
@@ -34,6 +35,7 @@ var _urchin_world_mode := Node.PROCESS_MODE_INHERIT
 var _urchin_hud_visible := true
 var _arjun_returning := false
 var _arjun_walk: Tween
+var _reunion_check_timer := 0.0
 
 const EMERGENCY_DELAY := 14.0
 const SETTLEMENT_DAMAGE_TICK := 5.0
@@ -61,6 +63,10 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	_reunion_check_timer += delta
+	if _reunion_check_timer >= 0.75:
+		_reunion_check_timer = 0.0
+		_check_campaign_ending()
 	_side_quest_timer += delta
 	if _side_quest_auto_enabled and _side_quest_timer >= 0.3:
 		_side_quest_timer = 0.0
@@ -176,6 +182,7 @@ func _remove_title_if_owner(expected: CanvasLayer) -> void:
 # ------------------------------------------------------------------ world switching
 
 func _clear_world() -> void:
+	if is_instance_valid(_active_story): _active_story.cancel()
 	if not _side_quest_intro.is_empty():
 		_side_quest_intro.cancelled = true
 		hud.dialogue_panel.close_panel()
@@ -677,7 +684,7 @@ func open_field_guide() -> void:
 
 
 func board_ship(boarding: ShipDeparture, direct_tap: bool = false) -> bool:
-	if not world is Lobby or _transitioning or _input_locked or _sailing or _game_over or is_instance_valid(home_interior) or GameState.recovery_active() or GameState.emergency_active():
+	if not GameState.sea_journey_available() or not world is Lobby or _transitioning or _input_locked or _sailing or _game_over or is_instance_valid(home_interior) or GameState.recovery_active() or GameState.emergency_active():
 		return false
 	var p := player()
 	if not is_instance_valid(boarding) or boarding.get_parent() != world or not is_instance_valid(p) or p.dead or p.sleeping or (not direct_tap and p.global_position.distance_to(boarding.global_position) > boarding.interact_radius):
@@ -698,7 +705,7 @@ func board_ship(boarding: ShipDeparture, direct_tap: bool = false) -> bool:
 	return true
 
 func enter_ocean(boarding: ShipDeparture) -> void:
-	if _transitioning or not _sailing or not is_instance_valid(boarding) or boarding.get_parent() != world or not boarding.arrived:
+	if not GameState.sea_journey_available() or _transitioning or not _sailing or not is_instance_valid(boarding) or boarding.get_parent() != world or not boarding.arrived:
 		return
 	_transitioning = true
 	_input_locked = true
@@ -924,6 +931,8 @@ func play_dock_conversation(introduction: bool = false) -> void:
 
 
 func play_story(kind: String, from_title: bool = false) -> void:
+	if _story_active: return
+	var story_journey := GameState.journey_serial
 	_story_active = true
 	_input_locked = true
 	_apply_input_lock()
@@ -934,6 +943,7 @@ func play_story(kind: String, from_title: bool = false) -> void:
 	var was_visible := hud.visible
 	hud.visible = false
 	var story := StorySequence.new()
+	_active_story = story
 	story.kind = kind
 	var departing_title := _title_layer
 	story.arrive_from_title = from_title and is_instance_valid(departing_title)
@@ -942,16 +952,19 @@ func play_story(kind: String, from_title: bool = false) -> void:
 		story.departure_covered.connect(_remove_title_if_owner.bind(departing_title), CONNECT_ONE_SHOT)
 	add_child(story)
 	await story.completed
+	if _active_story != story: return
+	_active_story = null
+	_story_active = false
+	if world != story_world or GameState.journey_serial != story_journey or story.cancelled: return
 	if kind == "intro": GameState.mark_story_seen("intro_seen")
 	if kind == "ending": GameState.mark_story_seen("ending_seen")
 	if is_instance_valid(story_world): story_world.process_mode = old_mode
-	_story_active = false
 	hud.visible = was_visible
-	_input_locked = hud.any_modal_open() or _sailing
+	_input_locked = hud.any_modal_open() or _sailing or _transitioning or _defeat_pending
 	_apply_input_lock()
 
 func enter_kraken_island() -> void:
-	if not world is OceanJourney or _transitioning: return
+	if not GameState.sea_journey_available() or not world is OceanJourney or _transitioning: return
 	_transitioning = true
 	await loading_screen.begin("Kraken King's Island")
 	_clear_world()
@@ -978,17 +991,10 @@ func _handle_island_defeat() -> void:
 
 func _rescue_mei_ling() -> void:
 	var dungeon := world as Dungeon
-	if not is_instance_valid(dungeon): return
+	if not is_instance_valid(dungeon) or _story_active: return
 	var journey := GameState.journey_serial
 	hud.hide_modals()
-	var companion := Sprite2D.new()
-	companion.name = "RescuedMeiLing"
-	companion.texture = PixelArt.character_texture("mei_ling", 0)
-	companion.scale = Vector2.ONE * PixelArt.PX
-	companion.position = dungeon.player.position + Vector2(-2, 0)
-	dungeon.add_child(companion)
 	await play_story("mei")
-	if is_instance_valid(companion): companion.queue_free()
 	if world != dungeon or GameState.journey_serial != journey: return
 	# Mei Ling returns home in the story. Keep the restored exploration realm,
 	# its wildlife and optional passages available until Adam chooses to leave.
@@ -996,7 +1002,20 @@ func _rescue_mei_ling() -> void:
 
 func _check_campaign_ending() -> void:
 	if not world is Lobby or _sailing or _transitioning or _story_active or not GameState.friends_reunited() or bool(GameState.campaign().get("ending_seen", false)): return
+	if not _reunion_context_safe(): return
 	await play_story("ending")
+
+func _reunion_context_safe() -> bool:
+	if _arjun_returning or _input_locked or _game_over or _defeat_pending or hud.any_modal_open() or is_instance_valid(home_interior) or is_instance_valid(_dock_conversation) or is_instance_valid(_urchin_arrival): return false
+	if not world is Lobby or world.journey_serial != GameState.journey_serial or world._settlement_editor.active: return false
+	if GameState.recovery_active() or GameState.emergency_active(): return false
+	var actor := player()
+	if not is_instance_valid(actor) or actor.dead or actor.sleeping or actor.attacking or actor.controls_locked or Input.is_action_pressed("attack"): return false
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if is_instance_valid(enemy) and not enemy.is_queued_for_deletion() and enemy.get_parent() == world and not enemy.dead and enemy.global_position.distance_to(actor.global_position) < 10.0: return false
+	for tree in get_tree().get_nodes_in_group("forest_tree"):
+		if is_instance_valid(tree) and tree.get_parent() == world and tree.burning and tree.global_position.distance_to(actor.global_position) < 10.0: return false
+	return true
 
 func _land_arjun(boarding: ShipDeparture) -> void:
 	var home := world as Lobby

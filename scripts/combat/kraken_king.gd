@@ -46,6 +46,9 @@ func _sprite_rest_position() -> Vector2:
 
 func _physics_process(delta: float) -> void:
 	if dead: return
+	if get_parent() is KrakenIsland:
+		var game := get_tree().get_first_node_in_group("game") as Game
+		if not is_instance_valid(game) or game.world != get_parent(): return
 	super._physics_process(delta)
 	_update_body()
 	_update_tentacle(delta)

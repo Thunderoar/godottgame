@@ -33,6 +33,7 @@ var _caption: Label
 var _canvas: StoryCanvas
 var _next: Button
 var _done := false
+var cancelled := false
 var _caption_panel: PanelContainer
 var arrive_from_title := false
 var include_loading_screen := false
@@ -43,16 +44,41 @@ var _arrival_reduced := false
 var _departure_emitted := false
 var _curtain: ColorRect
 var _skip: Button
+var _beat_label: Label
+var _mei_arjun_rescued := false
+var _mei_reduced := false
+var _mei_guard_time := 0.0
+var _mei_input_armed := false
+var _mei_input_cooldown := 0.0
+var reunion_night := false
+var _reunion_beat_time := 0.0
+var _reunion_text_done := false
+var _reunion_speaker: Label
+var _reunion_voice: AudioStreamPlayer
+var _reunion_voice_word := -1
+var _reunion_focus_out := false
 
 func _ready() -> void:
 	layer = 350
+	_mei_arjun_rescued = bool(GameState.campaign().get("arjun_rescued", false))
+	_mei_reduced = GameSettings.reduce_motion()
+	reunion_night = GameState.is_night()
 	var root := Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(root)
+	if kind in ["mei","ending"]:
+		var backdrop := ColorRect.new()
+		backdrop.color = Color("#151e2b")
+		backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		root.add_child(backdrop)
 	_canvas = StoryCanvas.new()
 	_canvas.sequence = self
 	_canvas.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	if kind in ["mei","ending"]:
+		_canvas.offset_bottom = -220 if kind == "ending" else -184
+		_canvas.clip_contents = true
 	root.add_child(_canvas)
 	var panel := GameUI.panel(Color("#102733"), Color("#bc9c61"))
 	_caption_panel = panel
@@ -60,13 +86,21 @@ func _ready() -> void:
 	panel.anchor_bottom = 1
 	panel.anchor_right = 1
 	panel.offset_top = -174
+	if kind == "ending": panel.offset_top = -210
 	panel.offset_bottom = -18
 	panel.offset_left = 24
 	panel.offset_right = -24
 	root.add_child(panel)
 	var box := VBoxContainer.new()
 	panel.add_child(box)
+	if kind in ["mei","ending"]:
+		_beat_label = GameUI.label("", 13, GameUI.GOLD)
+		box.add_child(_beat_label)
+	if kind == "ending":
+		_reunion_speaker = GameUI.label("",20,GameUI.GOLD)
+		box.add_child(_reunion_speaker)
 	_caption = GameUI.label("", 22, GameUI.TEXT)
+	if kind in ["mei","ending"]: _caption.add_theme_font_size_override("font_size", 18)
 	_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_caption.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_child(_caption)
@@ -74,14 +108,31 @@ func _ready() -> void:
 	box.add_child(row)
 	var skip := GameUI.button("Skip scene", Vector2(150, 42))
 	_skip = skip
-	skip.pressed.connect(finish)
+	skip.pressed.connect(_on_skip_pressed)
 	row.add_child(skip)
 	var space := Control.new()
 	space.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(space)
 	_next = GameUI.button("Next", Vector2(150, 42))
-	_next.pressed.connect(advance)
+	_next.pressed.connect(_on_next_pressed)
 	row.add_child(_next)
+	if kind in ["mei","ending"]:
+		# React only to a fresh press after the killing input has been released.
+		_next.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+		_skip.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+		_next.focus_mode = Control.FOCUS_ALL
+		_skip.focus_mode = Control.FOCUS_ALL
+		_next.disabled = true
+		_skip.disabled = true
+	if kind == "ending":
+		_skip.text = "Skip conversation"
+		_skip.custom_minimum_size.x = 190
+		_reunion_voice = AudioStreamPlayer.new()
+		_reunion_voice.name = "ReunionVoice"
+		_reunion_voice.bus = "Master"
+		add_child(_reunion_voice)
+		GameSettings.changed.connect(_on_reunion_setting_changed)
+		_on_reunion_setting_changed("effects_volume")
 	_render()
 	if arrive_from_title and kind == "intro":
 		_arrival_active = true
@@ -173,8 +224,16 @@ func _on_arrival_setting_changed(key: String) -> void:
 func lines() -> Array:
 	match kind:
 		"arjun": return ["The sea king is defeated. Adam unlocks Arjun's prison!", "Arjun runs aboard the UNISZA ship. Together they sail back to BESUT."]
-		"mei": return ["Shadow & Chaos Fiend falls. His hold over Mei Ling is broken. She is free!", "Mei Ling returns safely to BESUT Village. Adam can explore the peaceful wilds or return through the rift to meet her."]
-		"ending": return ["Adam, Arjun and Mei Ling are reunited in BESUT Village.", "Their fishing voyage crossed into another dimension. This island is now their home.", "With their friends and the villagers, they choose a peaceful new life in BESUT. THE END · Village life continues."]
+		"mei": return [
+			"Shadow & Chaos Fiend falls. For a moment, the citadel is silent.",
+			"Behind him, the chaos seal fractures. Mei Ling looks up at the light.",
+			"The gate opens. Mei Ling steps free. Adam: \"Mei Ling!\"",
+			"Mei Ling: \"Adam... you found me.\"\nAdam: \"You're safe now.\"",
+			"Mei Ling: \"And Arjun?\"  Adam: \"%s\"\n\"Go through. The villagers will help you.\"" % ("He's safe in BESUT." if _mei_arjun_rescued else "I'm still looking. I'll find him."),
+			"Mei Ling reaches BESUT safely. Familiar faces welcome her home.",
+			"Mei Ling is safe. Explore the restored Wilds, or return through the rift to meet her."
+		]
+		"ending": return ReunionDialogueDB.lines()
 	return INTRO
 
 func _process(delta: float) -> void:
@@ -186,17 +245,71 @@ func _process(delta: float) -> void:
 		return
 	clock += delta
 	_page_time += delta
+	if kind in ["mei","ending"]:
+		_mei_guard_time += delta
+		_mei_input_cooldown = maxf(0, _mei_input_cooldown - delta)
+		_mei_reduced = _mei_reduced or GameSettings.reduce_motion()
+		if not _mei_input_armed:
+			var guarded := _mei_guard_time < 0.35 or Input.is_action_pressed("attack") or Input.is_action_pressed("interact") or Input.is_action_pressed("ui_accept") or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+			_mei_input_armed = not guarded
+			_next.disabled = guarded
+			_skip.disabled = guarded
 	_canvas.queue_redraw()
-	if _page_time >= 6.0:
+	if kind == "ending":
+		_reunion_beat_time += delta
+		_process_reunion()
+		return # Dialogue always waits for the reader, independently of animation time.
+	if _page_time >= (float(MeiLingRescueRenderer.DURATIONS[page]) if kind == "mei" else 6.0):
 		advance()
 
 func _render() -> void:
 	_canvas.prepare_page()
 	_caption.text = str(lines()[page])
+	_caption.visible_characters = -1
 	_next.text = "Continue" if page == lines().size() - 1 else "Next"
+	if kind == "ending":
+		_render_reunion()
+	if kind == "mei":
+		if is_instance_valid(_beat_label): _beat_label.text = "%d / 7  ·  %s" % [page + 1, MeiLingRescueRenderer.TITLES[page]]
+		match page:
+			0: Sfx.play("hit", -13)
+			1: Sfx.play("charge", -20)
+			2: Sfx.play("step", -12)
+			5: Sfx.play("portal_out", -14)
+			6: Sfx.play("victory", -16)
+
+func _on_next_pressed() -> void:
+	if kind in ["mei","ending"]:
+		if not _mei_input_armed or _mei_input_cooldown > 0: return
+		# A primary touch can also deliver an emulated mouse press. Consume one gesture.
+		_mei_input_cooldown = 0.2
+	advance()
+
+func _on_skip_pressed() -> void:
+	if kind in ["mei","ending"] and (not _mei_input_armed or _mei_input_cooldown > 0): return
+	if kind == "ending":
+		_go_to_reunion_dock()
+		return
+	finish()
 
 func advance() -> void:
 	if _done: return
+	if kind == "ending":
+		if page >= ReunionDialogueDB.TURNS.size():
+			if _page_time >= 2.0: finish()
+			return
+		if not _reunion_text_done:
+			_reunion_text_done = true
+			_caption.visible_characters = -1
+			if is_instance_valid(_reunion_voice): _reunion_voice.stop()
+			_next.text = "Next"
+			return
+		var old_beat := int(ReunionDialogueDB.turn(page).beat)
+		page += 1
+		_page_time = 0
+		if int(ReunionDialogueDB.turn(page).beat) != old_beat: _reunion_beat_time = 0
+		_render()
+		return
 	_finish_arrival()
 	page += 1
 	_page_time = 0
@@ -205,10 +318,73 @@ func advance() -> void:
 
 func finish() -> void:
 	if _done: return
+	if is_instance_valid(_reunion_voice): _reunion_voice.stop()
 	_finish_arrival()
 	_done = true
 	completed.emit()
 	queue_free()
+
+func cancel() -> void:
+	cancelled = true
+	finish()
+
+func _render_reunion() -> void:
+	var row := ReunionDialogueDB.turn(page)
+	var dock := page >= ReunionDialogueDB.TURNS.size()
+	if is_instance_valid(_beat_label): _beat_label.text = "%d / 8  ·  %s" % [int(row.beat)+1,ReunionDialogueDB.TITLES[int(row.beat)]]
+	if is_instance_valid(_reunion_speaker):
+		_reunion_speaker.text = "BESUT DOCK" if dock else str(CharacterDB.get_character(str(row.speaker)).name)
+		_reunion_speaker.add_theme_color_override("font_color",Color("#b8d9c2") if row.speaker == "mei_ling" else (Color("#e2b58a") if row.speaker == "arjun" else GameUI.GOLD))
+	_reunion_text_done = dock
+	_caption.visible_characters = -1 if dock else 0
+	_reunion_voice_word = -1
+	if is_instance_valid(_reunion_voice): _reunion_voice.stop()
+	_next.text = "Continue" if dock else "Show line"
+	_skip.visible = not dock
+	_next.disabled = dock or not _mei_input_armed
+
+func _process_reunion() -> void:
+	if page >= ReunionDialogueDB.TURNS.size():
+		_next.disabled = not _mei_input_armed or _page_time < 2.0
+		return
+	if not _reunion_text_done:
+		var total := _caption.get_total_character_count()
+		_caption.visible_characters = mini(total,maxi(0,int((_page_time-0.25)*34)))
+		if _caption.visible_characters >= total:
+			_reunion_text_done = true
+			_next.text = "Next"
+			if is_instance_valid(_reunion_voice): _reunion_voice.stop()
+		else:
+			var shown := _caption.text.left(_caption.visible_characters)
+			var word := shown.count(" ")
+			if shown.length() > 0 and word != _reunion_voice_word and not _reunion_focus_out and not GameSettings.mute_all() and GameSettings.effects_volume() > 0 and GameSettings.master_volume() > 0:
+				_reunion_voice_word = word
+				if is_instance_valid(_reunion_voice):
+					var speaker := str(ReunionDialogueDB.turn(page).speaker)
+					_reunion_voice.stream = Sfx.dialogue_voice(speaker,word%4)
+					_reunion_voice.pitch_scale = 0.88 if speaker == "arjun" else (1.15 if speaker == "mei_ling" else 1.0)
+					_reunion_voice.play()
+
+func _go_to_reunion_dock() -> void:
+	if _done or page >= ReunionDialogueDB.TURNS.size(): return
+	page = ReunionDialogueDB.TURNS.size()
+	_page_time = 0
+	_reunion_beat_time = 0
+	_mei_input_cooldown = 0.2
+	_render()
+	_canvas.queue_redraw()
+
+func _on_reunion_setting_changed(key: String) -> void:
+	if not is_instance_valid(_reunion_voice): return
+	if key in ["effects_volume","master_volume","mute_all"]:
+		_reunion_voice.volume_db = -16.0+GameSettings.volume_percent_to_db(GameSettings.effects_volume())
+		if GameSettings.mute_all() or GameSettings.effects_volume() <= 0 or GameSettings.master_volume() <= 0: _reunion_voice.stop()
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		_reunion_focus_out = true
+		if is_instance_valid(_reunion_voice): _reunion_voice.stop()
+	elif what == NOTIFICATION_WM_WINDOW_FOCUS_IN: _reunion_focus_out = false
 
 class StoryCanvas extends Control:
 	var sequence: StorySequence
@@ -219,6 +395,8 @@ class StoryCanvas extends Control:
 	var _landfall: OpeningLandfallRenderer
 	var _rescue: OpeningRescueRenderer
 	var _welcome: OpeningWelcomeRenderer
+	var _mei: MeiLingRescueRenderer
+	var _reunion: ReunionRenderer
 	func _ready() -> void:
 		texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		if is_instance_valid(sequence) and sequence.kind == "intro":
@@ -258,6 +436,8 @@ class StoryCanvas extends Control:
 		return OpeningWelcomeRenderer.sample(sequence._page_time, GameSettings.reduce_motion(), GameSettings.effects_quality())
 	func prepare_page() -> void:
 		# Warm on entering this page, not in _draw or before the title curtain exists.
+		if sequence.kind == "mei" and _mei == null: _mei = MeiLingRescueRenderer.new()
+		if sequence.kind == "ending" and _reunion == null: _reunion = ReunionRenderer.new()
 		if uses_wreck_shot() and _wreck == null:
 			if _kraken == null: _kraken = OpeningKrakenRenderer.new()
 			_wreck = OpeningWreckRenderer.new(_kraken)
@@ -274,6 +454,16 @@ class StoryCanvas extends Control:
 		return OpeningWreckRenderer.sample(sequence._page_time, GameSettings.reduce_motion(), GameSettings.effects_quality())
 	func _draw() -> void:
 		if not is_instance_valid(sequence): return
+		if sequence.kind == "ending":
+			draw_rect(Rect2(Vector2.ZERO,size),Color("#172830"))
+			if _reunion != null:
+				_reunion.draw(self,Rect2(Vector2.ZERO,size),ReunionRenderer.sample(sequence.page,sequence._reunion_beat_time,sequence._mei_reduced,GameSettings.effects_quality(),sequence.reunion_night))
+			return
+		if sequence.kind == "mei":
+			draw_rect(Rect2(Vector2.ZERO,size), Color("#151e2b"))
+			if _mei != null:
+				_mei.draw(self, Rect2(Vector2.ZERO, size), MeiLingRescueRenderer.sample(sequence.page, sequence._page_time, sequence._mei_reduced, GameSettings.effects_quality(), sequence._mei_arjun_rescued))
+			return
 		if uses_welcome_shot():
 			draw_rect(Rect2(Vector2.ZERO, size), Color("#102733"))
 			var bottom := size.y - 184.0
@@ -330,17 +520,6 @@ class StoryCanvas extends Control:
 		for i in 10:
 			var y := 220.0 + i * 34
 			draw_line(Vector2(0, y), Vector2(1280, y), Color("#245a71"), 2)
-		if sequence.kind == "ending":
-			draw_rect(Rect2(0, 280, 1280, 310), Color("#416e4b"))
-			_tex(PixelArt.house_texture(3), Vector2(640, 250), Vector2(260, 270))
-			for i in 3: _hero(["adam", "arjun", "mei_ling"][i], Vector2(510 + i * 130, 430), t)
-			return
-		if sequence.kind == "mei":
-			draw_circle(Vector2(900, 250), 105, Color("#8056b4"))
-			draw_circle(Vector2(900, 250), 75, Color("#16394c"))
-			_hero("adam", Vector2(lerpf(550, 940, clampf(t / 5, 0, 1)), 370), t)
-			_hero("mei_ling", Vector2(lerpf(410, 850, clampf(t / 5, 0, 1)), 370), t)
-			return
 		if sequence.kind == "arjun":
 			draw_rect(Rect2(0, 310, 1280, 230), Color("#897d55"))
 			var door := clampf(t / 2, 0, 1)
