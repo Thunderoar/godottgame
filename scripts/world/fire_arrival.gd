@@ -5,6 +5,8 @@ var home: Lobby
 var points := PackedVector2Array()
 var full_intro := false
 var elapsed := 0.0
+var offsets: Array = []
+var resolved: Array = []
 var _portals: Array[Sprite2D] = []
 var _bodies: Array[Sprite2D] = []
 var _rims: Array[Sprite2D] = []
@@ -65,15 +67,13 @@ func sample(time: float) -> void:
 	elapsed = time
 	var reduced := GameSettings.reduce_motion()
 	for i in _roots.size():
-		var t := time
+		var local_time := time - (float(offsets[i]) if not full_intro and i < offsets.size() else 0.0)
+		var t := local_time
 		if full_intro and i > 0:
-			# Every member clears its own portal before the shared handoff.
-			t = (time - 6.6 - float((i - 1) % 6) * 0.12) * 3.0 + 1.8
+			t = -1.0 # Followers arrive later during play, outside the lead's story.
 		elif not full_intro:
-			# Sparse embers precede a short crossing; all bodies arrive at 8 seconds.
-			t = 0.8 + time * 0.1 if time < 6.6 else 1.8 + (time - 6.6) / 1.4 * 3.6
-			if i > 0 and time < 7.8: t -= float(i % 4) * 0.08
-		_roots[i].visible = time >= 0 and t >= 0.8
+			t = 0.8 + local_time * 0.1 if local_time < 6.6 else 1.8 + (local_time - 6.6) / 1.4 * 3.6
+		_roots[i].visible = local_time >= 0 and t >= 0.8 and i not in resolved
 		var phase := 0
 		if t >= 1.8: phase = clampi(1 + int((t - 1.8) / 0.3), 1, 4)
 		if t >= 4.2: phase = clampi(5 + int((t - 4.2) / 0.4), 5, 7)
@@ -95,7 +95,7 @@ func sample(time: float) -> void:
 			body.position.x = lerpf(-0.08, 0.14, smoothstep(3, 4.2, t))
 		if t >= 5.4 and t < 6.6 and not reduced: body.rotation = -0.035 if body.flip_h else 0.035
 		# The final pose is exactly Enemy's rest texture, scale and foot position.
-		if time >= (9.2 if full_intro else 8.0): body.texture = FireArt.body()
+		if (time if full_intro else local_time) >= (9.2 if full_intro else 8.0): body.texture = FireArt.body()
 	queue_redraw()
 
 func _draw() -> void:

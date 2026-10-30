@@ -8,6 +8,9 @@ var ground: Sprite2D
 var line: Line2D
 var caption: Label
 var replay_button: Button
+var flowers: Sprite2D
+var ribbons: Array[Sprite2D] = []
+var glimmers: Array[Sprite2D] = []
 var _words := ""
 var _time := 0.0
 var revealing := false
@@ -18,7 +21,11 @@ func _ready() -> void:
 	interact_radius = 2.6
 	super._ready()
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	ground = _piece(WaystoneArt.ground(), Vector2(-56,-35), Vector2.ZERO)
+	ground = _piece(WaystoneArt.ground(), Vector2(-88,-58), Vector2.ZERO)
+	ground.z_index = -1
+	flowers = _piece(WaystoneArt.flowers(),Vector2(-88,-45),Vector2.ZERO)
+	for at in [Vector2(-2.25,0.9),Vector2(2.25,0.9)]:
+		ribbons.append(_piece(WaystoneArt.ribbon(),Vector2(-12,-42),at))
 	stone = _piece(WaystoneArt.marker(),Vector2(-15,-48),Vector2(-0.7,-0.05))
 	lantern = _piece(WaystoneArt.lantern(),Vector2(-10,-30),Vector2(0.94,0.08))
 	line = Line2D.new()
@@ -26,6 +33,10 @@ func _ready() -> void:
 	line.width = PixelArt.PX*2
 	line.default_color = Color("#eddf9d")
 	add_child(line)
+	for at in [Vector2(0.94,-0.66),Vector2(-0.45,-0.7),Vector2(0.25,0.16)]:
+		var glimmer := _piece(WaystoneArt.glimmer(),Vector2(-6,-6),at)
+		glimmer.light_mask = 0
+		glimmers.append(glimmer)
 	caption = Label.new()
 	caption.add_theme_font_size_override("font_size",14)
 	caption.add_theme_color_override("font_color",Color("#f8efd0"))
@@ -44,6 +55,7 @@ func _ready() -> void:
 	replay_button.pressed.connect(func() -> void: interact(get_tree().get_first_node_in_group("game").player()))
 	add_child(replay_button)
 	GameState.data_changed.connect(refresh)
+	GameSettings.changed.connect(_on_cue_setting_changed)
 	refresh()
 
 func _piece(texture: Texture2D, offset: Vector2, at: Vector2) -> Sprite2D:
@@ -73,10 +85,29 @@ func refresh() -> void:
 	else: prompt = "Examine the old stones"
 	caption.text = _words if not _words.is_empty() else prompt
 	replay_button.visible = bool(progress.opened) and not bool(progress.reveal_seen)
+	_update_cues()
+
+func _on_cue_setting_changed(key: String) -> void:
+	if key in ["reduce_motion","effects_quality"]: _update_cues()
+
+func _update_cues() -> void:
+	var opened := GameState.portal_opened()
+	var prepared := bool(GameState.portal_origin().get("rahim_consulted",false))
+	var animated := not GameSettings.reduce_motion() and GameSettings.effects_at_least("med")
+	for i in glimmers.size():
+		var glimmer := glimmers[i]
+		glimmer.visible = not opened and not revealing and (i == 0 or GameSettings.effects_at_least("med"))
+		glimmer.modulate = Color("#ffe6a0") if prepared else Color("#d0eadf")
+		glimmer.modulate.a = 0.75 if not animated else 0.38+0.38*maxf(0,sin(_time*1.6+float(i)*1.8))
+		var home: Vector2 = [Vector2(0.94,-0.66),Vector2(-0.45,-0.7),Vector2(0.25,0.16)][i]
+		glimmer.position = home+Vector2(0,sin(_time*1.1+float(i))*0.055 if animated else 0.0)
+	for i in ribbons.size():
+		ribbons[i].rotation = sin(_time*0.9+float(i)*0.7)*0.025 if animated and not opened else 0.0
 
 func _process(delta: float) -> void:
 	super._process(delta)
 	_time += delta
+	_update_cues()
 	if revealing: return
 	var game := get_tree().get_first_node_in_group("game") as Game
 	if not is_instance_valid(game) or game.world != get_parent() or not is_instance_valid(game.player()): return

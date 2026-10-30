@@ -245,19 +245,21 @@ func _test_day_night() -> void:
 	_check(lobby.spawn_sea_urchin(Vector2(17, 29)) == null and lobby.capture_monsters().is_empty(), "all fire, beach and emergency spawn paths reject daytime")
 	GameState.advance_world_clock(1.0)
 	_check(GameState.is_night() and GameState.time_string() == "NIGHT 3:00", "night begins exactly at three minutes")
-	# Arrival timing/Skip are covered by the focused checks; this fixture owns
-	# dusk population, dawn persistence and the one-wave-per-night contract.
+	# Introductions release only a lead pair. The saved queue supplies the rest
+	# gradually, and every actual actor is frozen before advancing the clock.
 	if is_instance_valid(game._urchin_arrival): game._urchin_arrival.finish()
-	if is_instance_valid(lobby._urchin_cue): lobby._urchin_cue.finish()
-	_check(lobby._forest_monsters.size() == Lobby.FIRE_MONSTER_COUNT, "night spawns twenty-four fire monsters")
-	_check(lobby.capture_monsters().size() == Lobby.FIRE_MONSTER_COUNT + Lobby.NIGHT_URCHIN_COUNT, "night also spawns sea urchins at the beach")
+	lobby._resume_ordinary_arrival()
+	_check(lobby.capture_monsters().size() <= 2, "night starts with at most a lead pair instead of the full allowance")
+	for i in 80: _advance_arrivals(lobby, 2)
+	_check(lobby._forest_monsters.size() == Lobby.FIRE_MONSTER_COUNT, "an attended night gradually delivers twenty-four fire monsters")
+	_check(lobby.capture_monsters().size() == Lobby.FIRE_MONSTER_COUNT + Lobby.NIGHT_URCHIN_COUNT, "sea urchins also arrive gradually through the night")
 	for enemy in lobby.get_children():
 		if enemy is Enemy:
 			enemy.set_physics_process(false)
 	var fire := lobby._forest_monsters[0]
 	fire.hp = 11
 	var count := lobby.capture_monsters().size()
-	GameState.advance_world_clock(180.0)
+	GameState.advance_world_clock(20.0)
 	_check(not GameState.is_night() and GameState.time_string() == "DAY 3:00", "day returns after three minutes of night")
 	_check(is_instance_valid(fire) and fire.hp == 11 and lobby.capture_monsters().size() == count, "dawn preserves living monsters and their HP")
 	var tree := lobby._forest_trees[0]
@@ -281,7 +283,7 @@ func _test_day_night() -> void:
 	lobby._forest_monsters[0].take_damage(99999)
 	_check(lobby.capture_monsters().size() == count - 1, "killed monsters stay absent during the day")
 	GameState.advance_world_clock(180.0)
-	if is_instance_valid(lobby._urchin_cue): lobby._urchin_cue.finish()
+	_advance_arrivals(lobby, 8)
 	_check(GameState.is_night() and lobby.capture_monsters().size() == count, "the next night replenishes killed monsters")
 	lobby._on_day_phase_changed(true, true)
 	_check(lobby.capture_monsters().size() == count, "a night wave cannot spawn twice during the same night")
@@ -298,6 +300,26 @@ func _test_day_night() -> void:
 	for gun in get_tree().get_nodes_in_group("house_defenses"):
 		gun.set_process(false)
 	game.set_process(true)
+
+func _advance_arrivals(home: Lobby, delta: float) -> void:
+	GameState.advance_world_clock(delta)
+	for cue in [home._urchin_cue, home._fire_cue]:
+		if is_instance_valid(cue) and not cue._done:
+			cue.set_process(false)
+			cue._process(0)
+	for child in home.get_children():
+		if child is Enemy or child is Resident: child.set_physics_process(false)
+
+func _village_combat_fixture(home: Lobby) -> void:
+	# Combat assertions need known live targets; entry pacing has its own suite.
+	if is_instance_valid(game._urchin_arrival): game._urchin_arrival.cancel()
+	if is_instance_valid(home._urchin_cue): home._urchin_cue.cancel()
+	if is_instance_valid(home._fire_cue): home._fire_cue.cancel()
+	GameState.data.home_arrival = {}
+	GameState.data.home_fire_arrival = {}
+	GameState.mark_home_wave()
+	var count := home._live_fire_count()
+	for point in home.fire_entry_points(maxi(0, 24 - count)): home._create_fire_monster(point, true)
 
 
 func _test_settlement_expansion() -> void:
@@ -835,6 +857,13 @@ func _test_emergency_attack() -> void:
 	dungeon.call("exit_to_lobby", true)
 	await get_tree().create_timer(1.0).timeout
 	_check(game.world is Lobby, "player can leave through the Shore Gate during an emergency")
+	# Arrival has a real warning and two-second intervals; advance those saved
+	# deadlines while retaining normal combat/stat assertions below.
+	var home := game.world as Lobby
+	for i in 7: _advance_arrivals(home, 2)
+	for child in home.get_children():
+		if child is Enemy or child is Resident: child.set_physics_process(true)
+	await get_tree().create_timer(0.1).timeout
 	var attackers: Array[Enemy] = []
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if bool(enemy.get("settlement_mode")):
@@ -1146,10 +1175,7 @@ func _test_village_systems() -> void:
 	if not GameState.is_night():
 		GameState.advance_world_clock(GameState.DAY_PHASE_SECONDS)
 	var lobby := game.world as Lobby
-	# Entry timing has dedicated coverage; these fixtures exercise live combat.
-	if is_instance_valid(game._urchin_arrival): game._urchin_arrival.finish()
-	if is_instance_valid(lobby._urchin_cue): lobby._urchin_cue.finish()
-	if is_instance_valid(lobby._fire_cue): lobby._fire_cue.finish()
+	_village_combat_fixture(lobby)
 	for gun in game.get_tree().get_nodes_in_group("house_defenses"):
 		gun.set_process(false)
 	for enemy in lobby._forest_monsters:
@@ -1289,9 +1315,7 @@ func _test_village_systems() -> void:
 
 func _test_forest_restoration() -> void:
 	var lobby := game.world as Lobby
-	if is_instance_valid(game._urchin_arrival): game._urchin_arrival.finish()
-	if is_instance_valid(lobby._urchin_cue): lobby._urchin_cue.finish()
-	if is_instance_valid(lobby._fire_cue): lobby._fire_cue.finish()
+	_village_combat_fixture(lobby)
 	for gun in game.get_tree().get_nodes_in_group("house_defenses"):
 		gun.set_process(false)
 	var keepers: Array[Resident] = []

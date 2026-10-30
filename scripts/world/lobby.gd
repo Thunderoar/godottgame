@@ -702,7 +702,7 @@ func _resume_fire_reinforcements() -> void:
 func _on_fire_cue_completed(cue: UrchinArrival) -> void:
 	if _fire_cue != cue: return
 	_fire_cue = null
-	if not cue.cancelled: finish_urchin_arrival(cue)
+	if not cue.cancelled: call_deferred("_resume_fire_reinforcements")
 
 func _live_fire_count() -> int:
 	return capture_monsters().filter(func(record: Dictionary) -> bool: return str(record.kind) == "fire").size()
@@ -848,6 +848,9 @@ func _on_day_phase_changed(night: bool, _immediate: bool = false) -> void:
 	else: fire_points = fire_entry_points(fire_count)
 	if pending.is_empty() or not pending.has("fire_points"):
 		pending = GameState.stage_home_arrival(fire_points.size(), points, false, fire_points)
+	GameState.expire_home_arrival_members(false, capture_monsters())
+	pending = GameState.pending_home_arrival()
+	if pending.is_empty(): return
 	if points.is_empty() and fire_points.is_empty():
 		GameState.complete_home_arrival(GameState.night_number(), capture_monsters())
 		return
@@ -857,6 +860,7 @@ func _on_day_phase_changed(night: bool, _immediate: bool = false) -> void:
 	_urchin_cue.configure(pending)
 	_urchin_cue.completed.connect(_on_urchin_cue_completed.bind(_urchin_cue))
 	add_child(_urchin_cue)
+	if GameState.emergency_active(): call_deferred("_spawn_emergency_monsters", GameState.emergency_monsters())
 
 func urchin_entry_clear(at: Vector2) -> bool:
 	if WorldTerrain.is_sea(at) or not MAP_RECT.grow(-0.6).has_point(at): return false
@@ -889,28 +893,41 @@ func urchin_entry_points(count: int) -> PackedVector2Array:
 func _on_urchin_cue_completed(cue: UrchinArrival) -> void:
 	if _urchin_cue != cue: return
 	_urchin_cue = null
-	if not cue.cancelled: finish_urchin_arrival(cue)
+	if not cue.cancelled: call_deferred("_resume_ordinary_arrival")
+
+func _resume_ordinary_arrival() -> void:
+	if not GameState.pending_home_arrival().is_empty(): _on_day_phase_changed(GameState.is_night())
 
 func finish_urchin_arrival(arrival: UrchinArrival) -> bool:
+	# The one-time story introduces only the lead of each allocated species.
+	# Skip never drains the rest of the night's queue.
+	if not arrival.full_intro: return false
+	var delivered := false
+	if not arrival.fire_points.is_empty(): delivered = deliver_arrival_member(arrival, "fire", 0, true) or delivered
+	if not arrival.points.is_empty(): delivered = deliver_arrival_member(arrival, "shore", 0, true) or delivered
+	call_deferred("_resume_ordinary_arrival")
+	return delivered
+
+func deliver_arrival_member(arrival: UrchinArrival, species: String, index: int, introduction: bool = false) -> bool:
 	var game := get_tree().get_first_node_in_group("game") as Game
 	if not is_instance_valid(game) or game.world != self or is_queued_for_deletion() or arrival.serial != journey_serial or journey_serial != GameState.journey_serial: return false
 	var pending := GameState.pending_home_arrival(arrival.reinforcement)
 	if not GameState.is_night() or arrival.night != GameState.night_number() or pending.is_empty() or str(pending.get("id", "")) != arrival.batch_id: return false
-	var delivered_fires := 0
-	var fire_room := FIRE_MONSTER_LIMIT - _live_fire_count()
-	for i in arrival.fire_points.size():
-		var point := arrival.fire_points[i]
-		if delivered_fires >= fire_room: break
-		if fire_entry_clear(point):
-			var monster := _create_fire_monster(point, true)
-			if is_instance_valid(arrival._fire): monster.sprite.flip_h = arrival._fire._bodies[i].flip_h
-			delivered_fires += 1
-	var delivered := 0
-	for point in arrival.points:
-		if urchin_entry_clear(point) and is_instance_valid(spawn_sea_urchin(point, false, false, true, arrival.full_intro)): delivered += 1
-	GameState.complete_home_arrival(arrival.night, capture_monsters(), arrival.full_intro and arrival.introduce_shore and delivered > 0, arrival.full_intro and arrival.introduce_fire and delivered_fires > 0, arrival.batch_id, arrival.reinforcement)
-	if not arrival.reinforcement and GameState.emergency_active(): _spawn_emergency_monsters(GameState.emergency_monsters())
-	return delivered + delivered_fires > 0
+	if species not in ["fire", "shore"] or index in pending["resolved_" + species]: return false
+	if not introduction and float(GameState.data.world_time) - float(pending.last_delivery) < ArrivalDB.MEMBER_GAP - 0.001: return false
+	var points: Array = pending.fire_points if species == "fire" else pending.points
+	if index < 0 or index >= points.size(): return false
+	var point := Vector2(float(points[index][0]), float(points[index][1]))
+	var monster: Enemy
+	if not GameState.recovery_active():
+		if species == "fire" and _live_fire_count() < FIRE_MONSTER_LIMIT and fire_entry_clear(point):
+			monster = _create_fire_monster(point, true)
+			if is_instance_valid(arrival._fire): monster.sprite.flip_h = arrival._fire._bodies[index].flip_h
+		elif species == "shore" and urchin_entry_clear(point) and (not is_instance_valid(player) or player.position.distance_to(point) >= 2.5):
+			monster = spawn_sea_urchin(point, bool(pending.raid), false, true, true)
+	var introduced := introduction and (arrival.introduce_fire if species == "fire" else arrival.introduce_shore)
+	GameState.resolve_home_arrival_member(arrival.batch_id, arrival.reinforcement, species, index, capture_monsters(), is_instance_valid(monster), introduced)
+	return is_instance_valid(monster)
 
 
 func spawn_sea_urchin(at: Vector2, raid: bool = false, restoring: bool = false, validated_entry: bool = false, revealed: bool = false) -> Enemy:
@@ -1861,7 +1878,7 @@ func _spawn_emergency_monsters(count: int) -> void:
 	if not GameState.is_night() or GameState.game_over_active:
 		return
 	_clear_emergency_monsters()
-	if not _emergency_monsters.is_empty():
+	if not _emergency_monsters.is_empty() or is_instance_valid(_fire_cue) or not GameState.pending_home_arrival(true).is_empty():
 		return
 	var spots := [
 		Vector2(12.2, 25.8),   # sea approach
@@ -1871,17 +1888,18 @@ func _spawn_emergency_monsters(count: int) -> void:
 		Vector2(24.0, 24.2),
 		Vector2(41.5, 23.4),
 	]
-	for i in maxi(1, count):
-		var p: Vector2 = spots[i % spots.size()]
-		spawn_sea_urchin(p + Vector2(_rng.randf_range(-0.7, 0.7), 0.0), true)
-	# A raid also drives more woodland monsters into the tree line. They attack
-	# trees with impact effects but do not count toward the emergency kill quota.
-	var live_forest := 0
-	for monster in _forest_monsters:
-		if is_instance_valid(monster) and not monster.dead:
-			live_forest += 1
-	if live_forest < FIRE_MONSTER_LIMIT:
-		_spawn_forest_monsters(mini(6, FIRE_MONSTER_LIMIT - live_forest))
+	var points := PackedVector2Array()
+	for at in spots:
+		if points.size() >= count: break
+		var point := safe_spawn(at, 0.42)
+		if not urchin_entry_clear(point) or (is_instance_valid(player) and player.position.distance_to(point) < 2.5): continue
+		if Array(points).any(func(other: Vector2) -> bool: return other.distance_to(point) < 1.2): continue
+		points.append(point)
+	var fires := fire_entry_points(mini(6, FIRE_MONSTER_LIMIT - _live_fire_count()))
+	GameState.stage_home_arrival(fires.size(), points, false, fires, true, true)
+	# Impossible landings reduce the undelivered quota without pretending a kill.
+	GameState.discard_unarrived_raiders(maxi(0, count - points.size()))
+	_resume_fire_reinforcements()
 
 
 func _clear_emergency_monsters() -> void:
