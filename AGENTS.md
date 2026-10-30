@@ -4,6 +4,14 @@
 The project/application name is still **Save The World**; the player-facing title is
 **PB (Protect BESUT)**. Tidesworn is also the name of the editor workspace.
 
+**2026-10-30 Mei Ling rescue presentation:** Shadow & Chaos Fiend's defeat still
+commits her rescue before presentation. A visible nonblocking citadel prison now
+leads into seven authored animatic beats: defeat, seal fracture, release, meeting,
+Arjun-aware dialogue, BESUT arrival and peaceful exploration. Game owns suspension
+and cancellation; the renderer never writes progression. Use the isolated Windows
+wrapper with `-MeiRescue`, optionally `-Capture -Resolution 832x480` or `1280x720`.
+See the newest acceptance section and `docs/MEI_LING_RESCUE_ANIMATIC_PLAN.md`.
+
 **2026-10-29 runtime update:** the current Windows configuration names the application
 `Protect Besut`. One village Dimension Portal now enters `TwilightRealm`, a `Dungeon`
 subclass for the stable first-stage ID `tidebound_grotto`. First-realm exploration,

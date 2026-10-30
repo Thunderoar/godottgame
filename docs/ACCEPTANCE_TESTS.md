@@ -2452,3 +2452,69 @@ Evidence below C:/Users/ayiz/AppData/Local/Temp/:
 Reproduce with tools/test_isolated.ps1 -Godot <console-executable>, or add
 -PortalOrigin for the focused scene and -Capture -Resolution 832x480 / 1280x720
 for native review. See docs/PORTAL_AWAKENING.md for the runtime contract.
+
+## Mei Ling - the citadel opens (2026-10-30)
+
+Shadow & Chaos Fiend's arena now contains Mei Ling in a visible sealed stone
+prison. Defeat starts seven authored shots over 24 seconds: collapse, breaking
+seal, opening gate and grounded steps, Adam's reaching hand, an Arjun-aware
+exchange, Mei Ling arriving in BESUT, and Adam remaining in the restored citadel.
+The close shots share the prison's identity with the world scenery; the village
+insert is an illustration, not an active second world.
+
+- Rescue, clear and first rewards remain committed before presentation. Skip,
+  natural completion and repeated signals cannot revoke or duplicate them.
+  Old first-clear saves keep their rescue migration and peaceful revisits.
+- The real world/clock suspend during the story. Game owns a single StorySequence
+  and cancellation, with world/journey checks before restoring HUD and controls.
+  The ordinary boss corpse is hidden while its fade tween is suspended.
+- The gate clears before Mei Ling crosses it. Consecutive frames check release
+  continuity and hand contact. Both rescue orders use truthful Arjun dialogue;
+  he appears in the village insert only if already rescued. The normal ending
+  still waits for Adam's real return to BESUT, and defender IDs remain unique.
+- Essential action remains in low effects and Reduce Motion. Turning motion off
+  during a shot latches composed poses until the scene completes. Mute changes
+  no progression. Next/Skip require fresh input after the killing action; primary
+  touch and its emulated mouse press are debounced into one beat advance.
+- Stale "final portal boss" NPC copy and post-rescue Missions guidance are fixed.
+  The dedicated rescue fixture now explicitly starts after portal awakening.
+
+Validation also exposed two fixture issues: the opening art test temporarily
+changes an existing story's kind, so Mei-only caption decoration must be optional;
+and the full arrival suite can reach its late-return assertion before the first
+idle tick. Its setup now explicitly processes that cue once, as its earlier reload
+fixture already does, without changing arrival timing or weakening its checks.
+
+Windows review uses `tools/test_isolated.ps1 -Godot <console-executable>
+-MeiRescue`, with `-Capture -Resolution 832x480` or `1280x720` for actual-renderer
+captures. Full gameplay and Twilight validation use the same isolated wrapper.
+All review artifacts remain outside the repository; unrelated export/Android
+planning and objective-tracker edits belong to the existing workspace work.
+
+Windows Godot 4.7.2 verification:
+
+- Canonical isolated gameplay: **6,335 checks, PASS, exit 0**. Its first attempt exposed
+  the fixture issues described above; the corrected run has no failure/error markers.
+- Focused rescue headless: **65 checks, PASS, exit 0**.
+- Native rendered rescue: **65 checks, PASS, exit 0** at each of **832x480** and
+  **1280x720**, using the Compatibility renderer on AMD Radeon Vega 3. Inspected
+  captive arena placement, all seven beats, consecutive opening/step/contact/rift
+  frames, reduced motion and the Arjun-present arrival insert. Real mouse, primary
+  touch and focused keyboard events each advance one beat.
+- Focused Twilight: **197 checks, PASS, exit 0**; focused fire arrival:
+  **68 checks, PASS, exit 0**. The final full suite covers the deterministic
+  late-return setup fix and the boss-corpse cleanup as well.
+- Isolated import passes with the existing `Unable to open Android 'build-tools'
+  directory` warning. Final rescue/full runtime stderr files are empty.
+  `git diff --check` passes. This is native Windows evidence, not an Android
+  export or physical-phone test.
+
+Evidence below `C:/Users/LUQMAN/AppData/Local/Temp/`:
+
+- Full gate: `tidesworn-tests-20cdde42238a485aac3ae624a2e9200d`.
+- Rescue headless: `tidesworn-tests-17d94ab5242f4193abb47ed5351980f6`.
+- Final 832x480: `tidesworn-tests-b97171e19b5a473a91182b015ade734f`.
+- Final 1280x720: `tidesworn-tests-4134c56faa8d4b19b96f29e579f2dc00`.
+- Twilight: `tidesworn-tests-f51c7bb2cc39454cafc994341168b66b`.
+- Fire: `tidesworn-tests-69d02a0909514043b8c4b1d144bd808b`.
+- Import: `tidesworn-tests-dee056d0ef64435db6cd568f1938199d`.

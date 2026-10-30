@@ -33,6 +33,7 @@ var _caption: Label
 var _canvas: StoryCanvas
 var _next: Button
 var _done := false
+var cancelled := false
 var _caption_panel: PanelContainer
 var arrive_from_title := false
 var include_loading_screen := false
@@ -43,16 +44,33 @@ var _arrival_reduced := false
 var _departure_emitted := false
 var _curtain: ColorRect
 var _skip: Button
+var _beat_label: Label
+var _mei_arjun_rescued := false
+var _mei_reduced := false
+var _mei_guard_time := 0.0
+var _mei_input_armed := false
+var _mei_input_cooldown := 0.0
 
 func _ready() -> void:
 	layer = 350
+	_mei_arjun_rescued = bool(GameState.campaign().get("arjun_rescued", false))
+	_mei_reduced = GameSettings.reduce_motion()
 	var root := Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(root)
+	if kind == "mei":
+		var backdrop := ColorRect.new()
+		backdrop.color = Color("#151e2b")
+		backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		root.add_child(backdrop)
 	_canvas = StoryCanvas.new()
 	_canvas.sequence = self
 	_canvas.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	if kind == "mei":
+		_canvas.offset_bottom = -184
+		_canvas.clip_contents = true
 	root.add_child(_canvas)
 	var panel := GameUI.panel(Color("#102733"), Color("#bc9c61"))
 	_caption_panel = panel
@@ -66,7 +84,11 @@ func _ready() -> void:
 	root.add_child(panel)
 	var box := VBoxContainer.new()
 	panel.add_child(box)
+	if kind == "mei":
+		_beat_label = GameUI.label("", 13, GameUI.GOLD)
+		box.add_child(_beat_label)
 	_caption = GameUI.label("", 22, GameUI.TEXT)
+	if kind == "mei": _caption.add_theme_font_size_override("font_size", 18)
 	_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_caption.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_child(_caption)
@@ -74,14 +96,22 @@ func _ready() -> void:
 	box.add_child(row)
 	var skip := GameUI.button("Skip scene", Vector2(150, 42))
 	_skip = skip
-	skip.pressed.connect(finish)
+	skip.pressed.connect(_on_skip_pressed)
 	row.add_child(skip)
 	var space := Control.new()
 	space.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(space)
 	_next = GameUI.button("Next", Vector2(150, 42))
-	_next.pressed.connect(advance)
+	_next.pressed.connect(_on_next_pressed)
 	row.add_child(_next)
+	if kind == "mei":
+		# React only to a fresh press after the killing input has been released.
+		_next.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+		_skip.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+		_next.focus_mode = Control.FOCUS_ALL
+		_skip.focus_mode = Control.FOCUS_ALL
+		_next.disabled = true
+		_skip.disabled = true
 	_render()
 	if arrive_from_title and kind == "intro":
 		_arrival_active = true
@@ -173,7 +203,15 @@ func _on_arrival_setting_changed(key: String) -> void:
 func lines() -> Array:
 	match kind:
 		"arjun": return ["The sea king is defeated. Adam unlocks Arjun's prison!", "Arjun runs aboard the UNISZA ship. Together they sail back to BESUT."]
-		"mei": return ["Shadow & Chaos Fiend falls. His hold over Mei Ling is broken. She is free!", "Mei Ling returns safely to BESUT Village. Adam can explore the peaceful wilds or return through the rift to meet her."]
+		"mei": return [
+			"Shadow & Chaos Fiend falls. For a moment, the citadel is silent.",
+			"Behind him, the chaos seal fractures. Mei Ling looks up at the light.",
+			"The gate opens. Mei Ling steps free. Adam: \"Mei Ling!\"",
+			"Mei Ling: \"Adam... you found me.\"\nAdam: \"You're safe now.\"",
+			"Mei Ling: \"And Arjun?\"  Adam: \"%s\"\n\"Go through. The villagers will help you.\"" % ("He's safe in BESUT." if _mei_arjun_rescued else "I'm still looking. I'll find him."),
+			"Mei Ling reaches BESUT safely. Familiar faces welcome her home.",
+			"Mei Ling is safe. Explore the restored Wilds, or return through the rift to meet her."
+		]
 		"ending": return ["Adam, Arjun and Mei Ling are reunited in BESUT Village.", "Their fishing voyage crossed into another dimension. This island is now their home.", "With their friends and the villagers, they choose a peaceful new life in BESUT. THE END · Village life continues."]
 	return INTRO
 
@@ -186,14 +224,42 @@ func _process(delta: float) -> void:
 		return
 	clock += delta
 	_page_time += delta
+	if kind == "mei":
+		_mei_guard_time += delta
+		_mei_input_cooldown = maxf(0, _mei_input_cooldown - delta)
+		_mei_reduced = _mei_reduced or GameSettings.reduce_motion()
+		if not _mei_input_armed:
+			var guarded := _mei_guard_time < 0.35 or Input.is_action_pressed("attack") or Input.is_action_pressed("interact") or Input.is_action_pressed("ui_accept") or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+			_mei_input_armed = not guarded
+			_next.disabled = guarded
+			_skip.disabled = guarded
 	_canvas.queue_redraw()
-	if _page_time >= 6.0:
+	if _page_time >= (float(MeiLingRescueRenderer.DURATIONS[page]) if kind == "mei" else 6.0):
 		advance()
 
 func _render() -> void:
 	_canvas.prepare_page()
 	_caption.text = str(lines()[page])
 	_next.text = "Continue" if page == lines().size() - 1 else "Next"
+	if kind == "mei":
+		if is_instance_valid(_beat_label): _beat_label.text = "%d / 7  ·  %s" % [page + 1, MeiLingRescueRenderer.TITLES[page]]
+		match page:
+			0: Sfx.play("hit", -13)
+			1: Sfx.play("charge", -20)
+			2: Sfx.play("step", -12)
+			5: Sfx.play("portal_out", -14)
+			6: Sfx.play("victory", -16)
+
+func _on_next_pressed() -> void:
+	if kind == "mei":
+		if not _mei_input_armed or _mei_input_cooldown > 0: return
+		# A primary touch can also deliver an emulated mouse press. Consume one gesture.
+		_mei_input_cooldown = 0.2
+	advance()
+
+func _on_skip_pressed() -> void:
+	if kind == "mei" and (not _mei_input_armed or _mei_input_cooldown > 0): return
+	finish()
 
 func advance() -> void:
 	if _done: return
@@ -210,6 +276,10 @@ func finish() -> void:
 	completed.emit()
 	queue_free()
 
+func cancel() -> void:
+	cancelled = true
+	finish()
+
 class StoryCanvas extends Control:
 	var sequence: StorySequence
 	var _fishing: OpeningFishingRenderer
@@ -219,6 +289,7 @@ class StoryCanvas extends Control:
 	var _landfall: OpeningLandfallRenderer
 	var _rescue: OpeningRescueRenderer
 	var _welcome: OpeningWelcomeRenderer
+	var _mei: MeiLingRescueRenderer
 	func _ready() -> void:
 		texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		if is_instance_valid(sequence) and sequence.kind == "intro":
@@ -258,6 +329,7 @@ class StoryCanvas extends Control:
 		return OpeningWelcomeRenderer.sample(sequence._page_time, GameSettings.reduce_motion(), GameSettings.effects_quality())
 	func prepare_page() -> void:
 		# Warm on entering this page, not in _draw or before the title curtain exists.
+		if sequence.kind == "mei" and _mei == null: _mei = MeiLingRescueRenderer.new()
 		if uses_wreck_shot() and _wreck == null:
 			if _kraken == null: _kraken = OpeningKrakenRenderer.new()
 			_wreck = OpeningWreckRenderer.new(_kraken)
@@ -274,6 +346,11 @@ class StoryCanvas extends Control:
 		return OpeningWreckRenderer.sample(sequence._page_time, GameSettings.reduce_motion(), GameSettings.effects_quality())
 	func _draw() -> void:
 		if not is_instance_valid(sequence): return
+		if sequence.kind == "mei":
+			draw_rect(Rect2(Vector2.ZERO,size), Color("#151e2b"))
+			if _mei != null:
+				_mei.draw(self, Rect2(Vector2.ZERO, size), MeiLingRescueRenderer.sample(sequence.page, sequence._page_time, sequence._mei_reduced, GameSettings.effects_quality(), sequence._mei_arjun_rescued))
+			return
 		if uses_welcome_shot():
 			draw_rect(Rect2(Vector2.ZERO, size), Color("#102733"))
 			var bottom := size.y - 184.0
@@ -334,12 +411,6 @@ class StoryCanvas extends Control:
 			draw_rect(Rect2(0, 280, 1280, 310), Color("#416e4b"))
 			_tex(PixelArt.house_texture(3), Vector2(640, 250), Vector2(260, 270))
 			for i in 3: _hero(["adam", "arjun", "mei_ling"][i], Vector2(510 + i * 130, 430), t)
-			return
-		if sequence.kind == "mei":
-			draw_circle(Vector2(900, 250), 105, Color("#8056b4"))
-			draw_circle(Vector2(900, 250), 75, Color("#16394c"))
-			_hero("adam", Vector2(lerpf(550, 940, clampf(t / 5, 0, 1)), 370), t)
-			_hero("mei_ling", Vector2(lerpf(410, 850, clampf(t / 5, 0, 1)), 370), t)
 			return
 		if sequence.kind == "arjun":
 			draw_rect(Rect2(0, 310, 1280, 230), Color("#897d55"))

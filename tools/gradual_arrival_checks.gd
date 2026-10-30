@@ -56,6 +56,9 @@ static func run(game: Game, check: Callable, capture: Callable) -> void:
 	await game.get_tree().physics_frame
 	home = game.world as Lobby
 	fixture._freeze(home)
+	# Two physics frames can precede the first idle tick in a busy full suite.
+	# Deliver that first cue tick explicitly, as in the mid-night reload above.
+	if is_instance_valid(home._urchin_cue): home._urchin_cue._process(0)
 	check.call(home.capture_monsters().size() <= 2 and GameState.pending_home_arrival().resolved_fire.size() >= 15, "a late return expires missed members instead of dumping the night's queue into one frame")
 	var before := home.capture_monsters().size()
 	for i in 8:

@@ -22,6 +22,7 @@ var loading_screen: LoadingScreen
 var _sailing := false
 var _return_to_harbour := false
 var _story_active := false
+var _active_story: StorySequence
 var _side_quest_intro: Dictionary = {}
 var _side_quest_timer := 0.0
 var _side_quest_auto_enabled := true # Fixtures can isolate unrelated gameplay paths.
@@ -176,6 +177,7 @@ func _remove_title_if_owner(expected: CanvasLayer) -> void:
 # ------------------------------------------------------------------ world switching
 
 func _clear_world() -> void:
+	if is_instance_valid(_active_story): _active_story.cancel()
 	if not _side_quest_intro.is_empty():
 		_side_quest_intro.cancelled = true
 		hud.dialogue_panel.close_panel()
@@ -924,6 +926,8 @@ func play_dock_conversation(introduction: bool = false) -> void:
 
 
 func play_story(kind: String, from_title: bool = false) -> void:
+	if _story_active: return
+	var story_journey := GameState.journey_serial
 	_story_active = true
 	_input_locked = true
 	_apply_input_lock()
@@ -934,6 +938,7 @@ func play_story(kind: String, from_title: bool = false) -> void:
 	var was_visible := hud.visible
 	hud.visible = false
 	var story := StorySequence.new()
+	_active_story = story
 	story.kind = kind
 	var departing_title := _title_layer
 	story.arrive_from_title = from_title and is_instance_valid(departing_title)
@@ -942,12 +947,15 @@ func play_story(kind: String, from_title: bool = false) -> void:
 		story.departure_covered.connect(_remove_title_if_owner.bind(departing_title), CONNECT_ONE_SHOT)
 	add_child(story)
 	await story.completed
+	if _active_story != story: return
+	_active_story = null
+	_story_active = false
+	if world != story_world or GameState.journey_serial != story_journey or story.cancelled: return
 	if kind == "intro": GameState.mark_story_seen("intro_seen")
 	if kind == "ending": GameState.mark_story_seen("ending_seen")
 	if is_instance_valid(story_world): story_world.process_mode = old_mode
-	_story_active = false
 	hud.visible = was_visible
-	_input_locked = hud.any_modal_open() or _sailing
+	_input_locked = hud.any_modal_open() or _sailing or _transitioning or _defeat_pending
 	_apply_input_lock()
 
 func enter_kraken_island() -> void:
@@ -978,17 +986,10 @@ func _handle_island_defeat() -> void:
 
 func _rescue_mei_ling() -> void:
 	var dungeon := world as Dungeon
-	if not is_instance_valid(dungeon): return
+	if not is_instance_valid(dungeon) or _story_active: return
 	var journey := GameState.journey_serial
 	hud.hide_modals()
-	var companion := Sprite2D.new()
-	companion.name = "RescuedMeiLing"
-	companion.texture = PixelArt.character_texture("mei_ling", 0)
-	companion.scale = Vector2.ONE * PixelArt.PX
-	companion.position = dungeon.player.position + Vector2(-2, 0)
-	dungeon.add_child(companion)
 	await play_story("mei")
-	if is_instance_valid(companion): companion.queue_free()
 	if world != dungeon or GameState.journey_serial != journey: return
 	# Mei Ling returns home in the story. Keep the restored exploration realm,
 	# its wildlife and optional passages available until Adam chooses to leave.

@@ -202,6 +202,7 @@ func _ready() -> void:
 	await preload("res://tools/kraken_hunger_checks.gd").run(game, _check)
 	# Includes dock word pacing/reveal input, owned voices, layout and save migration.
 	await StoryChecks.run(game, _check)
+	# Seven-shot citadel rescue, real mouse/touch/keyboard input, save migration and both rescue orders.
 	await preload("res://tools/mei_ling_rescue_checks.gd").run(game, _check)
 	await MapUnlockChecks.run(game, _check)
 	await preload("res://tools/elemental_checks.gd").run(game, _check)

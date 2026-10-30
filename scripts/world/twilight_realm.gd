@@ -21,6 +21,7 @@ var _reading_panel: PanelContainer
 var _reading_title: Label
 var _reading_text: Label
 var _reading_origin := Vector2.ZERO
+var mei_prison: MeiLingPrison
 
 func _ready() -> void:
 	portal_id = RealmDB.PORTAL
@@ -102,6 +103,9 @@ func _place(kind: String, id: String, at: Vector2, title: String) -> RealmIntera
 	return item
 
 func _build_places() -> void:
+	mei_prison = MeiLingPrison.new()
+	mei_prison.position = RealmDB.MEI_PRISON
+	add_child(mei_prison)
 	_place("exit", "arrival", RealmDB.RETURN_RIFT, "Return to BESUT\nBank carried loot")
 	_place("shortcut", "rootway", RealmDB.WINCH, "Rootway winch")
 	_camp = _place("camp", "camp", RealmDB.CAMP, "Citadel lantern\nRest & set checkpoint")
@@ -336,6 +340,9 @@ func can_target_actor(actor: Node) -> bool:
 func _on_boss_finished(_enemy: Enemy) -> void:
 	if _boss_defeated: return
 	_boss_defeated = true
+	# Its ordinary death tween is suspended with the world during the animatic.
+	# The authored first shot owns the collapse; never reveal the old corpse afterward.
+	if is_instance_valid(_enemy) and _enemy == boss: _enemy.hide()
 	_boss_arrived = false
 	combat.cancel_all()
 	camera.framing_bounds = Rect2()
@@ -346,7 +353,7 @@ func _on_boss_finished(_enemy: Enemy) -> void:
 	background.texture = TwilightLandscape.terrain(true)
 	canvas_modulate.color = Color("#eef3dd")
 	Sfx.stop_battle_music()
-	Sfx.play("victory", -5)
+	if str(summary.get("rescued_friend", "")).is_empty(): Sfx.play("victory", -5)
 	player.controls_locked = false
 	_place("exit", "citadel", RealmDB.BOSS, "Citadel restored\nReturn to BESUT")
 	for child in get_children():

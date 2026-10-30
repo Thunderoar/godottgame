@@ -136,3 +136,37 @@ This is the complete first exploration slice. The proposed three-dimension campa
 `tools/twilight_checks.gd` runs both inside the canonical isolated gameplay suite and via `tools/twilight_test.tscn`, including `tools/realm_life_checks.gd` for the first expansion and `tools/realm_combat_checks.gd` for the second. The focused scene accepts `-- --capture` under an isolated actual renderer and writes screenshots to `TIDESWORN_TEST_ROOT`. Tests must use the same environment isolation as the canonical wrapper. See the newest Twilight section in `ACCEPTANCE_TESTS.md` for recorded evidence; older reports are historical.
 
 Windows review: use the canonical isolated wrapper with -Twilight, optionally -Capture -Resolution 832x480 or 1280x720. It prints the external evidence directory and rejects incomplete/error-bearing runs.
+
+## Mei Ling's citadel rescue animatic - 2026-10-30
+
+Mei Ling is visible in a sealed, nonblocking prison at the rear-right of the
+fiend's arena, with a readable name under it. Its anchor is `RealmDB.MEI_PRISON`
+at (31,7), clear of the boss HUD and existing pillar/collision lanes. The same
+prison art appears in the authored rescue sequence. After rescue it is open and
+empty, including reloads and peaceful revisits.
+
+Defeating Shadow & Chaos Fiend still commits the existing rescue flag and rewards
+before presentation. It now starts seven shots over 24 seconds: the fiend's
+collapse, a cracked chaos seal, the opening gate and Mei Ling's first steps,
+Adam reaching her, their exchange about Arjun, her arrival in BESUT, and Adam
+remaining in the restored citadel. The Arjun line and his presence in the village
+insert depend on his saved rescue flag. The insert creates no live Lobby and
+cannot trigger or consume the eventual three-friend reunion.
+
+`MeiLingRescueArt` supplies copied unarmed poses, prison and scenery;
+`MeiLingRescueRenderer` samples the shot timeline without changing save state.
+`StorySequence` owns beat timing, one-shot audio cues, Next/Skip and input guard.
+Game suspends the current world and clock and cancels its owned story on world
+replacement. The fiend's ordinary suspended death tween stays hidden after the
+authored collapse, preventing a corpse from reappearing on return to gameplay.
+
+Reduce Motion retains each event as a composed pose and stays latched if enabled
+mid-scene, avoiding a backwards replay when switched off. Low effects reduces
+optional ash; the gate, seal, contact pose and arrival remain visible. Mouse,
+primary touch (including emulated mouse) and focused keyboard activation advance
+one beat per gesture. Story-specific timings leave other stories unchanged.
+
+Run `tools/test_isolated.ps1 -Godot <console-executable> -MeiRescue`, with optional
+`-Capture -Resolution 832x480` or `1280x720`. The focused scene includes saved-state
+compatibility, all skip positions, natural completion, replacement, live settings,
+actual pointer/keyboard input, consecutive movement frames and both Arjun states.

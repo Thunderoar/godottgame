@@ -15,7 +15,7 @@ static func description(role: String) -> String:
 		"guard": return "COASTAL GUARD · Catches floating rubbish for one Gold. If rubbish reaches the beach, approach it and press Pick Up. Each piece pays only once."
 		"mission_guide": return "MISSION GUIDE · Follow the current task's dotted arrows. Day lessons cover village life; night lessons teach defense and the first portal boss. Use Menu to reopen tips."
 		"arjun": return "ARJUN · Rescued from the Kraken King's prison. His powerful scythe now guards BESUT against fire monsters and sea urchins."
-		"mei_ling": return "MEI LING · Rescued from the final portal boss. She now protects BESUT with ranged bow attacks against fire monsters and sea urchins."
+		"mei_ling": return "MEI LING · Freed from Shadow & Chaos Fiend's prison in Chaos Citadel. She now protects BESUT with ranged bow attacks against fire monsters and sea urchins."
 		"student": return "UNISZA STUDENT · A friendly visitor in BESUT. Talk to learn about the students who made this adventure."
 	return "BESUT RESIDENT · Works around the village during peaceful hours. Runs to an intact house when threatened. Builders repair damaged homes by day."
 
