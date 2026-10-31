@@ -69,7 +69,7 @@ static func run(game: Game, realm: TwilightRealm, check: Callable, capture: Call
 		check.call(game.hud.pet_battle_panel.visible and game.hud.pet_battle_panel.is_wild_challenge() and wild.position == moving_at, "moving pet opens the existing arena without moving its habitat body: " + wild.stable_id)
 		var arena := game.hud.pet_battle_panel
 		var expected_background := "res://assets/authored/illustrated/pet-arena.png" if not VisualStyle.is_pixel() else str(PetBattleDB.get_level(str(RealmDB.ENCOUNTERS[wild.stable_id].duel)).background)
-		check.call(arena._arena_backdrop.texture.resource_path == expected_background and arena._opponent_max == int(RealmDB.ENCOUNTERS[wild.stable_id].hp), "habitat reuses the pre-existing arena art with its starter-friendly battle stats: " + wild.stable_id)
+		check.call(arena._arena_backdrop.texture.resource_path == expected_background and arena._opponent_max == CombatBalance.health(int(RealmDB.ENCOUNTERS[wild.stable_id].hp), true), "habitat reuses the pre-existing arena art with tougher rival stats: " + wild.stable_id)
 		game.hud.pet_battle_panel.close_panel()
 		check.call(wild.position == moving_at, "cancel restores the exact pre-duel pet patrol position: " + wild.stable_id)
 		wild.position = home
@@ -77,6 +77,8 @@ static func run(game: Game, realm: TwilightRealm, check: Callable, capture: Call
 	var wisp := realm.interests.waykeeper as RealmInterest
 	realm.player.position = wisp.position + Vector2(0,2)
 	realm.player._update_nearby()
+	game.hud._update_prompt()
+	check.call(game.hud._interact_button.caption == "Talk", "the realm Waykeeper also uses the shared Talk button")
 	realm.player.try_interact()
 	check.call(GameState.realm_progress().waykeeper_met and realm._reading_panel.visible and not game._input_locked, "E interaction meets the optional Waykeeper without locking or pausing exploration")
 	check.call(realm._reading_text.text.contains("Old stones"), "Waykeeper begins with a short road-and-creatures hint")

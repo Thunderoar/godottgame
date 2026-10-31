@@ -1,5 +1,5 @@
 extends SceneTree
-## Build-time helper: rasterise icon.svg and write a multi-size Windows .ico so
+## Build-time helper: resize icon.png and write a multi-size Windows .ico so
 ## the exported executable has a crisp icon in Explorer and the taskbar.
 ## Not part of the shipped game. Run with:
 ##   godot --headless --path . --script res://tools/make_icon.gd
@@ -8,20 +8,15 @@ const SIZES := [16, 32, 48, 64, 128, 256]
 
 
 func _init() -> void:
-	var svg := FileAccess.get_file_as_string("res://icon.svg")
-	if svg.is_empty():
-		push_error("icon.svg could not be read")
+	var source := Image.load_from_file("res://icon.png")
+	if source == null or source.is_empty():
+		push_error("icon.png could not be read")
 		quit(1)
 		return
 
 	var pngs: Array[PackedByteArray] = []
 	for size: int in SIZES:
-		var image := Image.new()
-		var err := image.load_svg_from_string(svg, float(size) / 128.0)
-		if err != OK:
-			push_error("Failed to rasterise icon.svg at %d px: %s" % [size, err])
-			quit(1)
-			return
+		var image := source.duplicate() as Image
 		image.convert(Image.FORMAT_RGBA8)
 		if image.get_width() != size or image.get_height() != size:
 			image.resize(size, size, Image.INTERPOLATE_LANCZOS)

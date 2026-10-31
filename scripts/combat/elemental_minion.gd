@@ -33,7 +33,7 @@ func _sprite_rest_position() -> Vector2:
 
 func _chase(delta: float) -> void:
 	if is_instance_valid(_target) and _power_clock <= 0 and global_position.distance_to(_target.global_position) < 8:
-		_power_clock = 3.6
+		_power_clock = 3.6 * CombatBalance.ATTACK_INTERVAL
 		var style := str(ElementDB.get_element(element).get("minion_attack","ranged"))
 		match style:
 			"ranged","homing":

@@ -1,5 +1,6 @@
 class_name TouchActionButton
 extends Control
+signal pressed
 ## A large circular touch target that presses an InputMap action. The gameplay
 ## code never needs to know whether a finger or the keyboard sent the action.
 ##
@@ -23,6 +24,8 @@ var _badge := ""
 var _enabled := true
 var _press_scale := 1.0
 var _key_hint := ""
+var _cancelled_touch_id := -1
+var _cancelled_mouse := false
 
 
 func _ready() -> void:
@@ -36,6 +39,8 @@ func _ready() -> void:
 
 
 func _refresh_key_hint() -> void:
+	_key_hint = ""
+	if action.is_empty(): return
 	# Source the keycap from the InputMap itself so a rebinding can never leave
 	# a stale hint behind.
 	for event in InputMap.action_get_events(action):
@@ -48,6 +53,9 @@ func _refresh_key_hint() -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
+	if (event is InputEventScreenTouch or event is InputEventMouseButton) and event.pressed and (_cancelled_touch_id >= 0 or _cancelled_mouse):
+		accept_event()
+		return
 	if event is InputEventScreenTouch:
 		if event.pressed and not _active:
 			_touch_id = event.index
@@ -67,6 +75,15 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch and not event.pressed and event.index == _cancelled_touch_id:
+		_cancelled_touch_id = -1
+		_cancelled_mouse = false
+		get_viewport().set_input_as_handled()
+		return
+	if event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT and _cancelled_mouse:
+		_cancelled_mouse = false
+		get_viewport().set_input_as_handled()
+		return
 	if not _active:
 		return
 	if event is InputEventScreenTouch and not event.pressed and event.index == _touch_id:
@@ -82,32 +99,41 @@ func _press() -> void:
 		return
 	_active = true
 	_pulse = 1.0
-	Input.action_press(action)
+	if not action.is_empty(): Input.action_press(action)
 	_press_scale = 0.90
 	queue_redraw()
+	pressed.emit()
 
 
 func _release() -> void:
 	_active = false
 	_touch_id = -1
 	_mouse_active = false
-	Input.action_release(action)
+	if not action.is_empty(): Input.action_release(action)
 	_press_scale = 1.0
 	queue_redraw()
 
 
 func _process(delta: float) -> void:
 	_pulse = maxf(0.0, _pulse - delta * 4.0)
-	if not _active and Input.is_action_pressed(action):
+	if not _active and not action.is_empty() and Input.is_action_pressed(action):
 		_pulse = maxf(_pulse, 0.35)
 	if _press_scale < 1.0 and not _active:
 		_press_scale = minf(1.0, _press_scale + delta * 8.0)
 		queue_redraw()
 
 
-func cancel() -> void:
+func cancel(keep_pointer_until_release: bool = false) -> void:
 	if _active:
+		var touch := _touch_id
+		var mouse := _mouse_active
 		_release()
+		if keep_pointer_until_release:
+			_cancelled_touch_id = touch
+			_cancelled_mouse = mouse or touch >= 0
+	if not keep_pointer_until_release:
+		_cancelled_touch_id = -1
+		_cancelled_mouse = false
 
 
 # ------------------------------------------------------------------ public surface
@@ -141,12 +167,22 @@ func set_key_hint(text: String) -> void:
 
 
 func set_contextual(new_caption: String, kind: String) -> void:
-	# Used by the Use button to follow the current interaction prompt.
+	if caption == new_caption and icon_kind == kind: return
 	caption = new_caption
 	set_icon(kind)
+	queue_redraw()
+
+
+func set_action(new_action: String) -> void:
+	if action == new_action: return
+	cancel(true)
+	action = new_action
+	_refresh_key_hint()
+	queue_redraw()
 
 
 func set_touch_enabled(value: bool) -> void:
+	if not value: cancel(true)
 	_enabled = value
 	mouse_filter = Control.MOUSE_FILTER_STOP if value else Control.MOUSE_FILTER_IGNORE
 	queue_redraw()

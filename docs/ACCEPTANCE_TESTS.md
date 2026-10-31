@@ -2966,3 +2966,306 @@ Final evidence under `%LOCALAPPDATA%/Temp/`:
 - Final isolated import: `tidesworn-tests-509e02b46158401c9f406d8269e42c16`.
 
 See `SHORT_FUN_DOCK_ENDING_PLAN.md` for the approved script and implemented pacing.
+
+## 2026-10-31 — Opening logo, application icon and village song
+
+The user clarified that the supplied logo belongs on the opening splash and
+application icon. The home menu retains its original two-line PROTECT / BESUT
+text wordmark, font and navigation. Its outer responsive frame is refitted after
+minimum-width changes so a desktop-to-phone resize does not leave content beyond
+the screen.
+
+`assets/authored/branding/protect_besut.png` is a PNG conversion of the complete
+user-supplied `LOGO GAME PROTECT BESUT.jpeg`, required because the engine boot
+splash accepts PNG only. `application/boot_splash/image` selects that image,
+`stretch_mode=1` selects the engine's Keep mode to preserve aspect ratio, and the
+background matches the dark artwork. `icon.png` centres the same complete logo
+on a square background; `icon.ico` and `tools/make_icon.gd` use the PNG for Windows
+icon sizes. No runtime loading-screen or story artwork is replaced.
+
+`assets/audio/besut_village.ogg` contains the entire approximately 179-second
+stereo audio track from the user's `LAGU GAME BESUT.mp4`, converted to Ogg Vorbis
+quality 5 without the video. Its tracked import enables looping. Game owns the
+player: entering the village starts it; ocean, portal and title handoffs stop it.
+Stories, developer suspension, game over and pet battle music pause it while
+preserving position. Ordinary menus and the cottage keep it playing. Existing
+Master volume and mute cover the song.
+
+Focused Windows review, isolated from player progress:
+
+```powershell
+tools/test_isolated.ps1 -Godot <console-executable> -BrandingMusic -Capture
+```
+
+The focused fixture checks restored menu text, opening-splash path/Keep mode,
+application-icon path, looping across the actual song endpoint, dock dialogue
+pause/resume, Settings playback, mute, ocean handoff, village return and title
+stop. Native captures check the restored menu/navigation at 1280x720, 832x480 and
+360x780, plus the village. The canonical gameplay gate also verifies the restored
+menu, looping import, village start, pet battle priority/resumption, portal stop
+and title stop.
+
+Final Windows Godot 4.7.2 verification:
+
+- Focused native review: **22 checks, PASS, exit 0**. Evidence:
+  `%LOCALAPPDATA%/Temp/tidesworn-tests-246cdc4a1dfe47c09141fc9615df9b11`.
+- Canonical isolated gameplay: **6,628 checks, PASS, exit 0**. Evidence:
+  `%LOCALAPPDATA%/Temp/tidesworn-tests-eccde952d360486fa66282ebc4db143f`.
+- Neither final runtime log contains `[FAIL]`, `SCRIPT ERROR` or `ERROR:`.
+  Two `Could not save game: 12` warnings are the expected developer fork and
+  final-departure rollback fixtures. Isolated import succeeds with the existing
+  Android build-tools-directory warning. `git diff --check` passes.
+
+The engine's live property metadata confirms Keep=1 and PNG-only splash input.
+The opening logo is checked through those settings and successful engine startup;
+no direct OS capture of the brief boot frame was obtained. Captures cover the
+restored menus. Native review uses Dummy audio and verifies playback state/loop
+timing, not speaker listening, physical-phone behavior or exported builds.
+
+## 2026-10-31 — Contextual Sprint / Talk / Enter / Exit
+
+The shared land action button now follows the nearest available interaction in
+the active world. Clear ground shows Sprint. Village conversations show Talk;
+shops, the cottage, portals and the ship show Enter. House doorways, realm/shore
+gates and island return interactions show Exit. Other interactions retain a
+short Use, Sleep or Pick Up action. The existing ship voyage and ocean return
+routes remain owned by Game; this does not add cancellation during sailing.
+This supersedes the earlier permanent-Sprint-only touch-button description.
+
+Inside shop, house-upgrade, portal-selection, village-service, dialogue, mission
+and sea-cleaning panels, the same button becomes Exit and closes only the topmost
+eligible panel. It never sends a world interaction while closing a panel. Other
+modal owners, stories, developer suspension, defeat and transitions block it.
+Ordinary modal Escape handling remains owned by ModalBase. In the cottage, Exit
+is available near the doorway before walking through the automatic exit area.
+
+The saved layout ID remains `interact`, retaining its position and size. The
+button changes its InputMap action between sprint and interact; its caption,
+icon and keyboard hint follow that action. Shift remains sprint and E remains
+nearby interaction. Direct object taps remain supported. A context/action change
+releases the old held action and consumes the rest of that pointer gesture;
+a fresh press is required for the new function. This also prevents touch-emulated
+mouse presses from reopening a panel on the same Exit tap. Hide, focus loss,
+world handoff and deletion retain held-input cleanup. Retiring-world actors
+cannot become the current player's interaction target.
+An interaction press validates its selected target rather than silently choosing
+a different nearby actor if the original target has become unavailable. A stale
+ship target therefore cannot redirect the same press into the dock ending.
+TutorialSpotlight also checks target validity before testing its type, so a
+freed interaction handle cannot raise an error during a world handoff.
+
+The tutorial and control-settings label now describe the shared action button.
+The canonical tide gate includes the expanded ControlOceanChecks. Focused review:
+
+```powershell
+tools/test_isolated.ps1 -Godot <console-executable> -ContextControls -Capture -Resolution 832x480
+tools/test_isolated.ps1 -Godot <console-executable> -ContextControls -Capture -Resolution 1280x720
+```
+
+Both final native reviews pass **56 checks, exit 0**, with no failure/error
+markers. Real dispatched touch verifies Talk and panel Exit, shop Enter/Exit,
+cottage Enter/Exit outside the automatic doorway footprint, actual portal travel
+and realm Exit, ship Enter presentation, continued direct taps and sprint stamina.
+Held Sprint context changes, focus cleanup and retired-world targets are covered.
+Captures inspected include Talk, shop Exit, cottage Exit and realm Exit at both
+sizes; these are Windows touch simulations, not physical-phone verification.
+
+Focused evidence under `%LOCALAPPDATA%/Temp/`:
+
+- 1280x720: `tidesworn-tests-38535a2b65194dd8a9f80dfbe8f12312`.
+- 832x480: `tidesworn-tests-ec4dc99467bf4a5ea7973d0f9945fbaf`.
+- Focused dock: **90 checks, PASS, exit 0**, `tidesworn-tests-13eef615cd5e47bf8d30812a2f4d77c4`.
+- Focused ocean levels/completed sea journey: **54 checks, PASS, exit 0**,
+  `tidesworn-tests-c4526b3d4457409c83ee96fd580c1a90`.
+- Twilight exploration/Waykeeper Talk: **198 checks, PASS, exit 0**,
+  `tidesworn-tests-729d6aff6e154eba9e6eee4877bbfb5c`.
+
+Final canonical isolated gameplay: **6,648 checks, PASS, exit 0**, with no
+`[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers. Evidence:
+`%LOCALAPPDATA%/Temp/tidesworn-tests-74be57f548b44c028c707708f9b46156`.
+The two `Could not save game: 12` warnings are expected negative-test fixtures
+for developer-session creation and final-departure rollback. Isolated import
+retains the existing Android build-tools-directory warning. `git diff --check`
+passes. No normal player-save restoration, export or push was performed.
+
+## 2026-10-31 — Press a mission to show its direction
+
+The HUD objective cards are now selectable with touch, mouse or keyboard Enter.
+Selecting a card highlights it in gold and displays a compass with its current
+destination and distance, plus an obstacle-aware ground arrow trail. Select a
+different mission to change the route; press the same card again or the compass
+cross to cancel the selection. The Missions panel also lists active missions as
+direction buttons and returns to play after a choice. Its current-lesson Show
+direction action works independently of tutorial-tip visibility. The existing
+Menu action still explicitly restores tutorial tips.
+
+ObjectiveNavigation resolves live targets from the current world and village
+layout: yard, driftwood, shops, attackers/burning trees, cottage, waystone/Rahim,
+ship, workshop, realm landmarks/lantern/citadel, discovered wild companions,
+later bosses, the Kraken prison and return gates. An unopened portal routes Mei
+Ling's mission through Rahim and the waystone prerequisites. Pack lessons point
+to the Pack control without displaying invented world metres. Selecting a goal
+does not move actors, start fights, enter portals, discover landmarks, complete
+missions or grant rewards. Those actions retain their existing owners.
+
+Selection is volatile and scoped to the current world. Completion retires its
+arrow; world handoff/removal clears its ID and cached target. Freed or queued
+actors cannot remain navigation targets. Moving targets are resolved again as
+play continues. Explicit navigation may display its trail with tutorial tips
+hidden, without changing the saved Hide tips preference. Cancelling it restores
+the original automatic tutorial/campaign/project path rules. The existing
+workshop Show/Hide path action also updates the shared selected direction while
+retaining its original GameState-owned project-tracking transaction.
+
+Pointer handling distinguishes a card tap from vertical scrolling, supports a
+second touch while movement is held, suppresses duplicate emulated mouse presses,
+and cancels pending selections on hide/focus loss. Scaled card-local input is
+converted to viewport coordinates before measuring a drag. Keyboard focus still
+scrolls the selected card into view. Arrow layout reserves the objective column,
+map controls, first-clear notices and live arrival captions. Modal/story/travel,
+settlement editing and realm reading temporarily hide the compass. Reduce Motion
+keeps its direction visible without optional pulsing. Navigation changes do not
+pause simulation or release held movement.
+
+Focused Windows review uses the existing isolated objective route:
+
+```powershell
+tools/test_isolated.ps1 -Godot <console-executable> -Objectives -Capture
+```
+
+Final native review: **148 checks, PASS, exit 0**, no failure/error markers.
+The fixture changes the actual window/canvas between 1280x720 and 832x480 at
+75%, 100% and 130% UI scale. Selected yard, rescue and realm paths, collapsed/
+expanded quest lists, arrival-warning clearance and compass layout were captured
+and inspected. Real touch (finger 0 and an additional finger), mouse, Enter,
+scroll-versus-tap, focus cancellation, live direction/distance, moving/freed
+targets, completion, world retirement, hidden tips and read-only progression
+are covered. Evidence:
+`%LOCALAPPDATA%/Temp/tidesworn-tests-512ab6cc7b4746c4953f34468f16e5db`.
+
+These are native Windows captures and synthetic input, not a physical-phone or
+Android export verification.
+
+Final canonical gameplay gate after the layout adjustment: **6,691 checks, PASS,
+exit 0**, with no `[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers. Evidence:
+`%LOCALAPPDATA%/Temp/tidesworn-tests-e8a5ba5c944f468b98ab2b61742c89c4`.
+The two `Could not save game: 12` warnings are the expected developer-fork and
+final-departure rollback fixtures. Final isolated import also passes, retaining
+the pre-existing Android build-tools-directory warning:
+`%LOCALAPPDATA%/Temp/tidesworn-tests-0a3af74a0a5441f680925324ff6d178e`.
+`git diff --check` passes; screenshots remain outside the source checkout.
+
+## 2026-10-31 — Pak Karim's key before the portal
+
+New journeys now show **Get the portal key** as the first village objective.
+Both the automatic trail and selected mission arrow lead to Pak Karim at the
+dock before any visit to the waystone. His voluntary key conversation is
+available immediately after the opening welcome. Completing or explicitly
+skipping it grants the free permanent quest key; cancellation and retired worlds
+grant nothing. The opening welcome itself does not grant it. Ordinary dialogue
+continues to run the village clock.
+
+The objective then becomes **Unlock the Dimension Portal**, and the live arrow
+redirects to the northern clearing. An early visit without the key stays locked
+and sends the player back to Karim. Enter/E with the key commits opening before
+the existing reveal; entering the formed portal remains a separate interaction.
+Existing danger, recovery, replay and world-ownership guards remain enforced.
+Receiving or using the key costs no Gold, inventory items or XP.
+
+GameState retains the stable `portal_origin.rahim_consulted` save field as key
+ownership, exposed through `portal_key_received()`. Key-only saves preserve it
+without requiring prior site examination. Older completed lantern conversations
+retain their key, and already opened/legacy expedition saves retain access.
+Malformed records and unsupported future schemas retain their rejection rules.
+The display name is Pak Karim; internal `PakRahim` and portrait/save IDs remain
+stable. No new save schema or inventory item was introduced.
+
+BESUT Field Guide now opens People with Pak Karim, his village sprite and a key
+diagram. Its closed-portal Story & Sea pages, mission explanation, captions and
+dialogue follow the same key-first route and update after receipt. Repeated
+current-objective text is suppressed, and the shortened People description fits
+the native 832x480 panel with its page controls visible. Equipment merchant and
+gun-shop references match Garrick and the Equipment Shop.
+
+Focused isolated Windows evidence under `%LOCALAPPDATA%/Temp/`:
+
+- Portal/key route at 832x480: **47 checks, PASS, exit 0**,
+  `tidesworn-tests-6d851e83d3cc41f59aaa5bca825470b7`.
+- Portal/key route at 1280x720: **47 checks, PASS, exit 0**,
+  `tidesworn-tests-04c613c5b08144519a7256d054c4385e`.
+- Objective navigation: **148 checks, PASS, exit 0**,
+  `tidesworn-tests-c5b246ec29f8425aafef69be28080064`.
+- Dock conversation: **90 checks, PASS, exit 0**,
+  `tidesworn-tests-64cb22b1dd3d49738830421b575829e3`.
+
+The final canonical isolated gameplay gate passes **6,700 checks, exit 0**:
+`%LOCALAPPDATA%/Temp/tidesworn-tests-ae3ce446aa104f37ab04e3b73c5da78d`.
+There are no `[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers. The two
+`Could not save game: 12` warnings are the expected developer-session and
+final-departure rollback fixtures. Final isolated import passes with the existing
+Android build-tools-directory warning. Native Field Guide and key-dialogue
+captures were inspected; these are Windows captures, not physical-phone/export
+verification. `git diff --check` passes.
+
+## 2026-10-31 — Harder combat and exploration before Pak Rahim
+
+This revision supersedes the key-first order above. A fresh journey starts with
+**Explore the northern clearing**. The first selected and automatic arrows lead
+to the fallen waystone; no usable portal actor or portal map picture exists.
+Arriving through normal proximity/current-world/line-of-sight guards discovers
+the site and opens **The missing portal**, explicitly directing Adam to Pak
+Rahim at the dock. A nearby tap/E can also read the clue. Talking to Rahim early
+cannot grant the key. After discovery the same objective and live arrow become
+**Meet Pak Rahim**; completing his follow-up story grants the key and redirects
+the arrow back to **Unlock the Dimension Portal**. Awakening, separate entry,
+danger checks, reveal suspension and existing opened-save access remain intact.
+
+The clue uses the existing fitted DialoguePanel, with its title and Close button
+fixed in the header. Duplicate title/bottom Close content was removed, horizontal
+scrolling is disabled, and dialogue draws above tutorial cards and the HUD.
+The complete clue fits without scrolling at both native review sizes. Opening
+releases held controls and hides selected navigation; closing resumes the route.
+Reading follows ordinary modal clock rules. The dock welcome, follow-up dialogue,
+mission instructions and BESUT Field Guide all explain the new exploration-first
+order and consistently name Pak Rahim. Discovery and keys survive real save/load;
+previously earned key-only checkpoints and already opened roads retain access.
+
+CombatBalance applies fixed difficulty once to all Enemy subclasses after their
+authored setup: regular HP ×1.45, boss HP ×1.35, damage ×1.25 rounded up, repeated
+attack intervals ×0.90. Twilight guards and elemental minions use the same faster
+repeated casts. Melee, specials, ground powers and projectiles use the stronger
+damage. Summoned minions derive from the boss's unscaled base damage to avoid
+double multiplication. Manual tournament and habitat rivals use ×1.35 HP and
+×1.25 damage while retaining player-paced choices. Equipment does not raise
+enemy stats: upgrades retain their full advantage. Movement, warnings, recovery,
+wave quotas, drop rewards, XP and prices retain their authored values. Turtle
+route hazards/lives are unchanged. See `docs/COMBAT_DIFFICULTY.md`.
+
+The canonical gate now exercises live constructors across ordinary monsters,
+elemental families, all Twilight guard profiles, portal bosses, Kraken/crabs and
+all five manual rival setups. Real equipment and upgrade transactions verify
+five starter hits → three Iron Sword hits → two Iron Sword +5 hits against a
+58-HP target, and Leather Vest reducing a 12-damage hit to six. Existing arrival,
+swept-contact, fan/cross one-hit, reward, rescue and save-reload checks use the new
+stats while retaining their safety contracts.
+
+Final focused native Windows portal review: **53 checks, PASS, exit 0** at each
+resolution, with no failure/error markers. Complete clue text, visible Close,
+Field Guide updates, live arrow handoffs, real discovery/key saves and the
+existing reveal/entry were captured and inspected. Isolated evidence:
+
+- 832x480: `%LOCALAPPDATA%/Temp/tidesworn-tests-cfd6f1edfbcb4ffe9c7767a1e5772a19`.
+- 1280x720: `%LOCALAPPDATA%/Temp/tidesworn-tests-90a461d7188f473caa3d4ceede5da1c6`.
+- Final isolated import: exit 0,
+  `%LOCALAPPDATA%/Temp/tidesworn-tests-0d1709ec93804566a9ae461274eef77d`, with
+  the existing Android build-tools-directory warning.
+
+This is native Windows and automated input evidence, not physical-phone testing
+or an Android export. Screenshots remain outside the source checkout.
+
+Final canonical isolated gameplay gate: **6,750 checks, PASS, exit 0**, with no
+`[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers. Evidence:
+`%LOCALAPPDATA%/Temp/tidesworn-tests-45df434d5bc84bd9b6227bfdc0cbe733`.
+The two `Could not save game: 12` warnings are the intentional developer-session
+and final-departure rollback fixtures. `git diff --check` passes. No normal
+player-save restoration, export or push was performed.

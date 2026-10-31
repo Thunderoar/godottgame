@@ -41,6 +41,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	var before := GameState.data.duplicate(true)
 	for i in 5: game.hud._refresh_objectives()
 	check.call(GameState.data == before, "objective refresh is read-only and creates no progression or reward mutations")
+	await _navigation(game, check, capture)
 	Input.action_press("move_right")
 	await _click(game, tracker._header)
 	check.call(tracker.collapsed() and not tracker._summary.visible and not tracker._scroll.visible and tracker.size.x * tracker.scale.x < 100, "touching the header retracts all objective content into a narrow left-edge tab")
@@ -185,11 +186,13 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	game.world.process_mode = Node.PROCESS_MODE_DISABLED
 	game.hud._refresh_objectives()
 	check.call(tracker._entries[0].id == "explore" and not tracker.collapsed(), "real world handoff replaces the displayed objectives and keeps the panel preference")
+	await _realm_navigation(game,check,capture)
 	if capture.is_valid():
 		await _settle(game)
 		await capture.call("realm_exploration")
 	game.hud.set_world(null)
 	check.call(not tracker.visible and tracker._entries.is_empty(), "world removal immediately clears stale objectives")
+	check.call(not game.hud.has_tracked_objective() and not game.hud._navigation_box.visible, "world removal also clears selected direction and old target ownership")
 	game._clear_world()
 	await game.get_tree().process_frame
 	GameState.data = saved
@@ -252,6 +255,129 @@ static func _entry_index(tracker: ObjectiveTracker, id: String) -> int:
 		if str(tracker._entries[i].id) == id: return i
 	return -1
 
+static func _navigation(game: Game, check: Callable, capture: Callable) -> void:
+	var hud := game.hud
+	var tracker := hud.objective_tracker
+	var saved := GameState.data.duplicate(true)
+	var hidden := bool(GameSettings.get_value("tutorial_hidden"))
+	var player := game.player()
+	var original := player.global_position
+	var trail: MissionPath
+	for child in game.world.get_children():
+		if child is MissionPath: trail = child
+	var lesson: Button = tracker._cards[_entry_index(tracker,"lesson_move")].select
+	Input.action_press("move_right")
+	await _click(game,lesson)
+	check.call(hud._tracked_objective_id == "lesson_move" and hud._navigation_box.visible, "touching a mission card selects it and shows a direction arrow")
+	check.call(Input.is_action_pressed("move_right") and not game._input_locked and game.world.process_mode == Node.PROCESS_MODE_DISABLED, "selecting a mission leaves held movement and world ownership unchanged")
+	Input.action_release("move_right")
+	trail._process(0.5)
+	check.call(trail._points.size() > 1 and not hud.tutorial_guide.visible, "explicit selection shows the ground arrow path without reopening tutorial tips")
+	var target: Vector2 = hud._tracked_target.position
+	var distance := hud._navigation_arrow.distance
+	player.global_position += Vector2(-3,2)
+	hud._update_mission_guide()
+	check.call(not is_equal_approx(hud._navigation_arrow.distance,distance) and hud._navigation_arrow.direction.is_equal_approx((target-player.global_position).normalized()), "arrow direction and distance follow the player's live position")
+	var reduced := GameSettings.reduce_motion()
+	GameSettings.set_reduce_motion(true,false)
+	hud._navigation_arrow._process(0.5)
+	check.call(is_zero_approx(hud._navigation_arrow._time), "Reduce Motion keeps the direction visible without optional pulsing")
+	GameSettings.set_reduce_motion(reduced,false)
+	player.global_position = original
+	hud._update_mission_guide()
+	var progress_before := saved.duplicate(true)
+	var progress_after := GameState.data.duplicate(true)
+	progress_before.erase("play_time")
+	progress_after.erase("play_time")
+	check.call(progress_after == progress_before, "selecting and following a mission grants no progress, discoveries or rewards")
+	if capture.is_valid(): await capture.call("selected_yard_direction")
+	await _click(game,lesson)
+	trail._process(0.5)
+	check.call(not hud.has_tracked_objective() and not hud._navigation_box.visible and trail._points.is_empty(), "pressing the same mission again stops its arrow and hidden-tip trail")
+	var at := _rect(lesson).get_center()
+	await _touch(game,at,true)
+	var drag := InputEventScreenDrag.new()
+	drag.index = 6
+	drag.position = at + Vector2(0,-30)
+	drag.relative = Vector2(0,-30)
+	Input.parse_input_event(drag)
+	await game.get_tree().process_frame
+	await _touch(game,at,false)
+	check.call(not hud.has_tracked_objective(), "dragging a mission card does not accidentally select it")
+	check.call(tracker._scroll.scroll_vertical > 0, "dragging a mission card scrolls the list")
+	tracker._scroll.scroll_vertical = 0
+	await _settle(game)
+	await _touch(game,at,true)
+	tracker._notification(Node.NOTIFICATION_WM_WINDOW_FOCUS_OUT)
+	await _touch(game,at,false)
+	check.call(not hud.has_tracked_objective() and tracker._quest_touch_id == -1, "focus loss cancels a pending mission-card selection")
+	await _touch(game,at,true,0)
+	await _touch(game,at,false,0)
+	check.call(hud._tracked_objective_id == "lesson_move", "finger-zero touch and its emulated mouse select a mission exactly once")
+	hud.clear_objective_tracking()
+	for pressed in [true,false]:
+		var mouse := InputEventMouseButton.new()
+		mouse.button_index = MOUSE_BUTTON_LEFT
+		mouse.position = at
+		mouse.pressed = pressed
+		Input.parse_input_event(mouse)
+		await game.get_tree().process_frame
+	check.call(hud._tracked_objective_id == "lesson_move", "a real mouse click also selects the mission card")
+	hud.clear_objective_tracking()
+	lesson.grab_focus()
+	for pressed in [true,false]:
+		var key := InputEventKey.new()
+		key.keycode = KEY_ENTER
+		key.pressed = pressed
+		Input.parse_input_event(key)
+		await game.get_tree().process_frame
+	check.call(hud._tracked_objective_id == "lesson_move", "a focused mission card can also be selected with Enter")
+	lesson.release_focus()
+	hud.clear_objective_tracking()
+	GameSettings.set_value("tutorial_hidden",true,false)
+	hud._refresh_objectives()
+	await _settle(game)
+	var arjun: Button = tracker._cards[_entry_index(tracker,"arjun")].select
+	tracker._scroll.ensure_control_visible(arjun)
+	await _settle(game)
+	await _click(game,arjun)
+	check.call(hud._tracked_objective_id == "arjun" and (hud._tracked_target.position as Vector2).is_equal_approx((game.world as Lobby).ship_boarding.global_position), "pressing Rescue Arjun points to the current village ship")
+	trail._process(0.5)
+	check.call(trail._points.size() > 1 and bool(GameSettings.get_value("tutorial_hidden")), "selected rescue navigation works while the tutorial remains hidden")
+	if capture.is_valid(): await capture.call("selected_rescue_direction")
+	game.open_missions()
+	await _settle(game)
+	var follow: Button
+	for child in hud.mission_panel.content.get_children():
+		if child is Button and child.text == "Rescue Mei Ling": follow = child
+	check.call(follow != null, "Missions also presents each active quest as a direction choice")
+	if follow != null: follow.pressed.emit()
+	check.call(not hud.mission_panel.visible and not game._input_locked and hud._tracked_objective_id == "mei_ling", "choosing a mission from Missions returns to play with its direction active")
+	GameState.data.portal_origin.opened = false
+	GameState.data.portal_origin.site_examined = true
+	GameState.data.portal_origin.rahim_consulted = false
+	hud._update_mission_guide()
+	check.call(hud._tracked_target.label == "Pak Rahim · Portal Key", "Mei Ling's route respects the unopened road and points to Rahim first")
+	GameState.data.portal_origin.rahim_consulted = true
+	hud._update_mission_guide()
+	check.call(hud._tracked_target.label == "Unlock the Portal", "the selected route updates to the waystone after Rahim's actual prerequisite")
+	GameState.data.campaign.arjun_rescued = false
+	hud.track_objective("arjun")
+	GameState.data.campaign.arjun_rescued = true
+	hud._refresh_objectives()
+	check.call(not hud.has_tracked_objective() and not hud._navigation_box.visible, "completed missions automatically retire their selected direction")
+	GameState.data.completed_missions = ["move","gather","buy"]
+	hud.track_objective("lesson_inventory")
+	check.call(hud._tracked_target.get("control","") == "inventory" and not hud._navigation_arrow.show_distance and not hud.inventory_panel.visible, "Pack lessons point to the HUD control without opening it or inventing a world location")
+	hud.clear_objective_tracking()
+	GameState.data = saved
+	GameState._emit_all()
+	GameSettings.set_value("tutorial_hidden",hidden,false)
+	hud.tutorial_guide.hide()
+	hud._refresh_objectives()
+	tracker._scroll.scroll_vertical = 0
+	await _settle(game)
+
 static func _quest_sections(game: Game, check: Callable, capture: Callable) -> void:
 	var tracker := game.hud.objective_tracker
 	var saved := GameState.data.duplicate(true)
@@ -279,7 +405,7 @@ static func _quest_sections(game: Game, check: Callable, capture: Callable) -> v
 	GameState.data = GameState._make_default("adam")
 	GameSettings.set_value("tutorial_hidden", false, false)
 	game.hud._refresh_objectives()
-	check.call(tracker.section_count(main) == 3 and _entry_index(tracker, "lesson_move") >= 0, "visible training prepares the story without suppressing either rescue arc")
+	check.call(tracker.section_count(main) == 4 and _entry_index(tracker, "lesson_move") >= 0, "visible training prepares the story without suppressing either rescue arc")
 	check.call(tracker.section_count(side) == 0 and tracker._section_empty[side].visible, "undiscovered or ineligible side quests use a truthful empty state")
 	check.call(_entry_index(tracker, "workshop") < 0 and not bool(GameState.project_status().eligible), "side quest presentation never bypasses the first-clear workshop prerequisite")
 	GameSettings.set_value("tutorial_hidden", true, false)
@@ -322,6 +448,7 @@ static func _quest_sections(game: Game, check: Callable, capture: Callable) -> v
 
 static func _layouts(game: Game, check: Callable, capture: Callable) -> void:
 	var tracker := game.hud.objective_tracker
+	game.hud.track_objective("arjun")
 	for dimensions in [Vector2i(1280, 720), Vector2i(832, 480)]:
 		game.get_window().content_scale_size = dimensions
 		game.get_window().size = dimensions
@@ -338,6 +465,12 @@ static func _layouts(game: Game, check: Callable, capture: Callable) -> void:
 			if game.hud._progression_notice.visible: clear = clear and not rect.intersects(_rect(game.hud._progression_notice))
 			check.call(clear, "expanded objectives fit and clear touch controls and reward guidance at %dx%d / %d%%" % [dimensions.x, dimensions.y, scale_percent])
 			check.call(tracker._header.size.y * tracker.scale.y >= 43.9 and not tracker._scroll.get_h_scroll_bar().visible, "objective header stays touch-sized with no sideways scrolling at %dx%d / %d%%" % [dimensions.x, dimensions.y, scale_percent])
+			game.hud._update_mission_guide()
+			await _settle(game)
+			check.call(game.hud._navigation_box.visible and game.hud._root.get_global_rect().encloses(_rect(game.hud._navigation_box)) and not _rect(tracker).intersects(_rect(game.hud._navigation_box)), "selected direction fits beside the mission list at %dx%d / %d%%" % [dimensions.x,dimensions.y,scale_percent])
+			for cue in [(game.world as Lobby)._urchin_cue,(game.world as Lobby)._fire_cue]:
+				if is_instance_valid(cue) and cue._ui.visible and not cue._caption.text.is_empty():
+					check.call(not _rect(game.hud._navigation_box).intersects(cue._caption.get_global_rect()), "mission direction stays clear of the live arrival warning")
 			if capture.is_valid() and scale_percent == 100:
 				await capture.call("expanded_%dx%d" % [dimensions.x, dimensions.y])
 			tracker._scroll.scroll_vertical = int(tracker._sections[ObjectiveTrackerData.SIDE].position.y)
@@ -363,6 +496,46 @@ static func _layouts(game: Game, check: Callable, capture: Callable) -> void:
 	joystick.position = original
 	game.hud._layout_gui()
 	GameSettings.set_ui_scale(100, false)
+	game.hud.clear_objective_tracking()
+
+static func _realm_navigation(game: Game, check: Callable, capture: Callable) -> void:
+	var realm := game.world as TwilightRealm
+	var hud := game.hud
+	var before := GameState.data.duplicate(true)
+	hud.track_objective("explore")
+	check.call(hud._tracked_objective_id == "explore" and hud._tracked_target.label == "Rootbound Crossing", "selected realm exploration points to the next authored landmark")
+	var trail: MissionPath
+	for child in realm.get_children():
+		if child is MissionPath: trail = child
+	check.call(trail != null, "selecting a realm objective creates one world-owned navigation trail")
+	if trail != null:
+		trail._process(0.5)
+		check.call(trail._points.size() > 1, "realm navigation plans an obstacle-aware path from the current player")
+	var after := GameState.data.duplicate(true)
+	before.erase("play_time")
+	after.erase("play_time")
+	check.call(after == before, "following a realm direction cannot discover landmarks, accept fights or award loot")
+	if capture.is_valid(): await capture.call("selected_realm_direction")
+	realm.show_reading("Waykeeper","Read without a direction overlay.",realm.player.global_position)
+	hud._update_mission_guide()
+	check.call(not hud._navigation_box.visible and hud.has_tracked_objective(), "realm reading temporarily hides the arrow while retaining the selected mission")
+	realm.close_reading()
+	hud._update_mission_guide()
+	check.call(hud._navigation_box.visible, "closing realm reading restores the selected direction")
+	GameState.data.realm_progress.landmarks.append("grove")
+	hud._refresh_objectives()
+	hud.track_objective("companions")
+	var cat: Node2D = realm.wildlife.bramble_cat
+	var start := cat.global_position
+	cat.global_position += Vector2(1,0)
+	hud._update_mission_guide()
+	check.call((hud._tracked_target.position as Vector2).is_equal_approx(cat.global_position), "optional companion directions follow the discovered live pet, not a fixed old coordinate")
+	cat.global_position = start
+	cat.queue_free()
+	await game.get_tree().process_frame
+	hud._update_mission_guide()
+	check.call(hud._tracked_target.is_empty() and not hud._navigation_box.visible, "a freed mission target is safely hidden without pointing at a retired actor")
+	hud.track_objective("explore")
 
 static func _rect(control: Control) -> Rect2:
 	return Rect2(control.global_position, control.size * control.get_global_transform().get_scale())
@@ -375,10 +548,10 @@ static func _click(game: Game, button: Button) -> void:
 		await _touch(game, _rect(button).get_center(), pressed)
 	await _settle(game)
 
-static func _touch(game: Game, at: Vector2, pressed: bool) -> void:
+static func _touch(game: Game, at: Vector2, pressed: bool, finger: int = 6) -> void:
 	var event := InputEventScreenTouch.new()
 	event.position = at
 	event.pressed = pressed
-	event.index = 6
+	event.index = finger
 	Input.parse_input_event(event)
 	await game.get_tree().process_frame

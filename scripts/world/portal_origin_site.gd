@@ -17,6 +17,7 @@ var revealing := false
 const ROAD_POINTS := [Vector2(-1.2,0.1),Vector2(-0.55,0.1),Vector2(-0.55,-0.12),Vector2(0.38,-0.12),Vector2(0.85,0.08)]
 
 func _ready() -> void:
+	touch_verb = "Enter"
 	show_marker = false
 	interact_radius = 2.6
 	super._ready()
@@ -80,9 +81,9 @@ func refresh() -> void:
 	if bool(progress.opened):
 		prompt = "The village lantern keeps the road open"
 		_words = "" # E and the gate's main hotspot always enter the already open road.
-	elif bool(progress.rahim_consulted): prompt = "Set the marker and light the road"
-	elif bool(progress.site_examined): prompt = "Old waystone · Ask Pak Rahim at the dock"
-	else: prompt = "Examine the old stones"
+	elif GameState.portal_key_received(): prompt = "Use the portal key · Unlock the Dimension Portal"
+	elif bool(progress.site_examined): prompt = "The portal is missing · Ask Pak Rahim at the dock"
+	else: prompt = "An old waystone · Explore the clearing"
 	caption.text = _words if not _words.is_empty() else prompt
 	replay_button.visible = bool(progress.opened) and not bool(progress.reveal_seen)
 	_update_cues()
@@ -112,6 +113,8 @@ func _process(delta: float) -> void:
 	var game := get_tree().get_first_node_in_group("game") as Game
 	if not is_instance_valid(game) or game.world != get_parent() or not is_instance_valid(game.player()): return
 	var near := game.player().global_position.distance_to(global_position) < 5.3
+	if not GameState.portal_opened() and not GameState.portal_key_received() and not bool(GameState.portal_origin().get("site_examined", false)) and valid_actor(game.player()):
+		_discover(game)
 	caption.visible = near and not game._input_locked and not GameState.portal_opened()
 	replay_button.visible = near and not game._input_locked and GameState.portal_opened() and not bool(GameState.portal_origin().reveal_seen)
 	if not near and not _words.is_empty():
@@ -150,7 +153,19 @@ func interact(actor: Node) -> void:
 	var progress := GameState.portal_origin()
 	if bool(progress.opened):
 		if not bool(progress.reveal_seen): game.awaken_portal(self,true)
-	elif bool(progress.rahim_consulted): game.awaken_portal(self)
+	elif GameState.portal_key_received(): game.awaken_portal(self)
 	else:
-		GameState.examine_waystone()
-		set_message("A line breaks beneath the fallen marker.\nThe lantern socket is empty.\nAsk Pak Rahim at the dock.")
+		_discover(game)
+
+func _discover(game: Game) -> void:
+	GameState.examine_waystone()
+	set_message("The portal is missing. Ask Pak Rahim at the dock about the old road.")
+	game.hud.release_world_controls()
+	game.open_dialogue("The missing portal", [
+		"Only a fallen waystone remains. There is no portal here yet.",
+		"A weathered inscription reads: 'The road sleeps until its keeper brings back the light.'",
+		"Find Pak Rahim at the dock. He looks after this old road and may know how to restore the portal.",
+		"Your mission arrow now points to Pak Rahim. Close this message when you are ready."
+	])
+	game.hud.dialogue_panel.move_to_front()
+	game.hud._update_mission_guide()

@@ -110,7 +110,7 @@ static func _raid(game: Game, check: Callable) -> void:
 	for i in 7: _step(home, 2)
 	check.call(home._emergency_monsters.size() == 3 and home._forest_monsters.size() == 6 and GameState.pending_home_arrival(true).is_empty(), "raid members and their individual fire portals finish gradually with the same quota and stats")
 	var raider := home._emergency_monsters[0]
-	check.call(raider.max_hp == 60 and raider.damage == 9 and raider.speed == 1.75, "gradual raid arrivals preserve the stronger emergency variant")
+	check.call(raider.max_hp == 87 and raider.damage == 12 and raider.speed == 1.75, "gradual raid arrivals preserve the stronger emergency variant")
 	# A blocked arrival is not a kill, and must not leave an impossible quota.
 	home = await fixture._fresh(game, true, true)
 	GameState.data.world_time = 180.0

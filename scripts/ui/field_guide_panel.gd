@@ -33,9 +33,11 @@ func _rebuild() -> void:
 	illustration.entry = entry
 	illustration.custom_minimum_size.y = 100 if bool(entry.get("memory_journal", false)) else clampf(get_viewport_rect().size.y - 300, 180, 320)
 	content.add_child(illustration)
-	add_body_text(FieldGuideDB.description(entry), GameUI.TEXT, 16)
+	var description := FieldGuideDB.description(entry)
+	add_body_text(description, GameUI.TEXT, 16)
 	if _category == 3 and not bool(entry.get("memory_journal", false)):
-		add_body_text(GameState.campaign_objective(), GameUI.GOLD, 14)
+		var objective := GameState.campaign_objective()
+		if not description.contains(objective): add_body_text(objective, GameUI.GOLD, 14)
 	var navigation := HBoxContainer.new()
 	navigation.alignment = BoxContainer.ALIGNMENT_CENTER
 	var previous := GameUI.button("‹", Vector2(75, 44))

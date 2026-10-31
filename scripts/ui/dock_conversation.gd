@@ -21,7 +21,7 @@ const WELCOME := [
 	{"speaker": "Pak Rahim", "line": "You washed up on our shore, lad. That was introduction enough. There's a cottage ready for you. No debt attached."},
 	{"speaker": "Pak Rahim", "line": "We have our troubles, too. After dark, creatures come for the trees and homes. We keep one another safe. You won't have to face your troubles alone, either."},
 	{"speaker": "Adam", "expression": "resolved", "line": "When I'm steady, I'll help. And I'll find my friends. I just... don't know where to start."},
-	{"speaker": "Pak Rahim", "line": "Start small. Come off the dock. Meet your neighbours. We'll ask about Arjun and Mei Ling, one person at a time."},
+	{"speaker": "Pak Rahim", "line": "Explore the northern clearing when you're ready, Adam. There used to be an old road there. See what remains; it may help your search."},
 	{"speaker": "Pak Rahim", "line": "And Adam? You can look for a way home and still have a place here. Both can be true."},
 ]
 const REMINDER := [
@@ -34,7 +34,7 @@ var introduction := true
 var waystone := false
 var road_reminder := ""
 const WAYSTONE_READY := [
-	{"speaker": "Pak Rahim", "line": "The lantern's yours to borrow, Adam. Set the fallen waystone straight, then place the light in its socket. The carved line will show you where."},
+	{"speaker": "Pak Rahim", "line": "You already have the portal key, Adam. Take it to the locked portal in the northern clearing. Unlock the lantern's socket and the old road will answer."},
 	{"speaker": "Pak Rahim", "line": "Take your time. Clear any creatures nearby before you work. You can look after yourself and keep searching for your friends."},
 ]
 const WAYSTONE_OPEN := [
@@ -42,11 +42,11 @@ const WAYSTONE_OPEN := [
 	{"speaker": "Pak Rahim", "line": "I don't know what waits beyond it. Follow its light home when you need a rest. BESUT will be here."},
 ]
 const WAYSTONE := [
-	{"speaker": "Adam", "expression": "concerned", "line": "There are road marks by the fallen stone. They stop at an empty lantern socket."},
-	{"speaker": "Pak Rahim", "line": "My father called it a waystone. Said there was a road into the woods, once. I thought it was only a story."},
+	{"speaker": "Adam", "expression": "concerned", "line": "I found a fallen waystone in the northern clearing, but there's no portal. Do you know what happened to the old road?"},
+	{"speaker": "Pak Rahim", "line": "That road has slept for years. My father kept its lantern, and I still have the key. Its light can call the portal back. The key costs nothing."},
 	{"speaker": "Adam", "expression": "resolved", "line": "If the road is still there, someone beyond it might have seen my friends."},
-	{"speaker": "Pak Rahim", "line": "Perhaps. I can't promise what you'll find. But we can set the marker straight. Take one of our lanterns. No need to buy anything."},
-	{"speaker": "Pak Rahim", "line": "Follow the carving, Adam. Set the fallen marker upright, then place the lantern in its socket. If a road answers, let its light guide you home."},
+	{"speaker": "Pak Rahim", "line": "Take this portal key, Adam. It fits the locked lantern by the old waystone in the northern clearing."},
+	{"speaker": "Pak Rahim", "line": "Follow the arrow to the portal. Use Enter or E there to turn the key and unlock the road. Once it opens, choose Enter again when you're ready to explore."},
 ]
 var page := 0
 var cancelled := false

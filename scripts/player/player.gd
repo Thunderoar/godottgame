@@ -405,15 +405,24 @@ func _show_slash(arc := "lr") -> void:
 func try_interact() -> void:
 	if controls_locked or sleeping or dead:
 		return
-	if nearby != null and is_instance_valid(nearby) and nearby.has_method("interact"):
-		nearby.call("interact", self)
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if is_instance_valid(game) and game.player() != self: return
+	if not is_instance_valid(nearby) or nearby.is_queued_for_deletion(): return
+	if is_instance_valid(game) and (not is_instance_valid(game.world) or not game.world.is_ancestor_of(nearby)): return
+	if nearby.has_method("is_interactable_available") and not bool(nearby.call("is_interactable_available")): return
+	var radius := float(nearby.get("interact_radius")) if nearby.get("interact_radius") != null else 1.8
+	if global_position.distance_to(nearby.global_position) > radius: return
+	if nearby.has_method("interact"): nearby.call("interact", self)
 
 
 func _update_nearby() -> void:
 	var best: Node = null
 	var best_dist := 99999.0
+	var game := get_tree().get_first_node_in_group("game") as Game
 	for node in get_tree().get_nodes_in_group("interactable"):
-		if not is_instance_valid(node):
+		if not is_instance_valid(node) or node.is_queued_for_deletion():
+			continue
+		if is_instance_valid(game) and (not is_instance_valid(game.world) or not game.world.is_ancestor_of(node)):
 			continue
 		if node.has_method("is_interactable_available") and not bool(node.call("is_interactable_available")):
 			continue

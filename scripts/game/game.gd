@@ -36,6 +36,8 @@ var _urchin_hud_visible := true
 var _arjun_returning := false
 var _arjun_walk: Tween
 var _reunion_check_timer := 0.0
+const VILLAGE_MUSIC_PATH := "res://assets/audio/besut_village.ogg"
+var _village_music: AudioStreamPlayer
 
 var _developer_layer: CanvasLayer
 var _developer_bar: HBoxContainer
@@ -67,6 +69,10 @@ func _ready() -> void:
 	loading_screen = LoadingScreen.new()
 	add_child(loading_screen)
 	add_child(NpcInfo.new())
+	_village_music = AudioStreamPlayer.new()
+	_village_music.name = "VillageMusic"
+	_village_music.volume_db = -12.0
+	add_child(_village_music)
 	_build_developer_tools()
 	_connect_hud()
 	GameState.player_defeated.connect(_on_player_defeated)
@@ -76,6 +82,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_refresh_developer_overlay()
+	_sync_village_music()
 	if _developer_paused: return
 	_reunion_check_timer += delta
 	if _reunion_check_timer >= 0.75:
@@ -98,6 +105,13 @@ func _process(delta: float) -> void:
 			if _settlement_damage_accum >= SETTLEMENT_DAMAGE_TICK:
 				_settlement_damage_accum = 0.0
 				GameState.damage_settlement(5)
+
+
+func _sync_village_music() -> void:
+	# Keep the song's position through dialogue and pet duels. Ordinary menus
+	# continue village life; story-owned sound and developer suspension take priority.
+	if not is_instance_valid(_village_music): return
+	_village_music.stream_paused = not world is Lobby or _story_active or _developer_paused or _game_over or is_instance_valid(title_screen) or not Sfx.battle_track.is_empty()
 
 
 func _connect_hud() -> void:
@@ -212,6 +226,7 @@ func _clear_world() -> void:
 	_settlement_damage_accum = 0.0
 	_sailing = false
 	Sfx.stop_battle_music()
+	_village_music.stop()
 	home_interior = null
 	if is_instance_valid(world) and world is Lobby and world.journey_serial == GameState.journey_serial:
 		GameState.store_home_monsters(world.capture_monsters())
@@ -236,6 +251,10 @@ func _load_lobby(transition: bool = true, arrive_at_dock: bool = false) -> void:
 	lobby.arrive_at_dock = arrive_at_dock
 	world = lobby
 	_world_holder.add_child(lobby)
+	if _village_music.stream == null:
+		_village_music.stream = load(VILLAGE_MUSIC_PATH) as AudioStreamOggVorbis
+	_village_music.play()
+	_sync_village_music()
 	hud.set_world(lobby)
 	hud.visible = true
 	if _return_to_harbour:
@@ -923,9 +942,9 @@ func play_dock_conversation(introduction: bool = false) -> void:
 	hud.visible = false
 	var conversation := DockConversation.new()
 	conversation.introduction = introduction
-	conversation.waystone = not introduction and bool(GameState.portal_origin().site_examined) and not bool(GameState.portal_origin().rahim_consulted)
+	conversation.waystone = not introduction and not GameState.portal_opened() and not GameState.portal_key_received() and bool(GameState.portal_origin().get("site_examined", false))
 	if not introduction:
-		conversation.road_reminder = "open" if GameState.portal_opened() else ("ready" if bool(GameState.portal_origin().rahim_consulted) else "")
+		conversation.road_reminder = "open" if GameState.portal_opened() else ("ready" if GameState.portal_key_received() else "")
 	_dock_conversation = conversation
 	add_child(conversation)
 	await conversation.completed

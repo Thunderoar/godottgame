@@ -134,7 +134,7 @@ func sample(time: float) -> void:
 	_camera.zoom = zoom_target if reduced else _start_zoom.lerp(zoom_target,approach)
 	_camera.force_update_scroll()
 	if elapsed < 1.5: _caption.text = "Adam sets the fallen marker upright. The carved road joins again."
-	elif elapsed < 3: _caption.text = "Rahim's lantern lends a little light to the old road."
+	elif elapsed < 3: _caption.text = "Adam turns Pak Rahim's portal key. The unlocked lantern lights the old road."
 	elif elapsed < 4.5: _caption.text = "Across the darkness, another light answers."
 	elif elapsed < 6.5: _caption.text = "Leaves. Old stones. A road into the woods."
 	else: _caption.text = "The road remembers. Enter when you are ready; its light leads home."

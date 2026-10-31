@@ -68,7 +68,7 @@ func map_icons(world: Node2D) -> Array[Dictionary]:
 			var priority := 1
 			var theme := ""
 			if id == "monster_portal" and not GameState.portal_opened():
-				if bool(GameState.portal_origin().site_examined):
+				if GameState.portal_key_received() or bool(GameState.portal_origin().site_examined):
 					icons.append({"id": "old_waystone", "position": world._layout.position_of(id), "texture": WaystoneArt.marker(), "priority": 2, "theme": ""})
 				continue
 			if kind == "shop":

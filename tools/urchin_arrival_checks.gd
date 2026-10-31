@@ -82,7 +82,7 @@ static func _combat(home: Lobby, check: Callable, capture: Callable) -> void:
 	enemy._target = home.player
 	enemy._enter(Enemy.State.WINDUP)
 	enemy._update_urchin_pose(0)
-	check.call(enemy.max_hp == 30 and enemy.damage == 6 and enemy.speed == 1.35 and enemy._state_time == 0.42, "ordinary stats and 0.42-second melee windup are preserved")
+	check.call(enemy.max_hp == 44 and enemy.damage == 8 and enemy.speed == 1.35 and enemy._state_time == 0.42, "stronger ordinary stats retain the readable 0.42-second melee windup")
 	if capture.is_valid(): await capture.call("urchin_combat_windup")
 	var hp := GameState.health()
 	enemy._enter(Enemy.State.ATTACK)
@@ -103,7 +103,7 @@ static func _combat(home: Lobby, check: Callable, capture: Callable) -> void:
 	check.call(GameState.gold() == gold + 7 and enemy.dead and enemy.collision_layer == 0, "death presentation cannot pay twice or leave a damaging corpse")
 	var raid := home.spawn_sea_urchin(points[0], true)
 	raid.set_physics_process(false)
-	check.call(raid.max_hp == 60 and raid.damage == 9 and raid.speed == 1.75, "emergency urchins keep their stronger existing stats")
+	check.call(raid.max_hp == 87 and raid.damage == 12 and raid.speed == 1.75, "emergency urchins keep their stronger emergency stats")
 
 static func _urchins(home: Lobby) -> Array[Enemy]:
 	var result: Array[Enemy] = []

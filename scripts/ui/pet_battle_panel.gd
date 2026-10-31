@@ -237,10 +237,10 @@ func _start_battle(pet: Dictionary, def: Dictionary, level_id: String) -> void:
 	_player_level = int(pet.get("level", 1))
 	_player_max = PetDB.max_health(_player_pet_id, _player_level)
 	_player_hp = _player_max
-	_opponent_max = int(def.get("hp", 45))
+	_opponent_max = CombatBalance.health(int(def.get("hp", 45)), true)
 	_opponent_hp = _opponent_max
 	_player_damage = PetDB.attack_damage(_player_pet_id, _player_level) + 3
-	_enemy_damage = int(def.get("damage", 5))
+	_enemy_damage = CombatBalance.damage(int(def.get("damage", 5)))
 	_turn_number = 1
 	_player_cooldowns = {"attack": 0.0, "defend": 0.0, "burst": 0.0}
 	_enemy_cooldowns = {"attack": 0.0, "defend": 0.0, "burst": 0.0}

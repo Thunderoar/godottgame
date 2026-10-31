@@ -21,7 +21,8 @@ func _ready() -> void:
 	await get_tree().process_frame
 	_check(game.title_screen != null, "title screen exists")
 	_check(GameState.has_existing_save == false, "clean save state")
-	_check(game.title_screen._home_title.text == "BESUT" and game.title_screen._home_wordmark.text == "P R O T E C T", "main menu keeps the PROTECT BESUT wordmark")
+	_check(game.title_screen._home_title.text == "BESUT" and game.title_screen._home_wordmark.text == "P R O T E C T", "main menu keeps the original PROTECT BESUT wordmark")
+	_check(not game._village_music.playing, "title does not play the village song")
 	for removed_text in ["01  /  THE SHORE WE CALL HOME", "Every great journey\nbegins with a little hope.", "PB (Protect BESUT)", "A HOME WORTH FIGHTING FOR", "Between the forest and the sea, a village is counting on you.", "Build a home. Find a companion. Defend your shore.", "Your first chapter is waiting. Start a new journey."]:
 		_check(not _has_label(game.title_screen, removed_text), "main menu omits removed copy: %s" % removed_text)
 	_check(not game.title_screen._save_summary.visible, "fresh main menu hides the empty save summary")
@@ -63,6 +64,10 @@ func _ready() -> void:
 	_check(bool(GameState.campaign().get("dock_welcome_seen", false)) and not game._story_active, "explicitly skipping the dock conversation saves completion and releases village simulation")
 	hud = game.get("hud")
 	_check(game.world is Lobby, "lobby loads after character select")
+	_check(not GameState.portal_key_received() and ObjectiveTrackerData.entries(game.world)[0].id == "waystone", "fresh village play starts by exploring the missing portal location")
+	_check(game._village_music.playing and not game._village_music.stream_paused, "village song starts after the opening and dock welcome")
+	var village_song := game._village_music.stream as AudioStreamOggVorbis
+	_check(village_song != null and village_song.loop and village_song.get_length() > 178.0 and village_song.get_length() < 180.0, "supplied full-length village song imports with repeat enabled")
 	_check(game.call("player") != null, "player exists")
 	_check(get_tree().get_first_node_in_group("pet") != null, "starter pet exists")
 	var village_layout: WorldLayout = game.world._layout
@@ -86,7 +91,8 @@ func _ready() -> void:
 	_check(hud.get("_joystick") != null, "touch joystick exists")
 	_check(not hud.get_control_layout_current().has("ocean_eat") and not SettingsPanel.CONTROL_ROWS.any(func(row: Array) -> bool: return row[0] == "ocean_eat"), "Eat is removed from saved sea-control editing and Settings")
 	_check(hud.get("_attack_button").action == "attack", "touch attack maps to attack action")
-	_check(hud.get("_interact_button").action == "sprint", "permanent touch Sprint maps to sprint action")
+	hud._update_prompt()
+	_check(hud.get("_interact_button").action in ["sprint", "interact"], "shared Sprint button supports nearby interaction actions")
 	_check(hud.get("_inventory_button").action == "open_inventory", "backpack touch action exists")
 	_check(hud.get("_inventory_button").position.x > 210, "Pack sits beside the joystick away from combat controls")
 	_check(hud.get("_build_button") == null, "Build lives in Menu rather than the world HUD")
@@ -134,6 +140,7 @@ func _ready() -> void:
 	await MonsoonChecks.run(game, _check)
 	await preload("res://tools/realistic_checks.gd").run(game, _check)
 	await preload("res://tools/portal_origin_checks.gd").run(game, _check)
+	await preload("res://tools/combat_balance_checks.gd").run(game, _check)
 	# Subsequent combat/settlement fixtures represent an already discovered road.
 	GameState.data.portal_origin.opened = true
 	GameState.data.portal_origin.reveal_seen = true
@@ -409,6 +416,7 @@ func _test_settlement_expansion() -> void:
 	await get_tree().process_frame
 	hud.call("_update_mission_guide")
 	_check(hud.get("_mission_panel") == null and hud.get("_mission_arrows").is_empty(), "bottom mission notifications are removed")
+	_check(hud._navigation_box != null and not hud._navigation_box.visible, "selected mission directions stay hidden until the player chooses a mission")
 	_check(game.world.get_children().any(func(node: Node) -> bool: return node is MissionPath), "dashed mission path lives in the world")
 	var player := game.call("player") as Player
 	_check(player != null and player.get_node_or_null("VitalHud") is PlayerVitalHud, "player has a floating Health/XP dashboard")
@@ -691,6 +699,9 @@ func _test_pet_battle_portal() -> void:
 	var gold_before := GameState.gold()
 	var level_before := int(GameState.get_active_pet().get("level", 1))
 	_check(panel.start_battle("pet_duel_1"), "first duel starts")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(game._village_music.stream_paused and not Sfx.battle_track.is_empty(), "pet battle music takes priority over the village song")
 	_check(PetBattlePanel.SKILLS.size() == 3 and panel._skill_buttons.size() == 3, "three manual powers are available")
 	var hp := panel._player_hp
 	var enemy_hp := panel._opponent_hp
@@ -717,6 +728,9 @@ func _test_pet_battle_portal() -> void:
 	_check(GameState.pet_battle_state("pet_duel_2").get("unlocked", false), "victory unlocks next duel")
 	_check(GameState.gold() > gold_before and int(GameState.get_active_pet().get("level", 1)) > level_before, "victory grants Gold and pet level")
 	panel.close_panel()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(game._village_music.playing and not game._village_music.stream_paused, "village song resumes when the pet duel ends")
 
 func _test_rubbish_system() -> void:
 	var system := get_tree().get_first_node_in_group("rubbish_system") as RubbishSystem
@@ -768,6 +782,7 @@ func _test_portal_combat_and_auto_loot() -> void:
 	game.call("enter_portal", "sunken_crypt")
 	await get_tree().create_timer(0.8).timeout
 	_check(game.world is Dungeon, "portal dungeon loads")
+	_check(not game._village_music.playing, "leaving the village for a portal stops its song")
 	# Large imported art can finish construction before the fade has unlocked
 	# input. Wait for the real transition contract rather than racing a timer.
 	for frame in 180:
@@ -1186,6 +1201,7 @@ func _test_forest_game_over() -> void:
 	game.call("return_to_title", true)
 	await get_tree().create_timer(0.2).timeout
 	_check(game.title_screen != null and not hud.visible, "game over returns to the title screen")
+	_check(not game._village_music.playing, "returning to title stops the village song")
 
 
 func _test_village_systems() -> void:

@@ -88,9 +88,20 @@ var _target_clock := 0.0
 var _pose_tween: Tween
 var _separation_push := Vector2.ZERO
 var _urchin_stride := 0.0
+var _difficulty_applied := false
+var _base_damage := 0
 
 
 func _ready() -> void:
+	if not _difficulty_applied:
+		_difficulty_applied = true
+		_base_damage = damage
+		max_hp = CombatBalance.health(max_hp, is_boss)
+		damage = CombatBalance.damage(damage)
+		special_damage = CombatBalance.damage(special_damage)
+		projectile_damage = CombatBalance.damage(projectile_damage)
+		attack_interval *= CombatBalance.ATTACK_INTERVAL
+		special_cooldown *= CombatBalance.ATTACK_INTERVAL
 	if is_boss:
 		var vitality := WorldHealthBar.new()
 		vitality.name = "BossHealth"

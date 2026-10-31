@@ -5,6 +5,9 @@ var _hint: Button
 var _reason := ""
 var _time := 0.0
 
+func get_touch_verb() -> String:
+	return "Enter"
+
 func _ready() -> void:
 	show_marker = false
 	interact_radius = 2.2

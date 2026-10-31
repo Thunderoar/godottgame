@@ -9,6 +9,12 @@ var art: Sprite2D
 var label: Label
 var _home := Vector2.ZERO
 
+func get_touch_verb() -> String:
+	if kind == "waykeeper": return "Talk"
+	if kind == "exit": return "Exit"
+	if kind == "passage": return "Enter"
+	return super.get_touch_verb()
+
 func _ready() -> void:
 	super._ready()
 	_home = position

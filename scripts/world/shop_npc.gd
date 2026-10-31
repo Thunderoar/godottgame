@@ -20,6 +20,7 @@ func _ready() -> void:
 	super._ready()
 	add_to_group("ambient_shop")
 	prompt = "Open %s shop" % npc_name
+	touch_verb = "Enter"
 	_build()
 
 

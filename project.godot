@@ -14,7 +14,9 @@ config/name="Protect Besut"
 config/description="A seaside pixel-art survival action RPG vertical slice."
 run/main_scene="res://scenes/game.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
-config/icon="res://icon.svg"
+boot_splash/bg_color=Color(0, 0.118, 0.153, 1)
+boot_splash/image="res://assets/authored/branding/protect_besut.png"
+config/icon="res://icon.png"
 
 [autoload]
 

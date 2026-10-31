@@ -48,6 +48,15 @@ func _texture(texture: Texture2D, centre: Vector2, extent: float) -> void:
 	draw_texture_rect(texture, Rect2(centre - fitted / 2, fitted), false)
 
 func _picture(id: String, at: Vector2, extent: float) -> void:
+	if id == "npc:pak_karim":
+		_texture(DockHost.texture(),at,extent)
+		return
+	if id == "key":
+		var gold := Color("#ba8733")
+		draw_arc(at+Vector2(-0.22,0)*extent,extent*0.18,0,TAU,24,gold,5,true)
+		draw_line(at-Vector2(0.04,0)*extent,at+Vector2(0.36,0)*extent,gold,6,true)
+		for x in [0.18,0.33]: draw_line(at+Vector2(x,0)*extent,at+Vector2(x,0.15)*extent,gold,5,true)
+		return
 	if id.begins_with("realm_guard:"):
 		_texture(RealmCombatArt.guard_texture(id.get_slice(":",1),0),at,extent)
 		return

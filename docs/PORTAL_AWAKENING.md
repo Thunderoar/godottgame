@@ -1,40 +1,50 @@
 # The road remembers — portal discovery and awakening
 
-Implemented 2026-10-30. New journeys begin with a fallen waystone at the existing
-`monster_portal` anchor, without a usable Dimension Portal or its map icon.
-The old travellers' road reconnects when Adam aligns its marker and supplies the
-village lantern Rahim lends him. This connects the village opening to Twilight's
-existing memories of the citadel taking the road's light.
+Implemented 2026-10-30; exploration-first flow revised 2026-10-31. New journeys
+begin without a portal. Only the fallen waystone remains at the stable
+`monster_portal` anchor. Explore it, read the clue, consult Pak Rahim at the dock,
+then return with his key to awaken the road. This supersedes the earlier
+key-first revision on the same date.
 
 ## Playable flow
 
-1. Approach the broken stones and tap them, or use nearby E. A short world caption
-   describes the broken carved line and empty lantern socket. Reading does not
-   pause simulation or lock movement. Walking away clears the caption.
-2. Speak with Pak Rahim at the dock. After discovery, his five-line contextual
-   conversation replaces the ordinary reminder. He recalls his father's story,
-   admits uncertainty about the destination, and lends a lantern freely.
-   Completing the conversation or explicitly skipping it prepares the repair;
-   cancellation/world replacement does not. Later chats remind the player what
-   to do, and recognize an already open road.
-3. Return to the stones and choose the nearby interaction, "Set the marker and
-   light the road." Local enemies, recovery, emergencies and arrival ownership
-   prevent unsafe overlap. There is no kill quota, night requirement, paid key,
-   house upgrade, workshop dependency or inventory relic.
-4. The eight-second reveal aligns the marker, lights the carving progressively,
-   shows the answering road, forms the arch, and settles into the normal portal.
-   The player remains in the real clearing and chooses when to enter afterward.
-5. The existing portal transition enters Twilight Wilds. Wisp's first greeting
-   recognizes a village lantern. His later discovery/memory/restoration responses
-   remain intact. Normal expedition rewards, bonds and rescue progression continue.
+1. After the opening welcome, the first objective is **Explore the northern
+   clearing**. Selected mission navigation and the default trail lead to the
+   waystone. There is no portal actor, usable gate or portal picture on the map.
+   Talking to Pak Rahim early gives his ordinary reminder and cannot grant a key.
+2. Arriving within the waystone's normal interaction range automatically discovers
+   it through the current-world/proximity/line-of-sight guards. E or a nearby tap
+   can also examine it. A persistent **The missing portal** dialogue explains the
+   fallen road and explicitly directs the player to Pak Rahim at the dock.
+   It uses the existing fitted, scrollable modal with a visible Close action;
+   dialogue z-order is above tutorial cards, HUD and world art. It releases held
+   controls and hides selected navigation while open. Reading locks input but
+   follows ordinary menu rules: the village clock continues.
+3. The objective becomes **Meet Pak Rahim** and the same live arrow switches to
+   him. His five-line conversation explains the sleeping road and gives its free
+   permanent portal key. Cancelling or retiring its world grants nothing; explicit
+   Skip/completion grants the key. The opening welcome never grants it.
+4. The objective becomes **Unlock the Dimension Portal** and points back to the
+   clearing. Enter/E or a nearby tap with the key unlocks the lantern socket.
+   Nearby danger, recovery, emergency and arrival guards remain enforced. There
+   is no payment, kill quota, night rule or house/workshop prerequisite.
+5. The existing eight-second reveal aligns the fallen marker, lights the carving,
+   shows the answering road and forms the portal. Opening is saved before the
+   presentation. Skip/interruption retain the original contracts. Actors are not
+   repositioned. A separate Enter travels into Twilight Wilds through its normal
+   transition; expedition loot and both rescue arcs keep their owners.
 
-The village clock and world suspend during the deliberate reveal; ordinary
-discovery captions and later Rahim chats retain the normal non-pausing rules.
-Game owns held-input release, suspension, camera/HUD restoration and cancellation.
-The reveal has an immediately available Skip button. Reduce Motion uses stable
-tableaux; low effects and mute preserve the explanatory visuals and captions.
-No player/pet repositioning, terrain editing, new monster spawning or rewards
-are part of opening the road.
+BESUT Field Guide, mission cards, dock welcome/conversation and world captions
+follow clearing → clue → Pak Rahim → key → portal. Stage-dependent descriptions
+update after discovery and receipt; repeated objective instructions are suppressed.
+People includes Rahim's actual village sprite and a key pictogram. The guide also
+explains selectable mission arrows and the Sprint/Talk/Enter/Exit control.
+Equipment references match Garrick and the Equipment Shop.
+
+The deliberate portal reveal suspends the village and shared clock; ordinary
+conversations and early locked-site captions do not. Game owns held-input release,
+suspension, camera/HUD restoration and cancellation. Reduce Motion, low effects,
+mute, save-before-presentation and one-time completion remain supported.
 
 ## Decoration and discovery cues
 
@@ -48,7 +58,7 @@ it introduces no collision, terrain paint, tree changes or new interactables.
 A small glimmer draws attention to the empty socket. Extra quiet glimmers and
 slight ribbon movement are available at medium/high effects; low effects and
 Reduce Motion retain a steady socket cue and all essential stone/flower/cloth
-silhouettes. Rahim's prepared stage warms the glimmer, and opening the portal
+silhouettes. Rahim's key-ready stage warms the glimmer, and opening the portal
 retires it so the completed landmark no longer looks like an unfinished task.
 Ambient presentation never writes discovery or progression and uses no gameplay
 RNG, particles or extra light sources.
@@ -59,36 +69,39 @@ and full reveal. This keeps visual verification separate from attack scheduling.
 
 ## Guidance and persistence
 
-`GameState.portal_origin` stores schema 1 plus `site_examined`, `rahim_consulted`,
-`opened` and `reveal_seen`. All production writes use GameState transactions.
-Opening saves before presentation and does not start an expedition. Continue
-after an interrupted reveal retains the usable portal, with an optional nearby
-Watch awakening button. E/main gate interaction still enters the open road.
+`GameState.portal_origin` retains schema 1 and the stable fields `site_examined`,
+`rahim_consulted`, `opened` and `reveal_seen`. The saved `rahim_consulted` flag now
+owns the permanent quest key, exposed through `portal_key_received()`. It is not
+shop inventory and cannot be duplicated, sold or consumed. All production writes
+still use GameState transactions. `consult_waystone()` requires discovery before
+granting it; `open_waystone()` requires the key and records the actual site visit
+with the opening commit. No new save version or saved field is required.
 
-Raw saves lacking this record predate the feature and retain their previous
-portal access without a forced reveal. Active expeditions, saved realm presence,
-attempts, clears or Mei Ling's rescue reconcile contradictory closed flags.
-Unknown future numeric schemas fail load without overwriting the file.
-New Journey explicitly resets origin progress; defeat does not close an opened
-road or erase its discovery.
+Key-only saves preserve the earned key with `site_examined=false`. Older completed
+lantern conversations retain their earned access as the key. Raw saves without
+origin data, active expeditions, saved realm presence, attempts, clears and rescue
+flags retain their existing portal-access migration. Unknown future numeric
+schemas are still rejected without overwriting the save. Malformed records cannot
+fabricate access. New Journey resets the key and portal; ordinary defeat preserves
+journey progression.
 
-The map hides both the gate and waystone until discovery. After examination it
-shows a stone marker, switching to the normal portal picture after opening.
-The portal tutorial lesson, Missions panel and objective guidance describe the
-current discovery stage. Portal/boss teaching is available in daylight too.
-Tutorial Hide tips does not remove interactions. The opening promise no longer
-names a final portal before Adam discovers a road; the early guide preserves
-his uncertainty about Mei Ling's location.
+The actor's display name is Pak Rahim. The internal `PakRahim` node name, portrait
+path and saved `rahim_consulted` ID remain stable for compatibility. Before either
+a key or an optional examination, the locked site's map icon stays undiscovered;
+after discovery it becomes visible. Opening changes it to the normal
+portal picture. Missions, objective cards, selected arrows, default paths and the
+Field Guide all use the same stage-dependent instructions. Hide tips does not
+remove the key quest or its interactions.
 
 ## Ownership and verification
 
 - `PortalOriginSite` and `WaystoneArt`: nearby interactions, captions, broken stone,
-  borrowed lantern and progressive carved light.
+  key-locked lantern and progressive carved light.
 - `PortalAwakening`: deterministic reveal timeline and temporary camera, captions,
   Skip and restoration of hidden overhead vitals.
 - `Game`: world/journey ownership, local danger checks, suspension and cleanup.
 - `GameState`: origin defaults, transactions, eligibility and actual save migration.
-- `DockConversation`: contextual discovery exchange and ready/open reminders.
+- `DockConversation`: discovery-follow-up exchange and key-ready/open reminders.
 - `Lobby`, `VillageMinimap`, `MissionDB` and existing guidance/guide owners:
   stage-dependent world construction and player directions.
 

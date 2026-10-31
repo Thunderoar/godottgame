@@ -1368,6 +1368,19 @@ func portal_opened() -> bool:
 	return value is bool and value == true
 
 
+func portal_key_received() -> bool:
+	# Preserve the saved ID from the former lantern conversation. The key is
+	# permanent quest progression, never shop stock or a consumable item.
+	var value: Variant = portal_origin().get("rahim_consulted", false)
+	return value is bool and value == true
+
+
+func portal_origin_title() -> String:
+	if portal_opened(): return "Enter Twilight Wilds"
+	if portal_key_received(): return "Unlock the Dimension Portal"
+	return "Meet Pak Rahim" if bool(portal_origin().get("site_examined", false)) else "Explore the northern clearing"
+
+
 func examine_waystone() -> void:
 	if bool(data.portal_origin.site_examined): return
 	data.portal_origin.site_examined = true
@@ -1376,7 +1389,7 @@ func examine_waystone() -> void:
 
 
 func consult_waystone() -> bool:
-	if not bool(data.portal_origin.site_examined) or bool(data.portal_origin.rahim_consulted): return false
+	if portal_opened() or portal_key_received() or not bool(portal_origin().get("site_examined", false)): return false
 	data.portal_origin.rahim_consulted = true
 	_save_if_needed()
 	data_changed.emit()
@@ -1384,8 +1397,9 @@ func consult_waystone() -> bool:
 
 
 func open_waystone() -> bool:
-	if portal_opened() or not bool(data.portal_origin.site_examined) or not bool(data.portal_origin.rahim_consulted): return false
+	if portal_opened() or not portal_key_received(): return false
 	if health() <= 0 or recovery_active() or emergency_active(): return false
+	data.portal_origin.site_examined = true
 	data.portal_origin.opened = true
 	_save_if_needed() # Commit before presentation; an interrupted reveal cannot remove the road.
 	data_changed.emit()
@@ -1401,10 +1415,9 @@ func finish_portal_reveal() -> void:
 
 func portal_origin_instruction() -> String:
 	if portal_opened(): return "Enter Twilight Wilds through the Dimension Portal. The arrival rift leads home."
-	var origin := portal_origin()
-	if bool(origin.get("rahim_consulted", false)): return "Return to the old waystone. Set the marker and light the road with Rahim's lantern."
-	if bool(origin.get("site_examined", false)): return "Ask Pak Rahim at the dock about the old stones and their empty lantern socket."
-	return "Examine the fallen waystone in the northern clearing. An old road may still be waiting."
+	if portal_key_received(): return "Portal key received. Go to the locked portal in the northern clearing and use Enter or E to unlock it. Enter again after it opens to visit Twilight Wilds."
+	if bool(portal_origin().get("site_examined", false)): return "The portal is missing. Find Pak Rahim at the dock and ask him about the old road. He keeps its portal key."
+	return "Explore the northern clearing. Follow the arrow to the old waystone and look for traces of a portal."
 
 
 func _sanitize_portal_origin() -> void:
@@ -1415,7 +1428,7 @@ func _sanitize_portal_origin() -> void:
 	for id in PortalDB.ordered_ids():
 		if bool(portal_state(id).get("cleared", false)) or int(portal_state(id).get("attempts", 0)) > 0: opened = true
 	var examined: bool = opened or (origin.get("site_examined", false) is bool and origin.get("site_examined", false) == true)
-	var consulted: bool = opened or (examined and origin.get("rahim_consulted", false) is bool and origin.get("rahim_consulted", false) == true)
+	var consulted: bool = opened or (origin.get("site_examined", false) is bool and origin.get("rahim_consulted", false) is bool and origin.get("rahim_consulted", false) == true)
 	data.portal_origin = {"schema": 1, "site_examined": examined, "rahim_consulted": consulted, "opened": opened, "reveal_seen": opened and origin.get("reveal_seen", false) is bool and origin.get("reveal_seen", false) == true}
 
 func portal_state(portal_id: String) -> Dictionary:
@@ -2647,7 +2660,7 @@ func friends_reunited() -> bool:
 
 func campaign_objective() -> String:
 	var story := campaign()
-	if not portal_opened(): return "Search for Arjun and Mei Ling. Meet your neighbours and investigate the old waystone."
+	if not portal_opened(): return portal_origin_instruction()
 	if friends_reunited():
 		return "Explore BESUT before departure. Your friends are safe." if bool(story.get("departure_seen", false)) else "Arjun and Mei Ling are waiting at the dock. Join them when you're ready."
 	var goals: Array[String] = []

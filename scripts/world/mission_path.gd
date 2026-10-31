@@ -11,12 +11,17 @@ func _ready() -> void:
 	z_as_relative = false
 	z_index = 4
 
+func refresh_guidance() -> void:
+	_clock = 0.0
+	_points.clear()
+	queue_redraw()
+
 
 func _process(delta: float) -> void:
 	var game := get_tree().get_first_node_in_group("game") as Game
 	# Hide the tutorial trail with its tips, including cached arrows between refreshes.
 	# Completed training keeps the separate campaign/project navigation unchanged.
-	if is_instance_valid(game) and not GameState.tutorial_complete() and is_instance_valid(game.hud) and is_instance_valid(game.hud.tutorial_guide) and not game.hud.tutorial_guide.visible:
+	if is_instance_valid(game) and is_instance_valid(game.hud) and not game.hud.has_tracked_objective() and not GameState.tutorial_complete() and is_instance_valid(game.hud.tutorial_guide) and not game.hud.tutorial_guide.visible:
 		if not _points.is_empty():
 			_points.clear()
 			queue_redraw()
@@ -32,10 +37,10 @@ func _process(delta: float) -> void:
 		queue_redraw()
 		return
 	var player := game.player()
-	if not is_instance_valid(player) or not world.has_method("get_guidance_targets"):
+	if not is_instance_valid(player) or is_instance_valid(game.home_interior) or game._transitioning or game._story_active or game.hud.any_modal_open():
 		queue_redraw()
 		return
-	var targets: Array = world.call("get_guidance_targets")
+	var targets: Array = game.hud.tracked_guidance_targets(world) if game.hud.has_tracked_objective() else (world.call("get_guidance_targets") if world.has_method("get_guidance_targets") else [])
 	if targets.is_empty():
 		queue_redraw()
 		return

@@ -18,6 +18,7 @@ var _front_hull: Sprite2D
 
 func _ready() -> void:
 	prompt = ""
+	touch_verb = "Enter"
 	show_marker = false
 	interact_radius = 2.2
 	_moored_position = ship.position

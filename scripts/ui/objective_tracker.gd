@@ -1,5 +1,6 @@
 class_name ObjectiveTracker
 extends PanelContainer
+signal objective_selected(id: String)
 ## Non-modal objective accordion. Only its visible rectangle receives pointer input.
 
 const BODY_FONT := 14
@@ -20,6 +21,14 @@ var _touch_id := -1
 var _expanded_width := 320.0
 var _display_scale := 1.0
 var _panel_style: StyleBoxFlat
+var _tracked_id := ""
+var _quest_touch_id := -1
+var _quest_touch_start := Vector2.ZERO
+var _quest_touch_button: Button
+var _quest_touch_key := ""
+var _quest_touch_scroll := 0
+var _quest_touch_dragged := false
+var _quest_mouse_active := false
 
 func _ready() -> void:
 	name = "ObjectiveTracker"
@@ -61,7 +70,11 @@ func _ready() -> void:
 	_rows.minimum_size_changed.connect(_fit_body)
 	GameSettings.changed.connect(_on_setting_changed)
 	visibility_changed.connect(func() -> void:
-		if not is_visible_in_tree(): _touch_id = -1)
+		if not is_visible_in_tree():
+			_touch_id = -1
+			_quest_touch_id = -1
+			_quest_mouse_active = false
+			_scroll.follow_focus = true)
 	_sync_expansion()
 	hide()
 
@@ -85,20 +98,34 @@ func set_entries(entries: Array[Dictionary]) -> void:
 		for section in ObjectiveTrackerData.SECTION_ORDER:
 			_build_section(section)
 		for entry in _entries:
-			var card := VBoxContainer.new()
-			card.add_theme_constant_override("separation", 3)
-			card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			var card := PanelContainer.new()
+			card.mouse_filter = Control.MOUSE_FILTER_PASS
+			card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+			card.add_theme_stylebox_override("panel", GameUI.style(Color.TRANSPARENT, Color.TRANSPARENT, 0, 0))
 			_sections[ObjectiveTrackerData.section_for(entry)].add_child(card)
-			var tag := _label("", 11, GameUI.TEAL, card)
-			var title := _label("", 17, GameUI.TEXT, card)
-			var detail := _label("", BODY_FONT, GameUI.MUTED, card)
+			var select := Button.new()
+			select.name = "Track_" + str(entry.id)
+			select.custom_minimum_size.y = 44
+			select.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			select.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+			select.tooltip_text = "Show direction · press again to stop"
+			select.pressed.connect(func() -> void: objective_selected.emit(str(entry.id)))
+			card.gui_input.connect(_on_quest_input.bind(select, str(entry.id), card))
+			card.add_child(select)
+			var text := VBoxContainer.new()
+			text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			text.add_theme_constant_override("separation", 3)
+			card.add_child(text)
+			var tag := _label("", 11, GameUI.TEAL, text)
+			var title := _label("", 17, GameUI.TEXT, text)
+			var detail := _label("", BODY_FONT, GameUI.MUTED, text)
 			var bar := ProgressBar.new()
 			bar.custom_minimum_size.y = 5
 			bar.max_value = 1.0
 			bar.show_percentage = false
 			bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			card.add_child(bar)
-			_cards.append({"id": str(entry.id), "container": card, "tag": tag, "title": title, "detail": detail, "bar": bar})
+			text.add_child(bar)
+			_cards.append({"id": str(entry.id), "container": card, "select": select, "tag": tag, "title": title, "detail": detail, "bar": bar})
 	for i in _entries.size():
 		var entry: Dictionary = _entries[i]
 		var card: Dictionary = _cards[i]
@@ -118,6 +145,21 @@ func set_entries(entries: Array[Dictionary]) -> void:
 	_summary.tooltip_text = str(_entries[0].detail) if not _entries.is_empty() else ""
 	_summary.add_theme_color_override("font_color", GameUI.RED.lightened(0.3) if not _entries.is_empty() and bool(_entries[0].get("urgent", false)) else GameUI.TEXT)
 	_sync_expansion()
+	_sync_tracking()
+
+func set_tracked_id(id: String) -> void:
+	if _tracked_id == id: return
+	_tracked_id = id
+	_sync_tracking()
+
+func _sync_tracking() -> void:
+	for card in _cards:
+		var selected := str(card.id) == _tracked_id
+		card.title.add_theme_color_override("font_color", GameUI.GOLD if selected else GameUI.TEXT)
+		card.select.add_theme_stylebox_override("normal", GameUI.style(Color(0.12,0.23,0.22,0.65) if selected else Color.TRANSPARENT, GameUI.GOLD if selected else Color.TRANSPARENT, 1, 0))
+		card.select.add_theme_stylebox_override("hover", GameUI.style(Color(0.12,0.23,0.22,0.7), GameUI.TEAL, 1, 0))
+		card.select.add_theme_stylebox_override("pressed", GameUI.style(Color("#254b46"), GameUI.GOLD, 1, 0))
+		card.select.add_theme_stylebox_override("focus", GameUI.style(Color.TRANSPARENT, GameUI.GOLD, 2, 0))
 
 func section_count(section: String) -> int:
 	var count := 0
@@ -201,6 +243,24 @@ func _input(event: InputEvent) -> void:
 		var local: Vector2 = _header.get_global_transform().affine_inverse() * event.position
 		if Rect2(Vector2.ZERO, _header.size).has_point(local):
 			get_viewport().set_input_as_handled()
+		for card in _cards:
+			if _scroll.is_visible_in_tree() and _contains(_scroll, event.position) and card.select.is_visible_in_tree() and _contains(card.select,event.position): get_viewport().set_input_as_handled()
+	if event is InputEventScreenDrag and event.index == _quest_touch_id:
+		if event.position.distance_to(_quest_touch_start) > 12: _quest_touch_dragged = true
+		if _quest_touch_dragged:
+			var zoom := maxf(0.1,_scroll.get_global_transform().get_scale().y)
+			_scroll.scroll_vertical = _quest_touch_scroll - roundi((event.position.y-_quest_touch_start.y)/zoom)
+		get_viewport().set_input_as_handled()
+	if event is InputEventScreenTouch and not event.pressed and event.index == _quest_touch_id:
+		_quest_touch_id = -1
+		_scroll.follow_focus = true
+		if is_instance_valid(_quest_touch_button) and _quest_touch_button.is_visible_in_tree() and _contains(_scroll,event.position) and not _quest_touch_dragged and absi(_scroll.scroll_vertical - _quest_touch_scroll) < 3 and _contains(_quest_touch_button,event.position):
+			objective_selected.emit(_quest_touch_key)
+		get_viewport().set_input_as_handled()
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed and _quest_mouse_active:
+		_quest_mouse_active = false
+		if is_instance_valid(_quest_touch_button) and _quest_touch_button.is_visible_in_tree() and _contains(_scroll,event.position) and _contains(_quest_touch_button,event.position):
+			objective_selected.emit(_quest_touch_key)
 	if event is InputEventScreenTouch and not event.pressed and event.index == _touch_id:
 		_touch_id = -1
 		var local: Vector2 = _header.get_global_transform().affine_inverse() * event.position
@@ -209,4 +269,29 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_WINDOW_FOCUS_OUT: _touch_id = -1
+	if what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		_touch_id = -1
+		_quest_touch_id = -1
+		_quest_mouse_active = false
+		if is_instance_valid(_scroll): _scroll.follow_focus = true
+
+func _on_quest_input(event: InputEvent, button: Button, id: String, card: Control) -> void:
+	if event is InputEventScreenTouch and event.pressed and _quest_touch_id < 0:
+		_quest_touch_id = event.index
+		_quest_touch_start = card.get_global_transform() * event.position
+		_quest_touch_button = button
+		_quest_touch_key = id
+		_quest_touch_scroll = _scroll.scroll_vertical
+		_quest_touch_dragged = false
+		_scroll.follow_focus = false
+		var focused := get_viewport().gui_get_focus_owner()
+		if is_instance_valid(focused) and _scroll.is_ancestor_of(focused): focused.release_focus()
+		accept_event()
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed and event.device != InputEvent.DEVICE_ID_EMULATION:
+		_quest_mouse_active = true
+		_quest_touch_button = button
+		_quest_touch_key = id
+		button.grab_focus()
+
+func _contains(control: Control, point: Vector2) -> bool:
+	return Rect2(Vector2.ZERO,control.size).has_point(control.get_global_transform().affine_inverse() * point)

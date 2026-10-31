@@ -6,15 +6,16 @@ static func entries(category: int) -> Array[Dictionary]:
 	var pages: Array[Dictionary] = []
 	if category == 0:
 		pages = [
+			{"name": "Pak Rahim · Portal Key", "actor": "npc:pak_karim", "rows": [["player", "npc:pak_karim", "key"], ["key", "portal", "path"]], "description": GameState.portal_origin_instruction() + "\nExplore the old road first. Pak Rahim keeps its free, permanent key."},
 			{"name": "Water Keeper", "actor": "npc:water_keeper", "rows": [["water", "tree_fire", "tree_heal"], ["water", "enemy:fire", "hp_down"]]},
 			{"name": "Builder", "actor": "npc:construction_worker", "rows": [["house_broken", "hammer", "house"], ["sun", "time:10s", "fence"]]},
 			{"name": "Tree Planter", "actor": "npc:tree_planter", "rows": [["stump", "seed", "sapling"], ["sapling", "time:30s", "tree"]]},
 			{"name": "Swordsman", "actor": "npc:swordsman", "rows": [["sword", "enemy:urchin", "hp_down"], ["enemy:urchin", "shield", "house"]]},
 			{"name": "Rooftop Machine Gun", "actor": "hut", "rows": [["gold", "house", "hut"], ["hut", "enemy:urchin", "hp_down"]]},
 			{"name": "Bonded Guardians", "actor": "pet", "rows": [["pet", "enemy:fire", "hp_down"], ["pet", "enemy:urchin", "shield"]]},
-			{"name": "Mission Guide", "actor": "npc:mission_guide", "rows": [["question", "touch", "path"], ["sun", "moon", "question"]]},
+			{"name": "Mission Guide", "actor": "npc:mission_guide", "rows": [["question", "touch", "path"], ["sun", "moon", "question"]], "description": "MISSIONS · Press an active mission in OBJECTIVES or Missions to show an arrow and a ground route. The selected mission turns gold. Press it again or the compass cross to cancel the selection.\n\nThe shared Sprint button becomes Talk near NPCs, Enter near shops, the cottage, portals and the ship, and Exit at a doorway or while browsing a shop or conversation. Shift runs and E interacts. Explore the northern clearing first. The fallen waystone points you to Pak Rahim at the dock; receive his key, then return to awaken the portal."},
 			{"name": "Mara · Potion Shop", "actor": "npc:potion", "rows": [["gold", "touch", "potion"], ["potion", "pack", "hp_up"]]},
-			{"name": "Ilan · Equipment Shop", "actor": "npc:equipment", "rows": [["gold", "touch", "sword"], ["wood", "touch", "gold"]]},
+			{"name": "Garrick · Equipment Shop", "actor": "npc:equipment", "rows": [["gold", "touch", "sword"], ["wood", "touch", "gold"]]},
 			{"name": "Nia · Pet Shop", "actor": "npc:pet", "rows": [["gold", "touch", "pet"], ["food", "pet", "level_up"]]},
 			{"name": "Bram · Construction Shop", "actor": "npc:builder", "rows": [["diamond", "house", "level_up"], ["hut", "fence", "workers"]]},
 			{"name": "Worker Shop", "actor": "npc:construction_worker", "rows": [["gold", "touch", "workers"], ["house", "level_up", "workers"]]},
@@ -47,8 +48,8 @@ static func entries(category: int) -> Array[Dictionary]:
 		]
 		var lights: Array = []
 		if not GameState.portal_opened():
-			pages[3] = {"name": "Looking for Mei Ling", "actor": "hero:mei_ling", "rows": [["hero:adam","question","hero:mei_ling"]], "description": "Adam does not yet know where to search. Meet the villagers and examine the old stones in the northern clearing. Pak Rahim may recognize their markings."}
-			pages[4] = {"name": "The Old Waystone", "actor": "spark", "rows": [["question","path","spark"]], "description": GameState.portal_origin_instruction()}
+			pages[3] = {"name": "Looking for Mei Ling", "actor": "hero:mei_ling", "rows": [["hero:adam","npc:pak_karim","key"], ["key","portal","hero:mei_ling"]], "description": "Explore the northern clearing to find the remains of an old road. Then ask Pak Rahim at the dock about the missing portal. His key lets you return and awaken it. Enter Twilight Wilds when ready to search for Mei Ling.\n\n" + GameState.portal_origin_instruction()}
+			pages[4] = {"name": "Portal Key · Pak Rahim", "actor": "npc:pak_karim", "rows": [["dialogue","npc:pak_karim","key"], ["key","portal","path"]], "description": GameState.portal_origin_instruction()}
 		for id in RealmContentDB.FRAGMENTS:
 			lights.append("spark" if id in GameState.realm_progress().get("read_fragments", []) else "question")
 		pages.append({"name": "Memories of Twilight", "actor": "portal", "rows": [lights], "memory_journal": true})
@@ -63,7 +64,7 @@ static func description(entry: Dictionary) -> String:
 	if entry.has("description"): return str(entry.description)
 	var actor := str(entry.get("actor", ""))
 	if actor.begins_with("npc:"): return NpcInfo.description(actor.get_slice(":", 1))
-	if actor == "hut": return "TOWER DEFENSE · Buy rooftop machine guns at the Weapons Shop. Choose an intact house. Each paid mount attacks fire monsters and sea urchins; the central house tier improves fire rate."
+	if actor == "hut": return "TOWER DEFENSE · Buy rooftop machine guns at the Equipment Shop. Choose an intact house. Each paid mount attacks fire monsters and sea urchins; the central house tier improves fire rate."
 	if actor == "pet": return "BONDED GUARDIANS · Explore Twilight Wilds through the Dimension Portal. Approach Bramble Cat or Dusk Moth and challenge them in their habitat. Win a manual duel to form a lasting bond. Recruits also defend BESUT from fire monsters and sea urchins; existing tournament recruits remain yours."
 	if actor == "enemy:fire": return "FIRE MONSTER · Each new arrival crosses its own small ember portal, which seals behind it. Ignites mature trees and can attack exposed residents or the player. Defeating it does not extinguish a burning tree; Water Keepers do. Fire-monster combat and burning-tree sound effects are silent."
 	if actor == "enemy:urchin": return "SEA URCHIN · A physical attacker from the sea. It threatens trees, buildings, residents and the player. Intact houses shelter residents; defenders, guns and allies fight back."

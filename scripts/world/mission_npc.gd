@@ -5,6 +5,7 @@ func _ready() -> void:
 	super._ready()
 	add_to_group("mission_npc")
 	prompt = "View Missions"
+	touch_verb = "Talk"
 	var sprite := Sprite2D.new()
 	sprite.texture = PixelArt.npc_texture("mission_guide")
 	sprite.scale = Vector2.ONE * PixelArt.PX

@@ -52,56 +52,86 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 		home._update_daylight()
 	GameSettings.set_effects_quality(cue_quality,false)
 	GameSettings.set_reduce_motion(cue_motion,false)
+	check.call(not GameState.portal_key_received() and not GameState.consult_waystone() and not GameState.open_waystone(), "a fresh journey cannot skip exploration or unlock the portal")
+	var main_rows := ObjectiveTrackerData.entries(home)
+	check.call(main_rows[0].id == "waystone" and main_rows[0].title == "Explore the northern clearing", "the first village mission explores the missing portal's location")
+	var direction := ObjectiveNavigation.target(home,"waystone")
+	check.call(direction.label == "Northern Clearing" and (direction.position as Vector2).distance_to(site.global_position) < 3, "the first mission arrow points to the clearing rather than Rahim")
+	check.call(home.get_guidance_targets()[0].label == direction.label, "the automatic trail also leads to exploration first")
+	check.call(FieldGuideDB.entries(0)[0].name == "Pak Rahim · Portal Key" and FieldGuideDB.description(FieldGuideDB.entries(3)[4]).contains("Explore the northern clearing"), "Field Guide explains exploration before the key")
+	game.hud.track_objective("waystone")
+	game.hud._update_mission_guide()
+	if capture.is_valid(): await capture.call("01_explore_mission")
+	game.player().position = host.position+Vector2(0,1)
 	game.play_dock_conversation()
-	check.call(is_instance_valid(game._dock_conversation) and not game._dock_conversation.waystone, "Rahim gives ordinary reminders before discovering the stone")
-	game._dock_conversation.finish()
+	check.call(is_instance_valid(game._dock_conversation) and not game._dock_conversation.waystone, "speaking to Rahim before discovery only offers his normal reminder")
+	if is_instance_valid(game._dock_conversation): game._dock_conversation.finish()
+	check.call(not GameState.portal_key_received(), "an early dock chat cannot bypass exploration")
 	site.interact(game.player())
-	check.call(not bool(GameState.portal_origin().site_examined), "remote examination cannot advance the discovery")
+	check.call(not bool(GameState.portal_origin().site_examined), "remote portal interaction cannot advance discovery")
 	game.player().position = site.position+Vector2(0,1.6)
 	home.camera.position = site.position+Vector2(0,-1)
 	home.camera.force_update_scroll()
 	home.camera.reset_physics_interpolation()
-	await game.get_tree().physics_frame
-	await game.get_tree().physics_frame
-	await game.get_tree().process_frame
-	if capture.is_valid(): await capture.call("01_broken_stones")
-	await _tap_world(game,site.global_position+Vector2(0,-0.5))
-	check.call(bool(GameState.portal_origin().site_examined) and not GameState.portal_opened() and not GameState.expedition_active(), "actual nearby screen tap examines the broken line without entering or opening a gate")
-	check.call(_icon(game,home,"old_waystone") and not _icon(game,home,"monster_portal"), "discovery reveals a waystone picture rather than a usable portal")
-	game.player()._update_nearby()
-	game.player().try_interact()
-	check.call(site.caption.text.contains("line breaks") and not game.player().controls_locked, "nearby E interaction rereads the discovery without pausing or locking movement")
-	check.call(not GameState.open_waystone() and not GameState.portal_opened(), "repair requires Rahim's conversation after examining the site")
+	Input.action_press("sprint")
+	site._process(0)
+	await game.get_tree().create_timer(0.3).timeout
+	var discovery := game.hud.dialogue_panel
+	check.call(bool(GameState.portal_origin().site_examined) and not GameState.portal_opened() and not GameState.portal_key_received(), "arriving discovers remains, without creating a portal or key")
+	check.call(discovery.visible and discovery._lines.any(func(line: String) -> bool: return line.contains("Find Pak Rahim at the dock")), "arrival opens a persistent readable clue naming Pak Rahim")
+	check.call(discovery.z_index > game.hud.tutorial_guide.z_index, "the clue draws above tutorial cards regardless of sibling ordering")
+	check.call(not game.hud._navigation_box.visible and not Input.is_action_pressed("sprint"), "the clue hides navigation and releases held controls")
+	check.call(Rect2(Vector2.ZERO,game.get_viewport_rect().size).encloses(discovery.panel.get_global_rect()), "the clue panel stays entirely inside the viewport")
+	check.call(not discovery.body.get_v_scroll_bar().visible and not discovery.body.get_h_scroll_bar().visible, "all discovery text fits without scrolling or concealed lines")
+	if capture.is_valid(): await capture.call("01_discovery_clue")
+	discovery.close_panel()
+	game.hud._update_mission_guide()
+	direction = ObjectiveNavigation.target(home,"waystone")
+	check.call(direction.label == "Pak Rahim · Portal Key" and GameState.portal_origin_title() == "Meet Pak Rahim" and game.hud._tracked_target.label == direction.label, "discovery redirects both the mission and its selected live arrow to Rahim")
 	GameState.save_game()
-	check.call(GameState.load_game() and bool(GameState.portal_origin().site_examined) and not bool(GameState.portal_origin().rahim_consulted), "save/load keeps examined-but-unexplained discovery distinct")
+	check.call(GameState.load_game() and bool(GameState.portal_origin().site_examined) and not GameState.portal_key_received(), "the discovered clue and Rahim objective survive Continue")
+	if capture.is_valid(): await _guide_capture(game,3,4,capture,"01_field_guide_rahim")
 	game.player().position = host.position+Vector2(0,1)
 	home.camera.position = host.position+Vector2(0,-1)
 	home.camera.force_update_scroll()
-	home.camera.reset_physics_interpolation()
 	await game.get_tree().physics_frame
 	game.play_dock_conversation()
 	var dialogue := game._dock_conversation
 	if not is_instance_valid(dialogue):
-		check.call(false,"contextual dialogue was created")
+		check.call(false,"key conversation was created")
 		return
 	dialogue.set_process(false)
 	dialogue.reveal_line()
-	check.call(dialogue.waystone and dialogue.entries().size() == 5 and not game._story_active and home.process_mode != Node.PROCESS_MODE_DISABLED, "discovery selects the five-line Rahim exchange without pausing village simulation")
+	check.call(dialogue.waystone and dialogue.entries().size() == 5 and not game._story_active and home.process_mode != Node.PROCESS_MODE_DISABLED, "Rahim continues the portal story after discovery without pausing simulation")
 	var clock := float(GameState.data.world_time)
 	game._process(0.25)
-	check.call(float(GameState.data.world_time) > clock and not bool(GameState.portal_origin().rahim_consulted), "later chat keeps the world clock running and grants the lantern only on completion")
-	if capture.is_valid(): await capture.call("02_rahim")
+	check.call(float(GameState.data.world_time) > clock and not GameState.portal_key_received(), "the key conversation runs the world and grants nothing before completion")
+	if capture.is_valid():
+		dialogue.page = 3
+		dialogue._render()
+		dialogue.reveal_line()
+		await capture.call("02_rahim_key")
 	dialogue.cancel()
-	check.call(not bool(GameState.portal_origin().rahim_consulted), "cancelled contextual conversation cannot grant the lantern")
+	check.call(not GameState.portal_key_received(), "cancelling Rahim's conversation cannot grant the key")
 	game.play_dock_conversation()
 	dialogue = game._dock_conversation
 	for page in DockConversation.WAYSTONE.size():
 		dialogue.reveal_line()
 		dialogue.advance()
-	check.call(bool(GameState.portal_origin().rahim_consulted) and not GameState.portal_opened(), "completing or explicitly skipping Rahim's exchange prepares the free repair")
+	check.call(GameState.portal_key_received() and not GameState.portal_opened(), "finishing Rahim's conversation grants the key for the return to the clearing")
+	check.call(not GameState.consult_waystone(), "the permanent key cannot be awarded twice")
 	GameState.save_game()
-	check.call(GameState.load_game() and bool(GameState.portal_origin().rahim_consulted) and not GameState.portal_opened(), "the lantern conversation survives Continue without prematurely opening the road")
+	check.call(GameState.load_game() and GameState.portal_key_received() and not GameState.portal_opened(), "the earned key survives Continue")
+	check.call(_icon(game,home,"old_waystone") and not _icon(game,home,"monster_portal"), "the discovered site is mapped while the actual portal remains absent")
+	game.hud._update_mission_guide()
+	check.call(game.hud._tracked_target.label == "Unlock the Portal" and GameState.portal_origin_title() == "Unlock the Dimension Portal", "the selected mission redirects to the clearing after Rahim gives the key")
+	if capture.is_valid(): await _guide_capture(game,3,4,capture,"02_field_guide_key_received")
 	game.player().position = site.position+Vector2(0,1.6)
+	site.refresh()
+	home.camera.position = site.position+Vector2(0,-1)
+	home.camera.force_update_scroll()
+	await game.get_tree().physics_frame
+	if capture.is_valid(): await capture.call("03_key_ready_portal")
 	var enemy := Enemy.new()
 	enemy.kind = "urchin"
 	enemy.position = site.position+Vector2(2,1)
@@ -202,6 +232,15 @@ static func _migration(game: Game, check: Callable) -> void:
 	old.erase("portal_origin")
 	_write(old)
 	check.call(GameState.load_game() and GameState.portal_opened() and bool(GameState.portal_origin().reveal_seen), "old saves lacking origin fields retain their existing portal access without a forced reveal")
+	var key_only := GameState._make_default("adam")
+	key_only.portal_origin.rahim_consulted = true
+	_write(key_only)
+	check.call(GameState.load_game() and GameState.portal_key_received() and not bool(GameState.portal_origin().site_examined) and not GameState.portal_opened(), "a key-only checkpoint loads without requiring or fabricating a stone visit")
+	var old_lantern := GameState._make_default("adam")
+	old_lantern.portal_origin.site_examined = true
+	old_lantern.portal_origin.rahim_consulted = true
+	_write(old_lantern)
+	check.call(GameState.load_game() and GameState.portal_key_received() and not GameState.portal_opened(), "old completed lantern conversations retain their earned portal access as the key")
 	var interrupted := GameState._make_default("adam")
 	interrupted.portal_origin.opened = true
 	_write(interrupted)
@@ -218,12 +257,20 @@ static func _migration(game: Game, check: Callable) -> void:
 	GameState.data = GameState._make_default("adam")
 	GameState.data.portal_origin = {"opened":"false","site_examined":[],"rahim_consulted":true}
 	GameState._sanitize()
-	check.call(not GameState.portal_opened() and not bool(GameState.portal_origin().rahim_consulted), "malformed values cannot fabricate an open gate or an unearned lantern")
+	check.call(not GameState.portal_opened() and not bool(GameState.portal_origin().rahim_consulted), "malformed values cannot fabricate an open gate or an unearned key")
 
 static func _write(data: Dictionary) -> void:
 	var file := FileAccess.open(GameState.SAVE_PATH,FileAccess.WRITE)
 	file.store_string(JSON.stringify(data))
 	file.close()
+
+static func _guide_capture(game: Game, category: int, page: int, capture: Callable, name: String) -> void:
+	game.hud.field_guide_panel._category = category
+	game.hud.field_guide_panel._page = page
+	game.open_field_guide()
+	await game.get_tree().create_timer(0.25).timeout
+	await capture.call(name)
+	game.hud.field_guide_panel.close_panel()
 
 static func _icon(game: Game, home: Lobby, id: String) -> bool:
 	return game.hud._minimap.map_icons(home).any(func(icon: Dictionary) -> bool: return icon.id == id)

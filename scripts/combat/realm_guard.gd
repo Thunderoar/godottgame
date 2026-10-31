@@ -141,7 +141,7 @@ func begin_action() -> bool:
 	if profile == "keeper" and not RealmGuardAttack.cross_has_escape(director,target): return false
 	if not director.claim(self): return false
 	cast_serial += 1
-	_cooldown = float(RealmCombatDB.PROFILES[profile].cooldown)
+	_cooldown = float(RealmCombatDB.PROFILES[profile].cooldown) * CombatBalance.ATTACK_INTERVAL
 	_state = State.WINDUP
 	velocity = Vector2.ZERO
 	_knockback = Vector2.ZERO

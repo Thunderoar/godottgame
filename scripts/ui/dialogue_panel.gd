@@ -8,8 +8,10 @@ var _lines: Array[String] = []
 
 
 func _ready() -> void:
+	z_index = 200 # Keep story clues above tutorial cards and the ordinary HUD.
 	_panel_size = Vector2(620, 380)
 	super._ready()
+	body.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 
 
 func open_dialogue(speaker: String, lines: Array) -> void:
@@ -22,13 +24,10 @@ func open_dialogue(speaker: String, lines: Array) -> void:
 
 func _rebuild() -> void:
 	_clear_content()
-	add_body_text(_speaker, GameUI.GOLD, 20)
 	for line in _lines:
 		var label := GameUI.label(line, 18, GameUI.TEXT)
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		content.add_child(label)
-	content.add_child(GameUI.spacer(8))
-	var close := GameUI.button("Close", Vector2(180, 44))
-	close.pressed.connect(close_panel)
-	content.add_child(close)
+	# The fixed header already owns the title and Close button. Keep the body
+	# for text so the full clue fits without duplicate headings or hidden buttons.

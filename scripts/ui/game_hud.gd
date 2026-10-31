@@ -65,6 +65,10 @@ var _objective_panel: PanelContainer
 var objective_tracker: ObjectiveTracker
 var _mission_panel: PanelContainer
 var _mission_arrows: Array[MissionArrow] = []
+var _navigation_box: HBoxContainer
+var _navigation_arrow: MissionArrow
+var _tracked_objective_id := ""
+var _tracked_target: Dictionary = {}
 var _mission_timer := 0.0
 var _boss_panel: PanelContainer
 var _boss_label: Label
@@ -89,6 +93,7 @@ var _default_transforms: Dictionary = {}
 var _fade: ColorRect
 var _vignette: TextureRect
 var _last_prompt := ""
+var _context_target: Node
 var _last_objectives := ""
 var _loot_timer := 0.0
 
@@ -171,6 +176,7 @@ func _build_currency_panel() -> void:
 
 func _build_objectives() -> void:
 	objective_tracker = ObjectiveTracker.new()
+	objective_tracker.objective_selected.connect(track_objective)
 	_root.add_child(objective_tracker)
 	_objective_panel = objective_tracker
 
@@ -239,12 +245,116 @@ func _open_progression_plans() -> void:
 	game.open_missions()
 
 func _build_mission_guide() -> void:
-	# Navigation is drawn on world paths; no bottom notification strip.
-	pass
+	_navigation_box = HBoxContainer.new()
+	_navigation_box.name = "SelectedMissionDirection"
+	_navigation_box.add_theme_constant_override("separation", 4)
+	_navigation_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(_navigation_box)
+	_navigation_arrow = MissionArrow.new()
+	_navigation_arrow.custom_minimum_size = Vector2(200,38)
+	_navigation_arrow.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_navigation_box.add_child(_navigation_arrow)
+	var stop := GameUI.button("×", Vector2(38,38))
+	stop.tooltip_text = "Stop showing this mission's direction"
+	stop.pressed.connect(clear_objective_tracking)
+	_navigation_box.add_child(stop)
+	_navigation_box.hide()
 
 
 func _update_mission_guide() -> void:
-	pass
+	if _tracked_objective_id.is_empty(): return
+	var entry := _navigation_entry(_tracked_objective_id)
+	if entry.is_empty():
+		clear_objective_tracking()
+		return
+	_tracked_target = ObjectiveNavigation.target(world, _tracked_objective_id)
+	var game := get_tree().get_first_node_in_group("game") as Game
+	var visible_now := is_instance_valid(game) and game.world == world and visible and not world is OceanJourney and not game._transitioning and not game._story_active and not game._sailing and not game._input_locked and not game._game_over and not game._defeat_pending and not any_modal_open() and not _tracked_target.is_empty()
+	if world is Lobby and world._settlement_editor.active: visible_now = false
+	if world is TwilightRealm and is_instance_valid(world._reading_panel) and world._reading_panel.visible: visible_now = false
+	_navigation_box.visible = visible_now
+	if not visible_now: return
+	_navigation_arrow.setup(str(_tracked_target.get("label", entry.title)), GameUI.GOLD)
+	_navigation_arrow.show_distance = _tracked_target.has("position")
+	if _tracked_target.has("position"):
+		_navigation_arrow.aim(game.player().global_position, _tracked_target.position)
+	elif str(_tracked_target.get("control", "")) == "inventory":
+		_navigation_arrow.aim(_root.size * 0.5, _inventory_button.get_global_rect().get_center())
+	_layout_navigation()
+
+
+func _navigation_entry(id: String) -> Dictionary:
+	if not is_instance_valid(world) or world.is_queued_for_deletion(): return {}
+	for entry in ObjectiveTrackerData.entries(world, _status_strip.counts):
+		if str(entry.id) == id: return entry
+	var lesson := MissionDB.step(GameState.mission_step())
+	if world is Lobby and not lesson.is_empty() and id == "lesson_" + str(lesson.event):
+		return {"id": id, "title": str(lesson.title)}
+	return {}
+
+
+func track_objective(id: String) -> void:
+	if _tracked_objective_id == id:
+		clear_objective_tracking()
+		return
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if not is_instance_valid(game) or game.world != world or game._transitioning or game._story_active or game._sailing or game._game_over or game._defeat_pending or game._developer_paused: return
+	if _navigation_entry(id).is_empty(): return
+	_tracked_objective_id = id
+	objective_tracker.set_tracked_id(id)
+	_update_mission_guide()
+	var found := false
+	for child in world.get_children():
+		if child is MissionPath:
+			child.refresh_guidance()
+			found = true
+	if not found and world.has_method("get_map_rect"):
+		var trail := MissionPath.new()
+		world.add_child(trail)
+
+
+func clear_objective_tracking() -> void:
+	_tracked_objective_id = ""
+	_tracked_target.clear()
+	if is_instance_valid(_navigation_box): _navigation_box.hide()
+	if is_instance_valid(objective_tracker): objective_tracker.set_tracked_id("")
+	if is_instance_valid(world):
+		for child in world.get_children():
+			if child is MissionPath: child.refresh_guidance()
+
+
+func has_tracked_objective() -> bool:
+	return not _tracked_objective_id.is_empty()
+
+
+func tracked_guidance_targets(expected_world: Node) -> Array:
+	if world != expected_world or not has_tracked_objective() or not _tracked_target.has("position"): return []
+	return [_tracked_target.duplicate()]
+
+
+func _layout_navigation() -> void:
+	if not is_instance_valid(_navigation_box): return
+	var display_scale := minf(float(get_window().size.x) / maxf(1,_root.size.x), float(get_window().size.y) / maxf(1,_root.size.y))
+	if DisplayServer.get_name() == "headless": display_scale = 1.0
+	var zoom := maxf(get_gui_scale(), 1.0 / maxf(0.1,display_scale))
+	_navigation_box.scale = Vector2.ONE * zoom
+	var left := (objective_tracker.position.x + objective_tracker.size.x * objective_tracker.scale.x + 10) if objective_tracker.visible else 10.0
+	var right := _map_button.position.x - 10
+	var width := maxf(242 * zoom, minf(340 * zoom, right-left))
+	var top := maxf(_status_strip.position.y + _status_strip.size.y * _status_strip.scale.y, _map_button.position.y + _map_button.size.y * _map_button.scale.y) + 10
+	for notice in [_progression_notice, _emergency_panel]:
+		if is_instance_valid(notice) and notice.visible:
+			top = maxf(top, notice.position.y + notice.size.y * notice.scale.y + 8)
+	if world is Lobby:
+		for cue in [world._urchin_cue,world._fire_cue]:
+			if is_instance_valid(cue) and is_instance_valid(cue._caption) and is_instance_valid(cue._ui) and cue._ui.visible and not cue._caption.text.is_empty():
+				top = maxf(top,cue._caption.get_global_rect().end.y + 8)
+	if width > right-left:
+		left = 10
+		right = _root.size.x - 10
+		top = maxf(top, objective_tracker.position.y + objective_tracker.size.y * objective_tracker.scale.y + 8) if objective_tracker.visible else top
+	_navigation_box.size = Vector2(minf(width,right-left) / zoom,38)
+	_navigation_box.position = Vector2((left+right-_navigation_box.size.x*zoom)*0.5,top)
 
 func _build_emergency_panel() -> void:
 	_emergency_panel = GameUI.panel(Color(0.16, 0.035, 0.045, 0.94), Color("#c44f55"))
@@ -302,6 +412,7 @@ func _build_controls() -> void:
 	_interact_button.action = "sprint"
 	_interact_button.caption = "Sprint"
 	_interact_button.icon_kind = "sprint"
+	_interact_button.pressed.connect(_on_context_action_pressed)
 	_interact_button.accent = Color("#61c9ba")
 	_interact_button.diameter = 82
 	_anchor_bottom_right(_interact_button, Vector2(-88, -234), Vector2(-6, -152))
@@ -426,6 +537,7 @@ func _layout_gui() -> void:
 		for panel in [_emergency_panel, _build_mode_panel]:
 			panel.position.y = maxf(panel.position.y, below_strip)
 	_layout_objectives()
+	_layout_navigation()
 
 
 func _layout_objectives() -> void:
@@ -756,6 +868,59 @@ func _update_prompt() -> void:
 		_last_prompt = prompt
 		_prompt_label.text = prompt
 	_prompt_panel.visible = prompt != "" and not any_modal_open()
+	_update_context_action(game, player)
+
+
+func _context_exit_panel() -> ModalBase:
+	# Only the topmost modal may own Exit; Settings or an active battle must
+	# never expose a way to close a different panel underneath it.
+	var children := _root.get_children()
+	children.reverse()
+	for child in children:
+		if child is ModalBase and child.visible:
+			return child if child in [shop_panel, house_panel, portal_panel, village_services_panel, dialogue_panel, mission_panel, sea_cleaning_panel] else null
+	return null
+
+
+func _update_context_action(game: Game, player: Player) -> void:
+	if not is_instance_valid(_interact_button): return
+	var target: Node = null
+	var action := "sprint"
+	var caption := "Sprint"
+	var icon := "sprint"
+	var enabled := is_instance_valid(game) and is_instance_valid(player) and not player.controls_locked and not player.dead and not player.sleeping and not any_modal_open() and not game._transitioning and not game._story_active and not game._sailing and not game._game_over and not game._defeat_pending
+	var exit_panel := _context_exit_panel()
+	if is_instance_valid(game) and is_instance_valid(exit_panel) and not game._transitioning and not game._story_active and not game._sailing and not game._defeat_pending and not game._game_over and not game._developer_paused:
+		target = exit_panel
+		action = ""
+		caption = "Exit"
+		icon = "door"
+		enabled = true
+		_interact_button.move_to_front()
+	elif enabled and is_instance_valid(player.nearby) and not any_modal_open():
+		var near := player.nearby as Interactable
+		if near != null and not near.is_queued_for_deletion() and is_instance_valid(world) and world.is_ancestor_of(near) and near.is_interactable_available() and player.global_position.distance_to(near.global_position) <= near.interact_radius:
+			target = near
+			action = "interact"
+			caption = near.get_touch_verb()
+			icon = "talk" if caption == "Talk" else ("door" if caption in ["Enter", "Exit"] else ("bed" if caption == "Sleep" else "gather"))
+	if _context_target != target:
+		_interact_button.cancel(true)
+		_context_target = target
+	_interact_button.set_action(action)
+	_interact_button.set_contextual(caption, icon)
+	_interact_button.set_touch_enabled(enabled)
+	_interact_button.set_key_hint(("Esc" if action.is_empty() else _key_for_action(action)) if _show_key_hints() else "")
+
+
+func _on_context_action_pressed() -> void:
+	var game := get_tree().get_first_node_in_group("game") as Game
+	var panel := _context_exit_panel()
+	if not is_instance_valid(game) or game._transitioning or game._story_active or game._sailing or game._defeat_pending or game._game_over or game._developer_paused: return
+	if is_instance_valid(panel) and panel == _context_target and _interact_button.caption == "Exit":
+		_interact_button.cancel(true)
+		panel.close_panel()
+		_update_prompt()
 
 
 func _use_quick_potion(item_id: String) -> void:
@@ -763,11 +928,15 @@ func _use_quick_potion(item_id: String) -> void:
 
 
 func set_world(w: Node) -> void:
+	clear_objective_tracking()
 	world = w
 	_tally_timer = 0.0
 	_status_strip.refresh_world(w)
 	_last_prompt = ""
 	if _interact_button:
+		_context_target = null
+		_interact_button.cancel()
+		_interact_button.set_action("sprint")
 		_interact_button.set_contextual("Sprint", "sprint")
 	_prompt_panel.visible = false
 	if is_instance_valid(_boss_panel):
@@ -797,6 +966,7 @@ func _refresh_pet() -> void:
 func _refresh_objectives() -> void:
 	if not is_instance_valid(objective_tracker): return
 	objective_tracker.set_entries(ObjectiveTrackerData.entries(world, _status_strip.counts))
+	_update_mission_guide()
 	_update_objective_visibility()
 
 
@@ -906,7 +1076,7 @@ func _apply_touch_mode() -> void:
 		var button := pair[1] as TouchActionButton
 		if button == null:
 			continue
-		button.set_key_hint(_key_for_action(pair[0]) if hints else "")
+		button.set_key_hint(_key_for_action(button.action) if hints and not button.action.is_empty() else "")
 	_schedule_gui_layout()
 
 

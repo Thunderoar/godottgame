@@ -28,7 +28,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 		guard.set_physics_process(false)
 		guards.append(guard)
 		total_hp += guard.max_hp
-	check.call(guards.size() == 6 and total_hp == 282 and guards.filter(func(g: RealmGuard) -> bool: return g.profile == "imp").size() == 4, "combat expansion substitutes profiles within six guards and 282 total HP")
+	check.call(guards.size() == 6 and total_hp == 410 and guards.filter(func(g: RealmGuard) -> bool: return g.profile == "imp").size() == 4, "combat expansion substitutes profiles within six tougher guards and 410 total HP")
 	check.call(guards.filter(func(g: RealmGuard) -> bool: return g.profile == "watcher").size() == 1 and guards.filter(func(g: RealmGuard) -> bool: return g.profile == "keeper").size() == 1, "one lantern Watcher and one stone-mantled Keeper have distinct roles")
 	check.call(guards.map(func(g: RealmGuard) -> Vector2: return g.home) == RealmDB.MINIONS, "flat compatibility homes match the authored pair definitions")
 	var routes := ResidentRoutes.new(realm,realm.map_rect)
@@ -87,7 +87,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	_heal(realm)
 	hp = GameState.health()
 	action._physics_process(2.0)
-	check.call(action.hit_registered and GameState.health() < hp and hp-GameState.health() <= 7, "large-delta dash resolves one swept contact instead of tunnelling")
+	check.call(action.hit_registered and GameState.health() < hp and hp-GameState.health() <= imp.damage, "large-delta dash resolves one swept contact instead of tunnelling")
 	hp = GameState.health()
 	action._physics_process(2)
 	check.call(GameState.health() == hp, "finished charge cannot pay damage again")
@@ -121,7 +121,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	var damage_once := GameState.health()
 	realm.player.invulnerable = 0
 	action._physics_process(0.1)
-	check.call(GameState.health() == damage_once and hp-damage_once <= 7, "whole fan has one damage claim, independent of blink immunity")
+	check.call(GameState.health() == damage_once and hp-damage_once <= watcher.damage, "whole fan has one damage claim, independent of blink immunity")
 	# Keeper uses one clipped cross resolver; the intersection is not two hits.
 	action = _begin(realm,guards,keeper,target_points[2])
 	_heal(realm)
@@ -133,7 +133,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	var after_cross := GameState.health()
 	realm.player.invulnerable = 0
 	action._physics_process(0.10)
-	check.call(after_cross < hp and GameState.health() == after_cross and hp-after_cross <= 7, "cross intersection resolves exactly one hit even when blink is cleared")
+	check.call(after_cross < hp and GameState.health() == after_cross and hp-after_cross <= keeper.damage, "cross intersection resolves exactly one hit even when blink is cleared")
 	action = _begin(realm,guards,keeper,target_points[2])
 	_heal(realm)
 	hp = GameState.health()

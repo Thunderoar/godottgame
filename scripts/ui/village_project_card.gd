@@ -85,6 +85,7 @@ func _start() -> void:
 	_sync()
 
 func _show_path() -> void:
+	var was_tracked := GameState.tracked_village_project() == VillageProjectDB.WORKSHOP
 	GameState.track_village_project("" if GameState.tracked_village_project() == VillageProjectDB.WORKSHOP else VillageProjectDB.WORKSHOP)
 	var owner_panel := get_parent()
 	while owner_panel != null:
@@ -92,3 +93,9 @@ func _show_path() -> void:
 			owner_panel.close_panel()
 			break
 		owner_panel = owner_panel.get_parent()
+	var hud := get_tree().get_first_node_in_group("hud") as GameHUD
+	if not is_instance_valid(hud): return
+	if was_tracked and hud._tracked_objective_id == "workshop":
+		hud.clear_objective_tracking()
+	elif GameState.tracked_village_project() == VillageProjectDB.WORKSHOP and hud._tracked_objective_id != "workshop":
+		hud.track_objective("workshop")

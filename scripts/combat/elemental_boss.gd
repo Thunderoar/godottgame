@@ -159,7 +159,7 @@ func _execute_skill(skill: Dictionary) -> void:
 				minion.element = element
 				minion.monster_level = monster_level
 				minion.max_hp = 40+monster_level*7
-				minion.damage = maxi(5,floori(damage/3.0))
+				minion.damage = maxi(5,floori(_base_damage/3.0))
 				minion.position = position+Vector2.from_angle(TAU*i/3.0)*3
 				minion.dungeon_alerted = true
 				get_parent().add_child(minion)

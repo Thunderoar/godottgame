@@ -44,6 +44,8 @@ static func _village(counts: Dictionary) -> Array[Dictionary]:
 	elif GameState.emergency_active() or int(counts.get("fires", 0)) > 0 or int(counts.get("monsters", 0)) > 0:
 		out.append(_entry("defend", "Defend BESUT", "Fight the attackers and protect the residents and burning trees.", "URGENT", true, PRIORITY))
 	var show_training := not bool(GameSettings.get_value("tutorial_hidden"))
+	if not GameState.portal_opened():
+		out.append(_entry("waystone", GameState.portal_origin_title(), GameState.portal_origin_instruction(), "PORTAL KEY"))
 	var lesson := MissionDB.step(GameState.mission_step())
 	if show_training and not lesson.is_empty():
 		var title := str(lesson.get("title", "Learn to play"))
@@ -52,8 +54,7 @@ static func _village(counts: Dictionary) -> Array[Dictionary]:
 		out.append(_entry("lesson_" + str(lesson.event), title, hint, "NIGHT TRAINING" if GameState.is_night() else "DAY TRAINING"))
 	elif not GameState.tutorial_complete():
 		# Discovery guidance is not a training lesson, so it survives Hide tips.
-		if not GameState.portal_opened(): out.append(_entry("waystone", "Find the old road", GameState.portal_origin_instruction(), "DISCOVERY"))
-		elif show_training: out.append(_entry("phase", "Prepare for dawn" if GameState.is_night() else "Prepare for night", "This phase's lessons are complete. Help the village and keep supplies ready.", "TRAINING"))
+		if show_training and GameState.portal_opened(): out.append(_entry("phase", "Prepare for dawn" if GameState.is_night() else "Prepare for night", "This phase's lessons are complete. Help the village and keep supplies ready.", "TRAINING"))
 	# Optional village work and the two rescue arcs remain independent of the
 	# current training lesson. No UI category bypasses the real project gate.
 	var project := GameState.project_status()
@@ -76,7 +77,7 @@ static func _rescue_entries() -> Array[Dictionary]:
 	if not bool(story.get("arjun_rescued", false)):
 		out.append(_entry("arjun", "Rescue Arjun", "Board the ship. Sea level %d of %d leads toward Kraken Island." % [int(story.get("ocean_stage", 1)),GameState.OCEAN_STAGES], "STORY"))
 	if not bool(story.get("mei_ling_rescued", false)):
-		out.append(_entry("mei_ling", "Rescue Mei Ling", "Enter the Dimension Portal. Defeat Shadow & Chaos Fiend in Chaos Citadel to free her.", "STORY"))
+		out.append(_entry("mei_ling", "Rescue Mei Ling", "Enter the Dimension Portal. Defeat Shadow & Chaos Fiend in Chaos Citadel to free her." if GameState.portal_opened() else GameState.portal_origin_instruction(), "STORY"))
 	return out
 
 static func _twilight(realm: TwilightRealm) -> Array[Dictionary]:

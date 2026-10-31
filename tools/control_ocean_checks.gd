@@ -16,14 +16,18 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 		if actor is Enemy or actor is Resident: actor.set_physics_process(false)
 	var player := game.player()
 	var student := lobby.get_node("UniszaStudent") as UniszaStudent
+	await _context_actions(game, student, check, capture)
+	lobby = game.world as Lobby
+	player = game.player()
+	student = lobby.get_node("UniszaStudent") as UniszaStudent
 	player.position = student.position + Vector2(0,1.1)
 	player._update_nearby()
 	game.hud._update_prompt()
-	check.call(game.hud._interact_button.action == "sprint" and game.hud._interact_button.caption == "Sprint", "Sprint stays Sprint beside the yellow student; no Talk/Use action button")
+	check.call(game.hud._interact_button.action == "interact" and game.hud._interact_button.caption == "Talk", "Sprint becomes Talk beside the yellow student")
 	game.hud._interact_button._press()
-	check.call(Input.is_action_pressed("sprint") and not Input.is_action_pressed("interact"), "pressing the permanent Sprint button never talks or boards")
+	check.call(Input.is_action_pressed("interact") and not Input.is_action_pressed("sprint"), "Talk presses the interaction action without sprinting")
 	game.hud._interact_button.cancel()
-	check.call(not Input.is_action_pressed("sprint"), "Sprint touch release clears the held action")
+	check.call(not Input.is_action_pressed("interact"), "Talk touch release clears the held action")
 	await _tap(game, student.get_global_transform_with_canvas() * Vector2(0,-0.7))
 	check.call(game.hud.dialogue_panel.visible, "yellow UniSZA student still opens by direct screen tap")
 	game.hud.hide_modals()
@@ -54,8 +58,14 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	await game.get_tree().process_frame
 	check.call(_no_clear_label(game.hud.pet_battle_panel), "pet portal card titles never append CLEARED")
 	game.hud.pet_battle_panel.close_panel()
-	if capture.is_valid(): await capture.call("01_permanent_sprint")
+	player._update_nearby()
+	game.hud._update_prompt()
+	if capture.is_valid(): await capture.call("01_context_sprint")
 	var boarding := lobby.ship_boarding
+	player.position = boarding.position
+	player._update_nearby()
+	game.hud._update_prompt()
+	check.call(game.hud._interact_button.caption == "Enter" and game.hud._interact_button.action == "interact", "nearby ship exposes Enter on the shared action button")
 	check.call(boarding.get_prompt().is_empty() and not boarding.show_marker, "boarding exposes no Board button, prompt or interaction marker")
 	player.position = boarding.position + Vector2(4,0)
 	lobby.camera.set_process(false)
@@ -155,11 +165,122 @@ static func _tap(game: Game, at: Vector2) -> void:
 	touch.pressed = true
 	Input.parse_input_event(touch)
 	await game.get_tree().process_frame
+	await game.get_tree().physics_frame
+	await game.get_tree().physics_frame
 	var release := InputEventScreenTouch.new()
 	release.index = 29
 	release.position = touch.position
 	Input.parse_input_event(release)
 	await game.get_tree().process_frame
+	await game.get_tree().physics_frame
+
+static func _context_actions(game: Game, student: UniszaStudent, check: Callable, capture: Callable) -> void:
+	var hud := game.hud
+	var button := hud._interact_button
+	var player := game.player()
+	player.position = Vector2(23,30)
+	player._update_nearby()
+	hud._update_prompt()
+	check.call(button.caption == "Sprint" and button.action == "sprint", "clear ground keeps the Sprint action")
+	button._press()
+	player.position = student.global_position
+	player.velocity = Vector2.ZERO
+	player._update_nearby()
+	hud._update_prompt()
+	check.call(button.caption == "Talk" and not Input.is_action_pressed("sprint") and not Input.is_action_pressed("interact") and not hud.dialogue_panel.visible, "approaching an NPC releases held Sprint and requires a fresh Talk press")
+	if capture.is_valid(): await capture.call("00a_talk")
+	await _tap(game, button.get_global_rect().get_center())
+	hud._update_prompt()
+	check.call(hud.dialogue_panel.visible and button.caption == "Exit" and button.action.is_empty(), "actual touch Talk opens dialogue and changes the same button to Exit")
+	await _tap(game, button.get_global_rect().get_center())
+	check.call(not hud.dialogue_panel.visible and not game._input_locked and not Input.is_action_pressed("interact"), "actual touch Exit closes dialogue without reopening it or holding interaction")
+	var shop: ShopNPC
+	var entrance: HomeEntrance
+	var portal: PortalEntrance
+	for node in game.get_tree().get_nodes_in_group("interactable"):
+		if not game.world.is_ancestor_of(node): continue
+		if node is ShopNPC and node.shop_type == "potion": shop = node
+		if node is HomeEntrance: entrance = node
+		if node is PortalEntrance and node.gate_kind == "monster": portal = node
+	player.global_position = shop.global_position
+	player.velocity = Vector2.ZERO
+	player._update_nearby()
+	hud._update_prompt()
+	check.call(button.caption == "Enter", "nearby shop changes the action to Enter")
+	await _tap(game, button.get_global_rect().get_center())
+	hud._update_prompt()
+	check.call(hud.shop_panel.visible and button.caption == "Exit", "touch Enter opens the shop with a shared Exit button")
+	if capture.is_valid(): await capture.call("00b_shop_exit")
+	await _tap(game, button.get_global_rect().get_center())
+	check.call(not hud.shop_panel.visible and not game._input_locked, "touch Exit leaves the shop and restores world control")
+	player.global_position = portal.global_position
+	player.velocity = Vector2.ZERO
+	player._update_nearby()
+	hud._update_prompt()
+	check.call(button.caption == "Enter", "nearby dimension portal changes the action to Enter")
+	player.global_position = entrance.global_position
+	player.velocity = Vector2.ZERO
+	player._update_nearby()
+	hud._update_prompt()
+	check.call(button.caption == "Enter", "nearby cottage changes the action to Enter")
+	await _tap(game, button.get_global_rect().get_center())
+	for frame in 120:
+		if not game._transitioning: break
+		await game.get_tree().physics_frame
+	check.call(is_instance_valid(game.home_interior), "touch Enter goes inside the cottage")
+	if is_instance_valid(game.home_interior):
+		player.global_position = game.home_interior._exit.global_position + Vector2(0,-1.6)
+		player.velocity = Vector2.ZERO
+		player._update_nearby()
+		hud._update_prompt()
+		check.call(button.caption == "Exit" and button.action == "interact", "inside cottage doorway changes the action to Exit")
+		if capture.is_valid(): await capture.call("00c_home_exit")
+		check.call(is_instance_valid(game.home_interior) and not game._transitioning, "Exit remains available before crossing the automatic doorway footprint")
+		await _tap(game, button.get_global_rect().get_center())
+		for frame in 120:
+			if not game._transitioning: break
+			await game.get_tree().physics_frame
+		check.call(not is_instance_valid(game.home_interior) and not game._input_locked, "touch Exit returns from cottage to the village")
+	player.position = Vector2(23,30)
+	player._update_nearby()
+	hud._update_prompt()
+	button._press()
+	button._notification(Control.NOTIFICATION_WM_WINDOW_FOCUS_OUT)
+	check.call(not Input.is_action_pressed("sprint") and not button._active, "focus loss releases the shared Sprint action")
+	# Ignore actors from a retiring world even if their old position overlaps.
+	var stale := Interactable.new()
+	stale.prompt = "Talk to a retired actor"
+	game.add_child(stale)
+	stale.global_position = player.global_position
+	player._update_nearby()
+	hud._update_prompt()
+	check.call(player.nearby != stale and button.caption == "Sprint", "retired-world actors cannot take over the context button")
+	stale.queue_free()
+	player.global_position = portal.global_position
+	player.velocity = Vector2.ZERO
+	player._update_nearby()
+	hud._update_prompt()
+	await _tap(game, button.get_global_rect().get_center())
+	for frame in 180:
+		if game.world is TwilightRealm and not game._transitioning and not game._portal_fx_active: break
+		await game.get_tree().physics_frame
+	check.call(game.world is TwilightRealm, "touch Enter travels through the dimension portal")
+	if game.world is TwilightRealm:
+		var exit: RealmInteractable
+		for node in game.world.get_children():
+			if node is RealmInteractable and node.kind == "exit": exit = node
+		player = game.player()
+		player.global_position = exit.global_position
+		player.velocity = Vector2.ZERO
+		player._update_nearby()
+		hud._update_prompt()
+		check.call(button.caption == "Exit", "realm shore gate changes the action to Exit")
+		if capture.is_valid(): await capture.call("00d_portal_exit")
+		await _tap(game, button.get_global_rect().get_center())
+		for frame in 180:
+			if game.world is Lobby and not game._transitioning: break
+			await game.get_tree().physics_frame
+		check.call(game.world is Lobby and not game._input_locked, "touch Exit returns safely from the realm")
 
 static func _no_clear_label(node: Node) -> bool:
 	if node is Label and node.text.contains("CLEARED"): return false

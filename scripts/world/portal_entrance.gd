@@ -33,6 +33,7 @@ var _rift_material: ShaderMaterial
 
 func _ready() -> void:
 	super._ready()
+	touch_verb = "Enter"
 	add_to_group("battle_portal")
 	var is_pet := gate_kind == "pet"
 	var shown_title := gate_title

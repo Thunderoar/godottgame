@@ -1947,6 +1947,8 @@ func toggle_build_mode() -> bool:
 func get_guidance_targets() -> Array:
 	if GameState.final_departure_available() and is_instance_valid(final_departure) and not GameState.emergency_active():
 		return [{"label":"EMBARK TOGETHER", "position":final_departure.position, "color":GameUI.GOLD}]
+	if not GameState.portal_opened():
+		return [ObjectiveNavigation.target(self,"waystone")]
 	var lesson := MissionDB.step(GameState.mission_step())
 	if not lesson.is_empty():
 		var destination := _player_spawn + Vector2(3.5, 0)
@@ -1968,9 +1970,6 @@ func get_guidance_targets() -> Array:
 						destination = enemy.global_position
 			"portal", "boss":
 				destination = _layout.approach("monster_portal")
-				if not GameState.portal_opened() and bool(GameState.portal_origin().site_examined) and not bool(GameState.portal_origin().rahim_consulted):
-					var host := get_node_or_null("PakRahim") as DockHost
-					if is_instance_valid(host): destination = host.position
 			_:
 				return []
 		return [{"position": destination, "label": lesson.get("title", "Mission")}]
@@ -1979,11 +1978,6 @@ func get_guidance_targets() -> Array:
 		var raider := _emergency_monsters[0]
 		if is_instance_valid(raider):
 			targets.append({"label": "DEFEND", "position": raider.global_position, "color": Color("#e15b58")})
-	if targets.is_empty() and not GameState.portal_opened():
-		var origin := GameState.portal_origin()
-		var ask := bool(origin.site_examined) and not bool(origin.rahim_consulted)
-		var host := get_node_or_null("PakRahim") as DockHost
-		return [{"label": "ASK PAK RAHIM" if ask else ("LIGHT THE ROAD" if bool(origin.rahim_consulted) else "OLD WAYSTONE"), "position": host.position if ask and is_instance_valid(host) else _layout.approach("monster_portal"), "color": Color("#e8d69e")}]
 	var monster_pending := false
 	if targets.is_empty() and GameState.tracked_village_project() == VillageProjectDB.WORKSHOP and is_instance_valid(workshop) and str(GameState.project_status().state) != "complete":
 		return [{"label": "WEST WORKSHOP", "position": workshop.workpoint(), "color": Color("#f2c45a")}]

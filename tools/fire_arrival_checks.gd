@@ -101,12 +101,12 @@ static func _combat(home: Lobby, check: Callable) -> void:
 	fire.position = tree.position + Vector2(0.8, 0)
 	fire._target = tree
 	fire._enter(Enemy.State.WINDUP)
-	check.call(fire._state_time == 0.42 and fire.max_hp == 40 and fire.damage == 3 and fire.attack_interval == 1.6 and fire.collision_mask == 1, "revealed fires retain their actual stats, windup, attack interval and world-only collision")
+	check.call(fire._state_time == 0.42 and fire.max_hp == 58 and fire.damage == 4 and is_equal_approx(fire.attack_interval, 1.44) and fire.collision_mask == 1, "revealed fires use tougher stats with the original windup and faster attack interval and world-only collision")
 	var hp := tree.health
 	fire._enter(Enemy.State.ATTACK)
 	fire._attack_active(0)
 	fire._attack_active(0)
-	check.call(tree.burning and tree.health == hp - 3, "the first real fire strike ignites a mature tree and resolves exactly once")
+	check.call(tree.burning and tree.health == hp - fire.damage, "the first real fire strike ignites a mature tree and resolves exactly once")
 	var gold := GameState.gold()
 	fire.take_damage(99999)
 	fire.take_damage(99999)

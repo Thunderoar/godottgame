@@ -104,9 +104,9 @@ func _resolve_target() -> Rect2:
 			return _control_rect(hud._clock_label)
 	if step == 9 and game.world is Dungeon:
 		return _control_rect(hud._attack_button)
-	if step == 1 and player.nearby is ResourcePile:
+	if step == 1 and is_instance_valid(player.nearby) and player.nearby is ResourcePile:
 		return _control_rect(hud._interact_button)
-	if step == 8 and player.nearby is PortalEntrance and player.nearby.gate_kind == "monster":
+	if step == 8 and is_instance_valid(player.nearby) and player.nearby is PortalEntrance and player.nearby.gate_kind == "monster":
 		return _control_rect(hud._interact_button)
 	return _control_rect(hud._joystick)
 

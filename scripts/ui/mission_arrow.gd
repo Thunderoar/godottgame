@@ -6,6 +6,7 @@ var title := "OBJECTIVE"
 var accent := Color("#62c7ba")
 var distance := 0.0
 var direction := Vector2.RIGHT
+var show_distance := true
 
 var _time := 0.0
 
@@ -18,7 +19,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	_time += delta
+	_time = 0.0 if GameSettings.reduce_motion() else _time + delta
 	queue_redraw()
 
 
@@ -56,5 +57,5 @@ func _draw() -> void:
 		# Pulsing halo when the objective is close.
 		var halo_a := 0.4 + sin(_time * 3.2 + PI * 0.5) * 0.25
 		draw_arc(centre, 12.0 + sin(_time * 3.2) * 2.0, 0, TAU, 24, Color(accent.r, accent.g, accent.b, halo_a * proximity), 1.5, true)
-	var text := "%s  %dm" % [title, int(round(distance))]
-	draw_string(font, Vector2(35, size.y * 0.5 + 4), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.9, 0.9, 0.82, 0.95))
+	var text := "%s  %dm" % [title, int(round(distance))] if show_distance else title
+	draw_string(font, Vector2(35, size.y * 0.5 + 5), text, HORIZONTAL_ALIGNMENT_LEFT, size.x - 42, 14, Color(0.9, 0.9, 0.82, 0.95))

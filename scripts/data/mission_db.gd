@@ -6,7 +6,7 @@ const DAY_STEPS := [0, 1, 2, 3, 5, 6, 7, 8, 9]
 const NIGHT_STEPS := [4, 8, 9]
 
 const STEPS := [
-	{"event": "move", "title": "1. Learn to move", "text": "Use WASD or the left joystick. Hold Shift or the Sprint button to run; the blue bar below health is stamina. Tap NPCs and nearby objects directly. Walk along the dotted arrows to the yard marker.", "target": "yard"},
+	{"event": "move", "title": "1. Learn to move", "text": "Use WASD or the left joystick. Hold Shift or Sprint to run; the blue bar below health is stamina. Near NPCs and doorways, Sprint changes to Talk, Enter or Exit. Tap that button, press E or tap the object directly. Follow the dotted arrows to the yard marker.", "target": "yard"},
 	{"event": "gather", "title": "2. Gather wood", "text": "Follow the arrows to driftwood. Stand beside it and tap the driftwood, or press E. Wood can be sold at the equipment shop.", "target": "wood"},
 	{"event": "buy", "title": "3. Buy a potion", "text": "Visit Mara's Potion Shop. Tap the shop, then Buy a Health Potion. After a hit leaves HP at 25% or below, a potion is used automatically while stock lasts.", "target": "potion"},
 	{"event": "inventory", "title": "4. Open your backpack", "text": "Tap Pack or press I to inspect your items, equip weapons and use supplies.", "target": ""},
@@ -22,7 +22,7 @@ const STEPS := [
 static func step(index: int) -> Dictionary:
 	var entry: Dictionary = STEPS[index].duplicate(true) if index >= 0 and index < STEPS.size() else {}
 	if index == 8:
-		entry.title = "9. Find the old road" if not GameState.portal_opened() else "9. Enter Twilight Wilds"
+		entry.title = "9. " + GameState.portal_origin_title()
 		entry.text = GameState.portal_origin_instruction()
 	return entry
 

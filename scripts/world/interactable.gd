@@ -6,6 +6,7 @@ extends Area2D
 @export var prompt := "Interact"
 @export var interact_radius := 1.9
 @export var show_marker := true
+@export var touch_verb := ""
 
 var available := true
 var marker: Sprite2D
@@ -44,6 +45,17 @@ func _make_marker() -> void:
 
 func get_prompt() -> String:
 	return prompt
+
+
+func get_touch_verb() -> String:
+	if not touch_verb.is_empty(): return touch_verb
+	var text := get_prompt().to_lower()
+	if text.begins_with("talk"): return "Talk"
+	if text.begins_with("enter"): return "Enter"
+	if text.begins_with("return") or text.begins_with("leave") or text.begins_with("exit"): return "Exit"
+	if text.begins_with("sleep"): return "Sleep"
+	if text.begins_with("pick up"): return "Pick Up"
+	return "Use"
 
 
 func is_interactable_available() -> bool:

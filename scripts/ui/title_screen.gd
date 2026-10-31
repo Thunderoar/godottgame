@@ -463,6 +463,8 @@ func _on_page_stage_resized() -> void:
 
 func _fit_pages_to_stage() -> void:
 	_fit_pending = false
+	# Responsive minimum widths can briefly exceed the window during a resize.
+	_margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	# A page hidden while its autowrap labels have no width can clamp to a
 	# minimum thousands of pixels tall. Once it has been laid out at the real
 	# width, re-anchor it so the stage owns the size again.
@@ -826,6 +828,7 @@ func _layout() -> void:
 	_overlay_panel.offset_right = fitted.x * 0.5
 	_overlay_panel.offset_top = -fitted.y * 0.5
 	_overlay_panel.offset_bottom = fitted.y * 0.5
+	_schedule_page_fit()
 
 
 func _button(text: String, action: Callable, primary: bool = false, page_control: bool = true) -> Button:
