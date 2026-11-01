@@ -479,6 +479,7 @@ func _facing_index(dir: Vector2) -> int:
 func take_damage(amount: int, from: Vector2 = Vector2.ZERO) -> void:
 	var game := get_tree().get_first_node_in_group("game") as Game
 	if is_queued_for_deletion() or (is_instance_valid(game) and game.player() != self): return
+	if DialogueWorldHold.protects(self): return
 	if dead or sleeping or invulnerable > 0.0:
 		return
 	invulnerable = 0.55

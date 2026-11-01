@@ -104,8 +104,10 @@ func map_icons(world: Node2D) -> Array[Dictionary]:
 			var at: Vector2 = RealmDB.ENCOUNTERS[id].at
 			if RealmDB.cell_id(at) in progress.cells:
 				icons.append({"id": id, "position": at, "texture": PixelArt.pet_texture(id), "priority": 3, "theme": ""})
-		if "citadel" in progress.landmarks and is_instance_valid(world.boss) and not world.boss.dead:
+		if "citadel" in progress.landmarks and world.citadel_revealed() and is_instance_valid(world.boss) and not world.boss.dead:
 			icons.append({"id": "boss", "position": RealmDB.BOSS, "texture": PixelArt.enemy_texture(world.boss.kind,true), "priority": 4, "theme": ""})
+		if "citadel" in progress.landmarks and not world.citadel_revealed():
+			icons.append({"id":"citadel_ward", "position":CitadelApproachDB.ENTRANCE,"texture":PixelArt.icon("lock"),"priority":4,"theme":""})
 		if "approach" in progress.landmarks:
 			icons.append({"id": "camp", "position": RealmDB.CAMP, "texture": PixelArt.icon("spark"), "priority": 3, "theme": ""})
 	elif world is Dungeon:

@@ -33,6 +33,7 @@ func _ready() -> void:
 	var boss_skills := 0
 	var observed_boss_skills := 0
 	for phase in sites.size():
+		if phase in [3,4]: preload("res://tools/citadel_checks.gd").prepare_fixture(realm)
 		realm.player.position = sites[phase]
 		realm.player.invulnerable = 1000 # Survival is a fixture, not a gameplay change.
 		game._input_locked = true

@@ -46,6 +46,7 @@ var dungeon_alerted := false
 var hp := 42
 var dead := false
 var active := false
+var spawn_shimmer := true # Dormant story reveals can opt out without running AI.
 var spawning := true
 var arrival_revealed := false
 var sprite: Sprite2D
@@ -124,7 +125,7 @@ func _ready() -> void:
 	_route_clock = float(get_instance_id()%23)*0.025
 	_build()
 	# A short spawn-in shimmer so monsters do not pop into the dark.
-	if not (kind in ["urchin", "fire"] and arrival_revealed):
+	if spawn_shimmer and not (kind in ["urchin", "fire"] and arrival_revealed):
 		modulate.a = 0.0
 		var tween := create_tween()
 		tween.tween_property(self, "modulate:a", 1.0, 0.35)
@@ -816,6 +817,7 @@ func _lunge(dir: Vector2) -> void:
 # ------------------------------------------------------------------ damage & death
 
 func take_damage(amount: int, from_dir: Vector2 = Vector2.ZERO, _source: Node = null) -> void:
+	if DialogueWorldHold.protects(self): return
 	if get_parent().has_method("can_damage_actor") and not get_parent().can_damage_actor(self): return
 	if dead:
 		return
@@ -859,20 +861,7 @@ func _die() -> void:
 		_alert_icon.queue_free()
 	_telegraph.modulate.a = 0.0
 	remove_from_group("enemies")
-	if is_boss:
-		GameState.register_kill(0)
-	elif settlement_mode:
-		GameState.add_gold(gold_reward)
-		GameState.register_kill(xp_reward)
-		GameState.register_emergency_kill()
-		GameState.toast_requested.emit("Emergency monster defeated: +%d Gold." % gold_reward, "gold")
-	else:
-		if kind in ["fire", "rubbish", "urchin"]: GameState.add_gold(gold_reward)
-		GameState.register_kill(xp_reward)
-	if kind in ["fire", "rubbish", "urchin"] and not settlement_mode:
-		GameState.toast_requested.emit("Rubbish monster defeated: +%d Gold." % gold_reward, "gold")
-	elif not settlement_mode and not is_boss:
-		_spawn_reward()
+	_award_death_rewards()
 	# Death presentation: pop, burst of motes and a knock-slide, then fade.
 	var death_color := Color("#e8b46b")
 	match kind:
@@ -898,6 +887,22 @@ func _die() -> void:
 	tween.tween_property(self, "global_position", global_position + _knockback.limit_length(1.2) * 0.2, 0.9)
 	tween.chain().tween_callback(queue_free)
 
+
+func _award_death_rewards() -> void:
+	if is_boss:
+		GameState.register_kill(0)
+	elif settlement_mode:
+		GameState.add_gold(gold_reward)
+		GameState.register_kill(xp_reward)
+		GameState.register_emergency_kill()
+		GameState.toast_requested.emit("Emergency monster defeated: +%d Gold." % gold_reward, "gold")
+	else:
+		if kind in ["fire", "rubbish", "urchin"]: GameState.add_gold(gold_reward)
+		GameState.register_kill(xp_reward)
+	if kind in ["fire", "rubbish", "urchin"] and not settlement_mode:
+		GameState.toast_requested.emit("Rubbish monster defeated: +%d Gold." % gold_reward, "gold")
+	elif not settlement_mode and not is_boss:
+		_spawn_reward()
 
 func _spawn_reward() -> void:
 	if is_boss:

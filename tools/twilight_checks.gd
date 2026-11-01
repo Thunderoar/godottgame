@@ -171,6 +171,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(GameState.unbonded_realm_pets().is_empty() and not bool(GameState.pet_battle_state("pet_duel_1").cleared), "both habitat bonds finish wild guidance without fabricating a legacy tournament clear")
 	var blocked_path := routes.path(Vector2(12,32), RealmDB.CAMP, false)
 	var blocked_length := _length(blocked_path)
+	GameState.data.realm_progress.citadel_path.cleared_pairs.append("watchpost_guard") # Winch-specific fixture; actual deaths have dedicated coverage.
 	realm.open_shortcut()
 	await game.get_tree().process_frame
 	await game.get_tree().physics_frame
@@ -209,6 +210,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	realm.player.position = hollow.position + Vector2(0,1.8)
 	hollow.interact(realm.player)
 	check.call(RealmContentDB.CACHE in GameState.expedition_loot().get("pending_caches", []), "an actual hollow interaction carries its pending gift toward citadel victory")
+	preload("res://tools/citadel_checks.gd").prepare_fixture(realm)
 	realm.player.position = RealmDB.BOSS_THRESHOLD
 	realm._physics_process(0.1)
 	check.call(realm._boss_arrived and realm.boss.active and Sfx.battle_track == RealmDB.PORTAL, "crossing the citadel threshold activates the boss and battle track")
@@ -218,11 +220,13 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	realm._physics_process(0.1)
 	check.call(not realm._boss_arrived and realm.boss.hp == realm.boss.max_hp and Sfx.battle_track.is_empty(), "retreat resets the unfinished boss without moving through walls")
 	check.call(not realm.camera.framing_bounds.has_area(), "retreat releases encounter framing back to the exploration camera")
+	preload("res://tools/citadel_checks.gd").prepare_fixture(realm)
 	realm.player.position = RealmDB.BOSS_THRESHOLD
 	realm._physics_process(0.1)
 	realm.player.position = (RealmDB.BOSS_ARENA.position + Vector2(21,14))
 	realm._physics_process(0.1)
 	check.call(not realm._boss_arrived and not realm.camera.framing_bounds.has_area(), "retreat through the eastern passage also releases the boss and camera leash")
+	preload("res://tools/citadel_checks.gd").prepare_fixture(realm)
 	realm.player.position = RealmDB.BOSS_THRESHOLD
 	realm._physics_process(0.1)
 	if capture.is_valid():
@@ -346,6 +350,8 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	GameState.autosave_enabled = autosave
 	game.set_process(ticking)
 	await preload("res://tools/realm_combat_checks.gd").run(game,check,capture)
+	await preload("res://tools/citadel_checks.gd").run(game,check,capture)
+	await preload("res://tools/realm_wave_checks.gd").run(game,check,capture)
 
 static func _length(points: PackedVector2Array) -> float:
 	var total := 0.0

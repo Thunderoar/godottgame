@@ -1,6 +1,6 @@
 class_name PortalPanel
 extends ModalBase
-## Lists both portal gates, their level/unlock requirements and boss details.
+## Lists portal gates, their level/unlock requirements and boss details.
 ## Entry is blocked here for clarity and validated again by GameState.
 
 var selected := "tidebound_grotto"
@@ -68,7 +68,7 @@ func _add_portal_card(portal_id: String) -> void:
 	lore.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lore.custom_minimum_size = Vector2(470, 0)
 	info.add_child(lore)
-	var details := "Boss: %s  •  %s    Monsters: %d" % [str(def.boss_name), str(def.get("boss_ability_name", "Heavy Strike")), int(def.monster_count)]
+	var details := "Boss: %s  •  %s    %s" % [str(def.boss_name), str(def.get("boss_ability_name", "Heavy Strike")), population_summary(portal_id)]
 	var powers := GameUI.label(details, 13, GameUI.TEAL)
 	powers.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.add_child(powers)
@@ -100,3 +100,9 @@ func _add_portal_card(portal_id: String) -> void:
 		why.custom_minimum_size = Vector2(150, 0)
 		right.add_child(why)
 	content.add_child(card)
+
+
+static func population_summary(portal_id: String) -> String:
+	if portal_id == RealmDB.PORTAL:
+		return "%d guards / %d waves" % [RealmCombatDB.guard_total(), RealmCombatDB.PAIRS.size()*RealmCombatDB.WAVE_SIZES.size()]
+	return "Monsters: %d" % int(PortalDB.get_portal(portal_id).get("monster_count",0))

@@ -31,6 +31,47 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(guards.size() == 6 and total_hp == 410 and guards.filter(func(g: RealmGuard) -> bool: return g.profile == "imp").size() == 4, "combat expansion substitutes profiles within six tougher guards and 410 total HP")
 	check.call(guards.filter(func(g: RealmGuard) -> bool: return g.profile == "watcher").size() == 1 and guards.filter(func(g: RealmGuard) -> bool: return g.profile == "keeper").size() == 1, "one lantern Watcher and one stone-mantled Keeper have distinct roles")
 	check.call(guards.map(func(g: RealmGuard) -> Vector2: return g.home) == RealmDB.MINIONS, "flat compatibility homes match the authored pair definitions")
+	# Shared floating HP, not the old tiny damaged-only Enemy strip.
+	for guard in guards:
+		realm.player.position = guard.home+Vector2(0,1.2)
+		guard._physics_process(0)
+		var bar := guard.get_node_or_null("EnemyHealth") as WorldHealthBar
+		check.call(bar != null and bar.subject==guard and not bar.pet_bar and not bar.boss_bar,"guard reuses the shared ordinary HP component: "+guard.name_text())
+		if bar == null: continue
+		bar._process(0)
+		check.call(bar.visible and guard._name_label.visible and bar._label.text=="%d/%d" % [guard.hp,guard.max_hp],"full-health nearby guard shows name and numeric current/max HP: "+guard.name_text())
+		var maximum := guard.max_hp
+		var before_data := GameState.data.duplicate(true)
+		guard.hp -= 7
+		bar._process(0)
+		check.call(bar._hp==maximum-7 and bar._maximum==maximum and bar._label.text=="%d/%d" % [maximum-7,maximum] and GameState.data==before_data,"shared guard health redraw reflects damage without changing progression: "+guard.name_text())
+		check.call(guard._name_label.position.y+guard._name_label.size.y*guard._name_label.scale.y < bar.position.y+bar._label.position.y,"guard name sits clear above numeric HP: "+guard.name_text())
+		guard.hp = maximum
+	var sample := guards[0]
+	var sample_bar := sample._health_bar
+	realm.player.position = sample.home+Vector2(0,1)
+	sample.return_home()
+	sample_bar._process(0)
+	check.call(not sample_bar.visible and not sample._name_label.visible,"returning guard suppresses both health and name together")
+	sample._physics_process(0)
+	sample_bar._process(0)
+	check.call(sample.mode==RealmGuard.Mode.RESTING and sample_bar.visible and sample._name_label.visible,"settled nearby guard restores both health and name together")
+	realm.player.position = RealmDB.ARRIVAL
+	sample._physics_process(0)
+	sample_bar._process(0)
+	check.call(not sample_bar.visible and not sample._name_label.visible,"distant dormant guard keeps its overhead information unobtrusive")
+	realm.player.position = sample.home+Vector2(0,1)
+	sample.dead = true
+	sample._physics_process(0)
+	sample_bar._process(0)
+	check.call(not sample_bar.visible and not sample._name_label.visible,"dead guard has neither a stale HP bar nor a name label")
+	sample.dead = false
+	game.world = null
+	sample._physics_process(0)
+	sample_bar._process(0)
+	check.call(not sample_bar.visible and not sample._name_label.visible,"retired-world guard cannot leave an overhead display in the replacement world")
+	game.world = realm
+	realm.player.position = RealmDB.ARRIVAL
 	var routes := ResidentRoutes.new(realm,realm.map_rect)
 	for guard in guards:
 		check.call(routes.point_clear(guard.position) and not RealmCombatDB.protected(guard.position,guard.body_radius), "guard home is collision-clear and outside refuges: " + guard.name_text())
@@ -214,12 +255,15 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 		game.hud.field_guide_panel.close_panel()
 	# The boss receives ownership alone, and victory/retreat paths remain separate.
 	action = _begin(realm,guards,watcher,target_points[1])
+	preload("res://tools/citadel_checks.gd").prepare_fixture(realm)
 	realm.player.position = RealmDB.BOSS_THRESHOLD
 	realm._physics_process(0.016)
 	check.call(action.finished and realm._boss_arrived and realm.combat.active_id.is_empty() and realm.combat.slot == null, "citadel threshold cancels all regular attacks before enabling the boss")
 	realm.player.position = RealmDB.CAMP
 	realm._physics_process(0.016)
 	check.call(not realm._boss_arrived and not realm.camera.framing_bounds.has_area(), "boss retreat still releases its arena framing")
+	# Reopen real wave-zero permission for the remaining lifecycle-only fixtures.
+	GameState.data.realm_progress.citadel_path = CitadelApproachDB.defaults()
 	# Kill during windup: ordinary Enemy death/reward accounting remains one-shot.
 	action = _begin(realm,guards,watcher,target_points[1])
 	var kills := int(GameState.data.kills)

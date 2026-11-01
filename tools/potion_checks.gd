@@ -157,8 +157,10 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(is_equal_approx(GameState.potion_time("sprint"),9) and not game.boss_revival_available(), "temporary sprint survives the world handoff while revival stays locked outside the boss chamber")
 	realm.player.position = RealmDB.BOSS_TRIGGER.get_center()
 	realm._physics_process(0.01)
+	check.call(not game.boss_revival_available(), "entering the chamber before earning Citadel access cannot enable revival")
+	preload("res://tools/citadel_checks.gd").prepare_fixture(realm)
 	realm.boss.set_physics_process(false)
-	check.call(realm._boss_arrived and game.boss_revival_available(), "crossing the real citadel threshold enables boss-only revival")
+	check.call(realm._boss_arrived and game.boss_revival_available(), "the earned Citadel approach enables boss-only revival")
 	GameState.data.expedition.gold = 37
 	var boss_hp := realm.boss.hp
 	realm.player.invulnerable = 0

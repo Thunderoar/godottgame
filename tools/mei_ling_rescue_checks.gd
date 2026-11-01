@@ -63,6 +63,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	var realm := game.world as TwilightRealm
 	check.call(is_instance_valid(realm.mei_prison) and not realm.mei_prison.opened and realm.mei_prison.position == RealmDB.MEI_PRISON and realm.mei_prison.get_child_count() == 0, "fiend's arena contains a visible nonblocking captive prison")
 	realm.player.invulnerable = 1000
+	preload("res://tools/citadel_checks.gd").prepare_fixture(realm)
 	realm.player.position = RealmDB.BOSS_THRESHOLD
 	realm._physics_process(0.1)
 	if capture.is_valid(): await capture.call("00_captive_arena")

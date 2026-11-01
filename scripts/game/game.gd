@@ -22,6 +22,9 @@ var loading_screen: LoadingScreen
 var _sailing := false
 var _return_to_harbour := false
 var _story_active := false
+var _dialogue_hold: DialogueWorldHold
+var _ordinary_dialogue_hold: DialogueWorldHold
+var _citadel_conversation: CitadelConversation
 var _active_story: StorySequence
 var _side_quest_intro: Dictionary = {}
 var _side_quest_timer := 0.0
@@ -99,7 +102,7 @@ func _process(delta: float) -> void:
 	if _side_quest_auto_enabled and _side_quest_timer >= 0.3:
 		_side_quest_timer = 0.0
 		_try_side_quest_introduction()
-	if is_instance_valid(world) and not _game_over and not _story_active and not hud.pet_battle_panel.is_wild_challenge():
+	if is_instance_valid(world) and not _game_over and (not _story_active or dialogue_holding()) and not hud.pet_battle_panel.is_wild_challenge():
 		GameState.advance_world_clock(delta)
 		if not _transitioning and not _sailing:
 			GameState.advance_potion_effects(delta)
@@ -120,7 +123,7 @@ func _sync_village_music() -> void:
 	# Keep the song's position through dialogue and pet duels. Ordinary menus
 	# continue village life; story-owned sound and developer suspension take priority.
 	if not is_instance_valid(_village_music): return
-	_village_music.stream_paused = not world is Lobby or _story_active or _developer_paused or _game_over or is_instance_valid(title_screen) or not Sfx.battle_track.is_empty()
+	_village_music.stream_paused = not world is Lobby or (_story_active and not dialogue_holding()) or _developer_paused or _game_over or is_instance_valid(title_screen) or not Sfx.battle_track.is_empty()
 
 
 func _sync_ocean_music() -> void:
@@ -233,6 +236,10 @@ func _remove_title_if_owner(expected: CanvasLayer) -> void:
 # ------------------------------------------------------------------ world switching
 
 func _clear_world() -> void:
+	if is_instance_valid(_ordinary_dialogue_hold): hud.dialogue_panel.close_panel()
+	_end_dialogue_hold(_dialogue_hold)
+	_ordinary_dialogue_hold = null
+	if is_instance_valid(_citadel_conversation): _citadel_conversation.cancel()
 	if is_instance_valid(_active_story): _active_story.cancel()
 	if not _side_quest_intro.is_empty():
 		_side_quest_intro.cancelled = true
@@ -487,6 +494,10 @@ func show_victory(summary: Dictionary, portal_id: String) -> void:
 
 
 func _on_modal_closed() -> void:
+	if not hud.dialogue_panel.visible and is_instance_valid(_ordinary_dialogue_hold):
+		_end_dialogue_hold(_ordinary_dialogue_hold)
+		_ordinary_dialogue_hold = null
+	if world is TwilightRealm and world._camp_resting: return
 	if hud.any_modal_open() or _transitioning or _sailing or _story_active or is_instance_valid(_dock_conversation) or world is OceanJourney:
 		return
 	_input_locked = false
@@ -566,11 +577,34 @@ func open_settings() -> void:
 	hud.settings_panel.open_settings()
 
 
+func dialogue_holding(expected: Node = null) -> bool:
+	return is_instance_valid(_dialogue_hold) and not _dialogue_hold._released and is_instance_valid(world) and _dialogue_hold.world == world and (expected == null or expected == world)
+
+func _begin_dialogue_hold(expected: Node2D) -> DialogueWorldHold:
+	if is_instance_valid(_dialogue_hold) or expected != world: return null
+	var hold := DialogueWorldHold.new()
+	hold.world = expected
+	_dialogue_hold = hold
+	add_child(hold)
+	hud.release_world_controls()
+	hud._apply_touch_mode()
+	return hold
+
+func _end_dialogue_hold(hold: DialogueWorldHold) -> void:
+	if not is_instance_valid(hold): return
+	var expected := hold.world
+	hold.release()
+	if _dialogue_hold == hold: _dialogue_hold = null
+	hold.queue_free()
+	hud._apply_touch_mode()
+	if world == expected and is_instance_valid(expected) and not _transitioning and expected is Lobby:
+		expected.call_deferred("_on_day_phase_changed",GameState.is_night())
+
 func open_dialogue(speaker: String, lines: Array) -> void:
-	if world is Dungeon or _game_over:
-		return
+	if not world is Lobby or _game_over or _story_active or _transitioning or _sailing or _arjun_returning or hud.any_modal_open() or is_instance_valid(_dock_conversation) or dialogue_holding(): return
 	_input_locked = true
 	_apply_input_lock()
+	_ordinary_dialogue_hold = _begin_dialogue_hold(world)
 	hud.dialogue_panel.open_dialogue(speaker, lines)
 
 
@@ -892,14 +926,13 @@ func _try_side_quest_introduction() -> bool:
 	if not _side_quest_context_safe(): return false
 	var entry := SideQuestDB.nearby(world, player())
 	if entry.is_empty() or GameState.side_quest_intro_seen(str(entry.id)): return false
-	# This is an owned story beat, not a globally pausing menu or quest acceptance.
-	_side_quest_intro = {"id": str(entry.id), "world": world, "serial": GameState.journey_serial, "mode": world.process_mode, "cancelled": false}
+	# An owned conversation holds actors, not the ambient world or its clock.
+	_side_quest_intro = {"id": str(entry.id), "world": world, "serial": GameState.journey_serial, "hold": _begin_dialogue_hold(world), "cancelled": false}
 	_input_locked = true
 	_story_active = true
 	hud.release_world_controls()
 	player().velocity = Vector2.ZERO
 	_apply_input_lock()
-	world.process_mode = Node.PROCESS_MODE_DISABLED
 	hud.dialogue_panel.closed.connect(_finish_side_quest_introduction, CONNECT_ONE_SHOT)
 	hud.dialogue_panel.open_dialogue(str(entry.speaker), entry.lines)
 	return true
@@ -910,7 +943,7 @@ func _finish_side_quest_introduction() -> void:
 	_side_quest_intro = {}
 	var expected: Node = record.world
 	var owned := is_instance_valid(expected) and world == expected and int(record.serial) == GameState.journey_serial
-	if is_instance_valid(expected): expected.process_mode = int(record.mode)
+	_end_dialogue_hold(record.hold)
 	_story_active = false
 	if owned:
 		if not bool(record.cancelled): GameState.mark_side_quest_intro_seen(str(record.id))
@@ -975,16 +1008,15 @@ func play_dock_conversation(introduction: bool = false) -> void:
 	if GameState.recovery_active() or (introduction and bool(GameState.campaign().get("dock_welcome_seen", false))): return
 	var dock_world := world as Lobby
 	var serial := GameState.journey_serial
-	var previous_mode := dock_world.process_mode
+	var hold := _begin_dialogue_hold(dock_world)
 	var was_visible := hud.visible
 	_input_locked = true
 	_apply_input_lock()
 	hud.release_world_controls()
-	# The opening is a story; later voluntary chats follow normal menu rules.
+	# Keep the living dock visible while its actors hold still.
 	if introduction:
 		_story_active = true
-		dock_world.process_mode = Node.PROCESS_MODE_DISABLED
-	hud.visible = false
+
 	var conversation := DockConversation.new()
 	conversation.introduction = introduction
 	conversation.waystone = not introduction and not GameState.portal_opened() and not GameState.portal_key_received() and bool(GameState.portal_origin().get("site_examined", false))
@@ -998,7 +1030,7 @@ func play_dock_conversation(introduction: bool = false) -> void:
 		GameState.mark_story_seen("dock_welcome_seen")
 	if still_owned and conversation.waystone and not conversation.cancelled and not _game_over and not _defeat_pending:
 		GameState.consult_waystone()
-	if introduction and is_instance_valid(dock_world): dock_world.process_mode = previous_mode
+	_end_dialogue_hold(hold)
 	if _dock_conversation != conversation: return
 	_dock_conversation = null
 	if introduction: _story_active = false
@@ -1007,6 +1039,62 @@ func play_dock_conversation(introduction: bool = false) -> void:
 		_input_locked = hud.any_modal_open() or _sailing or _transitioning
 		_apply_input_lock()
 
+
+func play_citadel_sequence(realm: TwilightRealm, mode: String) -> void:
+	if world != realm or _story_active or _transitioning or _defeat_pending or realm._leaving or realm.player.dead or hud.any_modal_open(): return
+	var serial := GameState.journey_serial
+	var hold := _begin_dialogue_hold(realm)
+	var old_hud := hud.visible
+	var old_lock := _input_locked
+	var old_camera_position := realm.camera.position
+	var old_camera_zoom := realm.camera.zoom
+	var old_camera_frame := realm.camera.framing_bounds
+	if mode == "intro":
+		realm._area_label.text = "TWILIGHT WILDS · CHAOS CITADEL"
+		realm.set_message("The outer ward is open. Mei Ling is still imprisoned.")
+		# Frame the live meeting ABOVE the reading panel, not underneath it.
+		var height := get_viewport_rect().size.y
+		var panel_height := minf(258,height-48)+32
+		var story_zoom := minf(GameSettings.camera_zoom(),maxf(8,(height-panel_height)/19.0))
+		realm.camera.framing_bounds = Rect2()
+		realm.camera.zoom = Vector2.ONE*story_zoom
+		realm.camera.position = Vector2(26,10+panel_height/(2*story_zoom))
+		realm.camera.force_update_scroll()
+	_story_active = true
+	_input_locked = true
+	hud.release_world_controls()
+	_apply_input_lock()
+	realm.combat.cancel_all()
+	realm.close_reading()
+
+	var sequence := CitadelConversation.new()
+	sequence.mode = mode
+	if mode == "entry": sequence.pages = ["Three road lights answer the outer ward. Mei Ling's prison is still sealed.\n\nEnter the citadel now, or return when you are ready."]
+	elif mode == "preparation": sequence.pages = ["Adam: The road's light reaches this lantern now.\nAdam: Mei Ling. I'm coming.\n\nThe three emblems answer. The outer ward can now be opened."]
+	else: sequence.pages = CitadelApproachDB.INTRO.duplicate() if not GameState.citadel_path().intro_seen else ["Mei Ling: Watch the floor, Adam.\nAdam: I see it."]
+	_citadel_conversation = sequence
+	add_child(sequence)
+	await sequence.completed
+	if _citadel_conversation != sequence: return
+	_citadel_conversation = null
+	_end_dialogue_hold(hold)
+	_story_active = false
+	if world != realm or serial != GameState.journey_serial or not is_instance_valid(realm) or realm.is_queued_for_deletion(): return
+	if mode == "intro":
+		realm.camera.position = old_camera_position
+		realm.camera.zoom = old_camera_zoom
+		realm.camera.framing_bounds = old_camera_frame
+	hud.visible = old_hud
+	_input_locked = old_lock or hud.any_modal_open() or _transitioning or _defeat_pending
+	if mode == "entry" and sequence.accepted and not sequence.cancelled and GameState.citadel_road_ready():
+		realm.approach_phase = TwilightRealm.ApproachPhase.ENTRY_GRANTED
+	elif mode == "intro":
+		if sequence.accepted and not sequence.cancelled:
+			if not realm.begin_citadel_combat(): realm.approach_phase = TwilightRealm.ApproachPhase.READY
+		else:
+			realm.approach_phase = TwilightRealm.ApproachPhase.ENTRY_GRANTED
+	realm._refresh_approach()
+	_apply_input_lock()
 
 func play_story(kind: String, from_title: bool = false) -> void:
 	if _story_active: return
@@ -1327,8 +1415,9 @@ func run_developer_action(id: String) -> Dictionary:
 			await _load_dungeon(portal,true)
 			if not _developer_action_owned(serial): return _developer_action_failed()
 			if id == "travel_citadel":
+				world.approach_phase = TwilightRealm.ApproachPhase.INTRO
 				player().position = RealmDB.BOSS_THRESHOLD
-				world._physics_process(0)
+				world.begin_citadel_combat()
 		elif id in ["travel_sea_1","travel_sea_2"]:
 			await _load_developer_world("ocean")
 		elif id in ["travel_kraken","travel_prison"]:

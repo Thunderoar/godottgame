@@ -58,7 +58,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	var dock_welcome := game._dock_conversation as DockConversation
-	_check(dock_welcome != null and game._story_active and not game.hud.visible, "opening beats hand off to Pak Rahim's player-paced dock welcome before lessons")
+	_check(dock_welcome != null and game._story_active and game.hud.visible and game.dialogue_holding(game.world), "opening beats hand off to Pak Rahim's player-paced dock welcome before lessons")
 	if dock_welcome != null: dock_welcome.finish()
 	await get_tree().physics_frame
 	await get_tree().physics_frame
@@ -226,9 +226,11 @@ func _ready() -> void:
 	# Includes main/side grouping, untruncated rescue goals and shared Hide tips rules.
 	await preload("res://tools/objective_tracker_checks.gd").run(game, _check)
 	await preload("res://tools/side_quest_intro_checks.gd").run(game, _check)
+	await preload("res://tools/dialogue_hold_checks.gd").run(game, _check)
 	# Includes blocked repair recovery and the real Twilight -> village reward handoff.
 	await VillageProjectChecks.run(game, _check)
-	# Compact realm: living habitats, memories/cache transactions and three owned combat encounters.
+	# Compact realm: living habitats, memories/cache transactions and three owned wave sectors.
+	# Twilight integrates earned-road, shared-health and reinforcement-wave acceptance checks.
 	await preload("res://tools/twilight_checks.gd").run(game, _check)
 	await preload("res://tools/urchin_arrival_checks.gd").run(game, _check)
 	await preload("res://tools/fire_arrival_checks.gd").run(game, _check)
@@ -988,6 +990,7 @@ func _test_boss_and_progression() -> void:
 	_check(boss != null, "boss instance exists")
 	if boss == null:
 		return
+	preload("res://tools/citadel_checks.gd").prepare_fixture(game.world)
 	game.player().position = RealmDB.BOSS_THRESHOLD
 	game.world._physics_process(0.1)
 	boss.call("take_damage", 999999, Vector2.ZERO, game.call("player"))
