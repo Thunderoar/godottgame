@@ -31,6 +31,7 @@ func _rebuild() -> void:
 	content.add_child(DeveloperAccessControl.new())
 	add_section("APPEARANCE", GameUI.GOLD)
 	content.add_child(VisualStyleSettings.new())
+	content.add_child(HmsScanControl.new())
 
 	add_section("GUI SCALE", GameUI.GOLD)
 	var scale_row := HBoxContainer.new()

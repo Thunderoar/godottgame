@@ -3269,3 +3269,37 @@ Final canonical isolated gameplay gate: **6,750 checks, PASS, exit 0**, with no
 The two `Could not save game: 12` warnings are the intentional developer-session
 and final-departure rollback fixtures. `git diff --check` passes. No normal
 player-save restoration, export or push was performed.
+
+## 2026-11-01 — local HUAWEI Scan Kit integration
+
+Settings on title, land and ocean now embed `HmsScanControl`. Android calls the
+real Scan Kit 2.15.0.301 `buildBitmap` API through the included Godot v2 bridge.
+The QR contains only the public BESUT title/tagline; no progression, reward,
+account or save transaction is added. Desktop/missing-plugin builds explicitly
+disable generation. `HmsScanChecks` is included in the full gameplay gate.
+See `HMS_SCAN_KIT.md` for standalone-SDK rationale, build instructions and native
+Android review steps. Gradle export is enabled and its matching local template
+was installed without replacing the existing APK or signing material.
+
+- Real Huawei/Godot Java bridge compilation: PASS, Java 17 bytecode. The helper
+  validates the pinned downloaded SDK archive's SHA-256.
+- Isolated Godot class import: exit 0; existing Android build-tools-directory
+  diagnostic remains. Evidence: `%LOCALAPPDATA%/Temp/tidesworn-tests-36141f2f60434244b7b8c65d9891baed`.
+- Canonical isolated gameplay gate: **6,758 checks, PASS, exit 0**, without
+  `[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers. Evidence:
+  `%LOCALAPPDATA%/Temp/tidesworn-tests-f34b55049fc740cfa9f8dd3029c179a8`.
+  The two `Could not save game: 12` warnings are intentional existing
+  final-departure and developer-session rollback fixtures.
+- Native Windows focused review: **14 checks, PASS, exit 0**; 1280×720 and
+  832×480 Settings captures inspected. Evidence:
+  `%LOCALAPPDATA%/Temp/besut-hms-review-83d8a7bd4d084dcc9f52a15f0bfce7f4`.
+  Covered failure handling, public-only payload, PNG texture conversion,
+  unavailable desktop UI, closing cleanup and no journey/save creation.
+- Normal editor/import startup with the export plugin enabled: **exit 0**,
+  no script/error markers, in a disposable source and user-data copy at
+  `%LOCALAPPDATA%/Temp/besut-hms-editor-8349dfe71491442a919fe09d9a092516`.
+
+No Android APK export, emulator execution, physical-phone generation or
+independent QR decode is claimed. Those remain the native integration checks;
+Windows fake-bridge checks prove the boundary/UI, not HMS execution on Android.
+Normal player saves and the existing APK were preserved. No push was performed.
