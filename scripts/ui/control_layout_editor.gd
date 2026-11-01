@@ -50,6 +50,7 @@ func _ready() -> void:
 	actions.add_child(reset)
 	var switch_mode := GameUI.button("Village" if _sea else "Sea", Vector2(92, 42))
 	switch_mode.pressed.connect(func() -> void:
+		_commit_all()
 		_sea = not _sea
 		switch_mode.text = "Village" if _sea else "Sea"
 		_build_handles())
@@ -111,8 +112,7 @@ func _resize_selected(value: float) -> void:
 func _commit_all() -> void:
 	for id in _handles:
 		var handle := _handles[id] as Control
-		var factor := 1.0 if str(id).begins_with("ocean_") else _hud.get_gui_scale() * minf(1.0, minf(_root.size.x / 1280.0, _root.size.y / 720.0))
-		_hud.set_control_layout(id, handle.position.x, handle.position.y, handle.size.x / maxf(factor, 0.1))
+		_hud.set_control_layout(id, handle.position.x, handle.position.y, handle.size.x)
 
 class DragHandle extends Control:
 	var editor: ControlLayoutEditor
@@ -154,6 +154,14 @@ class DragHandle extends Control:
 		if release and dragging and pointer == index:
 			dragging = false
 		accept_event()
+	func _input(event: InputEvent) -> void:
+		if (event is InputEventScreenTouch and not event.pressed and event.index == pointer) or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed and pointer == -1):
+			dragging = false
+			pointer = -2
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+			dragging = false
+			pointer = -2
 	func _draw() -> void:
 		var radius := size.x * 0.5 - 3
 		draw_circle(size / 2, radius, Color("#395b65"))

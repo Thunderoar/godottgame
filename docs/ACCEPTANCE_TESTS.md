@@ -3269,3 +3269,248 @@ Final canonical isolated gameplay gate: **6,750 checks, PASS, exit 0**, with no
 The two `Could not save game: 12` warnings are the intentional developer-session
 and final-departure rollback fixtures. `git diff --check` passes. No normal
 player-save restoration, export or push was performed.
+
+## 2026-11-01 — Ocean background instrumental
+
+`assets/audio/besut_ocean.ogg` is an original 40-second stereo instrumental at
+96 BPM. Soft mallets, chords, bass and light percussion accompany the turtle
+journey. The reproducible `tools/generate_ocean_music.py` uses synthesized notes
+and sounds, without third-party music samples. The tracked Ogg import loops.
+
+Game owns one `OceanMusic` player on Master, at -15 dB. It starts when the ocean
+world enters, continues through the Sea Guide, both sea levels and route travel,
+and preserves playback position through ocean Settings, developer suspension and
+the defeat/retry screen. Ride Again resumes it. World clearing immediately stops
+it before the island, village or title takes ownership. Village and battle music
+retain their existing ownership. Master volume and mute cover the new track.
+
+The canonical tide gate includes `ocean_music_checks.gd` through the existing
+ocean-level review. Focused review uses `-OceanLevels`; `-BrandingMusic` also checks
+the real ship departure and the return to village without song overlap. The
+checks cover the imported full-length loop and its actual endpoint, Settings
+pause/position/resume, Master volume/mute, developer suspension, level-two travel,
+defeat/retry and island/village cleanup. Title silence is checked in `tide_test.gd`.
+
+Focused native Windows Godot 4.7.2 results (isolated user data, headless audio):
+
+- Ocean levels: **69 checks, PASS, exit 0**, empty runtime stderr. Evidence:
+  `%LOCALAPPDATA%/Temp/tidesworn-tests-26c7fa76a79f43749db12da10923f809`.
+- Branding/music ship handoff: **17 checks, PASS, exit 0**, empty runtime stderr.
+  Evidence: `%LOCALAPPDATA%/Temp/tidesworn-tests-f57ff752336e4f9ca5568dd1574acc2d`.
+- Final isolated audio import: exit 0, with the existing Android build-tools
+  directory warning. Evidence:
+  `%LOCALAPPDATA%/Temp/tidesworn-tests-9063fc001a2443ad96ea86625c242cb0`.
+- Decoded audio is 40.0 seconds, 44.1 kHz, stereo, with finite samples and a peak
+  below full scale. The Ogg asset is approximately 315 KiB.
+
+These are automated Windows playback/lifecycle checks, not a listening review or
+physical-phone/export verification. No normal player save was restored.
+
+The full canonical `tide_test.tscn` was attempted twice. Both runs hit the
+wrapper's 600-second timeout and therefore **are not full-gate PASS results**.
+The first used the ordinary Windows wrapper; the second used a temporary copy
+with the same isolation, failure filtering and timeout plus `--fixed-fps 60`.
+The ordinary run recorded two audio-timing assertion failures (endpoint and
+paused position); the fixed-step run recorded one (endpoint). No script/runtime
+error markers appeared. Each run emitted the two expected warnings from the intentional
+developer-session and departure rollback fixtures. Evidence roots:
+
+- Ordinary: `%LOCALAPPDATA%/Temp/tidesworn-tests-d16d54be6a4446cf8cc61a5b9de2382f`.
+- Fixed step: `%LOCALAPPDATA%/Temp/tidesworn-tests-f0ef5fca908d468b90626006a3c9b697`.
+
+The first focused ocean and music checks above completed successfully. The
+long-suite failures exposed races in the fixture's immediate play/seek and its
+use of simulation timers for the device's audio clock. The fixture now starts
+playback at the endpoint atomically, waits for the actual playback loop counter,
+and allows the queued pause command to reach the mixer before measuring a
+stationary clock. Its waits use bounded wall time and continue yielding frames.
+The ship-handoff review also runs these checks on a reused music player.
+
+Full-suite completion remains unverified on this host for this change. No
+gameplay code or committed test timeout was changed to bypass the limit.
+
+After the audio-clock fixture correction, final focused Windows runs both exit
+0 with empty runtime stderr and no failure/error markers:
+
+- Ocean levels: **69 checks, PASS**,
+  `%LOCALAPPDATA%/Temp/tidesworn-tests-1db5293a85a241318a69dbd0324433a2`.
+- Branding/music with the extra reused-player checks: **27 checks, PASS**,
+  `%LOCALAPPDATA%/Temp/tidesworn-tests-8109a7537b1f4622a318a85b890be7e3`.
+
+The full suite was not rerun after that fixture-only correction. The preceding
+full attempts remain timeout/failure evidence, not a certified full-suite pass.
+`git diff --check` passes. The already-open player session was not stopped.
+
+## 2026-11-01 — Turtle feeding, fatal shark capture, saved controls and village inspection
+
+Fish now play the dedicated cached `turtle_eat` sound exactly once on automatic
+consumption. Hearts retain their healing cue. A resolved fish cannot pay another
+sound, feeding benefit or cleanup reward.
+
+This supersedes the former one-life shark bite. Contact with a level-two shark
+immediately sets turtle health to zero, including during bomb blink immunity.
+The shark leaves the ordinary item list and becomes the owned capture actor.
+Its jaws close around the turtle, then shark, turtle and rider travel horizontally
+beyond the left edge of the current viewport. `FINISHED` still owns defeat; no campaign checkpoint
+advances. Ride Again appears at screen centre after the 2.4-second animation, return-to-shore cannot
+skip the capture, and retry removes the captured shark and restores rider pose.
+Bomb damage, the separate fullness meter and the two sea-level progression remain
+unchanged. The capture keeps all actors upright without rotating them downwards.
+Ocean Settings freezes the capture clock as well as the run. Sea Guide and the
+Turtle Journey Field Guide describe the fatal shark rule.
+
+Saved land/portal and ocean control sizes now use the same screen-space units as
+their drag-editor previews. GUI scale no longer scales a custom size a second
+time. The persistent land HUD naturally carries the same layout into portals.
+Ocean runtime controls and editor defaults share viewport-aware resolution and
+clamping. `GameState.control_layout_changed` applies edits/reset/load immediately
+without world/UI save writes. Switching editor contexts commits the previous
+handles. Pointer release and focus loss clear editor drags. There is no new saved
+field and no save-version change.
+
+The village camera accepts mouse and touch drags beginning on unhandled scenery.
+A 12-pixel threshold separates dragging from tapping. Inspection clamps the view
+to village bounds and does not move Adam or pause village simulation. Releasing
+the drag automatically restores Adam following; movement or attack also cancels
+inspection. Focus loss and blocked world/modal
+contexts cancel the gesture. HUD gestures, settlement editing, sailing, stories,
+recovery, interiors and developer suspension retain their owners. Only Lobby
+installs the gesture controller. No Follow Adam button is required. Camera inspection
+is temporary and never saved.
+
+`ocean_touch_camera_checks.gd` runs within `ControlOceanChecks`, hence both the
+focused `-ContextControls` review and canonical tide scene cover these changes.
+It sends real mouse/touch gestures, checks modal/focus/actor guards, commits drag
+handles at different GUI scales, crosses into the real portal world, round-trips
+the save, tests one-sound fish consumption and captures the fatal shark dive.
+The ship pointer fixture now chooses the visible clipped part of the ship rather
+than a point that can lie below the viewport after camera framing changes.
+
+Native Windows focused review at 1280x720: **82 checks, PASS, exit 0**, empty
+runtime stderr, with captures inspected for village inspection, saved controls,
+the closed-jaw bite and original downward drag (revised below). Evidence:
+`%LOCALAPPDATA%/Temp/tidesworn-tests-edcacd172932498f96e7095118ed9aad`.
+The ordinary isolated ocean-level review also passes **69 checks**, exit 0,
+with empty runtime stderr:
+`%LOCALAPPDATA%/Temp/tidesworn-tests-962d2e76732a4e7f9cdd85ddaf9368ef`.
+Import exits 0 with the existing Android build-tools-directory warning.
+
+The same native focused review at 832x480 also passes **82 checks**, exit 0,
+with empty runtime stderr. Village-pan, portal-layout, bite and dive captures
+were inspected:
+`%LOCALAPPDATA%/Temp/tidesworn-tests-2270e910423248dd83a918b4d30f8821`.
+
+Before the final Kraken/rescue and horizontal-capture revisions, the complete
+tide scene passes **6,792 checks, exit 0** at
+`%LOCALAPPDATA%/Temp/tidesworn-tests-8cbcb1bf74cf453abb38525ac4bcde66`.
+This includes the earlier ocean-music changes. A temporary copy of the Windows
+wrapper allowed 1,200 seconds and added Godot's `--disable-render-loop` for the
+headless run; isolation, scene, assertions and rejection filters were unchanged.
+The committed wrapper retains its original timeout. The two save-failure warnings
+come from intentional final-departure/developer rollback fixtures. There are no
+failure, script-error or error markers.
+
+A preceding full attempt exposed the focused camera fixture calling tutorial
+Skip, which left the device's hidden-tutorial preference changed for later dock
+tests. The fixture now temporarily hides the guide without changing that
+preference and restores its presentation flag. That failed attempt is retained
+at `%LOCALAPPDATA%/Temp/tidesworn-tests-bb7f029c96be445b923af5802ef21434`.
+
+## 2026-11-01 — Kraken ink and propeller tentacles; continuous Arjun rescue
+
+KrakenKing's automatic specials now repeat drag/slam, black ink fan, then eight
+spinning tentacles. The first attack remains the original 0.6-second opening
+tentacle warning. Ink locks three warning lanes for 0.85 seconds, then fires
+three swept projectiles from the extended fighting tentacle. Solid cover clips
+the muzzle, warning lanes and projectiles. A fan pays damage at most once.
+The spin marks its 5.6-unit radius for one second before 1.4 seconds of active
+rotation. Leaving the circle or sheltering behind a solid pillar avoids damage;
+one cast pays at most one hit. Each new power has a distinct procedural sound.
+Reduce Motion holds the fan's arm angles while preserving the danger zone and
+timing. Geometry queries run during simulation, never inside the renderer.
+Death, retired-world ownership and invalid/dead player ownership cancel powers.
+The prison arm, ten crabs, rewards and separate tap-to-free transaction remain.
+
+ArjunRescueRenderer replaces the two restarting illustrations with a continuous
+twelve-second composition: lifting gate, release, reunion, walk to the dock,
+boarding, rope release and sailing. The caption changes at six seconds preserve
+actor/ship positions and frame overshoot. Both friends board before cast-off.
+Human-sized unarmed character poses and the existing UNISZA ship are warmed
+before drawing; smooth positions do not allocate new sprite textures per frame.
+Pause/Resume and focus loss freeze the timeline; focus return preserves manual
+pause. Fresh-input guards prevent the cage interaction from also skipping the
+film. Reduced motion uses two calm compositions. The renderer writes no saved
+state: Game/Island retain rescue commitment, suspension, incoming ship and sea
+closure ownership. The Field Guide describes the new attacks and rescue film.
+
+Focused coverage lives in `kraken_power_checks.gd` and `arjun_rescue_checks.gd`,
+called from the existing ocean-level route and canonical tide scene. This checks
+actual automatic ability order, warnings, swept hits, dodge, cover, one-hit
+deduplication, low-effects cues, stale-world cancellation, boss-death cleanup,
+timeline continuity, input guard, pause/focus, boarding and the actual home return.
+
+Native 1280x720 review: **99 checks, PASS, exit 0**, empty runtime stderr:
+`%LOCALAPPDATA%/Temp/tidesworn-tests-f6757bba56bd4956901eabc6d337d2f8`.
+Ink warning/projectile, spin, prison/reunion, walk, boarding and sailing captures
+were inspected. Earlier iterations are not final pass evidence: one test used
+an unsupported PackedArray helper (replaced with a loop), and one run loaded
+an older boss script before the new muzzle-cover assertion was added.
+
+The final native 832x480 review also passes **99 checks, exit 0**, with empty
+runtime stderr:
+`%LOCALAPPDATA%/Temp/tidesworn-tests-a212d50d9cd24ea88316695ad2fd5f14`.
+The same attack/rescue captures were inspected at the smaller size; captions,
+Pause/Resume and Skip remain inside the viewport.
+
+### Final requested capture/camera behavior
+
+The shark capture now keeps its normal left-facing direction and carries turtle
+and rider horizontally, at constant depth, completely beyond the left viewport
+edge. This supersedes the downward motion shown in earlier captures. Ride Again
+is enlarged to 220x60 and centred both horizontally and vertically for all turtle
+defeats. The village camera now inspects only while the drag is held: mouse-up
+or touch release immediately restores normal Adam following. The temporary Follow
+Adam button has been removed. The pointer fixture captures inspection before
+release, then checks the automatic return for both mouse and touch, and verifies
+constant-depth shark travel and the retry button's exact centre.
+
+The in-flight full attempt at
+`%LOCALAPPDATA%/Temp/tidesworn-tests-c0c92f807b27431e9264e9beb49ae2e6`
+was deliberately stopped to apply this user correction. It is not pass evidence;
+only that isolated test's verified process was stopped, leaving live games alone.
+
+Final requested behavior at native 1280x720: **84 checks, PASS, exit 0**, empty
+runtime stderr:
+`%LOCALAPPDATA%/Temp/tidesworn-tests-f725d0457f8c4909930602fa0208d7df`.
+Held village inspection, horizontal shark carry and centred retry captures were
+inspected. The touch assertion accepts either the touch ID or its emulated mouse
+pointer while still requiring an active drag and automatic release; a preceding
+iteration incorrectly required one exact pointer ID. An overlapping small-screen
+attempt ended before its summary and is not used as pass evidence.
+
+The sequential native 832x480 review also passes **84 checks, exit 0**, empty
+runtime stderr:
+`%LOCALAPPDATA%/Temp/tidesworn-tests-8f5551adf89f458784634222a42663f3`.
+Horizontal capture and centred retry screenshots were inspected at this size.
+Final metadata import exits 0 at
+`%LOCALAPPDATA%/Temp/tidesworn-tests-26d745ad8b27443b85daf545d2c0e4b2`,
+with the existing Android build-tools-directory warning and no script errors.
+
+The full run at
+`%LOCALAPPDATA%/Temp/tidesworn-tests-62e8653da6ee414695bbb03adf759253`
+had loaded the earlier exact-touch-ID assertion before its correction. It
+reported that fixture assertion while the centre-retry, muzzle-cover and Arjun
+continuity checks passed. It was stopped and restarted with the final fixture;
+it is not full-suite pass evidence.
+
+Final complete tide scene with all requested changes and the corrected pointer
+fixture: **6,823 checks, PASS, exit 0** at
+`%LOCALAPPDATA%/Temp/tidesworn-tests-c6d435126f7c4a1f9601142b247204a8`.
+This includes horizontal shark capture, centred retry, automatic camera return,
+saved control layouts, feeding/ocean audio, the Kraken powers, Arjun's continuous
+film and existing campaign/ending/developer/village regressions. It uses the same
+isolated temporary-wrapper method described above (1,200-second allowance and
+headless `--disable-render-loop`), with the committed wrapper unchanged. Both
+expected save-failure warnings come from the intentional departure/developer
+rollback fixtures. No `[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers are present.
+`git diff --check` passes; existing import line-ending notices are unchanged.

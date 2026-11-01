@@ -123,6 +123,7 @@ func _ready() -> void:
 	_root.resized.connect(_layout_gui)
 	get_window().size_changed.connect(_schedule_gui_layout)
 	GameState.data_changed.connect(refresh_all)
+	GameState.control_layout_changed.connect(_reload_control_layout)
 	GameState.pet_changed.connect(_refresh_pet)
 	GameSettings.changed.connect(_on_setting_changed)
 	_apply_touch_mode()
@@ -500,6 +501,7 @@ func _layout_gui() -> void:
 		var top := float(base.top) * factor
 		var control_id: Variant = _control_nodes.find_key(node)
 		if control_id != null and GameState.control_layout().has(control_id):
+			element_factor = 1.0 # Saved layout sizes are screen pixels, just like the editor.
 			left = float(base.left)
 			top = float(base.top)
 		# Fit the legacy mission guide between edge controls at large scales.
@@ -583,24 +585,21 @@ func get_control_layout_current() -> Dictionary:
 		var node := _control_nodes[control_id] as Control
 		if node == null:
 			continue
-		var node_size := node.size.x
-		if node is TouchActionButton:
-			node_size = (node as TouchActionButton).diameter
-		var base: Dictionary = _gui_layout.get(node, {})
-		result[control_id] = {"x": node.anchor_left * _root.size.x + float(base.get("left", node.offset_left)), "y": node.anchor_top * _root.size.y + float(base.get("top", node.offset_top)), "size": node_size}
-	for id in ["ocean_joystick", "ocean_pickup"]:
-		result[id] = GameState.control_layout().get(id, DEFAULT_CONTROL_LAYOUT[id]).duplicate()
+		result[control_id] = {"x": node.position.x, "y": node.position.y, "size": node.size.x * node.scale.x}
+	result.merge(OceanJourney.control_layout_for_view(_root.size))
 	return result
 
 
 func set_control_layout(control_id: String, x: float, y: float, control_size: float) -> void:
 	GameState.set_control_layout(control_id, x, y, control_size)
-	_apply_control(control_id, x, y, control_size)
 
 
 func reset_control_layout() -> void:
 	GameState.reset_control_layout()
+
+func _reload_control_layout() -> void:
 	_restore_default_control_layout()
+	_apply_control_layout(GameState.control_layout())
 
 
 func _restore_default_control_layout() -> void:

@@ -34,6 +34,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(ocean._sea_guide.visible and _contains(ocean._sea_guide,"Level 2 adds sharks"), "Sea Guide explains the first-level objects and second-level shark introduction")
 	if capture.is_valid(): await capture.call("ocean_01_guide")
 	ocean.dismiss_sea_guide()
+	await preload("res://tools/ocean_music_checks.gd").run(game, ocean, check)
 	check.call(ocean.spawn_item("shark",25).is_empty() and not ocean.sharks_enabled(), "level one rejects shark creation even through the shared spawn entry point")
 	check.call(ocean.scenery.life.all(func(actor: Dictionary) -> bool: return str(actor.kind) not in ["shark","megalodon"] or not actor.sprite.visible), "level one contains no visible shark or megalodon background silhouettes")
 	var first_catalog := _sample_spawns(ocean)
@@ -55,6 +56,8 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	GameState.save_game()
 	check.call(GameState.load_game() and int(GameState.campaign().ocean_stage) == 2, "the new final-level checkpoint survives a JSON reload during travel")
 	ocean._advance_route_exit(OceanJourney.ROUTE_EXIT_SECONDS)
+	game._sync_ocean_music()
+	check.call(game._ocean_music.playing and not game._ocean_music.stream_paused, "the same ocean music continues during the second-level arrival")
 	check.call(ocean.stage == 2 and ocean.phase == OceanJourney.Phase.ARRIVING and ocean.health == 3 and ocean.fullness == 100 and is_equal_approx(ocean._progress.progress,0.5), "level two arrives with reset lives/fullness at the halfway checkpoint")
 	check.call(ocean.scenery.life.any(func(actor: Dictionary) -> bool: return str(actor.kind) == "megalodon" and actor.sprite.visible), "the existing megalodon background appears only after entering level two")
 	ocean._advance_route_entry(OceanJourney.ROUTE_ENTRY_SECONDS)
@@ -79,7 +82,11 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 		await capture.call("ocean_03_level_two")
 	_clear(ocean)
 	ocean._end_run("Retry fixture")
+	game._sync_ocean_music()
+	check.call(game._ocean_music.stream_paused, "turtle defeat pauses the ocean song during the retry screen")
 	ocean.restart()
+	game._sync_ocean_music()
+	check.call(game._ocean_music.playing and not game._ocean_music.stream_paused, "Ride Again resumes ocean music for the checkpoint retry")
 	check.call(ocean.stage == 2 and ocean.health == 3 and ocean.fullness == 100 and ocean._shark_clock == 7, "retry keeps the final-level checkpoint while resetting health, fullness and shark timing")
 	ocean._process(4)
 	ocean.dismiss_sea_guide()
@@ -91,14 +98,17 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 		if game.world is KrakenIsland and not game._transitioning: break
 		await game.get_tree().create_timer(0.025).timeout
 	check.call(game.world is KrakenIsland and not game._transitioning, "the second level carries Adam directly into the actual Kraken Island world")
+	check.call(not game._ocean_music.playing, "Kraken Island handoff stops the underwater instrumental")
 	if game.world is KrakenIsland:
 		check.call(not game.world.cage.available and not bool(GameState.campaign().arjun_rescued), "two sea levels still require the Kraken fight and separate prison rescue")
 		if capture.is_valid(): await capture.call("ocean_04_kraken_arrival")
+		await preload("res://tools/kraken_power_checks.gd").run(game,check,capture)
 		await preload("res://tools/kraken_crab_checks.gd").run(game,check,capture)
 		await preload("res://tools/sea_journey_completion_checks.gd").run(game,check,capture)
 	GameState.data = saved
 	GameState._emit_all()
 	await game._load_lobby(false)
+	check.call(not game._ocean_music.playing, "returning to BESUT leaves only village music active")
 	GameState.autosave_enabled = autosave
 	game.set_process(ticking)
 

@@ -6,6 +6,7 @@ extends Node
 ## methods; they never keep their own copy of health, gold or progression.
 
 signal data_changed
+signal control_layout_changed
 signal village_project_changed
 signal day_phase_changed(night: bool)
 
@@ -329,6 +330,7 @@ func _finish_developer_restore() -> void:
 
 
 func _emit_all() -> void:
+	control_layout_changed.emit()
 	data_changed.emit()
 	pet_changed.emit()
 	house_changed.emit(int(data.get("house_level", 1)))
@@ -1275,6 +1277,7 @@ func set_control_layout(control_id: String, x: float, y: float, control_size: fl
 	layout[control_id] = {"x": clampf(snappedf(x, 1.0), 0, 8192), "y": clampf(snappedf(y, 1.0), 0, 8192), "size": clampf(snappedf(control_size, 1.0), 42, 260)}
 	settings.control_layout = layout
 	data.settings = settings
+	control_layout_changed.emit()
 	data_changed.emit()
 	save_game()
 
@@ -1283,6 +1286,7 @@ func reset_control_layout() -> void:
 	var settings: Dictionary = data.get("settings", {})
 	settings.control_layout = {}
 	data.settings = settings
+	control_layout_changed.emit()
 	data_changed.emit()
 	save_game()
 

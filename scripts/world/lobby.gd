@@ -1415,6 +1415,9 @@ func _build_camera() -> void:
 	camera.bounds = MAP_RECT
 	camera.global_position = player.global_position + Vector2(0, -0.8)
 	add_child(camera)
+	var pan := preload("res://scripts/core/village_camera_pan.gd").new()
+	pan.name = "VillageCameraPan"
+	camera.add_child(pan)
 
 
 func _on_sleep_changed(active: bool, progress: float, label: String) -> void:

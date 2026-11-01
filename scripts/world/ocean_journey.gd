@@ -19,6 +19,7 @@ const SPEED_PER_SECOND := 0.035
 const MAX_SPEED := 27.5
 const ACTION_REACH := 2.2
 const SHARK_LEVEL := 2
+const SHARK_BITE_SECONDS := 2.4
 const TURTLE_AT := Vector2(9.2, 12.8)
 var zone_name := "Turtle Ocean Journey"
 var phase := Phase.DIVE
@@ -46,6 +47,9 @@ var scenery: OceanScenery
 var _heart_clock := 12.0
 var _bomb_clock := 3.0
 var _sink_time := 0.0
+var _caught_shark: Sprite2D
+var _shark_start := Vector2.ZERO
+var _capture_start := Vector2.ZERO
 var _ocean_joystick: TouchJoystick
 var _ocean_settings: SettingsPanel
 var _intro := 0.0
@@ -116,6 +120,7 @@ func _ready() -> void:
 	_build_ui()
 	_build_ocean_controls()
 	_build_sea_guide()
+	GameState.control_layout_changed.connect(_apply_ocean_layout)
 	_refresh_ui()
 
 func _build_sea_guide() -> void:
@@ -140,7 +145,7 @@ func _build_sea_guide() -> void:
 	var lessons := [
 		["gather","PICK UP RUBBISH","Swim close to rubbish, then tap Pick Up or press E. Collect every piece."],
 		["food","FISH FEED THE TURTLE","Swim near fish: the turtle eats automatically. No Eat button needed."],
-		["bomb","TWO SEA LEVELS","Level 1 has bombs, rubbish, hearts and fish. Level 2 adds sharks. Dodge hazards with WASD or the joystick."],
+		["bomb","TWO SEA LEVELS","Level 1 has bombs, rubbish, hearts and fish. Level 2 adds sharks. A shark bite is fatal: stay clear of its jaws."],
 		["heart","WATCH HEALTH & FULLNESS","Pink hearts restore lives. Below 50% fullness you slow down; at 0% the turtle dies."]]
 	for lesson in lessons:
 		var row := HBoxContainer.new()
@@ -266,14 +271,15 @@ func _build_ui() -> void:
 	_return.offset_bottom = 226
 	_return.pressed.connect(return_to_shore)
 	root.add_child(_return)
-	_retry = GameUI.button("Ride Again", Vector2(180, 48))
+	_retry = GameUI.button("Ride Again", Vector2(220, 60))
 	_retry.anchor_left = 0.5
 	_retry.anchor_right = 0.5
-	_retry.anchor_top = 0.85
-	_retry.anchor_bottom = 0.85
-	_retry.offset_left = -90
-	_retry.offset_right = 90
-	_retry.offset_bottom = 48
+	_retry.anchor_top = 0.5
+	_retry.anchor_bottom = 0.5
+	_retry.offset_left = -110
+	_retry.offset_right = 110
+	_retry.offset_top = -30
+	_retry.offset_bottom = 30
 	_retry.visible = false
 	_retry.pressed.connect(restart)
 	root.add_child(_retry)
@@ -290,6 +296,7 @@ func _place_action(root: Control, button: TouchActionButton, left: float) -> voi
 	root.add_child(button)
 
 func _process(delta: float) -> void:
+	if is_instance_valid(_ocean_settings) and _ocean_settings.visible: return
 	_clock += delta
 	if phase in [Phase.DIVE, Phase.RESCUE]:
 		_advance_intro(delta)
@@ -308,13 +315,16 @@ func _process(delta: float) -> void:
 	if phase == Phase.FINISHED and health > 0:
 		player.position = turtle.position + Vector2(-0.55, -1.0)
 	if phase == Phase.FINISHED and health == 0:
-		_sink_time += delta
-		turtle.rotation = lerpf(0.0, PI, clampf(_sink_time, 0, 1))
-		turtle.position.y += delta * 1.8
-		turtle.modulate.a = maxf(0, 1.0 - (_sink_time - 0.8) / 1.4)
-		player.modulate.a = turtle.modulate.a
-		player.position = turtle.position + Vector2(-0.55, -1.0)
-		_retry.visible = _sink_time >= 2.0
+		if is_instance_valid(_caught_shark):
+			_advance_shark_bite(delta)
+		else:
+			_sink_time += delta
+			turtle.rotation = lerpf(0.0, PI, clampf(_sink_time, 0, 1))
+			turtle.position.y += delta * 1.8
+			turtle.modulate.a = maxf(0, 1.0 - (_sink_time - 0.8) / 1.4)
+			player.modulate.a = turtle.modulate.a
+			player.position = turtle.position + Vector2(-0.55, -1.0)
+			_retry.visible = _sink_time >= 2.0
 	_refresh_ui()
 	queue_redraw()
 
@@ -380,13 +390,16 @@ func _update_run(delta: float) -> void:
 		if item.kind in ["bomb", "shark"]:
 			# Swept hit test prevents fast bombs tunnelling through the shell.
 			var closest := Geometry2D.get_closest_point_to_segment(turtle.position + Vector2(0.6, 0), previous, sprite.position)
-			if closest.distance_to(turtle.position + Vector2(0.6, 0)) < (2.1 if item.kind == "shark" else 1.5) and _hurt_time <= 0:
+			if closest.distance_to(turtle.position + Vector2(0.6, 0)) < (2.1 if item.kind == "shark" else 1.5) and (item.kind == "shark" or _hurt_time <= 0):
+				if item.kind == "shark":
+					_begin_shark_bite(item)
+					break
 				var blast_at := sprite.position
 				if item.kind == "bomb": _resolve_item(item, false)
 				Vfx.burst(blast_at, Color("#ff9c45"), 14)
 				Vfx.ring(blast_at, 2.5, Color("#ffe09a"), 0.45)
 				Sfx.play("hit", -7)
-				_mistake("Shark bite! Dodge its open jaws." if item.kind == "shark" else "Bomb! Move in any direction to dodge.")
+				_mistake("Bomb! Move in any direction to dodge.")
 		if not item.get("resolved", false) and sprite.position.x + sprite.texture.get_width() * sprite.scale.x * 0.5 < visible_left() - 1.0:
 			_resolve_item(item, false)
 			if item.kind == "trash":
@@ -452,6 +465,7 @@ func _consume_item(item: Dictionary) -> void:
 		Sfx.play("skill_recover", -12)
 	else:
 		food_eaten += 1
+		Sfx.play("turtle_eat", -10)
 		fullness = minf(FULLNESS_MAX,fullness+FISH_FULLNESS)
 		_status.text = "Fish eaten · Fullness +35%. Pink hearts restore lives."
 		Vfx.sparks(mouth_position(), Vector2.UP, Color("#ffe09a"), 5)
@@ -492,12 +506,43 @@ func _end_run(message: String) -> void:
 	_retry.text = "Ride Again"
 	_retry.visible = false
 
+func _begin_shark_bite(item: Dictionary) -> void:
+	if phase != Phase.RUNNING or item.get("resolved", false): return
+	_caught_shark = item.node as Sprite2D
+	_shark_start = _caught_shark.position
+	_capture_start = turtle.position
+	item.resolved = true
+	items.erase(item) # The captured shark now belongs only to the death animation.
+	_end_run("The shark caught the turtle! Ride Again to retry this sea route.")
+	_hurt_time = 0.0
+	_caught_shark.z_index = 7
+	Sfx.play("shark_bite", -8)
+	_refresh_ui()
+
+func _advance_shark_bite(delta: float) -> void:
+	_sink_time = minf(SHARK_BITE_SECONDS, _sink_time + delta)
+	var travel := clampf((_sink_time - 0.4) / (SHARK_BITE_SECONDS - 0.4), 0, 1)
+	var left := camera.position.x - get_viewport_rect().size.x / camera.zoom.x * 0.5 - 9.0
+	var end := Vector2(left, _capture_start.y)
+	turtle.position = _capture_start.lerp(end, travel * travel * (3.0 - 2.0 * travel))
+	_caught_shark.rotation = 0.0
+	var jaw := Vector2(-2.0, 0.35)
+	_caught_shark.position = _shark_start.lerp(turtle.position - jaw, clampf(_sink_time / 0.2, 0, 1))
+	_caught_shark.texture = OceanArt.creature("shark_bite" if _sink_time >= 0.2 else "shark", int(_clock * 3) % 2)
+	turtle.rotation = 0.0
+	player.rotation = 0.0
+	player.position = turtle.position + Vector2(-0.55, -1.0)
+	_retry.visible = _sink_time >= SHARK_BITE_SECONDS
+
 func restart() -> void:
 	if phase != Phase.FINISHED or health > 0:
 		return
 	for item in items:
 		(item.node as Node).queue_free()
 	items.clear()
+	if is_instance_valid(_caught_shark): _caught_shark.queue_free()
+	_caught_shark = null
+	player.rotation = 0.0
 	health = MAX_HEALTH
 	fullness = FULLNESS_MAX
 	missed_trash = 0
@@ -525,6 +570,7 @@ func restart() -> void:
 
 func return_to_shore() -> void:
 	if phase in [Phase.TRAVELLING, Phase.ARRIVING]: return
+	if is_instance_valid(_caught_shark) and _sink_time < SHARK_BITE_SECONDS: return
 	_ocean_joystick.cancel()
 	_pickup.cancel()
 	var game := get_tree().get_first_node_in_group("game") as Game
@@ -544,7 +590,7 @@ func _refresh_ui() -> void:
 	_status.visible = phase != Phase.BRIEFING
 	_pickup.visible = not travelling
 	if is_instance_valid(_ocean_joystick): _ocean_joystick.visible = not travelling
-	_return.disabled = travelling
+	_return.disabled = travelling or (is_instance_valid(_caught_shark) and _sink_time < SHARK_BITE_SECONDS)
 	if is_instance_valid(_controls_button): _controls_button.disabled = travelling
 	if is_instance_valid(_guide_button): _guide_button.disabled = phase != Phase.RUNNING
 	_pickup.set_touch_enabled(phase == Phase.RUNNING)
@@ -674,21 +720,31 @@ func _build_ocean_controls() -> void:
 	_apply_ocean_layout()
 
 func _apply_ocean_layout() -> void:
-	var view := get_viewport_rect().size
-	var defaults := {"ocean_joystick": {"x": 24.0, "y": view.y - 210.0, "size": 180.0}, "ocean_pickup": {"x": view.x - 136.0, "y": view.y - 132.0, "size": 104.0}}
+	var layout := control_layout_for_view(get_viewport_rect().size)
 	var controls := {"ocean_joystick": _ocean_joystick, "ocean_pickup": _pickup}
 	for id in controls:
-		var values: Dictionary = GameState.control_layout().get(id, defaults[id])
+		var values: Dictionary = layout[id]
 		var node := controls[id] as Control
 		var extent := clampf(float(values.get("size", 104)), 42, 260)
-		node.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		node.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 		node.custom_minimum_size = Vector2.ONE * extent
 		node.size = Vector2.ONE * extent
-		node.position = Vector2(float(values.get("x", 24)), float(values.get("y", 400))).clamp(Vector2.ZERO, (view - node.size).max(Vector2.ZERO))
+		node.position = Vector2(float(values.x), float(values.y))
 		if node is TouchActionButton: node.diameter = extent
 		if node is TouchJoystick:
 			node.radius = extent * 0.38
 			node.knob_radius = extent * 0.16
+		node.queue_redraw()
+
+static func control_layout_for_view(view: Vector2) -> Dictionary:
+	var defaults := {"ocean_joystick": {"x": 24.0, "y": view.y - 210.0, "size": 180.0}, "ocean_pickup": {"x": view.x - 136.0, "y": view.y - 132.0, "size": 104.0}}
+	var saved := GameState.control_layout()
+	for id in defaults:
+		var values: Dictionary = saved.get(id, defaults[id]).duplicate()
+		var extent := clampf(float(values.get("size", 104)), 42, 260)
+		var origin := Vector2(float(values.get("x", 24)), float(values.get("y", 400))).clamp(Vector2(6,6), (view - Vector2.ONE * extent - Vector2(6,6)).max(Vector2(6,6)))
+		defaults[id] = {"x": origin.x, "y": origin.y, "size": extent}
+	return defaults
 
 func visible_right() -> float:
 	return camera.position.x + get_viewport_rect().size.x / camera.zoom.x * 0.5

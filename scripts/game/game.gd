@@ -38,6 +38,8 @@ var _arjun_walk: Tween
 var _reunion_check_timer := 0.0
 const VILLAGE_MUSIC_PATH := "res://assets/audio/besut_village.ogg"
 var _village_music: AudioStreamPlayer
+const OCEAN_MUSIC_PATH := "res://assets/audio/besut_ocean.ogg"
+var _ocean_music: AudioStreamPlayer
 
 var _developer_layer: CanvasLayer
 var _developer_bar: HBoxContainer
@@ -73,6 +75,10 @@ func _ready() -> void:
 	_village_music.name = "VillageMusic"
 	_village_music.volume_db = -12.0
 	add_child(_village_music)
+	_ocean_music = AudioStreamPlayer.new()
+	_ocean_music.name = "OceanMusic"
+	_ocean_music.volume_db = -15.0
+	add_child(_ocean_music)
 	_build_developer_tools()
 	_connect_hud()
 	GameState.player_defeated.connect(_on_player_defeated)
@@ -83,6 +89,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_refresh_developer_overlay()
 	_sync_village_music()
+	_sync_ocean_music()
 	if _developer_paused: return
 	_reunion_check_timer += delta
 	if _reunion_check_timer >= 0.75:
@@ -112,6 +119,20 @@ func _sync_village_music() -> void:
 	# continue village life; story-owned sound and developer suspension take priority.
 	if not is_instance_valid(_village_music): return
 	_village_music.stream_paused = not world is Lobby or _story_active or _developer_paused or _game_over or is_instance_valid(title_screen) or not Sfx.battle_track.is_empty()
+
+
+func _sync_ocean_music() -> void:
+	if not is_instance_valid(_ocean_music): return
+	if not is_instance_valid(world) or not world is OceanJourney or world.is_queued_for_deletion():
+		_ocean_music.stop()
+		return
+	# One player carries the loop across both levels and retry. Game owns it so
+	# suspending the ocean for developer tools also suspends its audio clock.
+	if _ocean_music.stream == null:
+		_ocean_music.stream = load(OCEAN_MUSIC_PATH) as AudioStreamOggVorbis
+	if not _ocean_music.playing:
+		_ocean_music.play()
+	_ocean_music.stream_paused = _story_active or _developer_paused or _game_over or is_instance_valid(title_screen) or world.phase == OceanJourney.Phase.FINISHED or (is_instance_valid(world._ocean_settings) and world._ocean_settings.visible)
 
 
 func _connect_hud() -> void:
@@ -227,6 +248,7 @@ func _clear_world() -> void:
 	_sailing = false
 	Sfx.stop_battle_music()
 	_village_music.stop()
+	_ocean_music.stop()
 	home_interior = null
 	if is_instance_valid(world) and world is Lobby and world.journey_serial == GameState.journey_serial:
 		GameState.store_home_monsters(world.capture_monsters())
@@ -748,6 +770,7 @@ func enter_ocean(boarding: ShipDeparture) -> void:
 	ocean.name = "OceanJourney"
 	world = ocean
 	_world_holder.add_child(ocean)
+	_sync_ocean_music()
 	hud.set_world(ocean)
 	hud.visible = false
 	_apply_input_lock()

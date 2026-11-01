@@ -23,6 +23,7 @@ func _ready() -> void:
 	_check(GameState.has_existing_save == false, "clean save state")
 	_check(game.title_screen._home_title.text == "BESUT" and game.title_screen._home_wordmark.text == "P R O T E C T", "main menu keeps the original PROTECT BESUT wordmark")
 	_check(not game._village_music.playing, "title does not play the village song")
+	_check(not game._ocean_music.playing, "title does not play the ocean instrumental")
 	for removed_text in ["01  /  THE SHORE WE CALL HOME", "Every great journey\nbegins with a little hope.", "PB (Protect BESUT)", "A HOME WORTH FIGHTING FOR", "Between the forest and the sea, a village is counting on you.", "Build a home. Find a companion. Defend your shore.", "Your first chapter is waiting. Start a new journey."]:
 		_check(not _has_label(game.title_screen, removed_text), "main menu omits removed copy: %s" % removed_text)
 	_check(not game.title_screen._save_summary.visible, "fresh main menu hides the empty save summary")

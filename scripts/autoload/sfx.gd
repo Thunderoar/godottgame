@@ -136,6 +136,26 @@ func _build_stream(kind: String) -> AudioStreamWAV:
 	var end_freq := 140.0
 	var noise_amount := 0.35
 	match kind:
+		"kraken_ink":
+			duration = 0.32
+			start_freq = 250.0
+			end_freq = 70.0
+			noise_amount = 0.5
+		"kraken_spin":
+			duration = 0.7
+			start_freq = 110.0
+			end_freq = 170.0
+			noise_amount = 0.65
+		"turtle_eat":
+			duration = 0.24
+			start_freq = 190.0
+			end_freq = 95.0
+			noise_amount = 0.65
+		"shark_bite":
+			duration = 0.38
+			start_freq = 160.0
+			end_freq = 45.0
+			noise_amount = 0.8
 		"ending_creak":
 			duration = 0.55
 			start_freq = 105.0
@@ -251,6 +271,9 @@ func _build_stream(kind: String) -> AudioStreamWAV:
 		lcg = (lcg * 1103515245 + 12345) & 0x7fffffff
 		var noise := (float(lcg) / 2147483647.0) * 2.0 - 1.0
 		var sample := (sin(phase) * 0.72 + noise * noise_amount) * envelope * attack
+		if kind == "turtle_eat":
+			# Three soft crunches, rather than the pickup/coin or healing chime.
+			sample *= pow(maxf(0.0, sin(ratio * PI * 3.0)), 2.0)
 		var value := int(clampf(sample, -1.0, 1.0) * 32767.0)
 		if value < 0:
 			value += 65536
