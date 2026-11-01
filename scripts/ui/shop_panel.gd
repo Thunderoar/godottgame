@@ -171,7 +171,7 @@ func _rebuild() -> void:
 		"potion":
 			add_section("POTIONS & CARE")
 			_add_stock_grid(ItemDB.stock_for("potion"))
-			add_body_text("Carry up to nine health potions. At 25% HP or below, hits automatically use one to heal you.", GameUI.MUTED, 13)
+			add_body_text("Use Sprint, Fast Attack and Shield potions from your Pack. Carry up to three Boss Revival Potions: they activate automatically on a fatal hit only during a portal boss or Kraken fight. Health potions auto-heal after a hit at 25% HP or below.", GameUI.MUTED, 13)
 		"equipment":
 			var project_card := VillageProjectCard.new()
 			project_card.allow_commission = false
@@ -664,6 +664,7 @@ func _coin_arc(from: Vector2, to: Vector2) -> void:
 
 
 func _icon_kind(item_id: String) -> String:
+	if ItemDB.get_item(item_id).has("icon"): return str(ItemDB.get_item(item_id).icon)
 	if item_id == "health_potion":
 		return "health_potion"
 	if item_id == "pet_food":

@@ -9,7 +9,7 @@ static func creature(kind: String, frame: int = 0) -> Texture2D:
 		var pale := Color("#d5ecdc")
 		var fin := 3 if frame % 2 else -3
 		match kind:
-			"shark", "megalodon", "whale":
+			"shark", "shark_bite", "megalodon", "whale":
 				var whale := kind == "whale"
 				var skin := Color("#426b8d") if whale else blue
 				PixelArt._fill_polygon(img,[Vector2i(94,36),Vector2i(125,14+fin),Vector2i(117,38),Vector2i(126,63-fin),Vector2i(92,47)],ink)
@@ -28,13 +28,14 @@ static func creature(kind: String, frame: int = 0) -> Texture2D:
 					PixelArt.line(img,12,43,28,48,ink)
 					for i in 5: PixelArt.line(img,22+i*5,49,25+i*5,55,blue)
 				else:
-					PixelArt.ellipse(img,18,48,16,16,ink)
-					PixelArt.ellipse(img,17,48,12,12,Color("#6c283e"))
-					PixelArt.ellipse(img,16,54,9,4,Color("#cd6878"))
+					var biting := kind == "shark_bite"
+					PixelArt.ellipse(img,18,48,16,8 if biting else 16,ink)
+					PixelArt.ellipse(img,17,48,12,5 if biting else 12,Color("#6c283e"))
+					if not biting: PixelArt.ellipse(img,16,54,9,4,Color("#cd6878"))
 					for i in 4:
 						var x := 7+i*6
-						PixelArt._fill_polygon(img,[Vector2i(x,37),Vector2i(x+5,38),Vector2i(x+2,45)],pale)
-						PixelArt._fill_polygon(img,[Vector2i(x,58),Vector2i(x+5,57),Vector2i(x+2,51)],pale)
+						PixelArt._fill_polygon(img,[Vector2i(x,43 if biting else 37),Vector2i(x+5,44 if biting else 38),Vector2i(x+2,48 if biting else 45)],pale)
+						PixelArt._fill_polygon(img,[Vector2i(x,53 if biting else 58),Vector2i(x+5,52 if biting else 57),Vector2i(x+2,48 if biting else 51)],pale)
 			"mermaid", "diver":
 				var skin := Color("#e1ad83")
 				PixelArt.ellipse(img,44,20,9,10,ink)

@@ -5,6 +5,7 @@ extends Node2D
 var _pulse := 0.0
 var _level: Label
 var _xp: Label
+var _boosts: Label
 
 
 func _ready() -> void:
@@ -25,6 +26,13 @@ func _ready() -> void:
 	_xp.add_theme_font_size_override("font_size", 10)
 	_xp.add_theme_color_override("font_shadow_color", Color.BLACK)
 	add_child(_xp)
+	_boosts = Label.new()
+	_boosts.scale = Vector2.ONE * PixelArt.PX
+	_boosts.add_theme_font_size_override("font_size", 11)
+	_boosts.add_theme_color_override("font_color", GameUI.TEAL)
+	_boosts.add_theme_color_override("font_shadow_color", Color.BLACK)
+	_boosts.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_boosts)
 	set_process(true)
 
 
@@ -32,6 +40,14 @@ func _process(delta: float) -> void:
 	_pulse += delta
 	_level.text = "Lv %d" % int(GameState.data.get("level", 1))
 	_xp.text = "XP %d/%d" % [int(GameState.data.get("xp", 0)), int(GameState.data.get("xp_next", 60))]
+	var statuses: Array[String] = []
+	if GameState.potion_time("sprint") > 0: statuses.append("Sprint %ds" % ceili(GameState.potion_time("sprint")))
+	if GameState.potion_time("haste") > 0: statuses.append("Fast attack %ds" % ceili(GameState.potion_time("haste")))
+	if GameState.shield() > 0: statuses.append("Shield %d" % GameState.shield())
+	var actor := get_parent() as Player
+	if is_instance_valid(actor) and actor.revival_flash > 0: statuses.append("REVIVED!")
+	_boosts.text = "\n".join(statuses)
+	_boosts.position = Vector2(-_boosts.get_minimum_size().x * PixelArt.PX * 0.5, -0.85-_boosts.get_minimum_size().y * PixelArt.PX)
 	queue_redraw()
 
 

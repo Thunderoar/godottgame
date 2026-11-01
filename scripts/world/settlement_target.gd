@@ -80,6 +80,7 @@ func take_damage(amount: int, _from_dir: Vector2 = Vector2.ZERO, _source: Node =
 
 
 func take_attack_damage(amount: int) -> void:
+	if DialogueWorldHold.protects(self): return
 	if GameState.game_over_active:
 		return
 	if not structure_id.is_empty():

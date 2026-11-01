@@ -227,6 +227,25 @@ static func icon(kind: String, size: int = 16) -> Texture2D:
                                 ellipse(img, 8, 10, 5, 5, Color("#8f2835"))
                                 ellipse(img, 8, 10, 4, 4, Color("#ef5763"))
                                 px(img, 6, 8, Color("#ffa2a8"))
+                        "sprint_potion", "haste_potion", "shield_potion", "boss_revival_potion":
+                                var liquid := Color("#63dba0")
+                                if kind == "haste_potion": liquid = Color("#f6bf58")
+                                elif kind == "shield_potion": liquid = Color("#68bafa")
+                                elif kind == "boss_revival_potion": liquid = Color("#d391f0")
+                                rect(img, 6, 1, 4, 4, Color("#dbe7df"))
+                                rect(img, 5, 4, 6, 3, Color("#6d5a4e"))
+                                ellipse(img, 8, 10, 5, 5, liquid.darkened(0.5))
+                                ellipse(img, 8, 10, 4, 4, liquid)
+                                px(img, 6, 8, liquid.lightened(0.6))
+                                if kind == "boss_revival_potion":
+                                        line(img, 8, 8, 8, 13, Color.WHITE)
+                                        hline(img, 6, 10, 5, Color.WHITE)
+                                elif kind == "shield_potion":
+                                        _fill_polygon(img, [Vector2i(6, 8), Vector2i(10, 8), Vector2i(10, 11), Vector2i(8, 13), Vector2i(6, 11)], Color("#e7f3ff"))
+                                else:
+                                        line(img, 9, 8, 7, 10, Color.WHITE)
+                                        line(img, 7, 10, 9, 10, Color.WHITE)
+                                        line(img, 9, 10, 7, 13, Color.WHITE)
                         "potion_blue", "mana_potion":
                                 rect(img, 6, 2, 4, 4, Color("#cfd6cf"))
                                 rect(img, 5, 5, 6, 3, Color("#6d5a4e"))

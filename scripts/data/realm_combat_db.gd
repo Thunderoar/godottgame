@@ -7,14 +7,37 @@ const PROFILES := {
 	"watcher": {"name":"Ember Watcher", "windup":0.90, "active":1.20, "recovery":0.65, "cooldown":3.6},
 	"keeper": {"name":"Rune Keeper", "windup":1.05, "active":0.30, "recovery":0.80, "cooldown":4.5},
 }
+const WAVE_SIZES := [2,4,6]
+const REINFORCEMENT_WARNING := 1.4
 const PAIRS := [
-	{"id":"rootbound_patrol", "hint":"Rootbound patrol · read the rush, step aside, then counter.", "core":Rect2(29.2,36,8.6,3.6), "pursuit":Rect2(27.5,35.3,12,4.7),
+	{"id":"rootbound_patrol", "wave_sizes":WAVE_SIZES, "hint":"Rootbound patrol · read the rush, step aside, then counter.", "core":Rect2(29.2,36,8.6,3.6), "pursuit":Rect2(27.5,35.3,12,4.7),
 		"homes":[Vector2(31,37),Vector2(34.6,36.8)], "profiles":["imp","imp"]},
-	{"id":"watchpost_guard", "hint":"Ember Watcher · find a fan gap, use stone cover, or approach from the side.", "core":Rect2(31,29.8,8,5.5), "pursuit":Rect2(29,29.3,11,7),
+	{"id":"watchpost_guard", "wave_sizes":WAVE_SIZES, "hint":"Ember Watcher · find a fan gap, use stone cover, or approach from the side.", "core":Rect2(31,29.8,8,5.5), "pursuit":Rect2(29,29.3,11,7),
 		"homes":[Vector2(34.8,33),Vector2(38.3,30.2)], "profiles":["imp","watcher"]},
-	{"id":"ashen_sentries", "hint":"Rune Keeper · leave the marked cross. The lantern remains a refuge.", "core":Rect2(22.6,25.5,9,4.8), "pursuit":Rect2(22.4,25.4,11,7),
+	{"id":"ashen_sentries", "wave_sizes":WAVE_SIZES, "hint":"Rune Keeper · leave the marked cross. The lantern remains a refuge.", "core":Rect2(22.6,25.5,9,4.8), "pursuit":Rect2(22.4,25.4,11,7),
 		"homes":[Vector2(24.1,27.4),Vector2(28.4,28.1)], "profiles":["imp","keeper"]},
 ]
+const WAVE_POSTS := {
+	"rootbound_patrol":[Vector2(31,37),Vector2(34.6,36.8),Vector2(29.5,38),Vector2(36.5,38),Vector2(31.5,39),Vector2(35,39)],
+	"watchpost_guard":[Vector2(34.8,33),Vector2(38.3,30.2),Vector2(31.5,32),Vector2(36.5,31),Vector2(32.3,34.2),Vector2(36,34.5)],
+	"ashen_sentries":[Vector2(24.1,27.4),Vector2(28.4,28.1),Vector2(23.5,29.4),Vector2(30,28.4),Vector2(26,30.2),Vector2(31.5,30.3)],
+}
+
+static func guard_total() -> int:
+	var per_sector := 0
+	for size in WAVE_SIZES: per_sector += int(size)
+	return PAIRS.size()*per_sector
+
+static func wave_size(wave: int) -> int:
+	return int(WAVE_SIZES[wave]) if wave >= 0 and wave < WAVE_SIZES.size() else 0
+
+static func wave_profile(id: String, member: int) -> String:
+	return str(pair(id).profiles[member%2])
+
+static func wave_xp(wave: int) -> int:
+	# 2*4 + 4*2 + 6*2 = 28 base XP per sector, preserving the old pair's total.
+	return 4 if wave == 0 else 2
+
 const COVER := Vector2(38.4,35)
 const COVER_SIZE := Vector2(0.8,1.2)
 const SHOT_SPEED := 5.0

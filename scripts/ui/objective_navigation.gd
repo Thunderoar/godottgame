@@ -63,6 +63,10 @@ static func _village(home: Lobby, id: String) -> Dictionary:
 	return {}
 
 static func _realm(realm: TwilightRealm, id: String) -> Dictionary:
+	if id == "citadel_road":
+		var step := str(CitadelApproachDB.next_step(GameState.citadel_path()).id)
+		var targets := {"crossing_guards":[Vector2(33,37.8),"Rootbound Crossing"], "crossing":[CitadelApproachDB.CROSSING,"Crossing Light"], "watchpost_guards":[Vector2(33.6,31.3),"Broken Watchpost"], "watchpost":[RealmDB.WINCH,"Rootway Winch"], "ashen_guards":[Vector2(28.1,29.8),"Ashen Approach"], "lantern":[RealmDB.CAMP,"Citadel Lantern"], "enter":[CitadelApproachDB.ENTRANCE,"Citadel Outer Ward"]}
+		return _point(targets[step][0],str(targets[step][1]))
 	if id in ["arjun", "return", "restored"]: return _point(RealmDB.RETURN_RIFT, "Return to BESUT")
 	if id == "checkpoint": return _point(RealmDB.CAMP, "Citadel Lantern")
 	if id in ["citadel", "citadel_boss", "mei_ling"]:

@@ -23,6 +23,7 @@ func _ready() -> void:
 	_check(GameState.has_existing_save == false, "clean save state")
 	_check(game.title_screen._home_title.text == "BESUT" and game.title_screen._home_wordmark.text == "P R O T E C T", "main menu keeps the original PROTECT BESUT wordmark")
 	_check(not game._village_music.playing, "title does not play the village song")
+	_check(not game._ocean_music.playing, "title does not play the ocean instrumental")
 	for removed_text in ["01  /  THE SHORE WE CALL HOME", "Every great journey\nbegins with a little hope.", "PB (Protect BESUT)", "A HOME WORTH FIGHTING FOR", "Between the forest and the sea, a village is counting on you.", "Build a home. Find a companion. Defend your shore.", "Your first chapter is waiting. Start a new journey."]:
 		_check(not _has_label(game.title_screen, removed_text), "main menu omits removed copy: %s" % removed_text)
 	_check(not game.title_screen._save_summary.visible, "fresh main menu hides the empty save summary")
@@ -57,7 +58,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	var dock_welcome := game._dock_conversation as DockConversation
-	_check(dock_welcome != null and game._story_active and not game.hud.visible, "opening beats hand off to Pak Rahim's player-paced dock welcome before lessons")
+	_check(dock_welcome != null and game._story_active and game.hud.visible and game.dialogue_holding(game.world), "opening beats hand off to Pak Rahim's player-paced dock welcome before lessons")
 	if dock_welcome != null: dock_welcome.finish()
 	await get_tree().physics_frame
 	await get_tree().physics_frame
@@ -186,6 +187,7 @@ func _ready() -> void:
 	await preload("res://tools/visual_style_checks.gd").run(game, _check)
 	await _test_auto_heal_and_shield()
 	await _test_pet_support()
+	await preload("res://tools/potion_checks.gd").run(game, _check)
 	await _test_pet_battle_portal()
 	await _test_rubbish_system()
 	await _test_portal_combat_and_auto_loot()
@@ -224,9 +226,11 @@ func _ready() -> void:
 	# Includes main/side grouping, untruncated rescue goals and shared Hide tips rules.
 	await preload("res://tools/objective_tracker_checks.gd").run(game, _check)
 	await preload("res://tools/side_quest_intro_checks.gd").run(game, _check)
+	await preload("res://tools/dialogue_hold_checks.gd").run(game, _check)
 	# Includes blocked repair recovery and the real Twilight -> village reward handoff.
 	await VillageProjectChecks.run(game, _check)
-	# Compact realm: living habitats, memories/cache transactions and three owned combat encounters.
+	# Compact realm: living habitats, memories/cache transactions and three owned wave sectors.
+	# Twilight integrates earned-road, shared-health and reinforcement-wave acceptance checks.
 	await preload("res://tools/twilight_checks.gd").run(game, _check)
 	await preload("res://tools/urchin_arrival_checks.gd").run(game, _check)
 	await preload("res://tools/fire_arrival_checks.gd").run(game, _check)
@@ -987,6 +991,7 @@ func _test_boss_and_progression() -> void:
 	_check(boss != null, "boss instance exists")
 	if boss == null:
 		return
+	preload("res://tools/citadel_checks.gd").prepare_fixture(game.world)
 	game.player().position = RealmDB.BOSS_THRESHOLD
 	game.world._physics_process(0.1)
 	boss.call("take_damage", 999999, Vector2.ZERO, game.call("player"))

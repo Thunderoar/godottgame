@@ -2,6 +2,13 @@ class_name TwilightRealm
 extends Dungeon
 ## One connected authored exploration world; Dungeon's actor/routing API stays valid.
 
+enum ApproachPhase { SEALED, READY, ENTRY_GRANTED, INTRO, COMBAT, RETREATING, RESTORED }
+var approach_phase := ApproachPhase.SEALED
+var ward: CitadelWard
+var _camp_prepare := false
+var _pending_preparation := false
+var _journey := -1
+var _building_encounters := false
 var wildlife: Dictionary = {}
 var combat: RealmEncounterDirector
 var _packs: Array[Dictionary] = []
@@ -24,6 +31,7 @@ var _reading_origin := Vector2.ZERO
 var mei_prison: MeiLingPrison
 
 func _ready() -> void:
+	_journey = GameState.journey_serial
 	portal_id = RealmDB.PORTAL
 	zone_name = "Twilight Wilds"
 	map_rect = Rect2(Vector2.ZERO, RealmDB.SIZE)
@@ -52,7 +60,13 @@ func _ready() -> void:
 	camera.global_position = player.position
 	_build_places()
 	if not _boss_defeated: _build_encounters()
+	ward = CitadelWard.new()
+	ward.realm = self
+	add_child(ward)
+	approach_phase = ApproachPhase.RESTORED if _boss_defeated else (ApproachPhase.READY if GameState.citadel_road_ready() else ApproachPhase.SEALED)
 	_build_realm_labels()
+	GameState.data_changed.connect(_refresh_approach)
+	_refresh_approach()
 	Vfx.ensure_pool(self)
 	GameState.player_defeated.connect(_on_player_defeated)
 	Sfx.stop_battle_music()
@@ -94,7 +108,7 @@ func _build_realm_bounds() -> void:
 	if GameState.realm_progress().shortcut: _shortcut_body.queue_free()
 
 func _place(kind: String, id: String, at: Vector2, title: String) -> RealmInteractable:
-	var item: RealmInteractable = RealmWildPet.new() if kind == "pet" else RealmInteractable.new()
+	var item: RealmInteractable = RealmWildPet.new() if kind == "pet" else (CitadelRoadSite.new() if kind in ["road_light", "shortcut", "camp", "ward"] else RealmInteractable.new())
 	item.kind = kind
 	item.stable_id = id
 	item.position = at
@@ -107,7 +121,9 @@ func _build_places() -> void:
 	mei_prison.position = RealmDB.MEI_PRISON
 	add_child(mei_prison)
 	_place("exit", "arrival", RealmDB.RETURN_RIFT, "Return to BESUT\nBank carried loot")
-	_place("shortcut", "rootway", RealmDB.WINCH, "Rootway winch")
+	_place("road_light", "crossing", CitadelApproachDB.CROSSING, "Crossing light")
+	_place("shortcut", "watchpost", RealmDB.WINCH, "Rootway winch")
+	_place("ward", "citadel_entry", CitadelApproachDB.ENTRANCE, "Citadel outer ward")
 	_camp = _place("camp", "camp", RealmDB.CAMP, "Citadel lantern\nRest & set checkpoint")
 	for id in RealmDB.ENCOUNTERS:
 		var def: Dictionary = RealmDB.ENCOUNTERS[id]
@@ -129,24 +145,13 @@ func _build_places() -> void:
 	if _boss_defeated: _place("exit", "citadel", RealmDB.BOSS, "The citadel is restored\nReturn to BESUT")
 
 func _build_encounters() -> void:
-	var index := 0
-	for pair in RealmCombatDB.PAIRS:
-		for member in 2:
-			var enemy := RealmGuard.new()
-			enemy.director = combat
-			enemy.encounter_id = str(pair.id)
-			enemy.profile = str(pair.profiles[member])
-			enemy.position = pair.homes[member]
-			enemy.home = enemy.position
-			enemy.max_hp = 42 + index * 2
-			enemy.damage = 7
-			enemy.speed = 1.7
-			enemy.xp_reward = 14
-			enemy.gold_reward = 7
-			add_child(enemy)
-			_packs.append({"enemy":enemy,"home":enemy.home,"active":false,"encounter":pair.id})
-			index += 1
+	_building_encounters = true
+	for definition in RealmCombatDB.PAIRS:
+		var id := str(definition.id)
+		if GameState.citadel_waves_cleared(id) == 0: spawn_guard_wave(id,0)
+	_building_encounters = false
 	var ruler := ElementalBoss.new()
+	ruler.spawn_shimmer = false # The first meeting reveals a fully visible, still-dormant actor.
 	ruler.disable_mode = CollisionObject2D.DISABLE_MODE_KEEP_ACTIVE
 	ruler.element = "chaos"
 	ruler.is_boss = true
@@ -164,6 +169,30 @@ func _build_encounters() -> void:
 	add_child(boss)
 	boss.process_mode = Node.PROCESS_MODE_DISABLED
 
+func spawn_guard_wave(id: String, wave: int) -> void:
+	if not _building_encounters and (not combat.combat_allowed() or combat.active_id != id): return
+	if _boss_defeated or _journey != GameState.journey_serial or wave != GameState.citadel_waves_cleared(id) or RealmCombatDB.wave_size(wave)==0 or not combat._living(id).is_empty(): return
+	var pair_index := CitadelApproachDB.PAIRS.find(id)
+	if pair_index < 0: return
+	for member in RealmCombatDB.wave_size(wave):
+		var enemy := RealmGuard.new()
+		enemy.member_index = member
+		enemy.wave_index = wave
+		enemy.director = combat
+		enemy.encounter_id = id
+		enemy.profile = RealmCombatDB.wave_profile(id,member)
+		enemy.position = RealmCombatDB.WAVE_POSTS[id][member]
+		enemy.home = enemy.position
+		# More actors, not spongier actors; stable original sector/member tuning.
+		enemy.max_hp = 42+(pair_index*2+member%2)*2
+		enemy.damage = 7
+		enemy.speed = 1.7
+		enemy.xp_reward = RealmCombatDB.wave_xp(wave)
+		enemy.gold_reward = 7
+		add_child(enemy)
+		_packs.append({"enemy":enemy,"home":enemy.home,"active":false,"encounter":id,"wave":wave})
+		if combat.active_id == id: enemy.engage()
+
 func _build_realm_labels() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 3
@@ -180,7 +209,7 @@ func _build_realm_labels() -> void:
 	_hint_label = GameUI.label("", 14, Color("#d7d8e3"))
 	root.add_child(_hint_label)
 	_hint_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	_hint_label.position = Vector2(140, 45)
+	_hint_label.position = Vector2(140, 64)
 	_hint_label.offset_right = -140
 	_hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -230,8 +259,8 @@ func clear_interest_view(at: Vector2) -> bool:
 	return get_world_2d().direct_space_state.intersect_ray(ray).is_empty()
 
 func _landmark_hint(id: String) -> String:
-	if combat != null and not combat.active_id.is_empty(): return str(RealmCombatDB.pair(combat.active_id).hint)
-	if not _boss_defeated: return str(RealmDB.LANDMARKS[id].hint)
+	if combat != null and not combat.active_id.is_empty(): return combat.wave_hint(combat.active_id)
+	if not _boss_defeated: return str(CitadelApproachDB.next_step(GameState.citadel_path()).detail)
 	return "The wilds are peaceful. Visit onward passages or return to BESUT." if GameState.unbonded_realm_pets().is_empty() else "The wilds are peaceful. Find missed companions, visit onward passages, or return to BESUT."
 
 func set_message(message: String) -> void:
@@ -273,32 +302,83 @@ func _physics_process(delta: float) -> void:
 		_camp_timer += delta
 		if _camp_timer >= 2.0:
 			_camp_resting = false
-			GameState.finish_realm_rest()
-			game._input_locked = false
-			game._apply_input_lock()
-			set_message("Rested. Checkpoint saved at the lantern. Step through the arch when ready.")
+			var result := GameState.finish_citadel_rest(_camp_prepare)
+			_pending_preparation = bool(result.get("prepared", false))
+			set_message(str(result.message))
+			game._on_modal_closed()
 	if _boss_defeated: return
+	if _pending_preparation and not game.hud.any_modal_open() and not game._story_active:
+		_pending_preparation = false
+		game.play_citadel_sequence(self,"preparation")
+		return
 	combat.tick(delta)
 	if not _boss_arrived and RealmDB.BOSS_TRIGGER.has_point(player.position):
-		close_reading()
-		_boss_arrived = true
-		camera.framing_bounds = RealmDB.BOSS_FRAME
-		camera.position = camera.framing_bounds.get_center()
-		camera.zoom = Vector2.ONE * minf(GameSettings.camera_zoom(),get_viewport_rect().size.y / 23.0)
-		GameState.discover_realm_landmark("citadel")
-		boss.process_mode = Node.PROCESS_MODE_INHERIT
-		boss.active = true
-		boss.dungeon_alerted = true
-		boss._player = player
-		boss._target = player
-		boss._notify_boss_start()
-		boss._enter(Enemy.State.ALERT)
-		Sfx.start_battle_music(portal_id)
-		set_message("SHADOW & CHAOS FIEND · Watch the fan, dash and crossing flames.")
+		if approach_phase == ApproachPhase.ENTRY_GRANTED and GameState.citadel_road_ready():
+			approach_phase = ApproachPhase.INTRO
+			_refresh_approach()
+			game.play_citadel_sequence(self,"intro")
+		elif approach_phase != ApproachPhase.INTRO:
+			# Only corrupted/external placement can get behind the closed physical ward.
+			player.position = RealmDB.CAMP
+			player.velocity = Vector2.ZERO
+			pet.position = player.position+Vector2(-1,0.5)
+			set_message(str(CitadelApproachDB.next_step(GameState.citadel_path()).detail))
 	if _boss_arrived and is_instance_valid(boss) and not boss.dead and not RealmDB.BOSS_ARENA.has_point(player.position):
 		reset_boss()
+	if approach_phase == ApproachPhase.ENTRY_GRANTED and player.position.distance_to(CitadelApproachDB.ENTRANCE)>5 and not RealmDB.BOSS_ARENA.has_point(player.position):
+		approach_phase = ApproachPhase.READY
+		_refresh_approach()
+
+func citadel_revealed() -> bool:
+	return _boss_defeated or bool(GameState.citadel_path().intro_seen) or approach_phase in [ApproachPhase.INTRO,ApproachPhase.COMBAT,ApproachPhase.RETREATING]
+
+func _refresh_approach() -> void:
+	if _boss_defeated: approach_phase = ApproachPhase.RESTORED
+	elif approach_phase in [ApproachPhase.SEALED,ApproachPhase.READY]:
+		approach_phase = ApproachPhase.READY if GameState.citadel_road_ready() else ApproachPhase.SEALED
+	if is_instance_valid(boss): boss.visible = citadel_revealed() and not boss.dead and not _boss_defeated
+	if is_instance_valid(mei_prison): mei_prison.visible = citadel_revealed() or bool(GameState.campaign().mei_ling_rescued)
+	if is_instance_valid(ward): ward.refresh()
+	for child in get_children():
+		if child is CitadelRoadSite: child.refresh()
+
+func request_citadel_entry() -> void:
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if not is_instance_valid(game) or game.world != self or _camp_resting or _boss_arrived or _leaving or game.hud.any_modal_open(): return
+	close_reading()
+	if not GameState.citadel_road_ready():
+		show_reading("The outer ward is sealed",str(CitadelApproachDB.next_step(GameState.citadel_path()).detail)+"\nThe three road lights open this ward—not Mei Ling's prison.",CitadelApproachDB.ENTRANCE)
+		return
+	game.play_citadel_sequence(self,"entry")
+
+func begin_citadel_combat() -> bool:
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if not is_instance_valid(game) or game.world != self or _journey != GameState.journey_serial or game._transitioning or game._defeat_pending or _boss_defeated or _leaving or player.dead or approach_phase != ApproachPhase.INTRO or not RealmDB.BOSS_ARENA.has_point(player.position) or not GameState.citadel_road_ready(): return false
+	if not GameState.mark_citadel_intro():
+		set_message("Could not save the introduction. Leave the arch and try again.")
+		return false
+	approach_phase = ApproachPhase.COMBAT
+	_boss_arrived = true
+	combat.cancel_all()
+	close_reading()
+	camera.framing_bounds = RealmDB.BOSS_FRAME
+	camera.position = camera.framing_bounds.get_center()
+	camera.zoom = Vector2.ONE*minf(GameSettings.camera_zoom(),get_viewport_rect().size.y/23.0)
+	GameState.discover_realm_landmark("citadel")
+	boss.process_mode = Node.PROCESS_MODE_INHERIT
+	boss.active = true
+	boss.dungeon_alerted = true
+	boss._player = player
+	boss._target = player
+	boss._notify_boss_start()
+	boss._enter(Enemy.State.ALERT)
+	Sfx.start_battle_music(portal_id)
+	set_message("SHADOW & CHAOS FIEND · Watch the fan, dash and crossing flames.")
+	_refresh_approach()
+	return true
 
 func reset_boss() -> void:
+	approach_phase = ApproachPhase.RETREATING
 	_boss_arrived = false
 	camera.framing_bounds = Rect2()
 	boss.active = false
@@ -315,7 +395,9 @@ func reset_boss() -> void:
 	boss._ability_label.visible = false
 	_clear_effects(boss)
 	Sfx.stop_battle_music()
-	set_message("The fiend retreats to its throne. Rest at the lantern before trying again.")
+	set_message("The fiend retreats to its throne. Your road lights remain restored. Rest before trying again.")
+	approach_phase = ApproachPhase.READY
+	_refresh_approach()
 
 func _clear_effects(caster: Enemy = null) -> void:
 	for child in get_children():
@@ -329,7 +411,9 @@ func alert_intruders(_include_boss: bool = false) -> void:
 	pass
 
 func can_damage_actor(actor: Node) -> bool:
-	if actor == boss: return _boss_arrived and not _boss_defeated
+	if actor == boss:
+		var game := get_tree().get_first_node_in_group("game") as Game
+		return is_instance_valid(game) and game.world == self and _journey == GameState.journey_serial and not game._transitioning and not game._defeat_pending and not game._story_active and not _leaving and not player.dead and approach_phase == ApproachPhase.COMBAT and _boss_arrived and GameState.citadel_road_ready() and not _boss_defeated
 	if actor is RealmGuard: return combat.can_damage(actor)
 	return actor.process_mode != Node.PROCESS_MODE_DISABLED
 
@@ -340,6 +424,8 @@ func can_target_actor(actor: Node) -> bool:
 func _on_boss_finished(_enemy: Enemy) -> void:
 	if _boss_defeated: return
 	_boss_defeated = true
+	approach_phase = ApproachPhase.RESTORED
+	_refresh_approach()
 	# Its ordinary death tween is suspended with the world during the animatic.
 	# The authored first shot owns the collapse; never reveal the old corpse afterward.
 	if is_instance_valid(_enemy) and _enemy == boss: _enemy.hide()
@@ -374,26 +460,38 @@ func challenge_pet(encounter: RealmInteractable) -> void:
 	if not game.hud.pet_battle_panel.open_wild_challenge(self, encounter): game._on_modal_closed()
 
 func open_shortcut() -> void:
-	GameState.open_realm_shortcut()
+	if _boss_defeated:
+		GameState.open_realm_shortcut()
+		if is_instance_valid(_shortcut_body): _shortcut_body.queue_free()
+		if _monster_routes != null: _monster_routes.invalidate()
+		combat.invalidate_routes()
+		pet.invalidate_routes()
+		set_message("Rootway opened. The restored road is yours to explore.")
+		_refresh_approach()
+		return
+	var result := GameState.light_citadel_site("watchpost")
+	set_message(str(result.message))
+	if not bool(result.ok): return
+	show_reading("The watchpost light", str(result.message), RealmDB.WINCH)
 	if is_instance_valid(_shortcut_body): _shortcut_body.queue_free()
 	if _monster_routes != null: _monster_routes.invalidate()
 	combat.invalidate_routes()
 	pet.invalidate_routes()
-	set_message("Rootway opened. The grove now loops directly to the citadel approach.")
+	_refresh_approach()
 
 func rest_at_camp() -> void:
-	if _boss_arrived: return
+	if _boss_arrived or _camp_resting: return
 	var game := get_tree().get_first_node_in_group("game") as Game
 	if not is_instance_valid(game): return
 	close_reading()
 	combat.cancel_all()
-	GameState.set_realm_checkpoint("camp")
+	_camp_prepare = not GameState.citadel_path().lantern_prepared and CitadelApproachDB.can_prepare(GameState.citadel_path(),bool(GameState.realm_progress().shortcut))
 	game.hud.release_world_controls()
 	game._input_locked = true
 	game._apply_input_lock()
 	_camp_resting = true
 	_camp_timer = 0
-	set_message("Resting at the lantern…")
+	set_message("Preparing the lantern…" if _camp_prepare else "Resting at the lantern… "+str(CitadelApproachDB.next_step(GameState.citadel_path()).title))
 
 func exit_to_lobby(bank_loot: bool) -> void:
 	var game := get_tree().get_first_node_in_group("game") as Game

@@ -17,6 +17,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	var player := game.player()
 	var student := lobby.get_node("UniszaStudent") as UniszaStudent
 	await _context_actions(game, student, check, capture)
+	await preload("res://tools/ocean_touch_camera_checks.gd").run(game, check, capture)
 	lobby = game.world as Lobby
 	player = game.player()
 	student = lobby.get_node("UniszaStudent") as UniszaStudent
@@ -76,7 +77,11 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	await game.get_tree().process_frame
 	await game.get_tree().physics_frame
 	check.call(player.position.distance_to(boarding.position) > boarding.interact_radius, "ship test starts beyond the old Board interaction distance")
-	var at := boarding.ship.get_global_transform_with_canvas() * (boarding.ship.get_rect().get_center()+Vector2(15,15))
+	var ship_transform := boarding.ship.get_global_transform_with_canvas()
+	var ship_rect := boarding.ship.get_rect()
+	var screen_ship := Rect2(ship_transform * ship_rect.position, ship_rect.size * boarding.ship.scale * lobby.camera.zoom).intersection(game.get_viewport().get_visible_rect())
+	check.call(screen_ship.has_area(), "ship tap fixture selects a visible part of the hull inside the viewport")
+	var at := screen_ship.get_center()
 	if capture.is_valid(): await capture.call("01b_ship_tap_target")
 	print("Ship tap fixture: at=",at," input_locked=",game._input_locked," available=",boarding.available," player_dist=",player.position.distance_to(boarding.position))
 	await _tap(game,at)
@@ -134,13 +139,17 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	ocean._hurt_time = 0
 	ocean.stage = 2 # Sharks are introduced only in the second sea level.
 	var shark := ocean.spawn_item("shark",ocean.turtle.position.x+0.5)
-	var hp := ocean.health
 	ocean._update_run(0.05)
-	check.call(ocean.health == hp-1 and not shark.resolved, "open-jaw shark bites cost a life while the shark continues swimming")
+	check.call(ocean.health == 0 and shark.resolved and ocean._caught_shark == shark.node, "a shark bite is immediately fatal and captures its shark for the carry animation")
 	ocean._update_run(0.05)
-	check.call(ocean.health == hp-1, "blinking protection prevents repeated shark damage")
+	check.call(ocean.health == 0 and ocean.phase == OceanJourney.Phase.FINISHED, "a captured turtle cannot continue feeding or taking repeated hazard hits")
 	check.call(ocean.actionable_item().get("kind","") != "shark", "Pick Up cannot consume a shark")
-	ocean._resolve_item(shark,false)
+	ocean._process(OceanJourney.SHARK_BITE_SECONDS)
+	var left := ocean.camera.position.x-ocean.get_viewport_rect().size.x/ocean.camera.zoom.x*0.5
+	check.call(ocean._caught_shark.position.x < left-5 and ocean._retry.visible, "the biting shark carries the rider beyond the side edge before Ride Again appears")
+	ocean.restart()
+	ocean._process(4)
+	ocean.dismiss_sea_guide()
 	ocean.stage = 2
 	ocean.elapsed = OceanJourney.STAGE_SECONDS/2
 	ocean._refresh_ui()

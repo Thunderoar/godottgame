@@ -51,8 +51,10 @@ func _build() -> void:
 	info.add_theme_constant_override("separation", 1)
 	hbox.add_child(info)
 	_name_label = GameUI.label("", 16, GameUI.TEXT)
+	_name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.add_child(_name_label)
 	_stat_label = GameUI.label("", 12, GameUI.GREEN)
+	_stat_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.add_child(_stat_label)
 	var right := VBoxContainer.new()
 	right.custom_minimum_size = Vector2(128, 0)

@@ -34,12 +34,12 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	actor.velocity = Vector2(2, 0)
 	Input.action_press("move_right")
 	check.call(game._try_side_quest_introduction(), "approaching the eligible workshop triggers its nearby notice introduction")
-	check.call(game._story_active and actor.controls_locked and actor.velocity == Vector2.ZERO and home.process_mode == Node.PROCESS_MODE_DISABLED, "introduction immediately stops the player and owns local world suspension")
+	check.call(game._story_active and actor.controls_locked and actor.velocity == Vector2.ZERO and home.process_mode == mode and game.dialogue_holding(home), "introduction holds the player without disabling the living world")
 	check.call(not Input.is_action_pressed("move_right") and not game.get_tree().paused, "introduction releases held synthetic controls without globally pausing the tree")
 	var clock := float(GameState.data.world_time)
 	var position := actor.global_position
 	game._process(2)
-	check.call(float(GameState.data.world_time) == clock and actor.global_position == position, "reading cannot advance village time or move the player")
+	check.call(float(GameState.data.world_time) > clock and actor.global_position == position, "reading advances village time while holding the player in place")
 	check.call(not game._try_side_quest_introduction(), "an active introduction cannot nest or open twice")
 	check.call(not GameState.side_quest_intro_seen("workshop") and GameState.project_status() == project, "displaying the introduction neither records completion nor commissions restoration")
 	if capture.is_valid():

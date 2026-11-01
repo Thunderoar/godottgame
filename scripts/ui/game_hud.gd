@@ -89,6 +89,7 @@ var _hp_count: Label
 var _build_mode_panel: PanelContainer
 var _menu_button: Button
 var _control_nodes: Dictionary = {}
+var _dialogue_control_visibility: Dictionary = {}
 var _default_transforms: Dictionary = {}
 var _fade: ColorRect
 var _vignette: TextureRect
@@ -123,6 +124,7 @@ func _ready() -> void:
 	_root.resized.connect(_layout_gui)
 	get_window().size_changed.connect(_schedule_gui_layout)
 	GameState.data_changed.connect(refresh_all)
+	GameState.control_layout_changed.connect(_reload_control_layout)
 	GameState.pet_changed.connect(_refresh_pet)
 	GameSettings.changed.connect(_on_setting_changed)
 	_apply_touch_mode()
@@ -500,6 +502,7 @@ func _layout_gui() -> void:
 		var top := float(base.top) * factor
 		var control_id: Variant = _control_nodes.find_key(node)
 		if control_id != null and GameState.control_layout().has(control_id):
+			element_factor = 1.0 # Saved layout sizes are screen pixels, just like the editor.
 			left = float(base.left)
 			top = float(base.top)
 		# Fit the legacy mission guide between edge controls at large scales.
@@ -583,24 +586,21 @@ func get_control_layout_current() -> Dictionary:
 		var node := _control_nodes[control_id] as Control
 		if node == null:
 			continue
-		var node_size := node.size.x
-		if node is TouchActionButton:
-			node_size = (node as TouchActionButton).diameter
-		var base: Dictionary = _gui_layout.get(node, {})
-		result[control_id] = {"x": node.anchor_left * _root.size.x + float(base.get("left", node.offset_left)), "y": node.anchor_top * _root.size.y + float(base.get("top", node.offset_top)), "size": node_size}
-	for id in ["ocean_joystick", "ocean_pickup"]:
-		result[id] = GameState.control_layout().get(id, DEFAULT_CONTROL_LAYOUT[id]).duplicate()
+		result[control_id] = {"x": node.position.x, "y": node.position.y, "size": node.size.x * node.scale.x}
+	result.merge(OceanJourney.control_layout_for_view(_root.size))
 	return result
 
 
 func set_control_layout(control_id: String, x: float, y: float, control_size: float) -> void:
 	GameState.set_control_layout(control_id, x, y, control_size)
-	_apply_control(control_id, x, y, control_size)
 
 
 func reset_control_layout() -> void:
 	GameState.reset_control_layout()
+
+func _reload_control_layout() -> void:
 	_restore_default_control_layout()
+	_apply_control_layout(GameState.control_layout())
 
 
 func _restore_default_control_layout() -> void:
@@ -847,7 +847,8 @@ func _process(delta: float) -> void:
 		_refresh_objectives()
 	_refresh_recovery()
 	_update_prompt()
-	if any_modal_open() or _sleep_panel.visible:
+	var dialogue_game := get_tree().get_first_node_in_group("game") as Game
+	if any_modal_open() or _sleep_panel.visible or (is_instance_valid(dialogue_game) and dialogue_game.dialogue_holding()):
 		return
 	if Input.is_action_just_pressed("open_inventory"):
 		inventory_requested.emit()
@@ -890,6 +891,7 @@ func _update_context_action(game: Game, player: Player) -> void:
 	var icon := "sprint"
 	var enabled := is_instance_valid(game) and is_instance_valid(player) and not player.controls_locked and not player.dead and not player.sleeping and not any_modal_open() and not game._transitioning and not game._story_active and not game._sailing and not game._game_over and not game._defeat_pending
 	var exit_panel := _context_exit_panel()
+	if is_instance_valid(game) and game.dialogue_holding(): _interact_button.visible = exit_panel == dialogue_panel and not game._story_active
 	if is_instance_valid(game) and is_instance_valid(exit_panel) and not game._transitioning and not game._story_active and not game._sailing and not game._defeat_pending and not game._game_over and not game._developer_paused:
 		target = exit_panel
 		action = ""
@@ -1062,6 +1064,16 @@ func _key_for_action(action_name: String) -> String:
 
 
 func _apply_touch_mode() -> void:
+	var owner_game := get_tree().get_first_node_in_group("game") as Game
+	if is_instance_valid(owner_game) and owner_game.dialogue_holding():
+		if _dialogue_control_visibility.is_empty():
+			for id in _control_nodes: _dialogue_control_visibility[id] = _control_nodes[id].visible
+		for control in _control_nodes.values(): control.visible = false
+		return
+	if not _dialogue_control_visibility.is_empty():
+		for id in _dialogue_control_visibility:
+			if _control_nodes.has(id): _control_nodes[id].visible = bool(_dialogue_control_visibility[id])
+		_dialogue_control_visibility.clear()
 	if pet_battle_panel != null and pet_battle_panel.is_wild_challenge():
 		for control in _control_nodes.values(): control.visible = false
 		return

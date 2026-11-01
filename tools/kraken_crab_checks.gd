@@ -71,7 +71,11 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	island.child_entered_tree.disconnect(count_gold)
 	check.call(crab.dead and not crab.is_in_group("enemies") and int(GameState.data.kills) == kills + 1 and gold_drops[0] == 1, "a defeated crab awards one kill and standard collectible Gold without duplicate rewards")
 	var before_boss := int(GameState.data.kills)
+	island.boss._cancel_powers()
+	island.boss._begin_power("ink")
+	island.boss._update_power(KrakenKing.INK_WARNING)
 	island.boss.take_damage(island.boss.max_hp,Vector2.ZERO,island.player)
+	check.call(island.boss.power_time < 0 and island.boss.ink_shots.is_empty(), "defeating the Kraken immediately cancels his ink and spinning powers")
 	check.call(island.defeated and crabs.all(func(guard: KrakenCrab) -> bool: return guard.dead or (guard.retreating and not guard.is_in_group("enemies") and guard.collision_layer == 0 and not guard.is_physics_processing())), "the Kraken's defeat makes every surviving crab withdraw without further attacks")
 	check.call(island.cage.available and not island.cage.opened and not bool(GameState.campaign().arjun_rescued) and int(GameState.data.kills) == before_boss + 1, "withdrawing guards give no kill rewards and preserve the separate prison rescue")
 	await game.get_tree().create_timer(0.55).timeout

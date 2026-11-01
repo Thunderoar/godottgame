@@ -17,6 +17,8 @@ var shake_amount := 0.0
 var shake_time := 0.0
 var _rng := RandomNumberGenerator.new()
 var _look := Vector2.ZERO
+var manual_pan := false
+var pan_center := Vector2.ZERO
 
 
 func _init() -> void:
@@ -55,6 +57,7 @@ func _physics_process(delta: float) -> void:
 			_look = _look.move_toward(Vector2.ZERO, delta * 6.0)
 		aim += _look
 		if framing_bounds.has_area(): aim = framing_bounds.get_center()
+		if manual_pan: aim = pan_center
 		global_position = global_position.lerp(aim, 1.0 - exp(-delta * follow_speed))
 	if GameSettings.reduce_motion() or not GameSettings.screen_shake():
 		shake_time = 0.0

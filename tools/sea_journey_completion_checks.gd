@@ -7,7 +7,8 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	island.cage.interact(island.player)
 	await game.get_tree().process_frame
 	check.call(not GameState.sea_journey_available() and bool(GameState.campaign().arjun_rescued) and game._active_story != null, "freeing Arjun closes sea access immediately while his rescue story still plays")
-	if game._active_story != null: game._active_story.finish()
+	if game._active_story != null:
+		await preload("res://tools/arjun_rescue_checks.gd").run(game._active_story,check,capture)
 	for frame in 180:
 		if game.world is Lobby and not game._transitioning: break
 		await game.get_tree().create_timer(0.025).timeout

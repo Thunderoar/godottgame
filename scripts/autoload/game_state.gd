@@ -6,6 +6,7 @@ extends Node
 ## methods; they never keep their own copy of health, gold or progression.
 
 signal data_changed
+signal control_layout_changed
 signal village_project_changed
 signal day_phase_changed(night: bool)
 
@@ -16,6 +17,8 @@ signal house_changed(level: int)
 signal portal_completed(portal_id: String)
 signal player_defeated
 signal auto_potion_used(healed: int)
+signal combat_potion_used(item_id: String)
+signal boss_revival_used(healed: int)
 signal expedition_changed
 signal boss_health_changed(active: bool, name: String, value: int, maximum: int)
 signal recovery_changed(active: bool, progress: float)
@@ -40,6 +43,7 @@ var _clock_accum := 0.0
 var _last_purchase: Dictionary = {}
 var _purchase_serial := 0
 var _project_work_frames: Dictionary = {}
+var _potion_times := {"sprint": 0.0, "haste": 0.0}
 
 
 var _developer_active := false
@@ -48,6 +52,7 @@ var _developer_return_has_save := false
 var _developer_return_autosave := true
 var _developer_return_game_over := false
 var _developer_return_save_hash := ""
+var _developer_return_potions: Dictionary = {}
 var _developer_restore_requires_title := false
 var _developer_options := {"invulnerable":false,"freeze_time":false}
 
@@ -79,8 +84,10 @@ func begin_developer_session() -> bool:
 	_developer_return_autosave = autosave_enabled
 	_developer_return_game_over = game_over_active
 	_developer_return_save_hash = FileAccess.get_sha256(SAVE_PATH) if FileAccess.file_exists(SAVE_PATH) else ""
+	_developer_return_potions = _potion_times.duplicate()
 	_developer_restore_requires_title = false
 	_developer_active = true
+	clear_potion_effects()
 	journey_serial += 1
 	autosave_enabled = true
 	game_over_active = false
@@ -95,6 +102,8 @@ func begin_developer_session() -> bool:
 func end_developer_session() -> bool:
 	if not _developer_active: return false
 	_developer_active = false
+	_potion_times = _developer_return_potions.duplicate()
+	_developer_return_potions.clear()
 	journey_serial += 1
 	data = _developer_return_data.duplicate(true)
 	has_existing_save = _developer_return_has_save
@@ -176,6 +185,13 @@ func developer_prepare(id: String) -> bool:
 			data.realm_progress.visit_active = portal == RealmDB.PORTAL
 			if portal == RealmDB.PORTAL:
 				data.realm_progress.checkpoint = "arrival"
+				data.realm_progress.citadel_path = CitadelApproachDB.defaults()
+				if id == "travel_citadel":
+					data.realm_progress.citadel_path.cleared_pairs = CitadelApproachDB.PAIRS.duplicate()
+					data.realm_progress.citadel_path.crossing_lit = true
+					data.realm_progress.citadel_path.watchpost_lit = true
+					data.realm_progress.citadel_path.lantern_prepared = true
+					data.realm_progress.shortcut = true
 	_sanitize_campaign()
 	_save_if_needed()
 	_emit_all()
@@ -274,7 +290,7 @@ func _make_default(character_id: String) -> Dictionary:
 		"settlement_layout": {},
 		"pet_battles": {},
 		"village_pets": [],
-		"realm_progress": {"cells": [], "landmarks": ["arrival"], "shortcut": false, "checkpoint": "arrival", "visit_active": false, "bonded": [], "waykeeper_met": false, "discovered_content": [], "read_fragments": [], "banked_caches": []},
+		"realm_progress": {"citadel_path": CitadelApproachDB.defaults(), "cells": [], "landmarks": ["arrival"], "shortcut": false, "checkpoint": "arrival", "visit_active": false, "bonded": [], "waykeeper_met": false, "discovered_content": [], "read_fragments": [], "banked_caches": []},
 		"roof_guns": {},
 		"sea_cleaned": 0,
 		"forest_health": {},
@@ -301,6 +317,7 @@ func _make_default(character_id: String) -> Dictionary:
 
 
 func new_game(character_id: String = DEFAULT_CHARACTER) -> void:
+	clear_potion_effects()
 	_finish_developer_restore()
 	_wild_session.clear()
 	journey_serial += 1
@@ -329,6 +346,7 @@ func _finish_developer_restore() -> void:
 
 
 func _emit_all() -> void:
+	control_layout_changed.emit()
 	data_changed.emit()
 	pet_changed.emit()
 	house_changed.emit(int(data.get("house_level", 1)))
@@ -486,7 +504,23 @@ func consume_item(item_id: String) -> Dictionary:
 
 	var used := false
 	var message := ""
-	if effect.has("heal"):
+	if effect.has("boss_revive"):
+		return {"ok": false, "message": "Carry this potion. It activates automatically on a fatal hit during an active portal boss or Kraken fight."}
+	if effect.has("sprint_seconds") or effect.has("haste_seconds") or effect.has("shield"):
+		var game := get_tree().get_first_node_in_group("game") as Game
+		if health() <= 0 or not is_instance_valid(game) or not is_instance_valid(game.potion_player()):
+			return {"ok": false, "message": "Use this potion while exploring on foot."}
+		if effect.has("shield"):
+			if shield() >= 60: return {"ok": false, "message": "Your shield is already full (60)."}
+			data.shield = mini(60, shield() + int(effect.shield))
+			message = "Shield ready: %d points." % shield()
+		else:
+			var id := "sprint" if effect.has("sprint_seconds") else "haste"
+			if potion_time(id) > 0: return {"ok": false, "message": "%s is still active. Wait until it ends." % str(item.name)}
+			_potion_times[id] = float(effect.get("sprint_seconds", effect.get("haste_seconds", 10.0)))
+			message = "%s active for %d seconds." % [str(item.name), ceili(potion_time(id))]
+		used = true
+	elif effect.has("heal"):
 		if health() >= health_max():
 			return {"ok": false, "message": "You are already at full health."}
 		data.hp = mini(health_max(), health() + int(effect.heal))
@@ -506,7 +540,25 @@ func consume_item(item_id: String) -> Dictionary:
 	_save_if_needed()
 	data_changed.emit()
 	toast_requested.emit(message, "good")
+	if item_id in ["sprint_potion", "haste_potion", "shield_potion"]: combat_potion_used.emit(item_id)
 	return {"ok": true, "message": message}
+
+
+func potion_time(id: String) -> float:
+	return float(_potion_times.get(id, 0.0))
+
+
+func attack_speed_multiplier() -> float:
+	return float(ItemDB.get_item("haste_potion").effect.attack_speed) if potion_time("haste") > 0 else 1.0
+
+
+func advance_potion_effects(delta: float) -> void:
+	for id in _potion_times:
+		_potion_times[id] = maxf(0, float(_potion_times[id]) - maxf(0, delta))
+
+
+func clear_potion_effects() -> void:
+	_potion_times = {"sprint": 0.0, "haste": 0.0}
 
 
 func equip_item(item_id: String) -> Dictionary:
@@ -632,12 +684,24 @@ func damage_player(amount: int) -> void:
 		reduced -= absorbed
 	if reduced > 0:
 		data.hp = maxi(0, health() - reduced)
-	var potion_used := _try_auto_heal()
+	var revived := _try_boss_revival()
+	var potion_used := _try_auto_heal() if not revived else false
 	_interrupt_village_work()
 	data_changed.emit()
-	if potion_used: _save_if_needed()
+	if potion_used or revived: _save_if_needed()
 	if health() <= 0:
 		player_defeated.emit()
+
+
+func _try_boss_revival() -> bool:
+	if health() > 0 or item_count("boss_revival_potion") <= 0: return false
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if not is_instance_valid(game) or not game.boss_revival_available(): return false
+	var ratio := float(ItemDB.get_item("boss_revival_potion").effect.boss_revive)
+	data.hp = maxi(1, roundi(health_max() * ratio))
+	remove_item("boss_revival_potion", 1)
+	boss_revival_used.emit(health())
+	return true
 
 
 func _try_auto_heal() -> bool:
@@ -674,9 +738,8 @@ func xp_for_level(level: int) -> int:
 	var step := maxi(0,level-1)
 	return 60+35*step+5*step*step
 
-func grant_xp(amount: int) -> void:
-	if amount <= 0:
-		return
+func _apply_xp(amount: int) -> bool:
+	if amount <= 0: return false
 	data.xp = int(data.get("xp", 0)) + amount
 	var leveled := false
 	while int(data.xp) >= int(data.get("xp_next", 60)):
@@ -686,6 +749,11 @@ func grant_xp(amount: int) -> void:
 		data.hp_max = int(data.get("hp_max", 100)) + 10
 		data.hp = health_max()
 		leveled = true
+	return leveled
+
+func grant_xp(amount: int) -> void:
+	if amount <= 0: return
+	var leveled := _apply_xp(amount)
 	if leveled:
 		toast_requested.emit("Level %d reached. Your path grows clearer." % int(data.level), "gold")
 	data_changed.emit()
@@ -889,6 +957,28 @@ func _sanitize_realm_progress() -> void:
 	for id in clean.read_fragments:
 		if id not in clean.discovered_content: clean.discovered_content.append(id)
 	if clean.waykeeper_met and RealmContentDB.WAYKEEPER not in clean.discovered_content: clean.discovered_content.append(RealmContentDB.WAYKEEPER)
+	var path_raw: Variant = progress.get("citadel_path", {})
+	var path := CitadelApproachDB.defaults()
+	if path_raw is Dictionary:
+		var pairs: Variant = path_raw.get("cleared_pairs", [])
+		if pairs is Array:
+			for id in CitadelApproachDB.PAIRS:
+				if id in pairs: path.cleared_pairs.append(id)
+		var waves_raw: Variant = path_raw.get("waves_cleared",{})
+		for id in CitadelApproachDB.PAIRS:
+			var completed := 0
+			if waves_raw is Dictionary:
+				var value: Variant = waves_raw.get(id,0)
+				if (value is int or value is float) and is_finite(float(value)) and float(value)==floorf(float(value)) and float(value)>=0 and float(value)<=RealmCombatDB.WAVE_SIZES.size(): completed = int(value)
+			if id in path.cleared_pairs: completed = RealmCombatDB.WAVE_SIZES.size()
+			path.waves_cleared[id] = completed
+			if completed == RealmCombatDB.WAVE_SIZES.size() and id not in path.cleared_pairs: path.cleared_pairs.append(id)
+		path.crossing_lit = path_raw.get("crossing_lit") is bool and path_raw.get("crossing_lit") == true and CitadelApproachDB.PAIRS[0] in path.cleared_pairs
+		path.watchpost_lit = path_raw.get("watchpost_lit") is bool and path_raw.get("watchpost_lit") == true and CitadelApproachDB.PAIRS[1] in path.cleared_pairs
+		if path.watchpost_lit: clean.shortcut = true
+		path.lantern_prepared = path_raw.get("lantern_prepared") is bool and path_raw.get("lantern_prepared") == true and CitadelApproachDB.can_prepare(path, clean.shortcut)
+		path.intro_seen = path_raw.get("intro_seen") is bool and path_raw.get("intro_seen") == true and path.lantern_prepared
+	clean.citadel_path = path
 	data.realm_progress = clean
 	var expedition: Variant = data.get("expedition", {})
 	if expedition is Dictionary and bool(expedition.get("active", false)) and str(expedition.get("portal_id", "")) == RealmDB.PORTAL:
@@ -898,6 +988,91 @@ func _sanitize_realm_progress() -> void:
 	if pending is Array and expedition_active() and expedition_portal() == RealmDB.PORTAL:
 		if RealmContentDB.CACHE in pending and RealmContentDB.CACHE not in clean.banked_caches: valid_pending.append(RealmContentDB.CACHE)
 	if expedition is Dictionary: data.expedition.pending_caches = valid_pending
+
+func citadel_path() -> Dictionary:
+	return (data.realm_progress.get("citadel_path", CitadelApproachDB.defaults()) as Dictionary).duplicate(true)
+
+func citadel_road_ready() -> bool:
+	return CitadelApproachDB.ready(citadel_path(), bool(data.realm_progress.shortcut))
+
+func citadel_waves_cleared(id: String) -> int:
+	var path := citadel_path()
+	if id in path.cleared_pairs: return RealmCombatDB.WAVE_SIZES.size()
+	return int(path.get("waves_cleared",{}).get(id,0))
+
+func _commit_citadel(before: Dictionary) -> bool:
+	if autosave_enabled and not _save_now():
+		data = before
+		return false
+	data_changed.emit()
+	return true
+
+func accept_realm_guard_death(actor: RealmGuard) -> bool:
+	if not is_instance_valid(actor) or actor.dead or actor.hp > 0 or actor.director == null or not actor.director.current_world(): return false
+	var director := actor.director
+	if actor.wave_index != citadel_waves_cleared(actor.encounter_id) or actor.member_index < 0 or actor.member_index >= RealmCombatDB.wave_size(actor.wave_index) or not director.world._packs.any(func(pack: Dictionary) -> bool: return is_instance_valid(pack.enemy) and pack.enemy == actor) or not director.can_damage(actor) or not CitadelApproachDB.PAIRS.has(actor.encounter_id): return false
+	var key := "%s:%d:%d" % [actor.encounter_id, actor.wave_index, actor.member_index]
+	if director.defeated_members.has(key): return false
+	var before := data.duplicate(true)
+	var path := citadel_path()
+	if actor.encounter_id in path.cleared_pairs: return false
+	director.defeated_members[key] = true
+	var wave_complete := true
+	for member in RealmCombatDB.wave_size(actor.wave_index):
+		if not director.defeated_members.has("%s:%d:%d" % [actor.encounter_id,actor.wave_index,member]): wave_complete = false
+	if wave_complete:
+		path.waves_cleared[actor.encounter_id] = actor.wave_index+1
+		if actor.wave_index+1 == RealmCombatDB.WAVE_SIZES.size(): path.cleared_pairs.append(actor.encounter_id)
+	data.realm_progress.citadel_path = path
+	data.kills = int(data.kills)+1
+	_apply_xp(actor.xp_reward*COMBAT_XP_MULTIPLIER)
+	if autosave_enabled and not _save_now():
+		data = before
+		director.defeated_members.erase(key)
+		return false
+	data_changed.emit()
+	return true
+
+func light_citadel_site(site: String) -> Dictionary:
+	if not bool(data.realm_progress.visit_active) or health() <= 0: return {"ok":false,"message":"Visit the Wilds first."}
+	var path := citadel_path()
+	var pair_id := "rootbound_patrol" if site == "crossing" else "watchpost_guard"
+	if site not in ["crossing", "watchpost"]: return {"ok":false,"message":"Unknown road light."}
+	if pair_id not in path.cleared_pairs: return {"ok":false,"message":("The crossing patrol still binds this light." if site == "crossing" else "The watchpost binding holds the winch fast.")}
+	var field := "crossing_lit" if site == "crossing" else "watchpost_lit"
+	if path[field]: return {"ok":true,"changed":false,"message":CitadelApproachDB.followup(path)}
+	var before := data.duplicate(true)
+	path[field] = true
+	data.realm_progress.citadel_path = path
+	if site == "watchpost": data.realm_progress.shortcut = true
+	if not _commit_citadel(before): return {"ok":false,"message":"Could not save the road light. Please try again."}
+	return {"ok":true,"changed":true,"message":("Adam: One light back where it belongs.\n" if site == "crossing" else "Adam: A road back—and another light forward.\n")+CitadelApproachDB.followup(path)}
+
+func finish_citadel_rest(prepare: bool) -> Dictionary:
+	if not bool(data.realm_progress.visit_active) or health() <= 0: return {"ok":false,"message":"This rest has ended."}
+	var path := citadel_path()
+	var preparing: bool = prepare and not path.lantern_prepared and CitadelApproachDB.can_prepare(path, bool(data.realm_progress.shortcut))
+	var before := data.duplicate(true)
+	data.hp = health_max()
+	# Mutate the pet without revive_active_pet's intermediate signals/save.
+	var companion := get_active_pet()
+	if not companion.is_empty():
+		companion.alive = true
+		companion.hp = int(companion.hp_max)
+	data.realm_progress.checkpoint = "camp"
+	if preparing:
+		path.lantern_prepared = true
+		data.realm_progress.citadel_path = path
+	if not _commit_citadel(before): return {"ok":false,"message":"Could not save the checkpoint. Please try again."}
+	pet_changed.emit()
+	return {"ok":true,"prepared":preparing,"message":("The outer ward can now be opened." if preparing else ("Rested. Checkpoint saved. The Wilds are peaceful." if bool(portal_state(RealmDB.PORTAL).get("cleared",false)) else "Rested. Checkpoint saved. "+CitadelApproachDB.followup(path)))}
+
+func mark_citadel_intro() -> bool:
+	if not citadel_road_ready(): return false
+	if citadel_path().intro_seen: return true
+	var before := data.duplicate(true)
+	data.realm_progress.citadel_path.intro_seen = true
+	return _commit_citadel(before)
 
 func discover_realm_at(at: Vector2) -> void:
 	var changed := false
@@ -1275,6 +1450,7 @@ func set_control_layout(control_id: String, x: float, y: float, control_size: fl
 	layout[control_id] = {"x": clampf(snappedf(x, 1.0), 0, 8192), "y": clampf(snappedf(y, 1.0), 0, 8192), "size": clampf(snappedf(control_size, 1.0), 42, 260)}
 	settings.control_layout = layout
 	data.settings = settings
+	control_layout_changed.emit()
 	data_changed.emit()
 	save_game()
 
@@ -1283,6 +1459,7 @@ func reset_control_layout() -> void:
 	var settings: Dictionary = data.get("settings", {})
 	settings.control_layout = {}
 	data.settings = settings
+	control_layout_changed.emit()
 	data_changed.emit()
 	save_game()
 
@@ -1629,6 +1806,7 @@ func complete_portal(portal_id: String) -> Dictionary:
 
 
 func defeat_in_portal() -> void:
+	clear_potion_effects()
 	data.realm_progress.visit_active = false
 	data.deaths = int(data.get("deaths", 0)) + 1
 	lose_expedition_loot()
@@ -1651,6 +1829,7 @@ func leave_portal_safely() -> Dictionary:
 
 
 func defeat_at_home() -> void:
+	clear_potion_effects()
 	# Home has no expedition loot to lose. Reuse the existing recovery rules
 	# without the portal's second player_defeated notification.
 	data.deaths = int(data.get("deaths", 0)) + 1
@@ -2076,6 +2255,7 @@ func load_game() -> bool:
 			completed.append(str(MissionDB.step(index).get("event", "")))
 		data.completed_missions = completed
 	_sanitize()
+	clear_potion_effects()
 	game_over_active = false
 	has_existing_save = true
 	_emit_all()
@@ -2083,6 +2263,7 @@ func load_game() -> bool:
 
 
 func delete_save() -> void:
+	clear_potion_effects()
 	if FileAccess.file_exists(save_path()):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path()))
 	has_existing_save = false

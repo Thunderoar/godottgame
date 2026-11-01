@@ -63,9 +63,14 @@ func _ready() -> void:
 	ship.arrived = true
 	await game.enter_ocean(ship)
 	_check(game.world is OceanJourney and not music.playing, "ocean transition stops village song")
+	_check(game._ocean_music.playing and not game._ocean_music.stream_paused, "real ship departure starts the ocean instrumental without village overlap")
+	var ocean := game.world as OceanJourney
+	ocean.set_process(false)
+	await preload("res://tools/ocean_music_checks.gd").run(game, ocean, _check)
 	await game._load_lobby(false)
 	await get_tree().create_timer(0.1).timeout
 	_check(music.playing and not music.stream_paused, "return to village restarts its song")
+	_check(not game._ocean_music.playing, "return to village stops the ocean instrumental")
 	await game.return_to_title()
 	_check(not music.playing, "title handoff stops village song")
 	GameState.delete_save()

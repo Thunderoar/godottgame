@@ -4,6 +4,28 @@
 The project/application name is still **Save The World**; the player-facing title is
 **PB (Protect BESUT)**. Tidesworn is also the name of the editor workspace.
 
+**2026-11-01 living-world dialogue:** ordinary NPC dialogue, Rahim's first/repeat
+conversations, nearby quest introductions and all Citadel conversation cards now
+use `DialogueWorldHold`, not a disabled world tree. Actors/combat callbacks and
+burn/growth/loot progression hold; ambience, shaders, idle visuals, village music,
+HUD and the shared clock continue. Night lighting changes normally; hostile arrivals
+wait until close and then recheck the current night. Release restores exact callback
+flags and never enables a previously disabled boss/actor. New actors join the hold
+before physics. Close/cancel/world replacement release ownership safely. Actual
+cinematic films, portal/raid reveals, pet battles and developer suspension retain
+their own existing rules. See `docs/LIVING_WORLD_DIALOGUE.md`.
+
+**2026-11-01 Citadel reinforcement waves:** each of the three road sectors now
+requires three waves of 2, 4 and 6 guards (36 total, separate from the boss).
+Only one sector and one committed attack/effect slot are active at a time.
+Gold arrival marks warn for 1.4 seconds; occupied posts defer arrival. Retreat,
+world/journey replacement and accepted pet challenges cancel pending warnings.
+`citadel_path.waves_cleared` saves completed waves; unfinished waves reconstruct.
+Legacy `cleared_pairs` IDs still mean completed sectors and migrate to three waves.
+All waves are required before that sector's road mechanism can be restored.
+Existing per-actor stats, shared overhead health and aggregate 252 guard XP remain;
+ordinary drops scale with additional kills. See `docs/REALM_REINFORCEMENT_WAVES.md`.
+
 **2026-10-30 completed sea journey:** freeing Arjun permanently closes outbound
 sea travel for that journey. `GameState.sea_journey_available()` derives this from
 the existing saved `arjun_rescued` flag. Ship availability, nearby/direct boarding,
@@ -106,9 +128,19 @@ Do not add arbitrary console evaluation or persist the unlock phrase. Review use
 `-Developer`, optional captures at 832x480/1280x720; the full tide gate includes it.
 See `docs/DEVELOPER_MODE.md`. The phrase is supplied privately, not in docs/tests.
 
+**2026-11-01 earned Citadel approach:** first-boss access now requires three road
+pairs, the crossing marker, watchpost winch/light, and prepared camp lantern.
+Nearby explicit Enter grants traversal; a Game-owned introduction then arms combat.
+Completed pairs persist, unfinished pairs reconstruct, and stable authored ordinals
+preserve stats. Early rest/optional pets/lore stay independent. The ward closes all
+chamber seams; the boss/prison/map portrait remain concealed until a legitimate
+reveal. GameState commits guard XP/kill/pair credit together. This supersedes the
+position-only threshold, optional winch and reset-all-guards descriptions below.
+See `docs/CITADEL_APPROACH_PLAN.md`; review `-Twilight`, `-MeiRescue`, `-Developer`.
+
 ## 1. Ground truth and scope
 
-- This checkout is `/home/roku/Documents/ChatGPT/game`; `project.godot` is at its root.
+- This checkout is `/home/roku/Documents/ChatGPT/game2/godottgame`; `project.godot` is at its root.
   Other tournamentgame/godottgame/GDT2 checkouts are independent repositories.
 - Inspected on **2026-10-27**, source commit **76b5357**, branch **main**. These are
   observations, not instructions to switch branches. Run `git rev-parse --show-toplevel`
