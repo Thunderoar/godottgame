@@ -7,7 +7,7 @@ static func description(role: String) -> String:
 		"builder", "construction_worker": return "BUILDER · Repairs damaged houses and fences during the day. Work takes 10 seconds after reaching the structure. The main-house level raises the worker baseline."
 		"planter", "tree_planter": return "TREE PLANTER · Plants a new sapling at a lost tree. Saplings are protected while growing for 30 seconds. Protect every tree: losing the entire forest ends the journey."
 		"fighter", "swordsman", "defender": return "SWORDSMAN · Patrols BESUT and attacks nearby sea urchins. Protect the houses where vulnerable residents shelter."
-		"potion": return "POTION MERCHANT · Sells health potions. Buy with Gold, then use them from Pack. Mana and player skills are no longer used."
+		"potion": return "POTION MERCHANT · Health, Sprint, Fast Attack, Shield and Boss Revival potions. Buy with Gold. Use boosts from Pack; carry Revival for boss fights."
 		"equipment": return "WEAPONS & TOWER DEFENSE · Basic swords, armour and shields are available from arrival. Restore Bram's West Workshop after Chaos Citadel to license advanced swords. Buy rooftop machine guns for intact houses here. Guns target fire monsters and sea urchins. Sell gathered wood for Gold."
 		"pet": return "PET KEEPER · Feed and select your owned companions here. Bond with wild companions in Twilight Wilds to recruit village guardians. Luma joins after Chaos Citadel."
 		"house": return "CONSTRUCTION MERCHANT · Upgrade the main house using Diamonds. Its level improves village houses, worker baselines, fences and purchased rooftop guns. After Chaos Citadel, commission the free West Workshop restoration. Builders work there by day, or you can help at its workbench."

@@ -1,6 +1,7 @@
 class_name InventoryPanel
 extends ModalBase
 ## Backpack, equipment and companion overview. All values read from GameState.
+var _use_message := ""
 
 func _ready() -> void:
 	_panel_size = Vector2(900, 650)
@@ -11,11 +12,13 @@ func _ready() -> void:
 
 
 func open_inventory() -> void:
+	_use_message = ""
 	open_panel("Backpack & Equipment")
 
 
 func _rebuild() -> void:
 	_clear_content()
+	if not _use_message.is_empty(): add_body_text(_use_message, GameUI.RED, 15)
 	add_body_text("Level %d     XP %d/%d" % [int(GameState.data.level), int(GameState.data.xp), int(GameState.data.xp_next)], GameUI.TEAL, 17)
 	content.add_child(GameUI.spacer(2))
 	# Equipment cards.
@@ -62,7 +65,9 @@ func _rebuild() -> void:
 		info.add_child(GameUI.label("%s  x%d" % [str(item.get("name", item_id)), count], 16))
 		var stat := GameState.item_stat_line(str(item_id))
 		if stat != "":
-			info.add_child(GameUI.label(stat, 12, GameUI.GREEN))
+			var stat_label := GameUI.label(stat, 12, GameUI.GREEN)
+			stat_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			info.add_child(stat_label)
 		var actions := HBoxContainer.new()
 		actions.add_theme_constant_override("separation", 8)
 		hbox.add_child(actions)
@@ -75,12 +80,12 @@ func _rebuild() -> void:
 				if not result.ok:
 					GameState.toast_requested.emit(str(result.message), "bad"))
 			actions.add_child(equip)
+		elif item.get("effect", {}).has("boss_revive"):
+			var hint := GameUI.label("Auto\nBoss fights only", 13, GameUI.GOLD)
+			actions.add_child(hint)
 		elif item.has("effect"):
 			var use := GameUI.button("Use", Vector2(104, 34))
-			use.pressed.connect(func() -> void:
-				var result := GameState.consume_item(str(item_id))
-				if not result.ok:
-					GameState.toast_requested.emit(str(result.message), "bad"))
+			use.pressed.connect(_use_item.bind(str(item_id)))
 			actions.add_child(use)
 		content.add_child(row)
 	if not any:
@@ -116,7 +121,17 @@ func _rebuild() -> void:
 		add_body_text("Loot is banked only when you return through the Shore Gate or defeat the boss.", GameUI.MUTED, 13)
 
 
+func _use_item(item_id: String) -> void:
+	var result := GameState.consume_item(item_id)
+	if result.ok and item_id in ["sprint_potion", "haste_potion", "shield_potion"]:
+		close_panel()
+		return
+	_use_message = "" if result.ok else str(result.message)
+	_rebuild()
+
+
 func _icon_kind(item_id: String) -> String:
+	if ItemDB.get_item(item_id).has("icon"): return str(ItemDB.get_item(item_id).icon)
 	if item_id == "health_potion":
 		return "health_potion"
 	if item_id == "pet_food":

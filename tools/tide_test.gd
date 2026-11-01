@@ -187,6 +187,7 @@ func _ready() -> void:
 	await preload("res://tools/visual_style_checks.gd").run(game, _check)
 	await _test_auto_heal_and_shield()
 	await _test_pet_support()
+	await preload("res://tools/potion_checks.gd").run(game, _check)
 	await _test_pet_battle_portal()
 	await _test_rubbish_system()
 	await _test_portal_combat_and_auto_loot()

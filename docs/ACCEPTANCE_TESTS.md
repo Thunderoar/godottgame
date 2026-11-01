@@ -3514,3 +3514,72 @@ headless `--disable-render-loop`), with the committed wrapper unchanged. Both
 expected save-failure warnings come from the intentional departure/developer
 rollback fixtures. No `[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers are present.
 `git diff --check` passes; existing import line-ending notices are unchanged.
+
+## 2026-11-01 — UniSZA Besut competition and team credits
+
+The title's About/Credits overlay now names UniSZA Besut, the 5th UMPSA X HUAWEI
+GameCenter Mobile App Competition and 25 November 2026. It lists Ayiz Bin Norwan
+(093629, Team Leader / Project Manager), Muhammad Qayyim Bin Mohd Zambri (093589,
+Game Director / Creative Lead) and Muhammad Farhan Bin Samil (093845, Co-Director
+/ Technical Developer), in the requested order. Names wrap and the existing
+scroll container keeps every role reachable on smaller screens. Opening credits
+always resets scrolling to the institution/event heading. Progression and save
+ownership are unchanged.
+
+An isolated native preview reused TitleChecks and checked panel bounds, reachable
+last credits and reopening at the top at 1280x720, 832x480 and 360x780:
+**42 checks, PASS, exit 0**, empty runtime stderr. Captures inspected at
+`%LOCALAPPDATA%/Temp/pb-credits-64dd01533cb74fada63a4c18f6b64785`.
+The temporary preview scene/scripts were removed after review.
+
+## 2026-11-01 — Potion Shop sprint, fast attack, shield and boss revival
+
+Four new catalog items are sold for Gold with distinct compact/native flask icons:
+Sprint (35, ten seconds), Fast Attack (50, 1.5x for ten seconds), Shield (60, adds
+sixty shield points capped at sixty), and Boss Revival (150, carry up to three).
+Boost use from Pack closes it and displays active effects above Adam; failures
+remain visible inside Pack. Sprint is automatic while steering and spends no
+stamina, including from initial exhaustion. Fast Attack preserves the weapon
+phase/active-hit contract and accelerates both phase time and cooldown. Shield
+uses the existing saved absorption resource. The merchant description and stock
+cards explain their use and limits without relying on the no-op toast surface.
+
+Boss Revival consumes once before a lethal damage event emits defeat. Game must
+own a live active boss and player: Twilight additionally requires its chamber
+threshold/arena; Kraken uses its active fortress encounter. Village fights, early
+realm exploration, defeated/retired bosses, sea turtle play, story/transition and
+developer suspension cannot authorize it. It restores half HP, applies two-second
+protection and keeps actor position, current boss HP, progression and carried
+expedition loot. It is separate from the retired pet-revival/mana items, which
+remain removed and sanitized. Temporary effects have no saved fields; the shared
+clock, save/load and developer-context rules are in `docs/COMBAT_POTIONS.md`.
+
+The new isolated `-Potions` route reuses `potion_checks.gd` in the canonical tide
+scene. It exercises actual Buy/Use button signals, duration/stamina and bow
+release/cooldown behavior, absorption, simultaneous boosts, ordinary-menu versus
+suspended timing, real world handoff, save/load, fatal village damage, the real
+citadel threshold, both boss revivals, overlapping hits and retired actor guards.
+
+Native focused review at 1280x720: **45 checks, PASS, exit 0**, empty runtime stderr:
+`%LOCALAPPDATA%/Temp/tidesworn-tests-9e5e01562d3d48d786b2d9455e906725`.
+Native 832x480: **45 checks, PASS, exit 0**, empty runtime stderr:
+`%LOCALAPPDATA%/Temp/tidesworn-tests-5a205b57b87446128193f43bacf33023`.
+Shop/stock, simultaneous boost and boss revival captures were inspected. The first
+fixture iteration inspected deferred shop content too early; waiting for its
+existing rebuild fixed the purchase setup. Save/load bottle comparisons normalize
+through `item_count()` rather than comparing JSON float dictionaries to integers.
+
+Metadata import exits 0 at
+`%LOCALAPPDATA%/Temp/tidesworn-tests-d2002ad473434f60b649a28bc66949c2`, with the
+existing Android build-tools-directory warning. A temporary wrapper allowed 240
+seconds for that import; the earlier default 90-second run timed out after class
+registration and is not pass evidence. The committed timeout is unchanged.
+
+Complete tide scene with these items, existing campaign rules and the updated
+credits: **6,868 checks, PASS, exit 0** at
+`%LOCALAPPDATA%/Temp/tidesworn-tests-bdb4ce1e717841d3b0499eb7b9756f59`.
+The isolated temporary Windows wrapper allowed 1,200 seconds and disabled the
+headless render loop, with the same scene, assertions and error filters as the
+committed gate. No `[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers were present.
+The two save-failure warnings are expected from the intentional final-departure
+and developer rollback fixtures. `git diff --check` passes.

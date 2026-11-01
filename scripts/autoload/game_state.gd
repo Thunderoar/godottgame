@@ -17,6 +17,8 @@ signal house_changed(level: int)
 signal portal_completed(portal_id: String)
 signal player_defeated
 signal auto_potion_used(healed: int)
+signal combat_potion_used(item_id: String)
+signal boss_revival_used(healed: int)
 signal expedition_changed
 signal boss_health_changed(active: bool, name: String, value: int, maximum: int)
 signal recovery_changed(active: bool, progress: float)
@@ -41,6 +43,7 @@ var _clock_accum := 0.0
 var _last_purchase: Dictionary = {}
 var _purchase_serial := 0
 var _project_work_frames: Dictionary = {}
+var _potion_times := {"sprint": 0.0, "haste": 0.0}
 
 
 var _developer_active := false
@@ -49,6 +52,7 @@ var _developer_return_has_save := false
 var _developer_return_autosave := true
 var _developer_return_game_over := false
 var _developer_return_save_hash := ""
+var _developer_return_potions: Dictionary = {}
 var _developer_restore_requires_title := false
 var _developer_options := {"invulnerable":false,"freeze_time":false}
 
@@ -80,8 +84,10 @@ func begin_developer_session() -> bool:
 	_developer_return_autosave = autosave_enabled
 	_developer_return_game_over = game_over_active
 	_developer_return_save_hash = FileAccess.get_sha256(SAVE_PATH) if FileAccess.file_exists(SAVE_PATH) else ""
+	_developer_return_potions = _potion_times.duplicate()
 	_developer_restore_requires_title = false
 	_developer_active = true
+	clear_potion_effects()
 	journey_serial += 1
 	autosave_enabled = true
 	game_over_active = false
@@ -96,6 +102,8 @@ func begin_developer_session() -> bool:
 func end_developer_session() -> bool:
 	if not _developer_active: return false
 	_developer_active = false
+	_potion_times = _developer_return_potions.duplicate()
+	_developer_return_potions.clear()
 	journey_serial += 1
 	data = _developer_return_data.duplicate(true)
 	has_existing_save = _developer_return_has_save
@@ -302,6 +310,7 @@ func _make_default(character_id: String) -> Dictionary:
 
 
 func new_game(character_id: String = DEFAULT_CHARACTER) -> void:
+	clear_potion_effects()
 	_finish_developer_restore()
 	_wild_session.clear()
 	journey_serial += 1
@@ -488,7 +497,23 @@ func consume_item(item_id: String) -> Dictionary:
 
 	var used := false
 	var message := ""
-	if effect.has("heal"):
+	if effect.has("boss_revive"):
+		return {"ok": false, "message": "Carry this potion. It activates automatically on a fatal hit during an active portal boss or Kraken fight."}
+	if effect.has("sprint_seconds") or effect.has("haste_seconds") or effect.has("shield"):
+		var game := get_tree().get_first_node_in_group("game") as Game
+		if health() <= 0 or not is_instance_valid(game) or not is_instance_valid(game.potion_player()):
+			return {"ok": false, "message": "Use this potion while exploring on foot."}
+		if effect.has("shield"):
+			if shield() >= 60: return {"ok": false, "message": "Your shield is already full (60)."}
+			data.shield = mini(60, shield() + int(effect.shield))
+			message = "Shield ready: %d points." % shield()
+		else:
+			var id := "sprint" if effect.has("sprint_seconds") else "haste"
+			if potion_time(id) > 0: return {"ok": false, "message": "%s is still active. Wait until it ends." % str(item.name)}
+			_potion_times[id] = float(effect.get("sprint_seconds", effect.get("haste_seconds", 10.0)))
+			message = "%s active for %d seconds." % [str(item.name), ceili(potion_time(id))]
+		used = true
+	elif effect.has("heal"):
 		if health() >= health_max():
 			return {"ok": false, "message": "You are already at full health."}
 		data.hp = mini(health_max(), health() + int(effect.heal))
@@ -508,7 +533,25 @@ func consume_item(item_id: String) -> Dictionary:
 	_save_if_needed()
 	data_changed.emit()
 	toast_requested.emit(message, "good")
+	if item_id in ["sprint_potion", "haste_potion", "shield_potion"]: combat_potion_used.emit(item_id)
 	return {"ok": true, "message": message}
+
+
+func potion_time(id: String) -> float:
+	return float(_potion_times.get(id, 0.0))
+
+
+func attack_speed_multiplier() -> float:
+	return float(ItemDB.get_item("haste_potion").effect.attack_speed) if potion_time("haste") > 0 else 1.0
+
+
+func advance_potion_effects(delta: float) -> void:
+	for id in _potion_times:
+		_potion_times[id] = maxf(0, float(_potion_times[id]) - maxf(0, delta))
+
+
+func clear_potion_effects() -> void:
+	_potion_times = {"sprint": 0.0, "haste": 0.0}
 
 
 func equip_item(item_id: String) -> Dictionary:
@@ -634,12 +677,24 @@ func damage_player(amount: int) -> void:
 		reduced -= absorbed
 	if reduced > 0:
 		data.hp = maxi(0, health() - reduced)
-	var potion_used := _try_auto_heal()
+	var revived := _try_boss_revival()
+	var potion_used := _try_auto_heal() if not revived else false
 	_interrupt_village_work()
 	data_changed.emit()
-	if potion_used: _save_if_needed()
+	if potion_used or revived: _save_if_needed()
 	if health() <= 0:
 		player_defeated.emit()
+
+
+func _try_boss_revival() -> bool:
+	if health() > 0 or item_count("boss_revival_potion") <= 0: return false
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if not is_instance_valid(game) or not game.boss_revival_available(): return false
+	var ratio := float(ItemDB.get_item("boss_revival_potion").effect.boss_revive)
+	data.hp = maxi(1, roundi(health_max() * ratio))
+	remove_item("boss_revival_potion", 1)
+	boss_revival_used.emit(health())
+	return true
 
 
 func _try_auto_heal() -> bool:
@@ -1633,6 +1688,7 @@ func complete_portal(portal_id: String) -> Dictionary:
 
 
 func defeat_in_portal() -> void:
+	clear_potion_effects()
 	data.realm_progress.visit_active = false
 	data.deaths = int(data.get("deaths", 0)) + 1
 	lose_expedition_loot()
@@ -1655,6 +1711,7 @@ func leave_portal_safely() -> Dictionary:
 
 
 func defeat_at_home() -> void:
+	clear_potion_effects()
 	# Home has no expedition loot to lose. Reuse the existing recovery rules
 	# without the portal's second player_defeated notification.
 	data.deaths = int(data.get("deaths", 0)) + 1
@@ -2080,6 +2137,7 @@ func load_game() -> bool:
 			completed.append(str(MissionDB.step(index).get("event", "")))
 		data.completed_missions = completed
 	_sanitize()
+	clear_potion_effects()
 	game_over_active = false
 	has_existing_save = true
 	_emit_all()
@@ -2087,6 +2145,7 @@ func load_game() -> bool:
 
 
 func delete_save() -> void:
+	clear_potion_effects()
 	if FileAccess.file_exists(save_path()):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path()))
 	has_existing_save = false

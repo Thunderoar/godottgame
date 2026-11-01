@@ -42,6 +42,21 @@ static func draw_icon(img: Image, kind: String, size: int) -> void:
 			_shield(img, s)
 		"potion_red", "health_potion":
 			_potion(img, s, Color("#8f2835"), Color("#ef5763"), Color("#ffb0a8"))
+		"sprint_potion", "haste_potion", "shield_potion", "boss_revival_potion":
+			var mid := Color("#63dba0")
+			if kind == "haste_potion": mid = Color("#f6bf58")
+			elif kind == "shield_potion": mid = Color("#68bafa")
+			elif kind == "boss_revival_potion": mid = Color("#d391f0")
+			_potion(img, s, mid.darkened(0.45), mid, mid.lightened(0.5))
+			if kind == "boss_revival_potion":
+				_line(img, 16*s, 16*s, 16*s, 25*s, Color.WHITE, 2*s)
+				_line(img, 12*s, 20*s, 20*s, 20*s, Color.WHITE, 2*s)
+			elif kind == "shield_potion":
+				for seg in [[12,16,20,16],[12,16,12,22],[20,16,20,22],[12,22,16,26],[20,22,16,26]]:
+					_line(img,seg[0]*s,seg[1]*s,seg[2]*s,seg[3]*s,Color.WHITE,2*s)
+			else:
+				for seg in [[18,16,13,21],[13,21,18,21],[18,21,14,26]]:
+					_line(img,seg[0]*s,seg[1]*s,seg[2]*s,seg[3]*s,Color.WHITE,2*s)
 		"potion_blue", "mana_potion":
 			_potion(img, s, Color("#243f79"), Color("#5889d7"), Color("#b5d0ff"))
 		"food":

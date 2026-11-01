@@ -64,6 +64,7 @@ var _idle_clock := 0.0
 var _lunge_impulse := Vector2.ZERO
 var _step_timer := 0.0
 var _step_count := 0
+var revival_flash := 0.0
 
 
 func _ready() -> void:
@@ -77,7 +78,32 @@ func _ready() -> void:
 	vitals.name = "VitalHud"
 	add_child(vitals)
 	GameState.auto_potion_used.connect(_on_auto_potion_used)
+	GameState.combat_potion_used.connect(_on_combat_potion_used)
+	GameState.boss_revival_used.connect(_on_boss_revival_used)
 	set_process_input(true)
+
+func _owns_potion_feedback() -> bool:
+	var game := get_tree().get_first_node_in_group("game") as Game
+	return not is_queued_for_deletion() and is_instance_valid(game) and game.player() == self and is_instance_valid(game.potion_player())
+
+func _on_combat_potion_used(item_id: String) -> void:
+	if not _owns_potion_feedback(): return
+	var colour := GameUI.TEAL if item_id != "haste_potion" else GameUI.GOLD
+	Vfx.ring(global_position, 1.0, colour, 0.5)
+	Vfx.pop(global_position+Vector2(0,-1.3), item_id, colour)
+	Sfx.play("skill_recover", -12)
+
+func _on_boss_revival_used(healed: int) -> void:
+	if not _owns_potion_feedback(): return
+	invulnerable = maxf(invulnerable, 2.0)
+	revival_flash = 2.0
+	_attack_phase = AttackPhase.NONE
+	attacking = false
+	_attack_timer = 0
+	Vfx.ring(global_position, 1.5, GameUI.GOLD, 0.7)
+	Vfx.number(global_position+Vector2(0,-0.9), healed, false, GameUI.GOLD)
+	Vfx.pop(global_position+Vector2(0,-1.3), "boss_revival_potion", GameUI.GOLD)
+	Sfx.play("skill_recover", -8)
 
 func _on_auto_potion_used(healed: int) -> void:
 	var game := get_tree().get_first_node_in_group("game") as Game
@@ -128,6 +154,7 @@ func _build_visual() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	revival_flash = maxf(0, revival_flash-delta)
 	_element_slow_time = maxf(0,_element_slow_time-delta)
 	if _element_slow_time <= 0: _element_slow_factor = 1.0
 	_update_stamina(delta)
@@ -138,7 +165,7 @@ func _physics_process(delta: float) -> void:
 		if invulnerable <= 0.0 and _visual:
 			_visual.modulate.a = 1.0
 	if _attack_timer > 0.0:
-		_attack_timer = maxf(0.0, _attack_timer - delta)
+		_attack_timer = maxf(0.0, _attack_timer - delta * GameState.attack_speed_multiplier())
 	_idle_clock += delta
 
 	if dead:
@@ -158,7 +185,7 @@ func _physics_process(delta: float) -> void:
 		_update_nearby()
 		return
 
-	_update_attack_phase(delta)
+	_update_attack_phase(delta * GameState.attack_speed_multiplier())
 
 	var input := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if input.length_squared() > 0.01:
@@ -191,8 +218,13 @@ func _physics_process(delta: float) -> void:
 
 func _update_stamina(delta: float) -> void:
 	var moving := Input.get_vector("move_left", "move_right", "move_up", "move_down").length_squared() > 0.01
-	sprinting = Input.is_action_pressed("sprint") and moving and not controls_locked and not sleeping and not dead and not exhausted and stamina > 0
-	if sprinting:
+	var boosted := GameState.potion_time("sprint") > 0
+	sprinting = (Input.is_action_pressed("sprint") or boosted) and moving and not controls_locked and not sleeping and not dead and (boosted or (not exhausted and stamina > 0))
+	if boosted:
+		stamina = minf(STAMINA_MAX, stamina + STAMINA_REGEN * delta)
+		_stamina_delay = 0
+		exhausted = false
+	elif sprinting:
 		stamina = maxf(0.0, stamina - STAMINA_DRAIN * delta)
 		_stamina_delay = 0.7
 		if stamina <= 0:
@@ -445,6 +477,8 @@ func _facing_index(dir: Vector2) -> int:
 # ------------------------------------------------------------------ damage & rest
 
 func take_damage(amount: int, from: Vector2 = Vector2.ZERO) -> void:
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if is_queued_for_deletion() or (is_instance_valid(game) and game.player() != self): return
 	if dead or sleeping or invulnerable > 0.0:
 		return
 	invulnerable = 0.55

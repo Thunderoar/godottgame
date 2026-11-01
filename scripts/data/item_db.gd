@@ -438,6 +438,34 @@ const ITEMS := {
 		"lost_on_defeat": false,
 	},
 
+	"sprint_potion": {
+		"name": "Sprint Potion", "kind": "consumable", "icon": "sprint_potion",
+		"price": 35, "currency": "gold", "stack": 9,
+		"effect": {"sprint_seconds": 10.0},
+		"description": "Automatically sprint while moving for 10 seconds without spending stamina. Use from your Pack.",
+		"shop": "potion", "lost_on_defeat": false,
+	},
+	"haste_potion": {
+		"name": "Fast Attack Potion", "kind": "consumable", "icon": "haste_potion",
+		"price": 50, "currency": "gold", "stack": 9,
+		"effect": {"haste_seconds": 10.0, "attack_speed": 1.5},
+		"description": "Attack 1.5 times faster for 10 seconds. Speeds up weapon swings, arrow release and recovery. Use from your Pack.",
+		"shop": "potion", "lost_on_defeat": false,
+	},
+	"shield_potion": {
+		"name": "Shield Potion", "kind": "consumable", "icon": "shield_potion",
+		"price": 60, "currency": "gold", "stack": 9,
+		"effect": {"shield": 60},
+		"description": "Adds 60 shield points, capped at 60. The shield absorbs damage before health. Use from your Pack.",
+		"shop": "potion", "lost_on_defeat": false,
+	},
+	"boss_revival_potion": {
+		"name": "Boss Revival Potion", "kind": "consumable", "icon": "boss_revival_potion",
+		"price": 150, "currency": "gold", "stack": 3,
+		"effect": {"boss_revive": 0.5},
+		"description": "Carry to auto-revive from a fatal hit at 50% health with 2 seconds of protection. Works only during an active portal boss or Kraken fight. Does not revive pets or the sea turtle.",
+		"shop": "potion", "lost_on_defeat": false,
+	},
 	"pet_food": {
 		"name": "Pet Food",
 		"kind": "consumable",
@@ -517,4 +545,12 @@ static func stat_line(item_id: String) -> String:
 				bits.append("Heal %d" % int(item.effect[effect_key]))
 			"pet_xp":
 				bits.append("Pet XP +%d" % int(item.effect[effect_key]))
+			"sprint_seconds":
+				bits.append("Auto sprint %ds / no stamina cost" % int(item.effect[effect_key]))
+			"haste_seconds":
+				bits.append("Attack x%.1f for %ds" % [float(item.effect.attack_speed),int(item.effect[effect_key])])
+			"shield":
+				bits.append("Shield +%d (max 60)" % int(item.effect[effect_key]))
+			"boss_revive":
+				bits.append("Auto-revive at %d%% HP / boss fights only" % roundi(float(item.effect[effect_key])*100))
 	return "  ".join(bits)

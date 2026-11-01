@@ -101,6 +101,8 @@ func _process(delta: float) -> void:
 		_try_side_quest_introduction()
 	if is_instance_valid(world) and not _game_over and not _story_active and not hud.pet_battle_panel.is_wild_challenge():
 		GameState.advance_world_clock(delta)
+		if not _transitioning and not _sailing:
+			GameState.advance_potion_effects(delta)
 	if world is Dungeon and not world is TwilightRealm and GameState.expedition_active():
 		if not _emergency_triggered:
 			_portal_elapsed += delta
@@ -428,6 +430,25 @@ func handle_portal_defeat() -> void:
 	hud.defeat_panel.show_defeat(portal_name, lost.replace("Unbanked: ", ""), companion)
 
 
+func potion_player() -> Player:
+	if not is_instance_valid(world) or world.is_queued_for_deletion() or not (world is Lobby or world is Dungeon or world is KrakenIsland): return null
+	if _transitioning or _defeat_pending or _game_over or _story_active or _sailing or _developer_paused or _portal_fx_active: return null
+	if world.process_mode == Node.PROCESS_MODE_DISABLED or hud.pet_battle_panel.is_wild_challenge(): return null
+	var actor := player()
+	if not is_instance_valid(actor) or actor.is_queued_for_deletion() or actor.get_parent() != world or actor.dead or actor.sleeping: return null
+	return actor
+
+
+func boss_revival_available() -> bool:
+	if not is_instance_valid(potion_player()): return false
+	if not (world is Dungeon or world is KrakenIsland): return false
+	var boss: Enemy = world.boss
+	if not is_instance_valid(boss) or boss.is_queued_for_deletion() or boss.dead or boss.hp <= 0 or not boss.active or not boss._boss_notified: return false
+	if world is KrakenIsland: return not world.defeated
+	if not GameState.expedition_active() or GameState.expedition_portal() != world.portal_id or world._boss_defeated or not world._boss_arrived: return false
+	return not world is TwilightRealm or RealmDB.BOSS_ARENA.has_point(player().position)
+
+
 func _on_player_defeated() -> void:
 	if world is Dungeon:
 		handle_portal_defeat()
@@ -577,6 +598,7 @@ func _on_game_over(reason: String) -> void:
 
 
 func return_to_title(from_game_over: bool = false) -> void:
+	GameState.clear_potion_effects()
 	if _transitioning:
 		return
 	_transitioning = true

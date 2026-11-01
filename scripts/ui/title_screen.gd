@@ -750,11 +750,22 @@ func _open_guide() -> void:
 
 
 func _open_credits() -> void:
-	_open_overlay("Made for a place called home")
-	_overlay_body.add_child(_paragraph("PB (Protect BESUT)", 25, GOLD))
-	_overlay_body.add_child(_paragraph("Created by Qayyim, Farhan & Ayiz", 22, CREAM))
-	_overlay_body.add_child(_paragraph("A seaside survival action RPG set between a living forest and the waters of Besut, Terengganu.", 18, MUTED))
-	_overlay_body.add_child(_paragraph("Build, explore and stand together for the village.", 18, CREAM))
+	_open_overlay("PB (Protect BESUT)")
+	_overlay_body.add_child(_paragraph("UniSZA Besut", 25, GOLD))
+	_overlay_body.add_child(_paragraph("5th UMPSA X HUAWEI GameCenter\nMOBILE APP COMPETITION", 20, CREAM))
+	_overlay_body.add_child(_paragraph("25 NOVEMBER 2026", 18, MUTED))
+	_overlay_body.add_child(_paragraph("Created by", 20, GOLD))
+	for member in [
+		["Ayiz Bin Norwan", "093629", "Team Leader / Project Manager"],
+		["Muhammad Qayyim Bin Mohd Zambri", "093589", "Game Director / Creative Lead"],
+		["Muhammad Farhan Bin Samil", "093845", "Co-Director / Technical Developer"],
+	]:
+		var credit := VBoxContainer.new()
+		credit.add_theme_constant_override("separation", 4)
+		credit.add_child(_paragraph(str(member[0]), 20, CREAM))
+		credit.add_child(_paragraph("%s  ·  %s" % [member[1], member[2]], 16, MUTED))
+		_overlay_body.add_child(credit)
+	(_overlay_body.get_parent() as ScrollContainer).set_deferred("scroll_vertical", 0)
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
