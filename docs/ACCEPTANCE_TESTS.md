@@ -3270,40 +3270,6 @@ The two `Could not save game: 12` warnings are the intentional developer-session
 and final-departure rollback fixtures. `git diff --check` passes. No normal
 player-save restoration, export or push was performed.
 
-## 2026-11-01 — local HUAWEI Scan Kit integration
-
-Settings on title, land and ocean now embed `HmsScanControl`. Android calls the
-real Scan Kit 2.15.0.301 `buildBitmap` API through the included Godot v2 bridge.
-The QR contains only the public BESUT title/tagline; no progression, reward,
-account or save transaction is added. Desktop/missing-plugin builds explicitly
-disable generation. `HmsScanChecks` is included in the full gameplay gate.
-See `HMS_SCAN_KIT.md` for standalone-SDK rationale, build instructions and native
-Android review steps. Gradle export is enabled and its matching local template
-was installed without replacing the existing APK or signing material.
-
-- Real Huawei/Godot Java bridge compilation: PASS, Java 17 bytecode. The helper
-  validates the pinned downloaded SDK archive's SHA-256.
-- Isolated Godot class import: exit 0; existing Android build-tools-directory
-  diagnostic remains. Evidence: `%LOCALAPPDATA%/Temp/tidesworn-tests-36141f2f60434244b7b8c65d9891baed`.
-- Canonical isolated gameplay gate: **6,758 checks, PASS, exit 0**, without
-  `[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers. Evidence:
-  `%LOCALAPPDATA%/Temp/tidesworn-tests-f34b55049fc740cfa9f8dd3029c179a8`.
-  The two `Could not save game: 12` warnings are intentional existing
-  final-departure and developer-session rollback fixtures.
-- Native Windows focused review: **14 checks, PASS, exit 0**; 1280×720 and
-  832×480 Settings captures inspected. Evidence:
-  `%LOCALAPPDATA%/Temp/besut-hms-review-83d8a7bd4d084dcc9f52a15f0bfce7f4`.
-  Covered failure handling, public-only payload, PNG texture conversion,
-  unavailable desktop UI, closing cleanup and no journey/save creation.
-- Normal editor/import startup with the export plugin enabled: **exit 0**,
-  no script/error markers, in a disposable source and user-data copy at
-  `%LOCALAPPDATA%/Temp/besut-hms-editor-8349dfe71491442a919fe09d9a092516`.
-
-No Android APK export, emulator execution, physical-phone generation or
-independent QR decode is claimed. Those remain the native integration checks;
-Windows fake-bridge checks prove the boundary/UI, not HMS execution on Android.
-Normal player saves and the existing APK were preserved. No push was performed.
-
 ## Earned Citadel approach and workspace migration — 2026-11-01
 
 Active checkout: `/home/roku/Documents/ChatGPT/game2/godottgame`, as requested.
@@ -3805,3 +3771,22 @@ warnings come from intentional departure, developer, Citadel and reinforcement
 rollback fixtures. `git diff --check` passes. No Android export, physical-device
 execution or new visual certification is claimed. Normal player saves were not
 used by the tests. No push was performed.
+## 2026-11-02 — Exclude HMS Scan Kit after merge
+
+Removed the HMS Android bridge/plugin, QR service and Settings controls, build
+helper, focused tests and integration guide. Removed HMS registration from the
+gameplay gate and editor plugins. Restored the standard non-Gradle Android export
+setting and build instructions. Incoming gameplay/credits updates remain intact;
+the preceding merge record describes the intermediate state before this exclusion.
+
+Isolated native Windows Godot 4.7.2 import: exit 0 with no script/error markers;
+the existing Android build-tools-directory diagnostic remains. Evidence:
+`%LOCALAPPDATA%/Temp/tidesworn-tests-632f64baa55f421ea1948fcad3bcb65b`.
+Canonical isolated tide scene: **7,019 checks, PASS, exit 0**, no `[FAIL]`,
+`SCRIPT ERROR` or `ERROR:` markers. Evidence:
+`%LOCALAPPDATA%/Temp/tidesworn-tests-4a86198e7a8a45db9cd28382ef6f2ad8`.
+The same external Windows wrapper used a 1,200-second allowance and disabled the
+headless render loop, retaining the scene, save isolation and error filters.
+The four save-code-12 warnings are intentional rollback fixtures. No remaining
+HMS integration references were found in scripts, tools, addons or project/export
+configuration. `git diff --check` passes. No APK export or push was performed.

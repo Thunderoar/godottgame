@@ -1,6 +1,6 @@
 # Android APK build
 
-Use Godot 4.7.2 with matching Android export templates, JDK 17 and an Android SDK configured in Godot Editor Settings. The Android preset in export_presets.cfg builds an APK with arm64-v8a and armeabi-v7a libraries, landscape orientation, immersive display and the Compatibility renderer. Gradle export is enabled for the HUAWEI Scan Kit plugin: install Godot's Gradle Build Template before exporting. The first Gradle build requires network access on the build computer. The app's local QR feature needs no network, camera or external-storage permission; the export plugin removes those optional SDK permissions. See [HMS_SCAN_KIT.md](HMS_SCAN_KIT.md) for setup, source and verification limits.
+Use Godot 4.7.2 with matching Android export templates, JDK 17 and an Android SDK configured in Godot Editor Settings. The Android preset in export_presets.cfg builds an APK with arm64-v8a and armeabi-v7a libraries, landscape orientation, immersive display and the Compatibility renderer. No network or external-storage permission is requested.
 
 The package is com.tidesworn.protectbesut. Output: build/android/ProtectBESUT.apk. Build outputs and signing material are not tracked. The preset contains no signing passwords or machine-specific SDK paths.
 
