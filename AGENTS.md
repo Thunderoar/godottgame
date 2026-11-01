@@ -106,9 +106,19 @@ Do not add arbitrary console evaluation or persist the unlock phrase. Review use
 `-Developer`, optional captures at 832x480/1280x720; the full tide gate includes it.
 See `docs/DEVELOPER_MODE.md`. The phrase is supplied privately, not in docs/tests.
 
+**2026-11-01 earned Citadel approach:** first-boss access now requires three road
+pairs, the crossing marker, watchpost winch/light, and prepared camp lantern.
+Nearby explicit Enter grants traversal; a Game-owned introduction then arms combat.
+Completed pairs persist, unfinished pairs reconstruct, and stable authored ordinals
+preserve stats. Early rest/optional pets/lore stay independent. The ward closes all
+chamber seams; the boss/prison/map portrait remain concealed until a legitimate
+reveal. GameState commits guard XP/kill/pair credit together. This supersedes the
+position-only threshold, optional winch and reset-all-guards descriptions below.
+See `docs/CITADEL_APPROACH_PLAN.md`; review `-Twilight`, `-MeiRescue`, `-Developer`.
+
 ## 1. Ground truth and scope
 
-- This checkout is `/home/roku/Documents/ChatGPT/game`; `project.godot` is at its root.
+- This checkout is `/home/roku/Documents/ChatGPT/game2/godottgame`; `project.godot` is at its root.
   Other tournamentgame/godottgame/GDT2 checkouts are independent repositories.
 - Inspected on **2026-10-27**, source commit **76b5357**, branch **main**. These are
   observations, not instructions to switch branches. Run `git rev-parse --show-toplevel`

@@ -89,12 +89,9 @@ static func _twilight(realm: TwilightRealm) -> Array[Dictionary]:
 		out.append_array(_rescue_entries())
 	elif realm._boss_arrived:
 		out.append(_entry("citadel_boss", "Defeat Shadow & Chaos Fiend", "Defeat him to free Mei Ling. Dodge his marked attacks; leaving the arena resets this encounter.", "BOSS"))
-	elif "citadel" in landmarks or "approach" in landmarks:
-		if str(progress.get("checkpoint", "arrival")) != "camp":
-			out.append(_entry("checkpoint", "Rest at the lantern", "Use the lantern to recover and save your checkpoint before the citadel.", "PREPARE"))
-		out.append(_entry("citadel", "Enter Chaos Citadel", "Cross the inner arch when you are ready to face its ruler.", "EXPLORE"))
 	else:
-		out.append(_entry("explore", "Explore Twilight Wilds", "Follow the old stones and discover the paths. The arrival rift leads home.", "EXPLORE"))
+		var step := CitadelApproachDB.next_step(GameState.citadel_path())
+		out.append(_entry("citadel_road",str(step.title),str(step.detail),"RESCUE"))
 	var known_pets: Array[String] = []
 	for pair in [["grove", "bramble_cat"], ["pool", "dusk_moth"]]:
 		if pair[0] in landmarks and not GameState.realm_pet_bonded(str(pair[1])) and GameState.get_pet(str(pair[1])).is_empty():

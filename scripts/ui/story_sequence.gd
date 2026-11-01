@@ -261,7 +261,7 @@ func lines() -> Array:
 			"Shadow & Chaos Fiend falls. For a moment, the citadel is silent.",
 			"Behind him, the chaos seal fractures. Mei Ling looks up at the light.",
 			"The gate opens. Mei Ling steps free. Adam: \"Mei Ling!\"",
-			"Mei Ling: \"Adam... you found me.\"\nAdam: \"You're safe now.\"",
+			"Mei Ling: \"You did it.\"\nAdam: \"You're safe now.\"",
 			"Mei Ling: \"And Arjun?\"  Adam: \"%s\"\n\"Go through. The villagers will help you.\"" % ("He's safe in BESUT." if _mei_arjun_rescued else "I'm still looking. I'll find him."),
 			"Mei Ling reaches BESUT safely. Familiar faces welcome her home.",
 			"Mei Ling is safe. Explore the restored Wilds, or return through the rift to meet her."

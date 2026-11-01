@@ -1,5 +1,12 @@
 # Twilight Wilds — first explorable dimension
 
+**2026-11-01 current approach:** restore the crossing light, watchpost winch/light
+and citadel lantern after defeating their three guard pairs. Choose Enter at the
+outer ward, then finish/skip the owned introduction to begin the fight. Early
+rest and optional pets/memories remain available. Completed pairs now persist;
+unfinished pairs reconstruct. See `CITADEL_APPROACH_PLAN.md`, which supersedes
+the older optional-winch and position-only entry descriptions below.
+
 **2026-10-30 portal awakening:** new journeys first discover the fallen village
 waystone, ask Pak Rahim about it, and restore its carved road with his borrowed
 lantern. The Dimension Portal appears through an owned reveal, then enters this

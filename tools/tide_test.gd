@@ -227,6 +227,7 @@ func _ready() -> void:
 	# Includes blocked repair recovery and the real Twilight -> village reward handoff.
 	await VillageProjectChecks.run(game, _check)
 	# Compact realm: living habitats, memories/cache transactions and three owned combat encounters.
+	# Twilight integrates the earned-road state/collision/dialogue acceptance checks.
 	await preload("res://tools/twilight_checks.gd").run(game, _check)
 	await preload("res://tools/urchin_arrival_checks.gd").run(game, _check)
 	await preload("res://tools/fire_arrival_checks.gd").run(game, _check)
@@ -986,6 +987,7 @@ func _test_boss_and_progression() -> void:
 	_check(boss != null, "boss instance exists")
 	if boss == null:
 		return
+	preload("res://tools/citadel_checks.gd").prepare_fixture(game.world)
 	game.player().position = RealmDB.BOSS_THRESHOLD
 	game.world._physics_process(0.1)
 	boss.call("take_damage", 999999, Vector2.ZERO, game.call("player"))

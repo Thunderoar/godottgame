@@ -22,6 +22,7 @@ var loading_screen: LoadingScreen
 var _sailing := false
 var _return_to_harbour := false
 var _story_active := false
+var _citadel_conversation: CitadelConversation
 var _active_story: StorySequence
 var _side_quest_intro: Dictionary = {}
 var _side_quest_timer := 0.0
@@ -210,6 +211,7 @@ func _remove_title_if_owner(expected: CanvasLayer) -> void:
 # ------------------------------------------------------------------ world switching
 
 func _clear_world() -> void:
+	if is_instance_valid(_citadel_conversation): _citadel_conversation.cancel()
 	if is_instance_valid(_active_story): _active_story.cancel()
 	if not _side_quest_intro.is_empty():
 		_side_quest_intro.cancelled = true
@@ -444,6 +446,7 @@ func show_victory(summary: Dictionary, portal_id: String) -> void:
 
 
 func _on_modal_closed() -> void:
+	if world is TwilightRealm and world._camp_resting: return
 	if hud.any_modal_open() or _transitioning or _sailing or _story_active or is_instance_valid(_dock_conversation) or world is OceanJourney:
 		return
 	_input_locked = false
@@ -963,6 +966,63 @@ func play_dock_conversation(introduction: bool = false) -> void:
 		_apply_input_lock()
 
 
+func play_citadel_sequence(realm: TwilightRealm, mode: String) -> void:
+	if world != realm or _story_active or _transitioning or _defeat_pending or realm._leaving or realm.player.dead or hud.any_modal_open(): return
+	var serial := GameState.journey_serial
+	var old_mode := realm.process_mode
+	var old_hud := hud.visible
+	var old_lock := _input_locked
+	var old_camera_position := realm.camera.position
+	var old_camera_zoom := realm.camera.zoom
+	var old_camera_frame := realm.camera.framing_bounds
+	if mode == "intro":
+		realm._area_label.text = "TWILIGHT WILDS · CHAOS CITADEL"
+		realm.set_message("The outer ward is open. Mei Ling is still imprisoned.")
+		# Frame the live meeting ABOVE the reading panel, not underneath it.
+		var height := get_viewport_rect().size.y
+		var panel_height := minf(258,height-48)+32
+		var story_zoom := minf(GameSettings.camera_zoom(),maxf(8,(height-panel_height)/19.0))
+		realm.camera.framing_bounds = Rect2()
+		realm.camera.zoom = Vector2.ONE*story_zoom
+		realm.camera.position = Vector2(26,10+panel_height/(2*story_zoom))
+		realm.camera.force_update_scroll()
+	_story_active = true
+	_input_locked = true
+	hud.release_world_controls()
+	_apply_input_lock()
+	realm.combat.cancel_all()
+	realm.close_reading()
+	realm.process_mode = Node.PROCESS_MODE_DISABLED
+	hud.hide()
+	var sequence := CitadelConversation.new()
+	sequence.mode = mode
+	if mode == "entry": sequence.pages = ["Three road lights answer the outer ward. Mei Ling's prison is still sealed.\n\nEnter the citadel now, or return when you are ready."]
+	elif mode == "preparation": sequence.pages = ["Adam: The road's light reaches this lantern now.\nAdam: Mei Ling. I'm coming.\n\nThe three emblems answer. The outer ward can now be opened."]
+	else: sequence.pages = CitadelApproachDB.INTRO.duplicate() if not GameState.citadel_path().intro_seen else ["Mei Ling: Watch the floor, Adam.\nAdam: I see it."]
+	_citadel_conversation = sequence
+	add_child(sequence)
+	await sequence.completed
+	if _citadel_conversation != sequence: return
+	_citadel_conversation = null
+	_story_active = false
+	if world != realm or serial != GameState.journey_serial or not is_instance_valid(realm) or realm.is_queued_for_deletion(): return
+	if mode == "intro":
+		realm.camera.position = old_camera_position
+		realm.camera.zoom = old_camera_zoom
+		realm.camera.framing_bounds = old_camera_frame
+	realm.process_mode = old_mode
+	hud.visible = old_hud
+	_input_locked = old_lock or hud.any_modal_open() or _transitioning or _defeat_pending
+	if mode == "entry" and sequence.accepted and not sequence.cancelled and GameState.citadel_road_ready():
+		realm.approach_phase = TwilightRealm.ApproachPhase.ENTRY_GRANTED
+	elif mode == "intro":
+		if sequence.accepted and not sequence.cancelled:
+			if not realm.begin_citadel_combat(): realm.approach_phase = TwilightRealm.ApproachPhase.READY
+		else:
+			realm.approach_phase = TwilightRealm.ApproachPhase.ENTRY_GRANTED
+	realm._refresh_approach()
+	_apply_input_lock()
+
 func play_story(kind: String, from_title: bool = false) -> void:
 	if _story_active: return
 	var story_journey := GameState.journey_serial
@@ -1282,8 +1342,9 @@ func run_developer_action(id: String) -> Dictionary:
 			await _load_dungeon(portal,true)
 			if not _developer_action_owned(serial): return _developer_action_failed()
 			if id == "travel_citadel":
+				world.approach_phase = TwilightRealm.ApproachPhase.INTRO
 				player().position = RealmDB.BOSS_THRESHOLD
-				world._physics_process(0)
+				world.begin_citadel_combat()
 		elif id in ["travel_sea_1","travel_sea_2"]:
 			await _load_developer_world("ocean")
 		elif id in ["travel_kraken","travel_prison"]:

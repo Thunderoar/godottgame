@@ -176,6 +176,13 @@ func developer_prepare(id: String) -> bool:
 			data.realm_progress.visit_active = portal == RealmDB.PORTAL
 			if portal == RealmDB.PORTAL:
 				data.realm_progress.checkpoint = "arrival"
+				data.realm_progress.citadel_path = CitadelApproachDB.defaults()
+				if id == "travel_citadel":
+					data.realm_progress.citadel_path.cleared_pairs = CitadelApproachDB.PAIRS.duplicate()
+					data.realm_progress.citadel_path.crossing_lit = true
+					data.realm_progress.citadel_path.watchpost_lit = true
+					data.realm_progress.citadel_path.lantern_prepared = true
+					data.realm_progress.shortcut = true
 	_sanitize_campaign()
 	_save_if_needed()
 	_emit_all()
@@ -274,7 +281,7 @@ func _make_default(character_id: String) -> Dictionary:
 		"settlement_layout": {},
 		"pet_battles": {},
 		"village_pets": [],
-		"realm_progress": {"cells": [], "landmarks": ["arrival"], "shortcut": false, "checkpoint": "arrival", "visit_active": false, "bonded": [], "waykeeper_met": false, "discovered_content": [], "read_fragments": [], "banked_caches": []},
+		"realm_progress": {"citadel_path": CitadelApproachDB.defaults(), "cells": [], "landmarks": ["arrival"], "shortcut": false, "checkpoint": "arrival", "visit_active": false, "bonded": [], "waykeeper_met": false, "discovered_content": [], "read_fragments": [], "banked_caches": []},
 		"roof_guns": {},
 		"sea_cleaned": 0,
 		"forest_health": {},
@@ -674,9 +681,8 @@ func xp_for_level(level: int) -> int:
 	var step := maxi(0,level-1)
 	return 60+35*step+5*step*step
 
-func grant_xp(amount: int) -> void:
-	if amount <= 0:
-		return
+func _apply_xp(amount: int) -> bool:
+	if amount <= 0: return false
 	data.xp = int(data.get("xp", 0)) + amount
 	var leveled := false
 	while int(data.xp) >= int(data.get("xp_next", 60)):
@@ -686,6 +692,11 @@ func grant_xp(amount: int) -> void:
 		data.hp_max = int(data.get("hp_max", 100)) + 10
 		data.hp = health_max()
 		leveled = true
+	return leveled
+
+func grant_xp(amount: int) -> void:
+	if amount <= 0: return
+	var leveled := _apply_xp(amount)
 	if leveled:
 		toast_requested.emit("Level %d reached. Your path grows clearer." % int(data.level), "gold")
 	data_changed.emit()
@@ -889,6 +900,19 @@ func _sanitize_realm_progress() -> void:
 	for id in clean.read_fragments:
 		if id not in clean.discovered_content: clean.discovered_content.append(id)
 	if clean.waykeeper_met and RealmContentDB.WAYKEEPER not in clean.discovered_content: clean.discovered_content.append(RealmContentDB.WAYKEEPER)
+	var path_raw: Variant = progress.get("citadel_path", {})
+	var path := CitadelApproachDB.defaults()
+	if path_raw is Dictionary:
+		var pairs: Variant = path_raw.get("cleared_pairs", [])
+		if pairs is Array:
+			for id in CitadelApproachDB.PAIRS:
+				if id in pairs: path.cleared_pairs.append(id)
+		path.crossing_lit = path_raw.get("crossing_lit") is bool and path_raw.get("crossing_lit") == true and CitadelApproachDB.PAIRS[0] in path.cleared_pairs
+		path.watchpost_lit = path_raw.get("watchpost_lit") is bool and path_raw.get("watchpost_lit") == true and CitadelApproachDB.PAIRS[1] in path.cleared_pairs
+		if path.watchpost_lit: clean.shortcut = true
+		path.lantern_prepared = path_raw.get("lantern_prepared") is bool and path_raw.get("lantern_prepared") == true and CitadelApproachDB.can_prepare(path, clean.shortcut)
+		path.intro_seen = path_raw.get("intro_seen") is bool and path_raw.get("intro_seen") == true and path.lantern_prepared
+	clean.citadel_path = path
 	data.realm_progress = clean
 	var expedition: Variant = data.get("expedition", {})
 	if expedition is Dictionary and bool(expedition.get("active", false)) and str(expedition.get("portal_id", "")) == RealmDB.PORTAL:
@@ -898,6 +922,82 @@ func _sanitize_realm_progress() -> void:
 	if pending is Array and expedition_active() and expedition_portal() == RealmDB.PORTAL:
 		if RealmContentDB.CACHE in pending and RealmContentDB.CACHE not in clean.banked_caches: valid_pending.append(RealmContentDB.CACHE)
 	if expedition is Dictionary: data.expedition.pending_caches = valid_pending
+
+func citadel_path() -> Dictionary:
+	return (data.realm_progress.get("citadel_path", CitadelApproachDB.defaults()) as Dictionary).duplicate(true)
+
+func citadel_road_ready() -> bool:
+	return CitadelApproachDB.ready(citadel_path(), bool(data.realm_progress.shortcut))
+
+func _commit_citadel(before: Dictionary) -> bool:
+	if autosave_enabled and not _save_now():
+		data = before
+		return false
+	data_changed.emit()
+	return true
+
+func accept_realm_guard_death(actor: RealmGuard) -> bool:
+	if not is_instance_valid(actor) or actor.dead or actor.hp > 0 or actor.director == null or not actor.director.current_world(): return false
+	var director := actor.director
+	if actor.member_index not in [0,1] or not director.world._packs.any(func(pack: Dictionary) -> bool: return is_instance_valid(pack.enemy) and pack.enemy == actor) or not director.can_damage(actor) or not CitadelApproachDB.PAIRS.has(actor.encounter_id): return false
+	var key := "%s:%d" % [actor.encounter_id, actor.member_index]
+	if director.defeated_members.has(key): return false
+	var before := data.duplicate(true)
+	var path := citadel_path()
+	if actor.encounter_id in path.cleared_pairs: return false
+	director.defeated_members[key] = true
+	if director.defeated_members.has(actor.encounter_id+":0") and director.defeated_members.has(actor.encounter_id+":1"):
+		path.cleared_pairs.append(actor.encounter_id)
+	data.realm_progress.citadel_path = path
+	data.kills = int(data.kills)+1
+	_apply_xp(actor.xp_reward*COMBAT_XP_MULTIPLIER)
+	if autosave_enabled and not _save_now():
+		data = before
+		director.defeated_members.erase(key)
+		return false
+	data_changed.emit()
+	return true
+
+func light_citadel_site(site: String) -> Dictionary:
+	if not bool(data.realm_progress.visit_active) or health() <= 0: return {"ok":false,"message":"Visit the Wilds first."}
+	var path := citadel_path()
+	var pair_id := "rootbound_patrol" if site == "crossing" else "watchpost_guard"
+	if site not in ["crossing", "watchpost"]: return {"ok":false,"message":"Unknown road light."}
+	if pair_id not in path.cleared_pairs: return {"ok":false,"message":("The crossing patrol still binds this light." if site == "crossing" else "The watchpost binding holds the winch fast.")}
+	var field := "crossing_lit" if site == "crossing" else "watchpost_lit"
+	if path[field]: return {"ok":true,"changed":false,"message":CitadelApproachDB.followup(path)}
+	var before := data.duplicate(true)
+	path[field] = true
+	data.realm_progress.citadel_path = path
+	if site == "watchpost": data.realm_progress.shortcut = true
+	if not _commit_citadel(before): return {"ok":false,"message":"Could not save the road light. Please try again."}
+	return {"ok":true,"changed":true,"message":("Adam: One light back where it belongs.\n" if site == "crossing" else "Adam: A road back—and another light forward.\n")+CitadelApproachDB.followup(path)}
+
+func finish_citadel_rest(prepare: bool) -> Dictionary:
+	if not bool(data.realm_progress.visit_active) or health() <= 0: return {"ok":false,"message":"This rest has ended."}
+	var path := citadel_path()
+	var preparing: bool = prepare and not path.lantern_prepared and CitadelApproachDB.can_prepare(path, bool(data.realm_progress.shortcut))
+	var before := data.duplicate(true)
+	data.hp = health_max()
+	# Mutate the pet without revive_active_pet's intermediate signals/save.
+	var companion := get_active_pet()
+	if not companion.is_empty():
+		companion.alive = true
+		companion.hp = int(companion.hp_max)
+	data.realm_progress.checkpoint = "camp"
+	if preparing:
+		path.lantern_prepared = true
+		data.realm_progress.citadel_path = path
+	if not _commit_citadel(before): return {"ok":false,"message":"Could not save the checkpoint. Please try again."}
+	pet_changed.emit()
+	return {"ok":true,"prepared":preparing,"message":("The outer ward can now be opened." if preparing else ("Rested. Checkpoint saved. The Wilds are peaceful." if bool(portal_state(RealmDB.PORTAL).get("cleared",false)) else "Rested. Checkpoint saved. "+CitadelApproachDB.followup(path)))}
+
+func mark_citadel_intro() -> bool:
+	if not citadel_road_ready(): return false
+	if citadel_path().intro_seen: return true
+	var before := data.duplicate(true)
+	data.realm_progress.citadel_path.intro_seen = true
+	return _commit_citadel(before)
 
 func discover_realm_at(at: Vector2) -> void:
 	var changed := false

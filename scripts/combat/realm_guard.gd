@@ -3,6 +3,7 @@ extends Enemy
 ## Narrow realm FSM: no ElementDB changes or inherited automatic elemental cast.
 
 enum Mode { RESTING, ENGAGED, RETURNING }
+var member_index := 0
 var profile := "imp"
 var encounter_id := ""
 var home := Vector2.ZERO
@@ -12,16 +13,22 @@ var cast_serial := 0
 var action: RealmGuardAttack
 var _cooldown := 0.0
 var _name_label: Label
+var _health_bar: WorldHealthBar
 
 func _ready() -> void:
 	kind = "minion_chaos"
 	super._ready()
 	_state = State.WANDER
+	_health_bar = WorldHealthBar.new()
+	_health_bar.name = "EnemyHealth"
+	_health_bar.subject = self
+	_health_bar.position = Vector2(0,-2.25)
+	add_child(_health_bar)
 	_name_label = Label.new()
 	_name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_name_label.scale = Vector2.ONE*PixelArt.PX
-	_name_label.position = Vector2(-2.5,-2.6)
-	_name_label.size = Vector2(160,30)
+	_name_label.position = Vector2(-2.5,-3.55)
+	_name_label.size = Vector2(160,20)
 	_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_name_label.add_theme_font_size_override("font_size",13)
 	_name_label.add_theme_color_override("font_outline_color",Color("#181a2b"))
@@ -29,6 +36,14 @@ func _ready() -> void:
 	_name_label.text = name_text()
 	add_child(_name_label)
 	_update_guard_art()
+	_name_label.visible = overhead_vitals_visible()
+	_health_bar._process(0)
+
+func overhead_vitals_visible() -> bool:
+	return not dead and director != null and director.current_world() and mode != Mode.RETURNING and (mode == Mode.ENGAGED or director.world.player.position.distance_to(position) < 6.0)
+
+func _draw() -> void:
+	pass # The shared overhead component replaces Enemy's tiny damaged-only strip.
 
 func _sprite_rest_scale() -> Vector2:
 	return Vector2.ONE*PixelArt.PX*(64.0/sprite.texture.get_height())
@@ -49,6 +64,7 @@ func engage() -> void:
 func return_home() -> void:
 	cancel_action()
 	mode = Mode.RETURNING
+	_name_label.hide()
 	active = false
 	_state = State.WANDER
 	_route.clear()
@@ -74,12 +90,23 @@ func _enter(next: State) -> void:
 
 func _die() -> void:
 	if dead: return
+	if not GameState.accept_realm_guard_death(self):
+		if director != null and director.current_world(): director.world.set_message("Could not record this victory. Please try again.")
+		return
 	cancel_action()
+	_name_label.hide()
 	super._die()
 
+func _award_death_rewards() -> void:
+	# XP/kill/pair were committed together before death presentation/signals.
+	if is_inside_tree() and not get_parent().is_queued_for_deletion(): _spawn_reward()
+
 func _physics_process(delta: float) -> void:
-	if dead or director == null: return
+	if dead or director == null:
+		if is_instance_valid(_name_label): _name_label.hide()
+		return
 	if not director.current_world():
+		_name_label.hide()
 		cancel_action()
 		return
 	var animation_delta := delta
@@ -97,12 +124,13 @@ func _physics_process(delta: float) -> void:
 			_alert_icon.queue_free()
 			_alert_icon = null
 	_update_guard_art()
-	_name_label.visible = (mode == Mode.ENGAGED or director.world.player.position.distance_to(position) < 2.5) and mode != Mode.RETURNING
+	_name_label.visible = overhead_vitals_visible()
 	if mode == Mode.ENGAGED and not director.can_attack(self): return_home()
 	if mode == Mode.RESTING: return
 	if mode == Mode.RETURNING:
 		if position.distance_to(home) < 0.12:
 			mode = Mode.RESTING
+			_name_label.visible = overhead_vitals_visible()
 			velocity = Vector2.ZERO
 			return
 		_move_step(director.return_direction(self),delta)

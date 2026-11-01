@@ -253,6 +253,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(GameState.start_expedition(PortalDB.MEI_LING_PORTAL), "Mei Ling rescue requires only the first dimension, not later boss gates")
 	await game._load_dungeon(PortalDB.MEI_LING_PORTAL, false)
 	var dungeon := game.world as TwilightRealm
+	preload("res://tools/citadel_checks.gd").prepare_fixture(dungeon)
 	dungeon.player.position = RealmDB.BOSS_THRESHOLD
 	dungeon._physics_process(0.1)
 	dungeon.boss.take_damage(dungeon.boss.max_hp, Vector2.ZERO, dungeon.player)

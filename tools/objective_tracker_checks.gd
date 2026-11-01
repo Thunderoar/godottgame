@@ -146,12 +146,12 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	var realm := TwilightRealm.new()
 	GameState.data = GameState._make_default("adam")
 	GameState.data.portal_origin.opened = true # Existing combat/UI fixture starts after waystone restoration.
-	check.call(ObjectiveTrackerData.entries(realm)[0].id == "explore", "realm arrival replaces village training with exploration without exposing an undiscovered ruler")
+	check.call(ObjectiveTrackerData.entries(realm)[0].id == "citadel_road", "realm arrival replaces village training with exploration without exposing an undiscovered ruler")
 	GameState.data.realm_progress.landmarks.append("approach")
 	var rows := ObjectiveTrackerData.entries(realm)
-	check.call(rows[0].id == "checkpoint", "discovering the approach suggests the lantern before the boss")
+	check.call(rows[0].id == "citadel_road", "discovering the approach does not bypass missing road prerequisites")
 	GameState.data.realm_progress.checkpoint = "camp"
-	check.call(ObjectiveTrackerData.entries(realm)[0].id == "citadel", "saved lantern checkpoint advances guidance to the citadel arch")
+	check.call(ObjectiveTrackerData.entries(realm)[0].id == "citadel_road", "checkpoint alone cannot advance guidance past unfinished road tasks")
 	realm._boss_arrived = true
 	check.call(ObjectiveTrackerData.entries(realm)[0].id == "citadel_boss", "crossing the boss threshold changes the immediate objective")
 	realm._boss_arrived = false
@@ -185,7 +185,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	await game._load_dungeon(RealmDB.PORTAL, false)
 	game.world.process_mode = Node.PROCESS_MODE_DISABLED
 	game.hud._refresh_objectives()
-	check.call(tracker._entries[0].id == "explore" and not tracker.collapsed(), "real world handoff replaces the displayed objectives and keeps the panel preference")
+	check.call(tracker._entries[0].id == "citadel_road" and not tracker.collapsed(), "real world handoff replaces the displayed objectives and keeps the panel preference")
 	await _realm_navigation(game,check,capture)
 	if capture.is_valid():
 		await _settle(game)
@@ -424,7 +424,7 @@ static func _quest_sections(game: Game, check: Callable, capture: Callable) -> v
 	check.call(rows.size() == 1 and rows[0].section == main, "undiscovered realm companions are not revealed as side quests")
 	GameState.data.realm_progress.landmarks.append("grove")
 	rows = ObjectiveTrackerData.entries(realm)
-	check.call(rows[0].id == "explore" and rows[0].section == main and rows[-1].id == "companions" and rows[-1].section == side, "realm exploration is main and a discovered wild companion is optional side content")
+	check.call(rows[0].id == "citadel_road" and rows[0].section == main and rows[-1].id == "companions" and rows[-1].section == side, "realm exploration is main and a discovered wild companion is optional side content")
 	realm._boss_defeated = true
 	GameState.data.campaign.mei_ling_rescued = true
 	rows = ObjectiveTrackerData.entries(realm)
@@ -502,8 +502,8 @@ static func _realm_navigation(game: Game, check: Callable, capture: Callable) ->
 	var realm := game.world as TwilightRealm
 	var hud := game.hud
 	var before := GameState.data.duplicate(true)
-	hud.track_objective("explore")
-	check.call(hud._tracked_objective_id == "explore" and hud._tracked_target.label == "Rootbound Crossing", "selected realm exploration points to the next authored landmark")
+	hud.track_objective("citadel_road")
+	check.call(hud._tracked_objective_id == "citadel_road" and hud._tracked_target.label == "Rootbound Crossing", "selected realm exploration points to the next authored landmark")
 	var trail: MissionPath
 	for child in realm.get_children():
 		if child is MissionPath: trail = child
@@ -535,7 +535,7 @@ static func _realm_navigation(game: Game, check: Callable, capture: Callable) ->
 	await game.get_tree().process_frame
 	hud._update_mission_guide()
 	check.call(hud._tracked_target.is_empty() and not hud._navigation_box.visible, "a freed mission target is safely hidden without pointing at a retired actor")
-	hud.track_objective("explore")
+	hud.track_objective("citadel_road")
 
 static func _rect(control: Control) -> Rect2:
 	return Rect2(control.global_position, control.size * control.get_global_transform().get_scale())

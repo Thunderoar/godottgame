@@ -3269,3 +3269,82 @@ Final canonical isolated gameplay gate: **6,750 checks, PASS, exit 0**, with no
 The two `Could not save game: 12` warnings are the intentional developer-session
 and final-departure rollback fixtures. `git diff --check` passes. No normal
 player-save restoration, export or push was performed.
+
+
+## Earned Citadel approach and workspace migration — 2026-11-01
+
+Active checkout: `/home/roku/Documents/ChatGPT/game2/godottgame`, as requested.
+The earlier checkout is retained untouched. The 35-file implementation checkpoint,
+original proposal and deep audit were migrated after confirming the destination
+was clean, on the same source revision, and every implementation path matched its
+baseline. Current specification: `docs/CITADEL_APPROACH_PLAN.md`; historical
+proposal/audit copies: `docs/citadel/history/`.
+
+The position-only boss threshold is replaced by three cleared road pairs, crossing
+light, watchpost winch/light, prepared lantern, fresh entrance consent and the
+owned introduction/combat handoff. Old cleared saves remain peaceful with no new
+quest debt; unfinished road progress, guard credit, refuge geometry, stable stats,
+rest timing, actual input and rollback behavior are explicitly exercised.
+
+Observed on the migrated checkout with Godot 4.7.2:
+
+| Isolated route | Observed result |
+|---|---|
+| Canonical gameplay wrapper | **6,788 checks, PASS, exit 0** |
+| Twilight focused scene | **236 checks, PASS, exit 0** |
+| Mei Ling rescue focused scene | **65 checks, PASS, exit 0** |
+| Developer focused scene | **86 checks, PASS, exit 0** |
+| Citadel real renderer, 1280x720 | **38 checks, PASS, exit 0** |
+| Citadel real renderer, 832x480 | **38 checks, PASS, exit 0** |
+| Citadel real renderer, 832x480, low effects + Reduce Motion | **38 checks, PASS, exit 0** |
+
+Successful logs contain no `[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers. The
+save-failure test deliberately emits `Could not save game: 12` while its temporary
+isolated save path is made unwritable; it verifies state rollback and then restores
+the fixture. Xvfb emits its input-method and unsupported V-Sync warnings. These
+warning-bearing logs are not described as completely clean. Old failed attempts
+remain preserved separately rather than being counted as acceptance.
+
+Actual touch/keyboard choices, fresh-input/focus guards, normal/reduced geometry,
+blocked front/east entrances, the visible non-attacking first meeting, saved road
+progress, out-of-order guidance and old peaceful-world labels were checked.
+Rendered first-meeting, entrance-choice, preparation and sealed-approach captures
+were inspected. A scoped spawn-shimmer opt-out prevents the dormant fiend remaining
+transparent during the suspended meeting. The corpse remains hidden after rescue.
+
+Evidence directory: `/home/roku/Documents/ChatGPT/citadel-implementation-20261101-rBOlGyZJ`. Its `ACCEPTANCE_source_hashes.json` checks that the
+accepted scripts/tools stayed unchanged during the final run. `VERIFICATION.txt`
+records the exact matching rush probe, reconstruction patch and disposable
+rollback checks. Normal player data was not used. No commit/push, export, native
+Windows, physical Android, player pacing or soak certification is claimed.
+
+
+## Consistent Citadel enemy health display — 2026-11-01
+
+Citadel guards now reuse WorldHealthBar for a red overhead health bar and numeric
+current/max HP, including when undamaged and nearby. Names sit above the HP text;
+the old tiny damaged-only strip is suppressed to avoid duplicate bars. Name and
+health visibility follow the same nearby/engaged/returning/dead/current-world rule.
+Boss and companion bar modes are retained. No HP, damage, XP, loot or quest rules
+were changed.
+
+Observed on `/home/roku/Documents/ChatGPT/game2/godottgame`:
+- Canonical isolated gameplay: **6,817 checks, PASS, exit 0**.
+- Focused Twilight: **265 checks, PASS, exit 0**, including 29 health/presentation
+  checks across every guard, damage/full-health updates, aligned text, retreat,
+  death and world handoff. Import and git diff --check pass.
+- Actual Linux/Xvfb/llvmpipe renders inspected at **1280x720 and 832x480**. The
+  identical damaged-guard probe reports **54/61** before and after: initially no
+  shared numeric readout, afterward the shared widget prints **54/61**.
+- Self-contained `ROLLBACK.sh PROJECT_COPY --health-only` restores the exact
+  pre-health presentation without undoing the completed Citadel quest. Baseline
+  has no shared HP component, modified has it, health rollback removes it, and
+  patch reapplication restores it. This was exercised only on an independent copy.
+
+Evidence extends the existing four-role delivery in the external Citadel evidence
+folder, under `health-consistency/`. Successful logs have no failure/error markers;
+the full suite retains the expected save-fault warning and Xvfb retains its input-
+method/V-Sync warnings. An early external diagnostic's eager script type import
+failed before autoload initialization; its loader was corrected and the failed
+log retained rather than counted as validation. No normal player saves, native
+Windows/Android, export or soak testing were used or claimed.

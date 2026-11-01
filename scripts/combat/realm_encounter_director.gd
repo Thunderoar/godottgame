@@ -3,6 +3,7 @@ extends RefCounted
 ## One attacking pair and one owned action; dormant/returning bodies stay visible.
 
 var world: TwilightRealm
+var defeated_members: Dictionary = {}
 var active_id := ""
 var generation := 0
 var slot: RealmGuard
