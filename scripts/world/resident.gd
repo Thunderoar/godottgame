@@ -320,6 +320,7 @@ func _on_emergency_changed(active: bool, _remaining: int, _damage: int) -> void:
 
 
 func take_attack_damage(amount: int) -> void:
+	if DialogueWorldHold.protects(self): return
 	if dead or sheltered:
 		return
 	GameState.damage_resident(resident_name, amount)

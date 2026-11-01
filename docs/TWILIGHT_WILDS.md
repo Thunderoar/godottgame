@@ -1,10 +1,10 @@
 # Twilight Wilds — first explorable dimension
 
 **2026-11-01 current approach:** restore the crossing light, watchpost winch/light
-and citadel lantern after defeating their three guard pairs. Choose Enter at the
+and citadel lantern after clearing all three reinforcement waves in each sector. Choose Enter at the
 outer ward, then finish/skip the owned introduction to begin the fight. Early
-rest and optional pets/memories remain available. Completed pairs now persist;
-unfinished pairs reconstruct. See `CITADEL_APPROACH_PLAN.md`, which supersedes
+rest and optional pets/memories remain available. Completed waves persist;
+unfinished waves reconstruct. See `CITADEL_APPROACH_PLAN.md`, which supersedes
 the older optional-winch and position-only entry descriptions below.
 
 **2026-10-30 portal awakening:** new journeys first discover the fallen village
@@ -25,9 +25,9 @@ six-by-six discovery IDs and stable checkpoint/bond IDs remain compatible.
 
 Follow the stone road from Arrival Glade across Rootbound Crossing toward Broken Watchpost and the Ashen Approach. Bramble Grove branches west; Moonpool Hollow loops east. At the watchpost, the rootway winch opens a permanent shortcut through the escarpment. The citadel lantern provides a two-second rest and a saved return checkpoint.
 
-Six guards form three authored pairs: two Darkfire Imps north of the crossing, an Imp and Ember Watcher at the watchpost, and an Imp and Rune Keeper south of the lantern. Only one pair attacks at a time. Arrival, full pet stages, reading sites and the lantern are protected from guards and their attacks. Shadow & Chaos Fiend waits beyond the citadel's inner threshold. Dormant enemies cannot be damaged by weapons or companion attacks. Retreating to the lantern resets the unfinished boss, its spells and attack sequence.
+Thirty-six guards arrive across three road sectors, each with waves of 2, 4 and 6. The crossing fields Darkfire Imps; the watchpost alternates Imps and Ember Watchers; the ashen approach alternates Imps and Rune Keepers. Only one sector attacks at a time. Reinforcement arrival posts have a 1.4-second gold warning and wait until Adam steps clear. Arrival, full pet stages, reading sites and the lantern are protected from guards and their attacks. Shadow & Chaos Fiend waits beyond the citadel's inner threshold. Dormant enemies cannot be damaged by weapons or companion attacks. Retreating to the lantern resets the unfinished boss, its spells and attack sequence.
 
-## Read the Wilds: three combat encounters
+## Read the Wilds: three sectors, nine waves
 
 The Imp holds still for a 0.65-second directional warning, commits to a 0.38-second
 rush, then recovers. The Watcher locks its aim for 0.90 seconds before firing three
@@ -36,23 +36,25 @@ watchpost's outer flank. The Keeper gives a 1.05-second warning for a small fixe
 cross; ordinary diagonal movement escapes into a clear quadrant. The Field Guide's
 Monsters section illustrates all three profiles.
 
-One shared attack slot covers a pair's windup and all live damaging effects,
+One shared attack slot covers the active wave's windup and all live damaging effects,
 including travelling shots. A whole charge, fan or cross can contact Adam once;
 cross intersections and multiple overlapping shots cannot cause duplicate hits.
 Warnings and damage share clipped geometry. Swept tests stop shots and charges at
 real walls, pursuit limits and protected spaces, including the complete 8x7 animal
 stages plus clearance. Low effects, Reduce Motion and mute retain essential cues.
 
-Only six regular guards spawn: four Imps, one Watcher and one Keeper. Total HP is
-282, with the existing base movement, 7 damage, 14 XP per guard and ordinary loot
-rules. No additional saved encounter fields, currency, stat upgrades or boss keys
-are introduced. The shared HUD still counts every living guard and the ruler,
-including dormant actors; it is not an aggro counter.
+The nine waves contain 24 Imps, six Watchers and six Keepers. At most six guards
+belong to the active wave; future waves are not materialized until warned. Each
+actor retains its original sector's HP, base movement and 7 damage. Wave-one actors
+pay 4 base XP each; later actors pay 2, preserving 252 total player XP after the
+existing multiplier. Ordinary drops still pay per kill. Completed waves save in
+`citadel_path.waves_cleared`; legacy completed sector IDs remain valid. No currency,
+stat upgrade or boss key is introduced. See `REALM_REINFORCEMENT_WAVES.md`.
 
 Entering a different encounter or a refuge immediately invalidates old casts.
 Living guards walk home through refuge-aware routes, retain their current HP and
 settle without teleporting or healing. Killed guards stay dead for that visit;
-Continue retains the existing fresh-combat reconstruction policy. Returning actors
+Continue reconstructs the unfinished wave without replaying completed waves. Returning actors
 do not draw the companion away from the player's active fight. Normal menus keep
 their existing simulation behavior. A protected animal challenge ends pursuing
 regular casts before suspending the world.
@@ -94,7 +96,7 @@ New saved fields are `realm_progress.waykeeper_met`, `discovered_content`, `read
 
 `GameState.realm_progress` owns discovered cells on a normalized 6x6 map grid, landmarks, shortcut status, a stable checkpoint ID, bonded encounter IDs and saved realm presence. Unknown destinations sanitize to Arrival Glade. Old saves with an active first-portal expedition migrate to the new realm safely. Existing owned pets and cleared duel recruits remain owned.
 
-Continue resumes an active realm visit at its last safe checkpoint; unfinished enemies and bosses reset. Defeat retains the existing home recovery flow, discards ordinary unbanked expedition loot, and preserves the realm checkpoint/discoveries/bonds. Returning through a rift banks expedition loot and ends the visit.
+Continue resumes an active realm visit at its last safe checkpoint; unfinished waves and bosses reset. Defeat retains the existing home recovery flow, discards ordinary unbanked expedition loot, and preserves the realm checkpoint/discoveries/bonds. Returning through a rift banks expedition loot and ends the visit.
 
 Boss victory commits the existing first-portal rewards, banks expedition loot and opens its existing successor. It restores the terrain/light, removes hostile packs/spells, and leaves the player free to explore. Saved realm presence remains valid after expedition banking; Continue reconstructs the peaceful cleared world. A return rift appears in the chamber. Cleared first realms remain peaceful on revisits rather than automatically repeating the boss.
 
@@ -112,7 +114,7 @@ complete habitat guidance without inventing old duel clears.
 Onward passages retain their combat-level gates. Labels show required level and
 remaining player XP; an attempted locked entry explains village defense and
 cleared later-stage replays as preparation. The peaceful first realm cannot be
-farmed after clearing it. Six first-realm encounters plus its first boss provide
+farmed after clearing it. Thirty-six first-realm guards plus the first boss provide
 342 player XP; a boss-only zero-XP fixture still needs 70 XP for level 3. Companion
 challenge XP does not level Adam. No XP, price, enemy or house-tier rebalance is
 part of this guidance update.
@@ -133,7 +135,7 @@ This is the complete first exploration slice. The proposed three-dimension campa
 - `RealmWildPet` / `RealmInterest`: temporary pet routines and guarded optional interactions.
 - `TwilightLandscape`: deterministic terrain/decor; independent from village RNG.
 - `TwilightRealm`: world construction, local encounters, threshold/reset, shortcut and victory.
-- `RealmCombatDB` / `RealmEncounterDirector`: authored pairs, refuges, shared attack ownership and cancellation.
+- `RealmCombatDB` / `RealmEncounterDirector`: authored wave sectors, refuges, arrival warnings, shared attack ownership and cancellation.
 - `RealmGuard` / `RealmGuardAttack`: physical guard behavior, fixed warnings, swept collision and one-hit casts.
 - `RealmGuardRoutes` / `RealmCombatArt`: refuge-aware monster paths and reproducible profile/cover art.
 - `RealmInteractable`: nearby direct tap/E routes with current-world guards.

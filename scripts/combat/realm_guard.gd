@@ -3,6 +3,7 @@ extends Enemy
 ## Narrow realm FSM: no ElementDB changes or inherited automatic elemental cast.
 
 enum Mode { RESTING, ENGAGED, RETURNING }
+var wave_index := 0
 var member_index := 0
 var profile := "imp"
 var encounter_id := ""
@@ -40,6 +41,7 @@ func _ready() -> void:
 	_health_bar._process(0)
 
 func overhead_vitals_visible() -> bool:
+	if director != null and not director.active_id.is_empty() and director.active_id != encounter_id: return false
 	return not dead and director != null and director.current_world() and mode != Mode.RETURNING and (mode == Mode.ENGAGED or director.world.player.position.distance_to(position) < 6.0)
 
 func _draw() -> void:
@@ -98,7 +100,7 @@ func _die() -> void:
 	super._die()
 
 func _award_death_rewards() -> void:
-	# XP/kill/pair were committed together before death presentation/signals.
+	# XP/kill/wave were committed together before death presentation/signals.
 	if is_inside_tree() and not get_parent().is_queued_for_deletion(): _spawn_reward()
 
 func _physics_process(delta: float) -> void:
@@ -197,8 +199,18 @@ func finish_action(subject: RealmGuardAttack, interrupted: bool) -> void:
 	_clear_windup_pose()
 
 func _move_step(direction: Vector2, delta: float) -> void:
-	velocity = direction*speed
-	_move_motion(direction*speed*delta)
+	var steering := direction
+	if mode == Mode.ENGAGED:
+		for pack in director.world._packs:
+			if not is_instance_valid(pack.enemy): continue
+			var other := pack.enemy as RealmGuard
+			if not is_instance_valid(other) or other == self or other.dead or other.encounter_id != encounter_id or other.mode != Mode.ENGAGED: continue
+			var away: Vector2 = position-other.position
+			var distance: float = away.length()
+			if distance > 0.01 and distance < 1.05: steering += away/distance*(1.05-distance)*1.5
+	steering = steering.normalized()
+	velocity = steering*speed
+	_move_motion(steering*speed*delta)
 	if direction.length_squared() > 0.01: sprite.flip_h = direction.x < 0
 
 func _move_motion(motion: Vector2) -> void:

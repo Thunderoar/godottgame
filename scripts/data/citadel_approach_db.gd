@@ -11,7 +11,7 @@ const INTRO := [
 	"Fiend: The road may answer you. This citadel answers me.\nMei Ling: Then show him the difference.\nAdam: Stay back from the bars. I've got this.",
 ]
 static func defaults() -> Dictionary:
-	return {"cleared_pairs": [], "crossing_lit": false, "watchpost_lit": false, "lantern_prepared": false, "intro_seen": false}
+	return {"waves_cleared":{}, "cleared_pairs": [], "crossing_lit": false, "watchpost_lit": false, "lantern_prepared": false, "intro_seen": false}
 static func ready(path: Dictionary, shortcut: bool) -> bool:
 	return PAIRS.all(func(id: String) -> bool: return id in path.get("cleared_pairs", [])) and path.get("crossing_lit", false) == true and path.get("watchpost_lit", false) == true and shortcut and path.get("lantern_prepared", false) == true
 static func can_prepare(path: Dictionary, shortcut: bool) -> bool:
@@ -20,11 +20,11 @@ static func can_prepare(path: Dictionary, shortcut: bool) -> bool:
 	return ready(copy, shortcut)
 static func next_step(path: Dictionary) -> Dictionary:
 	var cleared: Array = path.get("cleared_pairs", [])
-	if PAIRS[0] not in cleared: return {"id":"crossing_guards", "title":"Free the crossing light", "detail":"Defeat the two Imps north of Rootbound Crossing. Read their rush, step aside, then counter."}
+	if PAIRS[0] not in cleared: return {"id":"crossing_guards", "title":"Free the crossing light", "detail":"Clear all three reinforcement waves north of Rootbound Crossing. Read their rush, step aside, then counter."}
 	if not path.get("crossing_lit",false): return {"id":"crossing", "title":"Relight the crossing marker", "detail":"The patrol binding is broken. Return to the marker beside the bridge and relight it."}
-	if PAIRS[1] not in cleared: return {"id":"watchpost_guards", "title":"Free the watchpost winch", "detail":"Defeat the watchpost pair. Use the fan gaps or the real stone cover."}
+	if PAIRS[1] not in cleared: return {"id":"watchpost_guards", "title":"Free the watchpost winch", "detail":"Clear the three watchpost waves. Use the fan gaps or the real stone cover."}
 	if not path.get("watchpost_lit",false): return {"id":"watchpost", "title":"Restore the watchpost light", "detail":"Turn the Rootway winch to reconnect its light and open the shortcut."}
-	if PAIRS[2] not in cleared: return {"id":"ashen_guards", "title":"Clear the ashen sentries", "detail":"Defeat the last pair south of the lantern. Move diagonally out of the marked cross."}
+	if PAIRS[2] not in cleared: return {"id":"ashen_guards", "title":"Clear the ashen sentries", "detail":"Clear the last waves south of the lantern. Move diagonally out of the marked cross."}
 	if not path.get("lantern_prepared",false): return {"id":"lantern", "title":"Prepare the citadel lantern", "detail":"Rest at the lantern to restore your strength, save a checkpoint and carry the last light to the ward."}
 	return {"id":"enter", "title":"Enter the citadel when ready", "detail":"The outer ward can be opened. Approach its entrance and choose Enter the citadel. The prison seal still belongs to the fiend."}
 static func followup(path: Dictionary) -> String:

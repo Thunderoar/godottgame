@@ -56,6 +56,7 @@ func register_visual(node: CanvasItem) -> void:
 
 
 func take_attack_damage(amount: int, ignite: bool = true) -> void:
+	if DialogueWorldHold.protects(self): return
 	if not is_attackable() or GameState.game_over_active:
 		return
 	if ignite:

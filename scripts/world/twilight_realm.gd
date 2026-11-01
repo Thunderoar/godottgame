@@ -8,6 +8,7 @@ var ward: CitadelWard
 var _camp_prepare := false
 var _pending_preparation := false
 var _journey := -1
+var _building_encounters := false
 var wildlife: Dictionary = {}
 var combat: RealmEncounterDirector
 var _packs: Array[Dictionary] = []
@@ -144,26 +145,11 @@ func _build_places() -> void:
 	if _boss_defeated: _place("exit", "citadel", RealmDB.BOSS, "The citadel is restored\nReturn to BESUT")
 
 func _build_encounters() -> void:
-	var index := 0
-	for pair in RealmCombatDB.PAIRS:
-		for member in 2:
-			var ordinal := index
-			index += 1 # Stable tuning even when completed pairs are not instantiated.
-			if str(pair.id) in GameState.citadel_path().cleared_pairs: continue
-			var enemy := RealmGuard.new()
-			enemy.member_index = member
-			enemy.director = combat
-			enemy.encounter_id = str(pair.id)
-			enemy.profile = str(pair.profiles[member])
-			enemy.position = pair.homes[member]
-			enemy.home = enemy.position
-			enemy.max_hp = 42 + ordinal * 2
-			enemy.damage = 7
-			enemy.speed = 1.7
-			enemy.xp_reward = 14
-			enemy.gold_reward = 7
-			add_child(enemy)
-			_packs.append({"enemy":enemy,"home":enemy.home,"active":false,"encounter":pair.id})
+	_building_encounters = true
+	for definition in RealmCombatDB.PAIRS:
+		var id := str(definition.id)
+		if GameState.citadel_waves_cleared(id) == 0: spawn_guard_wave(id,0)
+	_building_encounters = false
 	var ruler := ElementalBoss.new()
 	ruler.spawn_shimmer = false # The first meeting reveals a fully visible, still-dormant actor.
 	ruler.disable_mode = CollisionObject2D.DISABLE_MODE_KEEP_ACTIVE
@@ -183,6 +169,30 @@ func _build_encounters() -> void:
 	add_child(boss)
 	boss.process_mode = Node.PROCESS_MODE_DISABLED
 
+func spawn_guard_wave(id: String, wave: int) -> void:
+	if not _building_encounters and (not combat.combat_allowed() or combat.active_id != id): return
+	if _boss_defeated or _journey != GameState.journey_serial or wave != GameState.citadel_waves_cleared(id) or RealmCombatDB.wave_size(wave)==0 or not combat._living(id).is_empty(): return
+	var pair_index := CitadelApproachDB.PAIRS.find(id)
+	if pair_index < 0: return
+	for member in RealmCombatDB.wave_size(wave):
+		var enemy := RealmGuard.new()
+		enemy.member_index = member
+		enemy.wave_index = wave
+		enemy.director = combat
+		enemy.encounter_id = id
+		enemy.profile = RealmCombatDB.wave_profile(id,member)
+		enemy.position = RealmCombatDB.WAVE_POSTS[id][member]
+		enemy.home = enemy.position
+		# More actors, not spongier actors; stable original sector/member tuning.
+		enemy.max_hp = 42+(pair_index*2+member%2)*2
+		enemy.damage = 7
+		enemy.speed = 1.7
+		enemy.xp_reward = RealmCombatDB.wave_xp(wave)
+		enemy.gold_reward = 7
+		add_child(enemy)
+		_packs.append({"enemy":enemy,"home":enemy.home,"active":false,"encounter":id,"wave":wave})
+		if combat.active_id == id: enemy.engage()
+
 func _build_realm_labels() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 3
@@ -199,7 +209,7 @@ func _build_realm_labels() -> void:
 	_hint_label = GameUI.label("", 14, Color("#d7d8e3"))
 	root.add_child(_hint_label)
 	_hint_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	_hint_label.position = Vector2(140, 45)
+	_hint_label.position = Vector2(140, 64)
 	_hint_label.offset_right = -140
 	_hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -249,7 +259,7 @@ func clear_interest_view(at: Vector2) -> bool:
 	return get_world_2d().direct_space_state.intersect_ray(ray).is_empty()
 
 func _landmark_hint(id: String) -> String:
-	if combat != null and not combat.active_id.is_empty(): return str(RealmCombatDB.pair(combat.active_id).hint)
+	if combat != null and not combat.active_id.is_empty(): return combat.wave_hint(combat.active_id)
 	if not _boss_defeated: return str(CitadelApproachDB.next_step(GameState.citadel_path()).detail)
 	return "The wilds are peaceful. Visit onward passages or return to BESUT." if GameState.unbonded_realm_pets().is_empty() else "The wilds are peaceful. Find missed companions, visit onward passages, or return to BESUT."
 

@@ -824,6 +824,8 @@ func _on_day_phase_changed(night: bool, _immediate: bool = false) -> void:
 	if is_queued_for_deletion() or GameState.game_over_active or journey_serial != GameState.journey_serial:
 		return
 	_update_daylight()
+	var dialogue_game := get_tree().get_first_node_in_group("game") as Game
+	if is_instance_valid(dialogue_game) and dialogue_game.dialogue_holding(self): return
 	# Dawn changes only the light. Living enemies keep their HP, targets and AI.
 	var pending := GameState.pending_home_arrival()
 	if not night or not GameState.is_night() or (int(GameState.data.get("home_wave", -1)) >= GameState.night_number() and pending.is_empty()):
@@ -1825,7 +1827,7 @@ func _process(delta: float) -> void:
 	var game := get_tree().get_first_node_in_group("game") as Game
 	if (not is_instance_valid(game) or not is_instance_valid(game.home_interior)) and is_instance_valid(player) and GameState.mission_step() == 0 and player.position.distance_to(_mission_walk_origin) >= 3.0:
 		GameState.record_mission_event("move")
-	if GameState.recovery_active() and is_instance_valid(player) and (not is_instance_valid(game) or not is_instance_valid(game.home_interior)):
+	if GameState.recovery_active() and is_instance_valid(player) and (not is_instance_valid(game) or (not is_instance_valid(game.home_interior) and not game.dialogue_holding(self))):
 		_tick_recovery(delta)
 	if _emergency_fire and _emergency_fire.visible:
 		_emergency_fire.modulate.a = 0.65 + sin(Time.get_ticks_msec() * 0.009) * 0.25

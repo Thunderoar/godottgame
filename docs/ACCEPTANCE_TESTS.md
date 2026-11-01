@@ -3348,3 +3348,91 @@ method/V-Sync warnings. An early external diagnostic's eager script type import
 failed before autoload initialization; its loader was corrected and the failed
 log retained rather than counted as validation. No normal player saves, native
 Windows/Android, export or soak testing were used or claimed.
+
+
+## 2026-11-01 — Citadel reinforcement waves (migrated checkout)
+
+Target: `/home/roku/Documents/ChatGPT/game2/godottgame`, base commit `f83c1df`.
+The previously committed approach/health UI remains. No new commit or push.
+Source authority: `REALM_REINFORCEMENT_WAVES.md`; earlier six-guard reports are
+historical. The realm now requires nine waves / 36 guards before boss admission:
+2, 4, then 6 per sector. Aggregate pre-boss guard XP remains 252.
+
+Observed on Linux/Godot 4.7.2, with external isolated user data for every import,
+probe and test. Full canonical `./tools/test_isolated.sh`: **6882 checks, PASS**,
+exit 0. Focused `res://tools/twilight_test.tscn`: **330 checks, PASS**, exit 0.
+Rendered `res://tools/realm_wave_test.tscn -- --capture`: **65 checks, PASS**,
+exit 0 at 1280x720, 832x480 and 832x480 with `--reduced` (low effects/Reduce Motion).
+Nine actual llvmpipe/Xvfb PNGs were opened: gold arrival marks, four actors and six
+actors at each configuration. Hints sit below the top HUD; active guards retain
+shared numeric HP while adjacent dormant-sector names/HP yield during combat.
+Dense overhead names can still approach player XP; general overlap-free UI is not
+certified. Essential arrival marks remain on reduced settings.
+
+Coverage: all 18 clear/spaced posts, exact 2/4/6 materialization, one committed
+action, wave warning duration, occupied-post deferral, retreat/suspension/deleted-cue
+cancellation, accepted pet challenge, journey/world replacement, actual kill/XP
+transactions, coherent JSON checkpoints, save failure/retry/deduplication, legacy
+completed-sector migration, invalid save fields, unfinished-wave reconstruction,
+no completed-wave respawn, all-sector mechanism/boss gates and unchanged rescue.
+
+Successful final logs contain no `[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers.
+Expected code-12 save warnings come from deliberately unwritable isolated fixtures;
+Xvfb emits input-method/V-Sync warnings. Earlier error-bearing iterations were
+rejected even if they printed a PASS summary. The older combat lifecycle fixture
+needed real wave-zero permission reopened after its prepared boss test; resetting
+only one completed sector was no longer a valid setup. A transient indentation
+edit and shutdown-resource diagnostic logs remain outside the repository.
+
+Evidence root: `/home/roku/Documents/ChatGPT/citadel-implementation-20261101-rBOlGyZJ/waves`.
+Final logs: `FULL_VERIFIED.log`, `twilight-final-clean/test.log`, and
+`render-frozen-{1280x720,832x480,832x480-reduced}/test.log`.
+The external four-role ledger records exact baseline/modified/rollback/reapplied
+commands and hashes. Same-input probe: 6 planned guards / first clear finishes
+sector / 0 reinforcements → 36 / sector unfinished / 4 reinforcements → rollback
+6 / finished / 0 → reapply 36 / unfinished / 4. Completed-wave progress is 0/1/0/1.
+No native Windows, Android, export, soak or manual pacing/balance certification.
+
+
+## 2026-11-01 — Living-world conversation holds
+
+Target remains `/home/roku/Documents/ChatGPT/game2/godottgame`; the preceding
+36-guard/nine-wave work is preserved. See `LIVING_WORLD_DIALOGUE.md`.
+Ordinary NPCs, first/repeat Rahim, nearby quest introductions and Citadel cards now
+hold gameplay callbacks instead of disabling the world. Actors stay in place;
+ambience/shaders/idle visuals, village music, HUD and world time continue. Damage
+and burning/growth are safe, night arrivals defer, callbacks restore exactly, and
+ordinary NPC Exit plus post-dialogue touch attack/movement work again. Actual
+cinematic films, pet battle and developer suspension retain their prior contracts.
+
+Observed Linux/Godot 4.7.2 isolated results, all exit 0 and no `[FAIL]`,
+`SCRIPT ERROR` or `ERROR:` in successful final logs:
+- Canonical `./tools/test_isolated.sh`: **6900 checks, PASS**.
+- `res://tools/dialogue_hold_test.tscn`: **18 checks, PASS**.
+- Focused Twilight: **330 checks, PASS**; focused touch/ocean: **56 checks, PASS**.
+- Actual llvmpipe/Xvfb dialogue renders at 1280x720 and 832x480: **18 checks,
+  PASS** each. Four PNGs (village and Citadel at each size) were opened; actors,
+  background and close actions remain visible, without an opaque whole-screen dim.
+
+Coverage includes actual stationary player/pet/enemy frames, continuing ambient
+breathing and torch flicker/time, held inputs, music, late damage safety for both
+combat sides/residents/trees/structures, dynamically added actors, preservation of
+already-disabled callbacks, repeated release, ordinary live menus, night crossing
+and delayed arrivals, replacement cancellation, and Citadel attack ownership.
+
+The first full iteration was rejected for nine assertions: one obsolete hidden-HUD
+expectation and touch visibility not restored after the new hold. Exact visibility
+restoration and the existing NPC Exit action fixed it; the final full/touch suites
+verify them. A verbose shutdown diagnostic identified retained village Ogg playback
+resources in error-bearing focused runs. Focused harnesses now stop/clear their
+owned music before their drain wait; in-game conversation music is not interrupted.
+Intentional unwritable-save code-12 warnings and Xvfb input/V-Sync warnings remain.
+
+Evidence: `/home/roku/Documents/ChatGPT/citadel-implementation-20261101-rBOlGyZJ/dialogue`.
+Final logs: `FULL_FINAL.log`, `accepted-dialogue_hold/log`, `accepted-twilight/log`,
+`touch-final/log`, and `render-accepted-{1280x720,832x480}/log`.
+Same-input probe: baseline world/ambient/clock/HUD disabled → modified live →
+rollback disabled → reapply live, with the actor fixed in every case. The four-role
+ledger records exact commands, outputs, hashes and scoped rollback on a separate
+copy; default rollback preserves the previous waves. Native Windows/Android,
+export, soak and manual pacing/balance testing are not claimed. No new commit/push.

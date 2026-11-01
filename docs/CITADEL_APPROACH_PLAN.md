@@ -11,13 +11,13 @@ Acceptance evidence is recorded separately; this specification is not a test res
    recognizes the village light, confirms an archer was taken alive, and explains
    that three guarded road lights feed the outer ward. Adam supplies Mei Ling's
    name. Wisp stays in his home; neither speaking to him nor reading lore is a gate.
-2. Defeat both Rootbound patrol Imps, then relight the crossing marker at (33,40.8).
+2. Defeat the Rootbound patrol waves (2, 4, then 6 Imps), then relight the crossing marker at (33,40.8).
    It is a mechanism, NOT a protected optional-reading interest. Its silhouette,
    steady light and message change; there is no new XP or currency payout.
-3. Defeat the watchpost Imp and Watcher, then turn the existing winch at (37,32).
+3. Defeat the watchpost waves (2, 4, then 6 alternating Imps/Watchers), then turn the existing winch at (37,32).
    This restores the second light and opens the physical Rootway shortcut in one
    accepted action. Already-open legacy shortcuts can still restore the new light.
-4. Defeat the ashen Imp and Keeper. Rest at the lantern to heal Adam and revive/
+4. Defeat the ashen waves (2, 4, then 6 alternating Imps/Keepers). Rest at the lantern to heal Adam and revive/
    heal the companion, save the camp checkpoint, and prepare the third light.
    Ordinary early rest remains available even before any road task is completed.
 5. At the outer ward choose Enter the citadel or Not yet. Three labeled road
@@ -34,8 +34,8 @@ Acceptance evidence is recorded separately; this specification is not a test res
    Luma, workshop guidance, optional onward stages and dock ending stay intact.
 
 Nothing requires pet wins, memories/cache, purchases, another level, house upgrades,
-nighttime or rescuing Arjun first. No new inventory key, price, damage buff, enemy
-or timed waiting gate is added. Tasks may be done out of order; mechanism messages,
+nighttime or rescuing Arjun first. No new inventory key, price or damage buff is added. Reinforcements expand the
+existing profiles; their short arrival warnings are safety cues, not an idle quest timer. Tasks may be done out of order; mechanism messages,
 ward reasons, tracker and selected navigation derive from one next-action graph.
 The selected `citadel_road` objective ID remains stable as its next task changes.
 
@@ -43,16 +43,16 @@ The selected `citadel_road` objective ID remains stable as its next task changes
 
 Enemy._die delegates its existing reward work through an overridable narrow hook.
 RealmGuard accepts an actual lethal death through GameState before presentation.
-Current-world ownership, the actual pack member, stable pair/member ID, lethal HP,
+Current-world ownership, the actual pack member, stable sector/wave/member ID, lethal HP,
 combat damage eligibility and a visit-local duplicate claim are checked. The
-GameState transaction mutates the kill count, XP and (on the second actual death)
-completed pair before saving or emitting data_changed. Save failure rolls back the
+GameState transaction mutates the kill count, XP and (on the final actual death of a wave)
+completed-wave checkpoint; the third wave also completes its sector before saving or emitting data_changed. Save failure rolls back the
 state and claim without presenting a recorded victory. Ordinary physical drops
 are spawned once by the inherited death hook after acceptance, not paid by another
 listener. Normal Enemy, boss and village reward branches retain their behavior.
 
-Completed pairs persist for the journey and do not respawn. A partially finished
-pair reconstructs on Continue under the existing policy; strict per-guard lifetime
+Completed waves persist for the journey and do not respawn. An unfinished
+wave reconstructs on Continue under the existing policy; strict per-guard lifetime
 anti-farming is intentionally not introduced. Unbanked loot still follows ordinary
 banking/defeat loss; road persistence does not silently insure dropped/carried loot.
 
@@ -84,13 +84,14 @@ back doors and remain reachable from the approach.
 
 The normal two-second rest runs in the active world. At completion one transaction
 heals, saves camp and (if eligible) records lantern preparation. Only AFTER that
-completion does the Game-owned preparation dialogue suspend the world and shared
-clock. A modal can defer its reveal without losing earned preparation. Modal-close
+completion does the Game-owned preparation dialogue hold gameplay callbacks. The ambient
+world, HUD, music and shared clock continue. A modal can defer its reveal without losing earned preparation. Modal-close
 routing does not unlock an unfinished rest. There is no global SceneTree pause.
 
-Game owns the conversation, previous process mode/HUD/lock state and cancellation.
-It releases held world controls, hides HUD, and disables the owned realm while the
-reading cards are open. Normal Wisp/optional reading and ordinary menus retain
+Game owns the conversation, callback hold/HUD/lock state and cancellation.
+It releases held world controls, holds the owned realm
+actors while the reading cards are open. The world process mode and visible HUD
+are preserved; environment/idle animation and the shared clock keep running. Normal Wisp/optional reading and ordinary menus retain
 non-pausing rules. Every conversation completion checks world and journey identity.
 Clear-world cancels owned entry/introduction before retiring actors. Focus loss
 cannot advance or arm dialogue; focus return requires a fresh release/press. All
@@ -99,9 +100,11 @@ a typewriter. Skip advances the introduction to combat, never rescue or rewards.
 
 ## Audit F4: additive save compatibility
 
-`realm_progress.citadel_path` contains cleared_pairs, crossing_lit, watchpost_lit,
+`realm_progress.citadel_path` contains cleared_pairs, waves_cleared, crossing_lit, watchpost_lit,
 lantern_prepared and intro_seen. Defaults and load sanitization both own it. Pair
-IDs are allowlisted/deduplicated and flags require actual boolean types. Light
+IDs are allowlisted/deduplicated and flags require actual boolean types.
+Wave counts accept only finite integral numbers from 0 through 3. Legacy completed
+IDs migrate to three completed waves; three waves reconcile the completed ID. Light
 flags require their pair; prepared requires the complete prerequisite graph;
 intro_seen requires prepared. Earned watchpost light reconciles shortcut openness.
 The global save version remains 6. No actors, timers or consent are serialized.
@@ -121,7 +124,7 @@ There is no new production skip flag or arbitrary console command.
 - F6: `next_step` drives progress-sensitive text and directions. Completing the
   watchpost before crossing never sends Adam back to a finished winch. Named
   dialogue pages avoid fragile turn offsets. Wisp ambient responses remain.
-- F7: authored pair/member ordinal advances even when a completed pair is skipped;
+- F7: authored sector/member ordinal remains stable when completed waves are skipped;
   remaining enemies retain the original tuning and existing CombatBalance scaling.
 - F8: unrevealed ruler/prison are hidden behind the ward composition; merely
   discovering the citadel shows a sealed entrance on both map sizes, not its boss
@@ -147,3 +150,9 @@ Rendered review is required at 1280x720 and 832x480, including low effects, Redu
 Motion, actor visibility, reading fit, actual buttons and safe traversal. Native
 Windows/Android and player pacing are not certified by Linux/headless/llvmpipe.
 The former 6–10-minute target remains an unmeasured playtest hypothesis, not a claim.
+
+## Reinforcement expansion — 2026-11-01
+
+The same road graph now requires nine waves / 36 guards before boss entry.
+`REALM_REINFORCEMENT_WAVES.md` owns warning/cancellation, checkpoints and rewards.
+Existing Enter/Not yet, introduction, retreat and rescue contracts remain unchanged.

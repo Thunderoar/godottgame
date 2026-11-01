@@ -14,11 +14,13 @@ static func prepare_fixture(realm: TwilightRealm) -> void:
 
 static func _kill_pair(realm: TwilightRealm, index: int) -> void:
 	var points := [Vector2(33,37.8),Vector2(33.6,31.3),Vector2(28.1,29.8)]
-	realm.player.position = points[index]
-	realm.combat.tick(0.016)
-	for pack in realm._packs:
-		if is_instance_valid(pack.enemy) and not pack.enemy.dead and pack.encounter == CitadelApproachDB.PAIRS[index]:
-			pack.enemy.take_damage(99999,Vector2.ZERO,realm.player)
+	for wave in RealmCombatDB.WAVE_SIZES.size():
+		realm.player.position = points[index]
+		realm.combat.tick(0.016)
+		if realm.combat._living(CitadelApproachDB.PAIRS[index]).is_empty(): realm.combat.tick(1.5)
+		for pack in realm._packs.duplicate():
+			if is_instance_valid(pack.enemy) and not pack.enemy.dead and pack.encounter == CitadelApproachDB.PAIRS[index]:
+				pack.enemy.take_damage(99999,Vector2.ZERO,realm.player)
 
 static func run(game: Game, check: Callable, capture: Callable = Callable()) -> void:
 	var saved := GameState.data.duplicate(true)
@@ -110,7 +112,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(bool(result.ok) and not bool(result.changed) and int(GameState.data.kills)==kills and int(GameState.data.xp)==xp,"citadel repeated mechanism input is idempotent and pays no quest XP")
 	# Both guards are accepted through their real damage/death path, not missing-node inference.
 	_kill_pair(realm,0)
-	check.call("rootbound_patrol" in GameState.citadel_path().cleared_pairs and int(GameState.data.kills)==4,"citadel actual guard deaths commit four kills and two completed pairs once")
+	check.call("rootbound_patrol" in GameState.citadel_path().cleared_pairs and int(GameState.data.kills)==24,"citadel actual wave deaths commit 24 kills and two completed sectors once")
 	# An unwritable save destination must roll back the accepted light transaction.
 	GameState.save_game()
 	var save := ProjectSettings.globalize_path(GameState.save_path())
@@ -124,7 +126,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	DirAccess.remove_absolute(save)
 	DirAccess.rename_absolute(backup,save)
 	result = GameState.light_citadel_site("crossing")
-	check.call(bool(result.ok) and str(result.message).contains("last pair") and not str(result.message).contains("winch"),"citadel out-of-order crossing follow-up points ahead, not back to the restored winch")
+	check.call(bool(result.ok) and str(result.message).contains("last waves") and not str(result.message).contains("winch"),"citadel out-of-order crossing follow-up points ahead, not back to the restored winch")
 	GameState.save_game()
 	check.call(GameState.load_game() and GameState.citadel_path().cleared_pairs.size()==2 and GameState.citadel_path().crossing_lit,"citadel road accomplishments survive an actual JSON reload")
 	await game._load_dungeon(RealmDB.PORTAL,false)
@@ -135,14 +137,14 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	# Observe final death: pair and XP are coherent by the first notification and on disk.
 	var observations: Array[bool] = []
 	var observe := func() -> void:
-		if int(GameState.data.kills)==6: observations.append("ashen_sentries" in GameState.citadel_path().cleared_pairs)
+		if int(GameState.data.kills)==36: observations.append("ashen_sentries" in GameState.citadel_path().cleared_pairs)
 	GameState.data_changed.connect(observe)
 	GameState.autosave_enabled = true
 	_kill_pair(realm,2)
 	GameState.autosave_enabled = false
 	GameState.data_changed.disconnect(observe)
 	var disk: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(GameState.save_path()))
-	check.call(not observations.is_empty() and not observations.has(false) and "ashen_sentries" in disk.realm_progress.citadel_path.cleared_pairs and int(disk.kills)==6,"citadel final kill saves and signals XP/kill/pair completion as one coherent transaction")
+	check.call(not observations.is_empty() and not observations.has(false) and "ashen_sentries" in disk.realm_progress.citadel_path.cleared_pairs and int(disk.kills)==36,"citadel final kill saves and signals XP/kill/pair completion as one coherent transaction")
 	var phase_ok := true
 	for phase in TwilightRealm.ApproachPhase.values():
 		for ready in [false,true]:
@@ -162,7 +164,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	realm.player.position = RealmDB.CAMP
 	realm.rest_at_camp()
 	realm._physics_process(2.1)
-	check.call(GameState.citadel_road_ready() and game._story_active and realm.process_mode==Node.PROCESS_MODE_DISABLED and not realm._boss_arrived,"citadel rest finishes and commits readiness BEFORE the suspended preparation reveal")
+	check.call(GameState.citadel_road_ready() and game._story_active and realm.process_mode!=Node.PROCESS_MODE_DISABLED and game.dialogue_holding(realm) and not realm._boss_arrived,"citadel rest finishes and commits readiness BEFORE the living-world preparation conversation")
 	if capture.is_valid(): await capture.call("18_citadel_preparation")
 	game._citadel_conversation.finish()
 	await game.get_tree().process_frame
@@ -210,7 +212,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(realm.approach_phase==TwilightRealm.ApproachPhase.ENTRY_GRANTED and not realm._boss_arrived,"citadel fresh consent opens traversal but does not make the boss attackable")
 	realm.player.position = RealmDB.BOSS_THRESHOLD
 	realm._physics_process(0.016)
-	check.call(game._story_active and realm.citadel_revealed() and realm.boss.visible and realm.boss.modulate.a == 1.0 and not realm.can_damage_actor(realm.boss) and not realm._boss_arrived,"citadel threshold reveals a suspended first meeting, not instant combat")
+	check.call(game._story_active and realm.citadel_revealed() and realm.boss.visible and realm.boss.modulate.a == 1.0 and not realm.can_damage_actor(realm.boss) and not realm._boss_arrived,"citadel threshold reveals a held first meeting, not instant combat")
 	if capture.is_valid(): await capture.call("20_citadel_first_meeting")
 	game._citadel_conversation.finish(true)
 	await game.get_tree().process_frame

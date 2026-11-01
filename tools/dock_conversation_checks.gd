@@ -31,12 +31,12 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	game.play_dock_conversation(true)
 	var dialogue := game._dock_conversation
 	await game.get_tree().process_frame
-	check.call(dialogue != null and game._story_active and game.player().controls_locked and lobby.process_mode == Node.PROCESS_MODE_DISABLED and not game.hud.visible, "first dock conversation owns story suspension, held controls and the hidden tutorial HUD")
+	check.call(dialogue != null and game._story_active and game.player().controls_locked and lobby.process_mode == previous_mode and game.dialogue_holding(lobby) and game.hud.visible, "first dock conversation holds actors while preserving the live world and HUD")
 	var clock := float(GameState.data.world_time)
 	var position := game.player().position
 	game._process(30)
 	await game.get_tree().physics_frame
-	check.call(float(GameState.data.world_time) == clock and game.player().position == position and dialogue.page == 0, "reading neither advances the village clock nor moves Adam nor times out a line")
+	check.call(float(GameState.data.world_time) > clock and game.player().position == position and dialogue.page == 0, "reading advances the village clock without moving Adam or timing out a line")
 	check.call(dialogue._portrait.texture != null and dialogue._portrait.texture.get_image().get_pixel(0, 0).a == 0, "original anime portrait loads with a transparent background")
 	check.call(dialogue._adam_portrait != null and dialogue._adam_portrait != dialogue._rahim_portrait and dialogue._adam_portrait.get_image().get_pixel(0, 0).a == 0, "Adam has his own imported transparent dialogue portrait")
 	var expression_assets_valid := dialogue._adam_expressions.size() == 3

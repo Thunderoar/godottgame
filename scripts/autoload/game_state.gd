@@ -907,6 +907,15 @@ func _sanitize_realm_progress() -> void:
 		if pairs is Array:
 			for id in CitadelApproachDB.PAIRS:
 				if id in pairs: path.cleared_pairs.append(id)
+		var waves_raw: Variant = path_raw.get("waves_cleared",{})
+		for id in CitadelApproachDB.PAIRS:
+			var completed := 0
+			if waves_raw is Dictionary:
+				var value: Variant = waves_raw.get(id,0)
+				if (value is int or value is float) and is_finite(float(value)) and float(value)==floorf(float(value)) and float(value)>=0 and float(value)<=RealmCombatDB.WAVE_SIZES.size(): completed = int(value)
+			if id in path.cleared_pairs: completed = RealmCombatDB.WAVE_SIZES.size()
+			path.waves_cleared[id] = completed
+			if completed == RealmCombatDB.WAVE_SIZES.size() and id not in path.cleared_pairs: path.cleared_pairs.append(id)
 		path.crossing_lit = path_raw.get("crossing_lit") is bool and path_raw.get("crossing_lit") == true and CitadelApproachDB.PAIRS[0] in path.cleared_pairs
 		path.watchpost_lit = path_raw.get("watchpost_lit") is bool and path_raw.get("watchpost_lit") == true and CitadelApproachDB.PAIRS[1] in path.cleared_pairs
 		if path.watchpost_lit: clean.shortcut = true
@@ -929,6 +938,11 @@ func citadel_path() -> Dictionary:
 func citadel_road_ready() -> bool:
 	return CitadelApproachDB.ready(citadel_path(), bool(data.realm_progress.shortcut))
 
+func citadel_waves_cleared(id: String) -> int:
+	var path := citadel_path()
+	if id in path.cleared_pairs: return RealmCombatDB.WAVE_SIZES.size()
+	return int(path.get("waves_cleared",{}).get(id,0))
+
 func _commit_citadel(before: Dictionary) -> bool:
 	if autosave_enabled and not _save_now():
 		data = before
@@ -939,15 +953,19 @@ func _commit_citadel(before: Dictionary) -> bool:
 func accept_realm_guard_death(actor: RealmGuard) -> bool:
 	if not is_instance_valid(actor) or actor.dead or actor.hp > 0 or actor.director == null or not actor.director.current_world(): return false
 	var director := actor.director
-	if actor.member_index not in [0,1] or not director.world._packs.any(func(pack: Dictionary) -> bool: return is_instance_valid(pack.enemy) and pack.enemy == actor) or not director.can_damage(actor) or not CitadelApproachDB.PAIRS.has(actor.encounter_id): return false
-	var key := "%s:%d" % [actor.encounter_id, actor.member_index]
+	if actor.wave_index != citadel_waves_cleared(actor.encounter_id) or actor.member_index < 0 or actor.member_index >= RealmCombatDB.wave_size(actor.wave_index) or not director.world._packs.any(func(pack: Dictionary) -> bool: return is_instance_valid(pack.enemy) and pack.enemy == actor) or not director.can_damage(actor) or not CitadelApproachDB.PAIRS.has(actor.encounter_id): return false
+	var key := "%s:%d:%d" % [actor.encounter_id, actor.wave_index, actor.member_index]
 	if director.defeated_members.has(key): return false
 	var before := data.duplicate(true)
 	var path := citadel_path()
 	if actor.encounter_id in path.cleared_pairs: return false
 	director.defeated_members[key] = true
-	if director.defeated_members.has(actor.encounter_id+":0") and director.defeated_members.has(actor.encounter_id+":1"):
-		path.cleared_pairs.append(actor.encounter_id)
+	var wave_complete := true
+	for member in RealmCombatDB.wave_size(actor.wave_index):
+		if not director.defeated_members.has("%s:%d:%d" % [actor.encounter_id,actor.wave_index,member]): wave_complete = false
+	if wave_complete:
+		path.waves_cleared[actor.encounter_id] = actor.wave_index+1
+		if actor.wave_index+1 == RealmCombatDB.WAVE_SIZES.size(): path.cleared_pairs.append(actor.encounter_id)
 	data.realm_progress.citadel_path = path
 	data.kills = int(data.kills)+1
 	_apply_xp(actor.xp_reward*COMBAT_XP_MULTIPLIER)

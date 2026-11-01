@@ -262,7 +262,8 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	realm.player.position = RealmDB.CAMP
 	realm._physics_process(0.016)
 	check.call(not realm._boss_arrived and not realm.camera.framing_bounds.has_area(), "boss retreat still releases its arena framing")
-	GameState.data.realm_progress.citadel_path.cleared_pairs.erase("watchpost_guard")
+	# Reopen real wave-zero permission for the remaining lifecycle-only fixtures.
+	GameState.data.realm_progress.citadel_path = CitadelApproachDB.defaults()
 	# Kill during windup: ordinary Enemy death/reward accounting remains one-shot.
 	action = _begin(realm,guards,watcher,target_points[1])
 	var kills := int(GameState.data.kills)

@@ -445,6 +445,7 @@ func _facing_index(dir: Vector2) -> int:
 # ------------------------------------------------------------------ damage & rest
 
 func take_damage(amount: int, from: Vector2 = Vector2.ZERO) -> void:
+	if DialogueWorldHold.protects(self): return
 	if dead or sleeping or invulnerable > 0.0:
 		return
 	invulnerable = 0.55

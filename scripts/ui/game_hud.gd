@@ -89,6 +89,7 @@ var _hp_count: Label
 var _build_mode_panel: PanelContainer
 var _menu_button: Button
 var _control_nodes: Dictionary = {}
+var _dialogue_control_visibility: Dictionary = {}
 var _default_transforms: Dictionary = {}
 var _fade: ColorRect
 var _vignette: TextureRect
@@ -847,7 +848,8 @@ func _process(delta: float) -> void:
 		_refresh_objectives()
 	_refresh_recovery()
 	_update_prompt()
-	if any_modal_open() or _sleep_panel.visible:
+	var dialogue_game := get_tree().get_first_node_in_group("game") as Game
+	if any_modal_open() or _sleep_panel.visible or (is_instance_valid(dialogue_game) and dialogue_game.dialogue_holding()):
 		return
 	if Input.is_action_just_pressed("open_inventory"):
 		inventory_requested.emit()
@@ -890,6 +892,7 @@ func _update_context_action(game: Game, player: Player) -> void:
 	var icon := "sprint"
 	var enabled := is_instance_valid(game) and is_instance_valid(player) and not player.controls_locked and not player.dead and not player.sleeping and not any_modal_open() and not game._transitioning and not game._story_active and not game._sailing and not game._game_over and not game._defeat_pending
 	var exit_panel := _context_exit_panel()
+	if is_instance_valid(game) and game.dialogue_holding(): _interact_button.visible = exit_panel == dialogue_panel and not game._story_active
 	if is_instance_valid(game) and is_instance_valid(exit_panel) and not game._transitioning and not game._story_active and not game._sailing and not game._defeat_pending and not game._game_over and not game._developer_paused:
 		target = exit_panel
 		action = ""
@@ -1062,6 +1065,16 @@ func _key_for_action(action_name: String) -> String:
 
 
 func _apply_touch_mode() -> void:
+	var owner_game := get_tree().get_first_node_in_group("game") as Game
+	if is_instance_valid(owner_game) and owner_game.dialogue_holding():
+		if _dialogue_control_visibility.is_empty():
+			for id in _control_nodes: _dialogue_control_visibility[id] = _control_nodes[id].visible
+		for control in _control_nodes.values(): control.visible = false
+		return
+	if not _dialogue_control_visibility.is_empty():
+		for id in _dialogue_control_visibility:
+			if _control_nodes.has(id): _control_nodes[id].visible = bool(_dialogue_control_visibility[id])
+		_dialogue_control_visibility.clear()
 	if pet_battle_panel != null and pet_battle_panel.is_wild_challenge():
 		for control in _control_nodes.values(): control.visible = false
 		return

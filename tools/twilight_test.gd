@@ -16,6 +16,9 @@ func _ready() -> void:
 	game._remove_title()
 	game.hud.visible = true
 	await preload("res://tools/twilight_checks.gd").run(game,_check,_shot if _capture else Callable())
+	game.set_process(false)
+	game._village_music.stop()
+	game._village_music.stream = null
 	# Let final route refresh and short-lived visual callbacks retire before
 	# tearing the fixture down, then drain its queued deletions before quitting.
 	await get_tree().physics_frame

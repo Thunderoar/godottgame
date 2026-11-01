@@ -4,6 +4,28 @@
 The project/application name is still **Save The World**; the player-facing title is
 **PB (Protect BESUT)**. Tidesworn is also the name of the editor workspace.
 
+**2026-11-01 living-world dialogue:** ordinary NPC dialogue, Rahim's first/repeat
+conversations, nearby quest introductions and all Citadel conversation cards now
+use `DialogueWorldHold`, not a disabled world tree. Actors/combat callbacks and
+burn/growth/loot progression hold; ambience, shaders, idle visuals, village music,
+HUD and the shared clock continue. Night lighting changes normally; hostile arrivals
+wait until close and then recheck the current night. Release restores exact callback
+flags and never enables a previously disabled boss/actor. New actors join the hold
+before physics. Close/cancel/world replacement release ownership safely. Actual
+cinematic films, portal/raid reveals, pet battles and developer suspension retain
+their own existing rules. See `docs/LIVING_WORLD_DIALOGUE.md`.
+
+**2026-11-01 Citadel reinforcement waves:** each of the three road sectors now
+requires three waves of 2, 4 and 6 guards (36 total, separate from the boss).
+Only one sector and one committed attack/effect slot are active at a time.
+Gold arrival marks warn for 1.4 seconds; occupied posts defer arrival. Retreat,
+world/journey replacement and accepted pet challenges cancel pending warnings.
+`citadel_path.waves_cleared` saves completed waves; unfinished waves reconstruct.
+Legacy `cleared_pairs` IDs still mean completed sectors and migrate to three waves.
+All waves are required before that sector's road mechanism can be restored.
+Existing per-actor stats, shared overhead health and aggregate 252 guard XP remain;
+ordinary drops scale with additional kills. See `docs/REALM_REINFORCEMENT_WAVES.md`.
+
 **2026-10-30 completed sea journey:** freeing Arjun permanently closes outbound
 sea travel for that journey. `GameState.sea_journey_available()` derives this from
 the existing saved `arjun_rescued` flag. Ship availability, nearby/direct boarding,
