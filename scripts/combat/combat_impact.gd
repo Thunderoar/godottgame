@@ -54,8 +54,20 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO,direction.angle(),Vector2.ONE*size)
 	# Held lozenge is the accessible low-motion fallback.
 	var r := 0.12 if quiet else lerpf(0.19,0.06,t)
-	draw_colored_polygon(PackedVector2Array([Vector2(-r*1.4,0),Vector2(0,-r),Vector2(r*1.4,0),Vector2(0,r)]),Color(color,fade))
+	if not kind.begins_with("material_"):
+		draw_colored_polygon(PackedVector2Array([Vector2(-r*1.4,0),Vector2(0,-r),Vector2(r*1.4,0),Vector2(0,r)]),Color(color,fade))
 	if quiet: return
+	if kind.begins_with("material_"):
+		# Four compact deterministic fragments; secondary and lower contrast than
+		# damage cores/telegraphs. No new nodes, gameplay RNG or ground writes.
+		for i in 4:
+			var axis := Vector2.from_angle(-1.2+float(i)*0.8)
+			var at := axis*(0.08+t*0.42)+Vector2(0,t*t*0.18)
+			if kind == "material_ash":
+				draw_circle(at,0.025,Color(tint,fade*0.45))
+			else:
+				draw_line(at,at+axis*(0.04 if kind == "material_steel" else 0.025),Color(tint,fade*0.65),0.025,aa)
+		return
 	# An ivory fracture along the impact direction reads as force rather than a
 	# circular magic spell. The dark under-edge remains visible on bright sand.
 	var cut_length := (0.62 if kind in ["finisher","defeat"] else 0.4)*(1.0-t)

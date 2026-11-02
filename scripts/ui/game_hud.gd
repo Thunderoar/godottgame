@@ -404,6 +404,8 @@ func _build_controls() -> void:
 
 	_attack_button = TouchActionButton.new()
 	_attack_button.action = "attack"
+	_attack_button.pressed.connect(_on_attack_requested)
+	_attack_button.cancelled.connect(_on_attack_cancelled)
 	_attack_button.caption = "Attack"
 	_attack_button.icon_kind = "sword"
 	_attack_button.accent = Color("#e1a34f")
@@ -838,6 +840,7 @@ func _process(delta: float) -> void:
 		var combatant: Player = game.player() if is_instance_valid(game) else null
 		if combatant != null and is_instance_valid(combatant) and combatant.has_method("cooldown_fraction"):
 			_attack_button.set_cooldown(float(combatant.call("cooldown_fraction")))
+			_attack_button.set_queued(combatant.has_queued_attack())
 		else:
 			_attack_button.set_cooldown(0.0)
 	_mission_timer += delta
@@ -1187,7 +1190,16 @@ func _schedule_gui_layout() -> void:
 	call_deferred("_layout_gui")
 
 
+func _on_attack_requested() -> void:
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if is_instance_valid(game) and is_instance_valid(game.player()): game.player().submit_attack_input()
+
+func _on_attack_cancelled() -> void:
+	var game := get_tree().get_first_node_in_group("game") as Game
+	if is_instance_valid(game) and is_instance_valid(game.player()): game.player().clear_attack_request()
+
 func release_world_controls() -> void:
+	_on_attack_cancelled()
 	for control in _control_nodes.values():
 		if control is TouchActionButton:
 			control.cancel()

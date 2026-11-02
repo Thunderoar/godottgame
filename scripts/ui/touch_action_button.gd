@@ -1,6 +1,7 @@
 class_name TouchActionButton
 extends Control
 signal pressed
+signal cancelled
 ## A large circular touch target that presses an InputMap action. The gameplay
 ## code never needs to know whether a finger or the keyboard sent the action.
 ##
@@ -15,6 +16,7 @@ signal pressed
 @export var accent := Color("#d8a557")
 @export var diameter := 94.0
 
+var _queued := false
 var _active := false
 var _touch_id := -1
 var _mouse_active := false
@@ -124,6 +126,8 @@ func _process(delta: float) -> void:
 
 
 func cancel(keep_pointer_until_release: bool = false) -> void:
+	cancelled.emit()
+	set_queued(false)
 	if _active:
 		var touch := _touch_id
 		var mouse := _mouse_active
@@ -137,6 +141,11 @@ func cancel(keep_pointer_until_release: bool = false) -> void:
 
 
 # ------------------------------------------------------------------ public surface
+
+func set_queued(value: bool) -> void:
+	if _queued == value: return
+	_queued = value
+	queue_redraw()
 
 func set_cooldown(fraction: float) -> void:
 	# fraction in 0..1: how much of the attack cooldown remains.
@@ -228,6 +237,9 @@ func _draw() -> void:
 		var end := start + TAU * _cooldown
 		draw_arc(centre, draw_r - 3.0, start, end, 48, Color(0.95, 0.95, 0.9, 0.55), 4.0, true)
 		draw_circle(centre, draw_r - 7.0, Color(0.01, 0.03, 0.04, 0.35 * _cooldown))
+	if _queued:
+		var point := centre+Vector2(-draw_r*0.72,-draw_r*0.65)
+		draw_colored_polygon(PackedVector2Array([point+Vector2(0,-5),point+Vector2(5,0),point+Vector2(0,5),point+Vector2(-5,0)]),Color("#a4e7db"))
 	# Count badge (item counts) at the top-right edge.
 	if _badge != "":
 		var badge_pos := centre + Vector2(draw_r * 0.52, -draw_r * 0.62)

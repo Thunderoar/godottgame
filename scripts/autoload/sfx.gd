@@ -9,6 +9,7 @@ const PLAYER_POOL := 8
 
 var _cache: Dictionary = {}
 var _players: Array[AudioStreamPlayer] = []
+var _combat_variants: Dictionary = {}
 var _next_player := 0
 var _music: AudioStreamPlayer
 var _music_cache: Dictionary = {}
@@ -27,8 +28,9 @@ func _ready() -> void:
 		add_child(player)
 		_players.append(player)
 	# Finite cached one-shots: synthesize before the first combat contact.
-	for kind in ["blade_swing","blade_hit","blade_finish","blade_armor","blade_defeat"]:
+	for kind in ["blade_swing","blade_hit","blade_finish","blade_armor","blade_defeat","blade_stone"]:
 		_get_stream(kind)
+		_get_stream(kind+"_v1")
 	call_deferred("_bind_combat_settings")
 
 
@@ -56,8 +58,13 @@ func _combat_setting_changed(key: String) -> void:
 		else:
 			voice.volume_db = float(voice.get_meta("combat_volume",-9.0)) + GameSettings.volume_percent_to_db(GameSettings.effects_volume())
 
+func play_combat(kind: String, volume_db := -9.0) -> void:
+	var variant := int(_combat_variants.get(kind,0))
+	_combat_variants[kind] = 1-variant
+	play(kind if variant == 0 else kind+"_v1",volume_db)
+
 func play(kind: String, volume_db: float = -7.0) -> void:
-	var combat_voice := kind.begins_with("blade_")
+	var combat_voice := kind.begins_with("blade_") or kind in ["hit","aggro","charge"]
 	if combat_voice and (GameSettings.mute_all() or GameSettings.effects_volume() <= 0 or GameSettings.master_volume() <= 0): return
 	if _players.is_empty():
 		return
@@ -154,6 +161,8 @@ func _get_stream(kind: String) -> AudioStreamWAV:
 func _build_combat_stream(kind: String) -> AudioStreamWAV:
 	# One composite PCM voice (air/crack/body/metal), not several overlapping
 	# players. Independent deterministic noise never consumes gameplay RNG.
+	var alternate := kind.ends_with("_v1")
+	kind = kind.trim_suffix("_v1")
 	var duration := 0.16
 	var bass := 112.0
 	var body := 0.40
@@ -175,6 +184,11 @@ func _build_combat_stream(kind: String) -> AudioStreamWAV:
 		duration = 0.24
 		bass = 68.0
 		body = 0.50
+	if kind == "blade_stone":
+		bass = 94.0
+		air = 0.48
+		body = 0.34
+	if alternate: bass *= 1.045
 	var count := int(MIX_RATE*duration)
 	var bytes := PackedByteArray()
 	bytes.resize(count*2)

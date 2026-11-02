@@ -85,6 +85,15 @@ func _ready() -> void:
 # ------------------------------------------------------------------ spawners
 
 func contact(at: Vector2, dir: Vector2, color: Color, kind: String) -> void:
+	if kind.begins_with("material_"):
+		# Decoration may only borrow an idle slot; saturation drops it instead
+		# of stealing accepted-hit cores or warning-adjacent contact information.
+		for i in CONTACT_COUNT:
+			var optional := _contacts[(_contact_cursor+i)%CONTACT_COUNT]
+			if not optional.visible:
+				optional.play(at,dir,color,kind)
+				return
+		return
 	# Every spawn resets age, style, direction, tint and visibility; even a busy
 	# slot can be reused without a stale tween hiding the replacement effect.
 	var fx := _contacts[_contact_cursor]

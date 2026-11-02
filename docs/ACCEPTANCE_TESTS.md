@@ -3990,3 +3990,37 @@ Normal player data was not used. No APK export, commit or push was performed.
   separately rather than represented as passing evidence.
 - No native Windows, physical Android/touch, export, performance/soak or subjective
   audio-listening validation is claimed. No commit/push is part of this pass.
+
+
+## 2026-11-02 — Combat evolution: input, timing, poses and contact results
+
+- Implemented `docs/COMBAT_EVOLUTION.md` following the external research plan:
+  one-slot 100 ms input buffering, keyboard/touch deduplication/cancellation,
+  remainder-safe phase advancement, bounded opt-in traces, code-native keyed
+  attack poses in pixel and illustrated modes, clamped contact anchors, accepted
+  hit results, world-owned feedback, pooled arrows and finite material audio variants.
+- Fresh pristine baseline gate: **8,529 checks PASS, exit 0**. Intermediate full
+  candidate gates passed **8,664** and then **8,669** checks as coverage grew.
+  Final focused suite passes **142 checks**, exit 0, empty stderr. The final
+  working-copy canonical count/status is recorded literally in VERIFICATION.txt.
+- Both baseline and candidate renderer probes pass **14 checks** with the same
+  inputs. Baseline rejects an early press and a 500 ms update ends in ACTIVE;
+  candidate retains the press and consumes that update through one attack to idle.
+  Both retain **13 damage / nominal 0.38-second cooldown**. Corrected elapsed
+  remainders mean realized cadence is intentionally not claimed byte-for-byte
+  identical to the old phase-stretching behavior. No damage/range/knockback,
+  authored wind-up/active/recovery or enemy telegraph constants were shortened.
+- Pixel real-renderer reviews at **1280x720** and **832x480**, plus a separate
+  illustrated-process review at **1280x720**, each exercise 480 weapon draw variants.
+  The controlled moving replay captures 90 simulation frames at 60 Hz with three
+  requests, three attacks and **39 total damage**. Its encoded preview is 1.5 s,
+  1280x720, 45 frames at 30 FPS. This is a deterministic renderer replay, not a
+  physical input-to-display latency or target-device FPS measurement.
+- The same canonical modified-project/patch/verification/rollback roles remain in
+  `/home/roku/Documents/ChatGPT/combat-visuals-20261102-8jjbl00t/`. This pass's
+  baseline/history are under `evolution-implementation-20261102-5esy15j5/`. Latest
+  rollback restores the previously committed impact upgrade, retaining startup.
+- Xvfb input-method/V-Sync warnings and isolated-import adb refusal are retained.
+  Initial parser/capture errors and corrected fixture expectations are recorded,
+  not hidden. No native Windows, Android/touch, subjective listening, blinded
+  user study or hardware performance/thermal certification; no commit/push.

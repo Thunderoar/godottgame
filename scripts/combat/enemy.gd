@@ -86,6 +86,7 @@ var _route_clock := 0.0
 var _route_goal := Vector2(INF, INF)
 var _route_index := 0
 var _target_clock := 0.0
+var last_hit_result: CombatHit
 var _death_sound_owned := false
 var _combat_motion: CombatBodyMotion
 var _pose_tween: Tween
@@ -829,6 +830,7 @@ func take_damage(amount: int, from_dir: Vector2 = Vector2.ZERO, _source: Node = 
 		return
 	if is_boss and get_parent() is Dungeon:
 		get_parent().alert_intruders(true)
+	var before_hp := hp
 	hp = maxi(0, hp - amount)
 	_hit_flash = 0.14
 	var opts := {"shake": 0.06, "shake_time": 0.1, "armored": is_boss, "lethal": hp <= 0}
@@ -844,6 +846,8 @@ func take_damage(amount: int, from_dir: Vector2 = Vector2.ZERO, _source: Node = 
 		opts["hitstop"] = 0.0
 	else:
 		opts["hitstop"] = 0.05 if bool(opts.get("heavy",false)) else 0.03
+	last_hit_result = CombatHit.describe(self,before_hp,hp,from_dir,_source,bool(opts.get("heavy",false)))
+	opts["result"] = last_hit_result
 	HitFeedback.impact(self, from_dir, amount, opts)
 	if from_dir != Vector2.ZERO:
 		_knockback = from_dir * (5.0 if is_boss else 6.5)

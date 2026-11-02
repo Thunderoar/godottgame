@@ -19,12 +19,12 @@ static func ensure_pool(world: Node) -> VfxPool:
 	return pool
 
 
-static func pool() -> VfxPool:
+static func pool(world: Node = null) -> VfxPool:
 	var tree := Engine.get_main_loop() as SceneTree
 	if tree == null:
 		return null
 	for node in tree.get_nodes_in_group("vfx_pool"):
-		if _available(node):
+		if _available(node) and (world == null or world.is_ancestor_of(node)):
 			return node as VfxPool
 	return null
 
@@ -40,14 +40,24 @@ static func camera_punch(source: Node2D, direction: Vector2, strength: float = 1
 			return
 
 
-static func contact(at: Vector2, dir: Vector2, color: Color = Color("#ffe7a1"), kind: String = "normal") -> void:
-	var active_pool := pool()
+static func contact(at: Vector2, dir: Vector2, color: Color = Color("#ffe7a1"), kind: String = "normal", world: Node = null) -> void:
+	var active_pool := pool(world)
 	if active_pool != null:
 		active_pool.contact(at, dir, color, kind)
 
 
-static func sparks(at: Vector2, dir: Vector2, color: Color = Color("#ffe7a1"), count: int = 6) -> void:
-	var pool := pool()
+static func material_contact(at: Vector2, direction: Vector2, material: String, world: Node) -> void:
+	if GameSettings.reduce_motion() or not GameSettings.effects_at_least("med"): return
+	var color := Color("#decba6")
+	if material == "steel": color = Color("#afcfe3")
+	elif material == "stone": color = Color("#a9a0b9")
+	elif material == "ash": color = Color("#e5b681")
+	var active_pool := pool(world)
+	if active_pool != null: active_pool.contact(at,direction,color,"material_"+material)
+
+
+static func sparks(at: Vector2, dir: Vector2, color: Color = Color("#ffe7a1"), count: int = 6, world: Node = null) -> void:
+	var pool := pool(world)
 	if pool == null:
 		return
 	pool.sparks(at, dir, color, count)
@@ -67,8 +77,8 @@ static func dust(at: Vector2, count: int = 3, color: Color = Color(0.78, 0.72, 0
 	pool.dust(at, count, color)
 
 
-static func number(at: Vector2, amount: int, crit := false, color: Color = Color("#ffe7a1")) -> void:
-	var pool := pool()
+static func number(at: Vector2, amount: int, crit := false, color: Color = Color("#ffe7a1"), world: Node = null) -> void:
+	var pool := pool(world)
 	if pool == null:
 		return
 	pool.number(at, amount, crit, color)

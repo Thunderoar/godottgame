@@ -118,7 +118,7 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(targets[0].hp == before_hp[0]-damage and targets[1].hp == before_hp[1]-damage, "impact: each target takes the exact unmodified active-frame damage")
 	check.call(cam.impact_count == punches+1 and Sfx._next_player == (cursor+1)%Sfx.PLAYER_POOL, "impact: multi-target strike emits exactly one punch and composite impact voice")
 	check.call(p._combat_visuals.confirmed and is_equal_approx(p._combat_visuals.contact_hold,0.045), "impact: real contact triggers the standard blade hold")
-	check.call(is_equal_approx(p._attack_timer,float(GameState.character_data().attack_cooldown)), "impact: hit confirmation does not delay or restart the attack cooldown twice")
+	check.call(is_equal_approx(p._attack_timer,float(GameState.character_data().attack_cooldown)-0.001), "impact: hit confirmation does not delay or restart the attack cooldown twice")
 	p._attack_step = 2
 	p._begin_active_phase()
 	var pool := Vfx.pool()

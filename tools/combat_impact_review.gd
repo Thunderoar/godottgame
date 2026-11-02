@@ -55,7 +55,7 @@ func _ready() -> void:
 	var damage := int(round(float(GameState.attack_power()) * float(GameState.character_data().get("attack_mult",1.0))))
 	p._update_attack_phase(0.061)
 	_check(target.hp == hp0-damage, "active frame deals exact existing sword damage")
-	_check(is_equal_approx(p._attack_timer,float(GameState.character_data().attack_cooldown)), "cooldown restarts at active frame")
+	_check(is_equal_approx(p._attack_timer,float(GameState.character_data().attack_cooldown)-0.001), "cooldown restarts at active frame")
 	_check(p.get_node("Slash").visible, "legacy slash compatibility remains visible")
 	if impactful:
 		var elapsed_before: float = fx.get("elapsed")

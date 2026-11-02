@@ -395,6 +395,10 @@ static func character_texture(character_id: String, facing: int, frame: int = 0)
                         _:
                                 step = 0
                                 bob = 1
+                var attack_pose := frame >= 7 and frame < 19
+                if attack_pose:
+                        bob = 0
+                        step = 1 if ((frame-7) % 4) in [1,2] else 0
                 var hurt := frame == 6
                 var eyes_closed := frame == 5
                 # Cloak / silhouette behind the body.
@@ -418,7 +422,9 @@ static func character_texture(character_id: String, facing: int, frame: int = 0)
                 # Chest clasp.
                 rect(img, 14, 27 + bob, 4, 2, accent.darkened(0.15))
                 # Arms.
-                if facing == 2:
+                if attack_pose:
+                        pass # The pose provider draws the committed arms/weapon below.
+                elif facing == 2:
                         rect(img, 20, 26 + bob, 4, 9, OUTLINE)
                         rect(img, 20, 27 + bob, 3, 8, tunic.lightened(0.06))
                         rect(img, 20, 35 + bob, 3, 3, skin)
@@ -489,6 +495,9 @@ static func character_texture(character_id: String, facing: int, frame: int = 0)
                         rect(img, 21, 13 + bob, 3, 13, hair)
                         rect(img, 7, 18 + bob, 4, 2, Color("#d7637e"))
                 # Unique weapon silhouette.
+                if attack_pose:
+                        CombatPoseArt.draw_weapon(img, character_id, facing, int((frame-7)/4), (frame-7)%4)
+                        return img
                 match character_id:
                         "arjun":
                                 # Forgehammer over the right shoulder.

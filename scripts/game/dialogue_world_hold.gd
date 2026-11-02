@@ -26,7 +26,13 @@ func _capture(node: Node) -> void:
 	node.set_physics_process(false)
 	if simulation: node.set_process(false)
 	if node is CharacterBody2D: node.velocity = Vector2.ZERO
-	if node is Player and is_instance_valid(node._visual): node._visual.set_motion(Vector2.ZERO,GameState.move_speed())
+	if node is Player:
+		node.clear_attack_request()
+		if is_instance_valid(node._visual):
+			node._visual.end_attack()
+			node._visual.set_motion(Vector2.ZERO,GameState.move_speed())
+		if is_instance_valid(node._combat_visuals): node._combat_visuals.cancel()
+		if is_instance_valid(node._combat_motion): node._combat_motion.cancel()
 
 func release() -> void:
 	if _released: return

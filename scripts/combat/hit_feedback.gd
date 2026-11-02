@@ -10,7 +10,11 @@ extends RefCounted
 static func impact(victim: Node2D, from_dir: Vector2, damage: int, opts := {}) -> void:
 	if victim == null or not is_instance_valid(victim):
 		return
-	var at: Vector2 = victim.global_position + Vector2(0, -0.6)
+	var result: CombatHit = opts.get("result") as CombatHit
+	if result != null and (not result.accepted or result.world == null): return
+	var effect_world := result.world if result != null else CombatHit.world_of(victim)
+	if effect_world == null: return
+	var at: Vector2 = result.position if result != null else CombatHit.anchor(victim,from_dir)
 	var color: Color = opts.get("color", Color("#ffe7a1"))
 	var shake: float = opts.get("shake", 0.0)
 	var shake_time: float = opts.get("shake_time", 0.12)
@@ -24,18 +28,19 @@ static func impact(victim: Node2D, from_dir: Vector2, damage: int, opts := {}) -
 	var variant := "defeat" if bool(opts.get("lethal",false)) else ("critical" if crit else ("armor" if bool(opts.get("armored",false)) else ("finisher" if heavy else "normal")))
 	if victim.has_method("combat_recoil"):
 		victim.call("combat_recoil",from_dir,heavy)
-	Vfx.contact(at, from_dir, color, variant)
+	Vfx.contact(at, from_dir, color, variant, effect_world)
 	# Sparks fly opposite the swing direction.
 	var spark_dir := -from_dir if from_dir != Vector2.ZERO else Vector2.ZERO
-	Vfx.sparks(at, spark_dir, color, 5 if not crit else 8)
-	Vfx.number(at + Vector2(0, -0.35), damage, crit, color)
+	Vfx.sparks(at, spark_dir, color, 5 if not crit else 8, effect_world)
+	Vfx.number(at + Vector2(0, -0.35), damage, crit, color, effect_world)
+	if result != null: Vfx.material_contact(at,from_dir,result.material,effect_world)
 	if hitstop > 0.0:
 		Vfx.hit_stop([victim], hitstop)
 	if shake > 0.0:
 		var tree := Engine.get_main_loop() as SceneTree
 		if tree != null:
 			for cam in tree.get_nodes_in_group("camera"):
-				if is_instance_valid(cam) and cam.has_method("shake"):
+				if is_instance_valid(cam) and cam.has_method("shake") and effect_world != null and effect_world.is_ancestor_of(cam):
 					cam.call("shake", shake, shake_time)
 					break
 

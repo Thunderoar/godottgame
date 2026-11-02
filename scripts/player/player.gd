@@ -8,7 +8,8 @@ extends CharacterBody2D
 ## Overhaul (3B/3D): velocity eases in and out (ACCEL/FRICTION) instead of
 ## snapping; try_attack() opens a data-driven anticipation -> active ->
 ## recovery chain (AttackDB) and damage lands on the ACTIVE frame; the cooldown
-## restarts at each hit frame so per-second damage is unchanged. Footsteps kick
+## restarts at each hit frame; buffered intent and remainder-safe timing avoid
+## dropped presses/tick-dependent phase stretching without shortening authored values. Footsteps kick
 ## up dust, hits and deaths use PlayerSprite poses.
 
 signal sleep_changed(active: bool, progress: float, label: String)
@@ -34,7 +35,10 @@ var stamina := STAMINA_MAX
 var sprinting := false
 var exhausted := false
 var _stamina_delay := 0.0
-var controls_locked := false
+var controls_locked := false:
+	set(value):
+		controls_locked = value
+		if value: clear_attack_request()
 var facing := Vector2.DOWN
 var nearby: Node = null
 var attacking := false
@@ -45,6 +49,15 @@ var dead := false
 var _element_slow_time := 0.0
 var _element_slow_factor := 1.0
 
+const ATTACK_BUFFER_SECONDS := 0.1
+var _request_left := 0.0
+var _request_direction := Vector2.RIGHT
+var _request_world_id := 0
+var _request_journey := 0
+var _input_edge_seen := false
+var attack_serial := 0
+var combat_trace_enabled := false
+var combat_trace: Array[Dictionary] = []
 var _attack_timer := 0.0
 var _attack_total := 0.45
 var _sleep_elapsed := 0.0
@@ -100,6 +113,8 @@ func _on_boss_revival_used(healed: int) -> void:
 	if not _owns_potion_feedback(): return
 	invulnerable = maxf(invulnerable, 2.0)
 	revival_flash = 2.0
+	clear_attack_request()
+	if _visual: _visual.end_attack()
 	if _combat_visuals: _combat_visuals.cancel()
 	if _combat_motion: _combat_motion.cancel()
 	_attack_phase = AttackPhase.NONE
@@ -139,6 +154,9 @@ func _build_visual() -> void:
 	_shadow.z_index = -1
 	add_child(_shadow)
 
+	for pose_facing in [0,1,2]:
+		for pose_step in 3:
+			for pose_key in 4: CombatPoseArt.texture(str(GameState.data.get("character_id","adam")),pose_facing,pose_step,pose_key)
 	_visual = PlayerSprite.new()
 	_visual.name = "Sprite"
 	_visual.character_id = str(GameState.data.get("character_id", "adam"))
@@ -183,6 +201,7 @@ func _physics_process(delta: float) -> void:
 		return
 
 	if controls_locked:
+		_input_edge_seen = false
 		velocity = velocity.move_toward(Vector2.ZERO, braking * delta)
 		move_and_slide()
 		if _visual:
@@ -190,7 +209,11 @@ func _physics_process(delta: float) -> void:
 		_update_nearby()
 		return
 
+	if _request_left > 0.0:
+		_request_left = maxf(0.0,_request_left-delta)
+		if not _request_valid(): clear_attack_request()
 	_update_attack_phase(delta * GameState.attack_speed_multiplier())
+	_consume_attack_request()
 
 	var input := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if input.length_squared() > 0.01:
@@ -214,7 +237,8 @@ func _physics_process(delta: float) -> void:
 		_visual.set_motion(get_real_velocity(), GameState.move_speed())
 
 	if Input.is_action_just_pressed("attack"):
-		try_attack()
+		if not _input_edge_seen: submit_attack_input()
+	_input_edge_seen = false
 	if Input.is_action_just_pressed("interact"):
 		try_interact()
 
@@ -279,10 +303,71 @@ func _process_sleep(delta: float) -> void:
 
 # ------------------------------------------------------------------ attacks
 
-func try_attack() -> bool:
-	if controls_locked or sleeping or dead:
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("attack") and not event.is_echo():
+		submit_attack_input()
+
+func _notification(what: int) -> void:
+	if what in [NOTIFICATION_WM_WINDOW_FOCUS_OUT,NOTIFICATION_APPLICATION_FOCUS_OUT]:
+		clear_attack_request()
+
+func _trace_combat(event: String) -> void:
+	if not combat_trace_enabled: return
+	if combat_trace.size() >= 64: combat_trace.pop_front()
+	combat_trace.append({"event":event,"usec":Time.get_ticks_usec(),"physics_frame":Engine.get_physics_frames(),"attack_id":attack_serial,"phase":_attack_phase})
+
+func submit_attack_input() -> bool:
+	# Events and the synthetic InputMap edge may describe the same physical press.
+	if _input_edge_seen: return false
+	_input_edge_seen = true
+	return request_attack()
+
+func _combat_available() -> bool:
+	if not is_inside_tree() or is_queued_for_deletion() or controls_locked or sleeping or dead or DialogueWorldHold.protects(self): return false
+	var game := get_tree().get_first_node_in_group("game") as Game
+	return not is_instance_valid(game) or (is_instance_valid(game.world) and game.world.is_ancestor_of(self))
+
+func request_attack(direction := Vector2.ZERO) -> bool:
+	if not _combat_available():
+		clear_attack_request()
 		return false
-	if _attack_timer > 0.0 or _attack_phase != AttackPhase.NONE:
+	var input_aim := Input.get_vector("move_left","move_right","move_up","move_down")
+	_request_direction = direction.normalized() if direction.length_squared() > 0.001 else (input_aim.normalized() if input_aim.length_squared() > 0.01 else facing)
+	_trace_combat("request")
+	if _attack_timer <= 0.000001 and _attack_phase == AttackPhase.NONE:
+		facing = _request_direction
+		clear_attack_request()
+		return try_attack()
+	_request_left = ATTACK_BUFFER_SECONDS
+	_request_world_id = get_parent().get_instance_id()
+	_request_journey = GameState.journey_serial
+	_trace_combat("buffered")
+	return true
+
+func _request_valid() -> bool:
+	return _request_left > 0.000001 and _combat_available() and get_parent().get_instance_id() == _request_world_id and GameState.journey_serial == _request_journey
+
+func _consume_attack_request() -> void:
+	if _request_left <= 0.0: return
+	if not _request_valid():
+		clear_attack_request()
+		return
+	if _attack_phase == AttackPhase.NONE and _attack_timer <= 0.000001:
+		facing = _request_direction
+		clear_attack_request()
+		try_attack() # At most one buffered start per physics update; no catch-up chain.
+
+func has_queued_attack() -> bool:
+	return _request_valid()
+
+func clear_attack_request() -> void:
+	_request_left = 0.0
+	_request_world_id = 0
+
+func try_attack() -> bool:
+	if not _combat_available():
+		return false
+	if _attack_timer > 0.000001 or _attack_phase != AttackPhase.NONE:
 		return false
 	var character := GameState.character_data()
 	_chain_style = str(character.get("weapon_style", "sword"))
@@ -291,6 +376,8 @@ func try_attack() -> bool:
 	if _combo_expire > 0.0 and _idle_clock < _combo_expire:
 		next_step = (_attack_step + 1) % AttackDB.step_count(_chain_style)
 	_attack_step = next_step
+	attack_serial += 1
+	_trace_combat("start")
 	_attack_dir = facing
 	_attack_phase = AttackPhase.ANTICIPATION
 	var step := AttackDB.step(_chain_style, _attack_step)
@@ -298,6 +385,7 @@ func try_attack() -> bool:
 	attacking = true
 	_combat_visuals.anticipate(_attack_dir, _chain_style, str(step.get("arc", "lr")), _phase_time, float(character.get("attack_range", 2.05)))
 	_combat_motion.windup(_attack_dir,_phase_time)
+	_visual.begin_attack(_attack_dir,_attack_step,_chain_style,_phase_time)
 	# A tiny hitch at the wind-up start sells the anticipation.
 	if _visual and not GameSettings.reduce_motion():
 		_visual.scale = Vector2(PixelArt.PX * 0.97, PixelArt.PX * 1.02)
@@ -305,23 +393,38 @@ func try_attack() -> bool:
 
 
 func _update_attack_phase(delta: float) -> void:
-	if _attack_phase == AttackPhase.NONE:
-		return
-	_phase_time -= delta
-	if _phase_time > 0.0:
-		return
-	match _attack_phase:
-		AttackPhase.ANTICIPATION:
-			_begin_active_phase()
-		AttackPhase.ACTIVE:
-			_attack_phase = AttackPhase.RECOVERY
-			_phase_time = float(AttackDB.step(_chain_style, _attack_step).get("recovery", 0.14))
-		AttackPhase.RECOVERY:
-			_attack_phase = AttackPhase.NONE
-			attacking = false
-			_combo_expire = _idle_clock + AttackDB.COMBO_WINDOW
-			if _visual:
-				_visual.scale = Vector2(PixelArt.PX, PixelArt.PX)
+	if _attack_phase == AttackPhase.NONE: return
+	var remaining := maxf(0.0,delta)
+	var entered_active := false
+	# Three transitions maximum for one accepted attack. Callbacks may hand off
+	# world ownership; recheck immediately before consuming another boundary.
+	for boundary in 3:
+		if _attack_phase == AttackPhase.NONE: break
+		var consumed := minf(remaining,maxf(0.0,_phase_time))
+		_phase_time -= consumed
+		remaining -= consumed
+		if _phase_time > 0.000001: break
+		match _attack_phase:
+			AttackPhase.ANTICIPATION:
+				_begin_active_phase()
+				entered_active = true
+				# Cooldown is anchored to the actual ACTIVE boundary, including
+				# the elapsed remainder after it, not the end of a slow tick.
+				_attack_timer = maxf(0.0,_attack_timer-remaining)
+				if not _combat_available(): break
+			AttackPhase.ACTIVE:
+				_attack_phase = AttackPhase.RECOVERY
+				_phase_time = float(AttackDB.step(_chain_style,_attack_step).get("recovery",0.14))
+				if _visual: _visual.recover_attack(_phase_time)
+			AttackPhase.RECOVERY:
+				_attack_phase = AttackPhase.NONE
+				attacking = false
+				_combo_expire = _idle_clock + AttackDB.COMBO_WINDOW - remaining/maxf(0.01,GameState.attack_speed_multiplier())
+				if _visual:
+					_visual.end_attack()
+					_visual.scale = Vector2(PixelArt.PX,PixelArt.PX)
+		if remaining <= 0.000001: break
+	if entered_active: _trace_combat("active")
 
 
 func _begin_active_phase() -> void:
@@ -338,6 +441,7 @@ func _begin_active_phase() -> void:
 		if _visual.has_method("set_facing"):
 			_visual.call("set_facing", _facing_index(_attack_dir), true)
 	_combat_motion.swing(_attack_dir,combat_impact_weight())
+	_visual.strike_attack(_attack_dir,_attack_step,_chain_style)
 	var lunge := float(step.get("lunge", 0.0))
 	if lunge > 0.0 and not GameSettings.reduce_motion():
 		_lunge_impulse = _attack_dir * lunge
@@ -356,6 +460,7 @@ func _apply_melee_hit(character: Dictionary, step: Dictionary) -> void:
 	var audible_hit := false
 	var lethal_hit := false
 	var armored_hit := false
+	var contact_material := "flesh"
 	_resolving_melee = true
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
@@ -368,15 +473,13 @@ func _apply_melee_hit(character: Dictionary, step: Dictionary) -> void:
 		if arc != "slam" and to_enemy.length() > 0.05 and _attack_dir.dot(to_enemy.normalized()) < -0.05:
 			continue
 		var damage := int(round(float(GameState.attack_power()) * multiplier))
-		var before_hp: Variant = enemy.get("hp")
-		enemy.call("take_damage", damage, to_enemy.normalized(), self)
-		# A rejected/protected/dead target is not a confirmed contact. This does
-		# not change damage resolution; it prevents false hit-stop/audio/punch.
-		var after_hp: Variant = enemy.get("hp")
-		if before_hp != null and after_hp != null and int(after_hp) >= int(before_hp): continue
+		if not get_parent().is_ancestor_of(enemy): continue
+		var result := CombatHit.apply(enemy,damage,to_enemy.normalized(),self)
+		if not result.accepted: continue
 		hit_any = true
-		lethal_hit = lethal_hit or (after_hp != null and int(after_hp) <= 0)
-		armored_hit = armored_hit or bool(enemy.get("is_boss"))
+		lethal_hit = lethal_hit or result.lethal
+		armored_hit = armored_hit or result.armored
+		if result.material != "ash": contact_material = result.material
 		if not enemy.has_method("combat_sounds_enabled") or bool(enemy.call("combat_sounds_enabled")):
 			audible_hit = true
 	_resolving_melee = false
@@ -384,11 +487,12 @@ func _apply_melee_hit(character: Dictionary, step: Dictionary) -> void:
 		var strong := combat_impact_weight() > 1.0
 		_combat_visuals.confirm_hit(strong)
 		_combat_motion.confirm_hit(0.065 if strong else 0.045)
+		_visual.confirm_attack(0.065 if strong else 0.045)
 		# Exactly one accent per accepted swing, independent of target count.
 		Vfx.camera_punch(self,_attack_dir,combat_impact_weight() + (0.1 if lethal_hit else 0.0))
 		if audible_hit:
-			var sound := "blade_defeat" if lethal_hit else ("blade_finish" if strong else ("blade_armor" if armored_hit else "blade_hit"))
-			Sfx.play(sound,-9.0)
+			var sound := "blade_defeat" if lethal_hit else ("blade_finish" if strong else ("blade_armor" if armored_hit else ("blade_stone" if contact_material == "stone" else "blade_hit")))
+			Sfx.play_combat(sound,-9.0)
 		if bool(step.get("shockwave", false)):
 			# Hammer ground impact: expanding ring + dust + rubble.
 			Vfx.ring(global_position + _attack_dir * 0.9, 1.6, Color("#ffd47b"), 0.4)
@@ -525,6 +629,8 @@ func apply_elemental_slow(seconds: float, factor: float) -> void:
 
 func die() -> void:
 	dead = true
+	clear_attack_request()
+	if _visual: _visual.end_attack()
 	if _combat_visuals: _combat_visuals.cancel()
 	if _combat_motion: _combat_motion.cancel()
 	sleeping = false
@@ -544,6 +650,7 @@ func die() -> void:
 func revive_at(position: Vector2) -> void:
 	global_position = position
 	dead = false
+	clear_attack_request()
 	controls_locked = false
 	sleeping = false
 	velocity = Vector2.ZERO
@@ -558,6 +665,8 @@ func start_sleep(duration: float) -> void:
 	if sleeping or dead:
 		return
 	sleeping = true
+	clear_attack_request()
+	if _visual: _visual.end_attack()
 	if _combat_visuals: _combat_visuals.cancel()
 	if _combat_motion: _combat_motion.cancel()
 	sleep_progress = 0.0
