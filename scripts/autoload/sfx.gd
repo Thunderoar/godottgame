@@ -26,6 +26,10 @@ func _ready() -> void:
 		player.volume_db = -7.0
 		add_child(player)
 		_players.append(player)
+	# Finite cached one-shots: synthesize before the first combat contact.
+	for kind in ["blade_swing","blade_hit","blade_finish","blade_armor","blade_defeat"]:
+		_get_stream(kind)
+	call_deferred("_bind_combat_settings")
 
 
 func _exit_tree() -> void:
@@ -39,7 +43,22 @@ func _exit_tree() -> void:
 	_cache.clear()
 
 
+func _bind_combat_settings() -> void:
+	if not GameSettings.changed.is_connected(_combat_setting_changed):
+		GameSettings.changed.connect(_combat_setting_changed)
+
+func _combat_setting_changed(key: String) -> void:
+	if key not in ["effects_volume","mute_all"]: return
+	for voice in _players:
+		if not bool(voice.get_meta("combat_voice",false)): continue
+		if GameSettings.effects_volume() <= 0 or GameSettings.mute_all():
+			voice.stop()
+		else:
+			voice.volume_db = float(voice.get_meta("combat_volume",-9.0)) + GameSettings.volume_percent_to_db(GameSettings.effects_volume())
+
 func play(kind: String, volume_db: float = -7.0) -> void:
+	var combat_voice := kind.begins_with("blade_")
+	if combat_voice and (GameSettings.mute_all() or GameSettings.effects_volume() <= 0 or GameSettings.master_volume() <= 0): return
 	if _players.is_empty():
 		return
 	var stream := _get_stream(kind)
@@ -48,7 +67,9 @@ func play(kind: String, volume_db: float = -7.0) -> void:
 	var player := _players[_next_player]
 	_next_player = (_next_player + 1) % _players.size()
 	player.stream = stream
-	player.volume_db = volume_db
+	player.set_meta("combat_voice",combat_voice)
+	player.set_meta("combat_volume",volume_db)
+	player.volume_db = volume_db + (GameSettings.volume_percent_to_db(GameSettings.effects_volume()) if combat_voice else 0.0)
 	player.play()
 
 
@@ -130,7 +151,64 @@ func _get_stream(kind: String) -> AudioStreamWAV:
 	return stream
 
 
+func _build_combat_stream(kind: String) -> AudioStreamWAV:
+	# One composite PCM voice (air/crack/body/metal), not several overlapping
+	# players. Independent deterministic noise never consumes gameplay RNG.
+	var duration := 0.16
+	var bass := 112.0
+	var body := 0.40
+	var air := 0.36
+	if kind == "blade_swing":
+		duration = 0.11
+		body = 0.06
+		air = 0.34
+	elif kind == "blade_finish":
+		duration = 0.22
+		bass = 82.0
+		body = 0.55
+	elif kind == "blade_armor":
+		duration = 0.18
+		bass = 165.0
+		body = 0.14
+		air = 0.18
+	elif kind == "blade_defeat":
+		duration = 0.24
+		bass = 68.0
+		body = 0.50
+	var count := int(MIX_RATE*duration)
+	var bytes := PackedByteArray()
+	bytes.resize(count*2)
+	var seed_value := 44231
+	var phase := 0.0
+	var noise_low := 0.0
+	for i in count:
+		var t := float(i)/MIX_RATE
+		var u := t/duration
+		seed_value = (seed_value*1103515245+12345)&0x7fffffff
+		var noise := float(seed_value)/1073741823.5-1.0
+		noise_low = lerpf(noise_low,noise,0.3)
+		phase += TAU*lerpf(bass,bass*0.36,u)/MIX_RATE
+		var envelope := minf(1.0,t/0.003)*pow(1.0-u,2.2)
+		var crack := (noise-noise_low)*exp(-t*70.0)*air
+		var pressure := sin(phase)*body*exp(-t*9.0)
+		var metal := (sin(TAU*840.0*t)+sin(TAU*1321.0*t)*0.45)*exp(-t*24.0)*0.07
+		if kind == "blade_armor": metal *= 3.2
+		if kind == "blade_swing":
+			pressure = 0.0
+			crack = noise_low*air*sin(u*PI)
+			metal = 0.0
+		var sample := clampf((pressure+crack+metal)*envelope,-0.92,0.92)
+		bytes.encode_s16(i*2,int(sample*32767.0))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = MIX_RATE
+	stream.stereo = false
+	stream.data = bytes
+	return stream
+
+
 func _build_stream(kind: String) -> AudioStreamWAV:
+	if kind.begins_with("blade_"): return _build_combat_stream(kind)
 	var duration := 0.12
 	var start_freq := 180.0
 	var end_freq := 140.0

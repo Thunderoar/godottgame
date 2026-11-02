@@ -1,5 +1,10 @@
 # Character combat: layered weapon and contact presentation
 
+**Impact follow-up:** the subsequent tactile pass is specified in
+[COMBAT_IMPACT_PLAN.md](COMBAT_IMPACT_PLAN.md). It adds visual-only body/blade
+contact holds, recoil, directional camera accents and composite audio without
+changing the original damage/timing contracts below.
+
 ## Intent and boundaries
 
 Make Adam's existing sword sequence readable, tactile and cohesive with BESUT's

@@ -62,3 +62,5 @@ static func run(game: Game, check: Callable) -> void:
 	GameSettings._values = settings
 	GameSettings.changed.emit("reduce_motion")
 	GameSettings.changed.emit("effects_quality")
+
+	await preload("res://tools/combat_impact_checks.gd").run(game,check)

@@ -185,12 +185,16 @@ func number(at: Vector2, amount: int, crit: bool, color: Color) -> void:
 	l.rotation = 0.0
 	var lane := float((_number_cursor % 3) - 1) * 0.16
 	l.global_position = at - Vector2(0.34, 0.3) + Vector2(lane, -absf(lane)*0.35)
+	var resting_scale := l.scale
 	var tween := l.create_tween().set_parallel(true)
 	_own(l, tween)
+	if not GameSettings.reduce_motion() and GameSettings.effects_at_least("med"):
+		l.scale = resting_scale*1.22
+		tween.tween_property(l,"scale",resting_scale,0.10).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	if not GameSettings.reduce_motion():
 		tween.tween_property(l, "global_position", l.global_position + Vector2(randf_range(-0.1, 0.1), -1.0), 0.6)
 		tween.tween_property(l, "rotation", randf_range(-0.12, 0.12), 0.6)
-	tween.tween_property(l, "modulate:a", 0.0, 0.6)
+	tween.tween_property(l, "modulate:a", 0.0, 0.5).set_delay(0.1)
 	tween.chain().tween_callback(func() -> void:
 		if is_instance_valid(l):
 			l.visible = false

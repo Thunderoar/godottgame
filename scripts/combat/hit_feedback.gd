@@ -20,7 +20,10 @@ static func impact(victim: Node2D, from_dir: Vector2, damage: int, opts := {}) -
 	var sprite: CanvasItem = victim.get("sprite") if victim.get("sprite") is CanvasItem else null
 	if sprite != null:
 		flash_white(sprite, 0.09)
-	var variant := "critical" if crit else ("armor" if bool(opts.get("armored", false)) else "normal")
+	var heavy := bool(opts.get("heavy",false))
+	var variant := "defeat" if bool(opts.get("lethal",false)) else ("critical" if crit else ("armor" if bool(opts.get("armored",false)) else ("finisher" if heavy else "normal")))
+	if victim.has_method("combat_recoil"):
+		victim.call("combat_recoil",from_dir,heavy)
 	Vfx.contact(at, from_dir, color, variant)
 	# Sparks fly opposite the swing direction.
 	var spark_dir := -from_dir if from_dir != Vector2.ZERO else Vector2.ZERO

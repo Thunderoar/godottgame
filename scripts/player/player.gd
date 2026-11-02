@@ -54,6 +54,8 @@ var _visual: PlayerSprite
 var _shadow: Sprite2D
 var _attack_sprite: Sprite2D
 var _combat_visuals: CombatVisuals
+var _combat_motion: CombatBodyMotion
+var _resolving_melee := false
 var _attack_phase := AttackPhase.NONE
 var _attack_step := 0
 var _phase_time := 0.0
@@ -99,6 +101,7 @@ func _on_boss_revival_used(healed: int) -> void:
 	invulnerable = maxf(invulnerable, 2.0)
 	revival_flash = 2.0
 	if _combat_visuals: _combat_visuals.cancel()
+	if _combat_motion: _combat_motion.cancel()
 	_attack_phase = AttackPhase.NONE
 	attacking = false
 	_attack_timer = 0
@@ -144,6 +147,10 @@ func _build_visual() -> void:
 	_visual.offset = Vector2(0, -24)
 	_visual.z_index = 0
 	add_child(_visual)
+	_combat_motion = CombatBodyMotion.new()
+	_combat_motion.name = "CombatBodyMotion"
+	add_child(_combat_motion)
+	_combat_motion.configure(self,_visual)
 
 	_combat_visuals = CombatVisuals.new()
 	_combat_visuals.name = "Slash"
@@ -290,6 +297,7 @@ func try_attack() -> bool:
 	_phase_time = float(step.get("anticipation", 0.06))
 	attacking = true
 	_combat_visuals.anticipate(_attack_dir, _chain_style, str(step.get("arc", "lr")), _phase_time, float(character.get("attack_range", 2.05)))
+	_combat_motion.windup(_attack_dir,_phase_time)
 	# A tiny hitch at the wind-up start sells the anticipation.
 	if _visual and not GameSettings.reduce_motion():
 		_visual.scale = Vector2(PixelArt.PX * 0.97, PixelArt.PX * 1.02)
@@ -329,6 +337,7 @@ func _begin_active_phase() -> void:
 		_visual.scale = Vector2(PixelArt.PX, PixelArt.PX)
 		if _visual.has_method("set_facing"):
 			_visual.call("set_facing", _facing_index(_attack_dir), true)
+	_combat_motion.swing(_attack_dir,combat_impact_weight())
 	var lunge := float(step.get("lunge", 0.0))
 	if lunge > 0.0 and not GameSettings.reduce_motion():
 		_lunge_impulse = _attack_dir * lunge
@@ -345,6 +354,9 @@ func _apply_melee_hit(character: Dictionary, step: Dictionary) -> void:
 	var multiplier := float(character.get("attack_mult", 1.0))
 	var hit_any := false
 	var audible_hit := false
+	var lethal_hit := false
+	var armored_hit := false
+	_resolving_melee = true
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
 			continue
@@ -356,23 +368,47 @@ func _apply_melee_hit(character: Dictionary, step: Dictionary) -> void:
 		if arc != "slam" and to_enemy.length() > 0.05 and _attack_dir.dot(to_enemy.normalized()) < -0.05:
 			continue
 		var damage := int(round(float(GameState.attack_power()) * multiplier))
+		var before_hp: Variant = enemy.get("hp")
 		enemy.call("take_damage", damage, to_enemy.normalized(), self)
+		# A rejected/protected/dead target is not a confirmed contact. This does
+		# not change damage resolution; it prevents false hit-stop/audio/punch.
+		var after_hp: Variant = enemy.get("hp")
+		if before_hp != null and after_hp != null and int(after_hp) >= int(before_hp): continue
 		hit_any = true
+		lethal_hit = lethal_hit or (after_hp != null and int(after_hp) <= 0)
+		armored_hit = armored_hit or bool(enemy.get("is_boss"))
 		if not enemy.has_method("combat_sounds_enabled") or bool(enemy.call("combat_sounds_enabled")):
 			audible_hit = true
-	var shake := float(_chain.get("shake", 0.07))
+	_resolving_melee = false
 	if hit_any:
+		var strong := combat_impact_weight() > 1.0
+		_combat_visuals.confirm_hit(strong)
+		_combat_motion.confirm_hit(0.065 if strong else 0.045)
+		# Exactly one accent per accepted swing, independent of target count.
+		Vfx.camera_punch(self,_attack_dir,combat_impact_weight() + (0.1 if lethal_hit else 0.0))
 		if audible_hit:
-			Sfx.play("hit", -9.0)
-		get_tree().call_group("camera", "shake", shake, float(_chain.get("shake_time", 0.12)))
+			var sound := "blade_defeat" if lethal_hit else ("blade_finish" if strong else ("blade_armor" if armored_hit else "blade_hit"))
+			Sfx.play(sound,-9.0)
 		if bool(step.get("shockwave", false)):
 			# Hammer ground impact: expanding ring + dust + rubble.
 			Vfx.ring(global_position + _attack_dir * 0.9, 1.6, Color("#ffd47b"), 0.4)
 			Vfx.dust(global_position + _attack_dir * 0.7, 4, Color(0.7, 0.62, 0.5, 0.8))
 			Vfx.sparks(global_position + _attack_dir * 1.2, Vector2.UP, Color("#c9b48a"), 6)
-	elif bool(step.get("shockwave", false)):
+	else:
+		if not DialogueWorldHold.protects(self): Sfx.play("blade_swing",-18.0)
+	if not hit_any and bool(step.get("shockwave", false)):
 		# A miss still cracks the ground a little.
 		Vfx.dust(global_position + _attack_dir * 0.7, 3, Color(0.7, 0.62, 0.5, 0.7))
+
+
+func owns_melee_feedback() -> bool:
+	return _resolving_melee
+
+
+func combat_impact_weight() -> float:
+	if _attack_phase != AttackPhase.ACTIVE: return 1.0
+	var arc := str(AttackDB.step(_chain_style,_attack_step).get("arc","lr"))
+	return 1.45 if arc in ["thrust","slam"] else 1.0
 
 
 func _fire_arrow(character: Dictionary, arc_kind: String) -> void:
@@ -473,6 +509,7 @@ func take_damage(amount: int, from: Vector2 = Vector2.ZERO) -> void:
 		var push := (global_position - from).normalized()
 		velocity += push * 2.2
 	if _visual:
+		_combat_motion.recoil(contact_dir,1.0)
 		_visual.call("play_pose", PlayerSprite.Pose.HURT, 0.28)
 		var tween := create_tween()
 		_visual.modulate = Color("#ff8b7d")
@@ -489,6 +526,7 @@ func apply_elemental_slow(seconds: float, factor: float) -> void:
 func die() -> void:
 	dead = true
 	if _combat_visuals: _combat_visuals.cancel()
+	if _combat_motion: _combat_motion.cancel()
 	sleeping = false
 	velocity = Vector2.ZERO
 	_attack_phase = AttackPhase.NONE
@@ -520,6 +558,8 @@ func start_sleep(duration: float) -> void:
 	if sleeping or dead:
 		return
 	sleeping = true
+	if _combat_visuals: _combat_visuals.cancel()
+	if _combat_motion: _combat_motion.cancel()
 	sleep_progress = 0.0
 	_sleep_elapsed = 0.0
 	_sleep_duration = maxf(0.2, duration)

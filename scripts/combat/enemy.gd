@@ -86,6 +86,8 @@ var _route_clock := 0.0
 var _route_goal := Vector2(INF, INF)
 var _route_index := 0
 var _target_clock := 0.0
+var _death_sound_owned := false
+var _combat_motion: CombatBodyMotion
 var _pose_tween: Tween
 var _separation_push := Vector2.ZERO
 var _urchin_stride := 0.0
@@ -124,6 +126,10 @@ func _ready() -> void:
 	_target_clock = float(get_instance_id()%19)*0.011
 	_route_clock = float(get_instance_id()%23)*0.025
 	_build()
+	_combat_motion = CombatBodyMotion.new()
+	_combat_motion.name = "CombatBodyMotion"
+	add_child(_combat_motion)
+	_combat_motion.configure(self,sprite)
 	# A short spawn-in shimmer so monsters do not pop into the dark.
 	if spawn_shimmer and not (kind in ["urchin", "fire"] and arrival_revealed):
 		modulate.a = 0.0
@@ -825,13 +831,19 @@ func take_damage(amount: int, from_dir: Vector2 = Vector2.ZERO, _source: Node = 
 		get_parent().alert_intruders(true)
 	hp = maxi(0, hp - amount)
 	_hit_flash = 0.14
-	var opts := {"shake": 0.06, "shake_time": 0.1, "armored": is_boss}
+	var opts := {"shake": 0.06, "shake_time": 0.1, "armored": is_boss, "lethal": hp <= 0}
+	var player_melee: bool = _source is Player and _source.get_parent() == get_parent() and _source.owns_melee_feedback()
+	_death_sound_owned = player_melee and hp <= 0
+	if player_melee:
+		# Player aggregates its camera/audio once after all targets resolve.
+		opts["shake"] = 0.0
+		opts["heavy"] = _source.combat_impact_weight() > 1.0
 	if is_boss:
 		# Bosses shrug off staggers; they get an armour flash instead.
-		opts["shake"] = 0.1
+		if not player_melee: opts["shake"] = 0.1
 		opts["hitstop"] = 0.0
 	else:
-		opts["hitstop"] = 0.03
+		opts["hitstop"] = 0.05 if bool(opts.get("heavy",false)) else 0.03
 	HitFeedback.impact(self, from_dir, amount, opts)
 	if from_dir != Vector2.ZERO:
 		_knockback = from_dir * (5.0 if is_boss else 6.5)
@@ -846,10 +858,16 @@ func take_damage(amount: int, from_dir: Vector2 = Vector2.ZERO, _source: Node = 
 	queue_redraw()
 
 
+func combat_recoil(direction: Vector2, heavy := false) -> void:
+	if _combat_motion != null and not dead:
+		_combat_motion.recoil(direction,1.4 if heavy else 1.0,is_boss)
+
+
 func _die() -> void:
 	if dead:
 		return
 	dead = true
+	if _combat_motion: _combat_motion.cancel()
 	if kind == "urchin": sprite.texture = UrchinArt.texture("dead")
 	_clear_windup_pose()
 	if get_parent() is Lobby:
@@ -875,7 +893,7 @@ func _die() -> void:
 			death_color = Color("#b0c48a")
 	Vfx.burst(global_position + Vector2(0, -0.5), death_color, 9)
 	Vfx.ring(global_position + Vector2(0, -0.4), 1.1, death_color, 0.35)
-	_play_combat_sound("hit", -8.0)
+	if not _death_sound_owned: _play_combat_sound("hit", -8.0)
 	if is_boss:
 		GameState.boss_health_changed.emit(false, _boss_name(), 0, max_hp)
 		boss_finished.emit(self)

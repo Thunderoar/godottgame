@@ -29,6 +29,17 @@ static func pool() -> VfxPool:
 	return null
 
 
+static func camera_punch(source: Node2D, direction: Vector2, strength: float = 1.0) -> void:
+	if not _available(source) or DialogueWorldHold.protects(source): return
+	var world := source.get_parent()
+	var game := source.get_tree().get_first_node_in_group("game") as Game
+	if is_instance_valid(game) and (not is_instance_valid(game.world) or not game.world.is_ancestor_of(source)): return
+	for cam in source.get_tree().get_nodes_in_group("camera"):
+		if _available(cam) and world.is_ancestor_of(cam) and cam.has_method("punch"):
+			cam.call("punch",direction,strength)
+			return
+
+
 static func contact(at: Vector2, dir: Vector2, color: Color = Color("#ffe7a1"), kind: String = "normal") -> void:
 	var active_pool := pool()
 	if active_pool != null:

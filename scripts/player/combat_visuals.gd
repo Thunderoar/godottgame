@@ -10,6 +10,9 @@ var reach := 2.05
 var elapsed := 0.0
 var duration := 0.22
 var _windup := 0.06
+var contact_hold := 0.0
+var confirmed := false
+var heavy := false
 
 func _ready() -> void:
 	add_to_group("combat_visual_effects")
@@ -25,6 +28,9 @@ func anticipate(aim: Vector2, weapon: String, kind: String, seconds: float, radi
 	reach = radius
 	_windup = maxf(seconds,0.01)
 	elapsed = 0
+	contact_hold = 0.0
+	confirmed = false
+	heavy = false
 	stage = "anticipation"
 	visible = true
 	queue_redraw()
@@ -35,13 +41,28 @@ func strike(aim: Vector2, weapon: String, kind: String, radius: float) -> void:
 	arc = kind
 	reach = radius
 	elapsed = 0
+	contact_hold = 0.0
+	confirmed = false
+	heavy = kind in ["thrust","slam"]
 	duration = 0.26 if kind == "thrust" or kind == "slam" else 0.22
 	stage = "active"
 	visible = true
 	queue_redraw()
 
+func confirm_hit(strong := false) -> void:
+	if stage != "active": return
+	confirmed = true
+	heavy = strong
+	if not GameSettings.reduce_motion() and GameSettings.effects_at_least("med"):
+		# The collision/damage frame already happened. Only art stops here.
+		elapsed = maxf(elapsed,duration*0.28)
+		contact_hold = 0.065 if strong else 0.045
+	queue_redraw()
+
 func cancel() -> void:
 	stage = "idle"
+	contact_hold = 0.0
+	confirmed = false
 	visible = false
 	queue_redraw()
 
@@ -50,7 +71,10 @@ func _process(delta: float) -> void:
 
 func advance(delta: float) -> void:
 	if stage == "idle": return
-	elapsed += delta
+	if GameSettings.reduce_motion() or not GameSettings.effects_at_least("med"): contact_hold = 0.0
+	var held := minf(maxf(delta,0.0),contact_hold)
+	contact_hold -= held
+	elapsed += maxf(0.0,delta-held)
 	if stage == "active" and elapsed >= duration:
 		cancel()
 	else:
@@ -65,6 +89,7 @@ func _draw() -> void:
 	if style == "scythe": tint = Color("#c4b4ff")
 	if style == "bow": tint = Color("#adefb9")
 	if arc == "slam": tint = Color("#ffc476")
+	if heavy and confirmed: tint = Color("#ffd28a")
 	var aa := not VisualStyle.is_pixel()
 	draw_set_transform(Vector2(0,-0.62), direction.angle(), Vector2(1,0.64))
 	if stage == "anticipation":
@@ -85,6 +110,11 @@ func _draw() -> void:
 		else:
 			draw_arc(Vector2.ZERO,reach*0.82,-0.78,0.78,12,Color(tint,opacity*0.8),0.055,aa)
 		return
+	if confirmed and not low:
+		# A thin solid blade anchors the energy to the hand during contact.
+		var blade_alpha := opacity*clampf(1.4-t*2.0,0.0,1.0)
+		draw_line(Vector2(0.35,0),Vector2(reach*0.88,0),Color("#173d49",blade_alpha),0.095,aa)
+		draw_line(Vector2(0.38,0),Vector2(reach*0.88,0),Color("#fff7dc",blade_alpha),0.035,aa)
 	if arc == "thrust" or style == "bow":
 		var length := reach*(0.75+0.25*sin(t*PI*0.5))
 		var width := 0.16 if arc == "thrust" else 0.09

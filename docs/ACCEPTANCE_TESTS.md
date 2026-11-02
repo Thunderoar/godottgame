@@ -3952,3 +3952,41 @@ Normal player data was not used. No APK export, commit or push was performed.
 - External transaction record:
   `/home/roku/Documents/ChatGPT/combat-visuals-20261102-8jjbl00t/`.
   No export, hardware/touch, soak or performance certification; no commit/push.
+
+
+## 2026-11-02 — Combat impact: resistance and response
+
+- Implemented `docs/COMBAT_IMPACT_PLAN.md`: additive actor-sprite wind-up,
+  follow-through and directional recoil; confirmed-hit blade/body holds; heavy
+  third-thrust and lethal contact profiles; one bounded directional camera
+  punch and one cached composite impact voice per accepted melee swing.
+- Existing combat balance/physics rules remain unchanged: the matching Adam
+  fixture observes **13 damage / 0.38-second cooldown** and
+  anticipation → active → recovery → idle. Misses gain no contact hold/punch.
+- The fresh baseline includes the merged first visual pass and startup-splash
+  source. Isolated baseline canonical gate: **8,462 checks, PASS, exit 0**.
+  Impact candidate canonical gate: **8,529 checks, PASS, exit 0**, with empty
+  stderr and no failure/error markers. This adds **67 impact regression checks**
+  through `combat_visual_checks.gd` → `combat_impact_checks.gd`.
+- Checks cover exact active-frame damage, no position/time-scale/pause changes,
+  pose restoration/reuse, visual-only contact holds, whiffs, finisher identity,
+  multi-target/multi-kill feedback aggregation, fire silence, dialogue/world
+  ownership, bounded directional camera decay, live accessibility toggles,
+  effects-volume/mute behavior, and finite cached unclipped PCM one-shots.
+- Actual Xvfb/Mesa llvmpipe renders at 1280x720 and 832x480 exercise 480 weapon
+  draw combinations. The candidate probe passes 12 checks versus 9 baseline
+  checks, including contact-only hold/punch; the sampled directional displacement
+  is `(0.033614, 0)` for the deterministic rightward 25 ms camera sample.
+- Canonical external roles remain in
+  `/home/roku/Documents/ChatGPT/combat-visuals-20261102-8jjbl00t/`.
+  This pass's baseline and original role history are preserved under
+  `impact-pass-20261102-1zvccd2g/`. The latest patch/default rollback operate
+  relative to this pass's starting state, retaining the first visual upgrade
+  and startup splash. Prior patches/rollbacks remain under `PREVIOUS_ROLES`.
+- Reconstructed patch/rollback and final live checks are recorded with literal
+  outputs, statuses and source hashes in `VERIFICATION.txt`. X11 input-method
+  and unsupported V-Sync warnings are retained; isolated import may report an
+  adb daemon connection refusal. Early parser/test/capture errors are retained
+  separately rather than represented as passing evidence.
+- No native Windows, physical Android/touch, export, performance/soak or subjective
+  audio-listening validation is claimed. No commit/push is part of this pass.
