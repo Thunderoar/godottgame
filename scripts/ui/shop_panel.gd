@@ -597,6 +597,11 @@ func _show_detail(item_id: String) -> void:
 	var item := ItemDB.get_item(item_id)
 	_detail_name.text = str(item.get("name", item_id))
 	_detail_desc.text = str(item.get("description", ""))
+	if item.get("kind", "") == "weapon":
+		_detail_desc.text += "\n" + str(EquipmentArt.comparison(item_id).get("text", ""))
+		_detail_desc.text += "\n" + EquipmentArt.upgrade_hint(item_id)
+		if item.get("style", "") == "sword":
+			_detail_desc.text += "\nSword · Melee damage. Higher ATK increases the damage of your sword attacks. Each upgrade adds 20% of base ATK."
 	var stats := GameState.item_stat_line(item_id)
 	var slot := str(item.get("slot", ""))
 	if slot != "" and ItemDB.is_equipment(item_id):

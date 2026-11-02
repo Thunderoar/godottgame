@@ -2501,6 +2501,14 @@ func worker_count(worker_role: String) -> int:
 func worker_name(worker_role: String, index: int) -> String:
 	return "%s %d" % [str(WORKER_LABELS.get(worker_role, "Worker")), index + 1]
 
+func worker_status(worker_role: String) -> Dictionary:
+	var total := worker_count(worker_role) if WORKER_LABELS.has(worker_role) else 0
+	var alive := 0
+	for i in total:
+		if resident_health(worker_name(worker_role, i)) > 0:
+			alive += 1
+	return {"alive": alive, "total": total, "fallen": total - alive}
+
 func worker_hire_slot(worker_role: String) -> int:
 	if not WORKER_LABELS.has(worker_role):
 		return -1

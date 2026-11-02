@@ -21,6 +21,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	check.call(game.world is TwilightRealm and not game.hud.portal_panel.visible, "village portal enters the explorable realm without a destination list")
 	var realm := game.world as TwilightRealm
 	if not is_instance_valid(realm): return
+	await _check_music(game, check)
 	realm.player.set_physics_process(false)
 	realm.pet.set_physics_process(false)
 	check.call(realm.player.position.is_equal_approx(RealmDB.ARRIVAL), "new visitors arrive beside the return rift")
@@ -337,6 +338,7 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	await game._load_lobby(false)
 	await game.get_tree().process_frame
 	check.call(not game.hud.pet_battle_panel.visible and not game.player().controls_locked and Sfx.battle_track.is_empty(), "world replacement cancels a challenge and restores controls without leaking its music")
+	check.call(not game._twilight_music.playing, "leaving Twilight stops its background track immediately")
 	GameState.data.realm_progress = {"checkpoint":"invalid", "cells":["-1:2","0:0","0:0"], "landmarks":["bad"], "bonded":["missing"]}
 	GameState._sanitize()
 	check.call(GameState.realm_progress().checkpoint == "arrival" and GameState.realm_progress().cells == ["0:0"] and GameState.realm_progress().bonded.is_empty(), "malformed exploration records sanitize without invalid destinations or duplicate discoveries")
@@ -352,6 +354,42 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	await preload("res://tools/realm_combat_checks.gd").run(game,check,capture)
 	await preload("res://tools/citadel_checks.gd").run(game,check,capture)
 	await preload("res://tools/realm_wave_checks.gd").run(game,check,capture)
+
+static func _check_music(game: Game, check: Callable) -> void:
+	game._sync_twilight_music()
+	var music := game._twilight_music
+	var song := music.stream as AudioStreamMP3
+	check.call(music.playing and not music.stream_paused and song != null and song.loop, "Twilight exploration plays the supplied looping MP3")
+	check.call(music.bus == "Master" and not game._village_music.playing and not game._ocean_music.playing, "Twilight follows Master audio settings without village or ocean overlap")
+	if song != null:
+		music.play(song.get_length() - 0.1)
+		var deadline := Time.get_ticks_msec() + 3000
+		while music.get_stream_playback().get_loop_count() == 0 and Time.get_ticks_msec() < deadline:
+			await game.get_tree().process_frame
+		check.call(music.playing and music.get_stream_playback().get_loop_count() > 0, "supplied Twilight track loops across its actual endpoint")
+	game.hud.settings_panel.open_settings()
+	game._sync_twilight_music()
+	check.call(not music.stream_paused, "ordinary Twilight Settings keeps background music playing")
+	game.hud.settings_panel.close_panel()
+	Sfx.start_battle_music(RealmDB.PORTAL)
+	game._sync_twilight_music()
+	check.call(music.stream_paused, "realm battle music takes priority over exploration music")
+	Sfx.stop_battle_music()
+	game._sync_twilight_music()
+	check.call(music.playing and not music.stream_paused, "exploration track resumes after realm battle music")
+	game._developer_paused = true
+	game._sync_twilight_music()
+	check.call(music.stream_paused, "developer suspension pauses Twilight music")
+	game._developer_paused = false
+	game._story_active = true
+	game._sync_twilight_music()
+	check.call(music.stream_paused, "cinematic sound takes priority over Twilight music")
+	var hold := game._begin_dialogue_hold(game.world)
+	game._sync_twilight_music()
+	check.call(not music.stream_paused, "living-world dialogue retains Twilight background music")
+	game._end_dialogue_hold(hold)
+	game._story_active = false
+	game._sync_twilight_music()
 
 static func _length(points: PackedVector2Array) -> float:
 	var total := 0.0

@@ -1,0 +1,8 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.tidesworn.protectbesut.hms">
+    <uses-sdk android:minSdkVersion="24" />
+    <application>
+        <meta-data android:name="org.godotengine.plugin.v2.ProtectBesutHms"
+            android:value="com.tidesworn.protectbesut.hms.ProtectBesutHms" />
+    </application>
+</manifest>

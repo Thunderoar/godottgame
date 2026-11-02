@@ -43,7 +43,7 @@ func _ready() -> void:
 		row.add_child(label)
 		if kind == "gold": gold_label = label
 		else: diamond_label = label
-	for entry in [["npc", 108], ["monsters", 105], ["trees", 114], ["fires", 66], ["homes", 118]]:
+	for entry in [["npc", 108], ["workers", 118], ["monsters", 105], ["trees", 114], ["fires", 66], ["homes", 118]]:
 		var chip := _chip(str(entry[0]), int(entry[1]), _stats_flow)
 		var label := GameUI.label("", FONT_SIZE)
 		label.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -98,6 +98,16 @@ func refresh_world(world: Node) -> void:
 	_stats_panel.visible = not counts.is_empty()
 	call_deferred("_arrange_sections")
 	if counts.is_empty(): return
+	var alive := 0
+	var total := 0
+	var roles: Array[String] = []
+	for role in GameState.WORKER_LABELS:
+		var status := GameState.worker_status(role)
+		alive += int(status.alive)
+		total += int(status.total)
+		roles.append("%s: %d/%d alive" % [str(GameState.WORKER_LABELS[role]), int(status.alive), int(status.total)])
+	_set_count("workers", "Workers %d/%d" % [alive, total], GameUI.RED if alive < total else GameUI.TEXT)
+	_labels.workers.tooltip_text = "\n".join(roles) + "\nReplace fallen specialists at the Worker Shop."
 	_set_count("npc", "NPC %d/%d" % [counts.npc_alive, counts.npc_total], GameUI.TEXT if counts.npc_alive == counts.npc_total else GameUI.RED)
 	_set_count("monsters", "Monsters %d" % counts.monsters, GameUI.RED if counts.monsters > 0 else GameUI.TEXT)
 	_set_count("trees", "Trees %d/%d" % [counts.trees_alive, counts.trees_total], GameUI.GREEN if counts.trees_alive == counts.trees_total else GameUI.GOLD)

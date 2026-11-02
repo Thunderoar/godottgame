@@ -33,7 +33,7 @@ window/stretch/aspect="expand"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/tidesworn_creative_tools/plugin.cfg")
+enabled=PackedStringArray("res://addons/tidesworn_creative_tools/plugin.cfg", "res://addons/pb_hms_scan/plugin.cfg")
 
 [importer_defaults]
 

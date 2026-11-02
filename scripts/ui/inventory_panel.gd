@@ -35,6 +35,9 @@ func _rebuild() -> void:
 		box.add_child(GameUI.label(slot.capitalize(), 12, GameUI.MUTED))
 		box.add_child(GameUI.label(ItemDB.name_of(id) if id != "" else "Empty", 15, GameUI.TEXT))
 		if id != "":
+			var preview := GameUI.icon_rect(_icon_kind(id), 40)
+			preview.texture = EquipmentArt.icon(id, _icon_kind(id))
+			box.add_child(preview)
 			box.add_child(GameUI.label(ItemDB.stat_line(id), 12, GameUI.GREEN))
 		equip_row.add_child(card)
 	var stat_card := GameUI.panel(Color("#14262c"), Color("#30494e"))
@@ -58,7 +61,9 @@ func _rebuild() -> void:
 		var hbox := HBoxContainer.new()
 		hbox.add_theme_constant_override("separation", 12)
 		row.add_child(hbox)
-		hbox.add_child(GameUI.icon_rect(_icon_kind(str(item_id)), 30))
+		var preview := GameUI.icon_rect(_icon_kind(str(item_id)), 40)
+		preview.texture = EquipmentArt.icon(str(item_id), _icon_kind(str(item_id)))
+		hbox.add_child(preview)
 		var info := VBoxContainer.new()
 		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		hbox.add_child(info)
@@ -68,6 +73,11 @@ func _rebuild() -> void:
 			var stat_label := GameUI.label(stat, 12, GameUI.GREEN)
 			stat_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			info.add_child(stat_label)
+		var comparison := EquipmentArt.comparison(str(item_id))
+		if not comparison.is_empty():
+			var compare_label := GameUI.label(str(comparison.text), 12, GameUI.TEAL)
+			compare_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			info.add_child(compare_label)
 		var actions := HBoxContainer.new()
 		actions.add_theme_constant_override("separation", 8)
 		hbox.add_child(actions)

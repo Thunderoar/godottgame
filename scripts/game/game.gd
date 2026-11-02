@@ -43,6 +43,8 @@ const VILLAGE_MUSIC_PATH := "res://assets/audio/besut_village.ogg"
 var _village_music: AudioStreamPlayer
 const OCEAN_MUSIC_PATH := "res://assets/audio/besut_ocean.ogg"
 var _ocean_music: AudioStreamPlayer
+const TWILIGHT_MUSIC_PATH := "res://assets/audio/besut_twilight.mp3"
+var _twilight_music: AudioStreamPlayer
 
 var _developer_layer: CanvasLayer
 var _developer_bar: HBoxContainer
@@ -82,6 +84,10 @@ func _ready() -> void:
 	_ocean_music.name = "OceanMusic"
 	_ocean_music.volume_db = -15.0
 	add_child(_ocean_music)
+	_twilight_music = AudioStreamPlayer.new()
+	_twilight_music.name = "TwilightMusic"
+	_twilight_music.volume_db = -15.0
+	add_child(_twilight_music)
 	_build_developer_tools()
 	_connect_hud()
 	GameState.player_defeated.connect(_on_player_defeated)
@@ -93,6 +99,7 @@ func _process(delta: float) -> void:
 	_refresh_developer_overlay()
 	_sync_village_music()
 	_sync_ocean_music()
+	_sync_twilight_music()
 	if _developer_paused: return
 	_reunion_check_timer += delta
 	if _reunion_check_timer >= 0.75:
@@ -138,6 +145,20 @@ func _sync_ocean_music() -> void:
 	if not _ocean_music.playing:
 		_ocean_music.play()
 	_ocean_music.stream_paused = _story_active or _developer_paused or _game_over or is_instance_valid(title_screen) or world.phase == OceanJourney.Phase.FINISHED or (is_instance_valid(world._ocean_settings) and world._ocean_settings.visible)
+
+
+func _sync_twilight_music() -> void:
+	if not is_instance_valid(_twilight_music): return
+	if not is_instance_valid(world) or not world is TwilightRealm or world.is_queued_for_deletion():
+		_twilight_music.stop()
+		return
+	if _twilight_music.stream == null:
+		_twilight_music.stream = load(TWILIGHT_MUSIC_PATH) as AudioStreamMP3
+	if not _twilight_music.playing:
+		_twilight_music.play()
+	# Ordinary dialogue and menus retain the living world's soundtrack. Films,
+	# pet/boss battle music and developer suspension preserve its playback position.
+	_twilight_music.stream_paused = (_story_active and not dialogue_holding()) or _developer_paused or _game_over or is_instance_valid(title_screen) or hud.pet_battle_panel.is_wild_challenge() or not Sfx.battle_track.is_empty()
 
 
 func _connect_hud() -> void:
@@ -258,6 +279,7 @@ func _clear_world() -> void:
 	Sfx.stop_battle_music()
 	_village_music.stop()
 	_ocean_music.stop()
+	_twilight_music.stop()
 	home_interior = null
 	if is_instance_valid(world) and world is Lobby and world.journey_serial == GameState.journey_serial:
 		GameState.store_home_monsters(world.capture_monsters())
@@ -324,6 +346,7 @@ func _load_dungeon(portal_id: String, transition: bool = true) -> void:
 	dungeon.name = "Dungeon"
 	world = dungeon
 	_world_holder.add_child(dungeon)
+	_sync_twilight_music()
 	hud.set_world(dungeon)
 	_restore_player_visual()
 	_apply_input_lock()

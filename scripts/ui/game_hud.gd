@@ -128,6 +128,7 @@ func _ready() -> void:
 	GameState.pet_changed.connect(_refresh_pet)
 	GameSettings.changed.connect(_on_setting_changed)
 	_apply_touch_mode()
+	_apply_interface_opacity()
 	GameState.boss_health_changed.connect(_on_boss_health)
 	GameState.expedition_changed.connect(_refresh_loot)
 	GameState.emergency_changed.connect(_on_emergency_changed)
@@ -1093,6 +1094,8 @@ func _apply_touch_mode() -> void:
 
 
 func _on_setting_changed(key: String) -> void:
+	if key == "interface_opacity":
+		_apply_interface_opacity()
 	if key == "ui_scale":
 		_layout_gui()
 	if key == "touch_controls":
@@ -1101,6 +1104,16 @@ func _on_setting_changed(key: String) -> void:
 		_layout_objectives()
 	if key == "tutorial_hidden":
 		_refresh_objectives()
+
+
+func _apply_interface_opacity() -> void:
+	var opacity := float(GameSettings.get_value("interface_opacity")) / 100.0
+	for control in _gui_layout:
+		if is_instance_valid(control):
+			control.modulate.a = opacity
+	for control in [_status_strip, objective_tracker]:
+		if is_instance_valid(control):
+			control.modulate.a = opacity
 
 
 func flash_hurt() -> void:

@@ -503,6 +503,7 @@ func _test_shops() -> void:
 
 func _test_visual_overhaul_contracts() -> void:
 	AndroidRenderingChecks.run(_check)
+	HmsScanChecks.run(_check)
 	# 3C: Strike icon follows the active hero's weapon discipline.
 	_check(str(hud.get("_attack_button").icon_kind) == GameState.character_weapon_style(), "strike icon follows the hero's weapon")
 	# 3C: the detailed 32px icon set generates for the key kinds.

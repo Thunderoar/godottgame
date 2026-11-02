@@ -1,0 +1,1 @@
+-keep class com.tidesworn.protectbesut.hms.ProtectBesutHms { *; }

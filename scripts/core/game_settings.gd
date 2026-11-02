@@ -13,6 +13,7 @@ extends Node
 ##   mute_all                 bool                     default false
 ##   fullscreen               bool                     default false
 ##   ui_scale                 int    75..130           default 100  (percent)
+##   interface_opacity        int    25..100           default 100  (HUD percent)
 ##   touch_controls           String auto|always|hidden default "always"
 ##   screen_shake             bool                     default true
 ##   auto_pause_on_focus_loss bool                     default true
@@ -59,6 +60,7 @@ const DEFAULTS := {
         "mute_all": false,
         "fullscreen": false,
         "ui_scale": 100,
+        "interface_opacity": 100,
         "camera_zoom": CAMERA_ZOOM_DEFAULT,
         "touch_controls": "always",
         "screen_shake": true,
@@ -178,6 +180,8 @@ func _sanitize_value(key: String, value: Variant) -> Variant:
                         return clampi(int(value), 0, 100)
                 "camera_zoom":
                         return clampi(int(value), CAMERA_ZOOM_MIN, CAMERA_ZOOM_MAX)
+                "interface_opacity":
+                        return clampi(int(value), 25, 100)
                 "target_fps":
                         return int(value) if value is int and int(value) in FRAME_RATES else 60
                 "render_resolution":

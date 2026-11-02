@@ -3790,3 +3790,132 @@ headless render loop, retaining the scene, save isolation and error filters.
 The four save-code-12 warnings are intentional rollback fixtures. No remaining
 HMS integration references were found in scripts, tools, addons or project/export
 configuration. `git diff --check` passes. No APK export or push was performed.
+
+## 2026-11-02 — Supplied Twilight Dimension background track
+
+Added `assets/audio/besut_twilight.mp3`, byte-identical to the supplied
+`WhatsApp Audio 2026-11-01 at 19.50.10.mpeg` (MP3 content). Import enables looping.
+Game owns the player: Twilight exploration, ordinary menus and living-world
+dialogue retain the track; battle music, wild challenges, cinematic presentation
+and developer suspension pause it. Leaving Twilight stops it. Existing Master
+volume/mute apply, with no village/ocean overlap.
+
+Isolated Godot 4.7.2 import exits 0; the existing Android build-tools-directory
+diagnostic remains. Focused Windows `-Twilight`: **340 checks, PASS, exit 0**,
+including actual audio endpoint looping and soundtrack ownership checks. No
+failure/script/error markers; two save-code-12 warnings are deliberate Citadel
+and reinforcement rollback fixtures. Evidence:
+`%LOCALAPPDATA%/Temp/tidesworn-tests-e44e739022a44407a5a4ed6ae1a8b36e`.
+
+## 2026-11-02 — Restore prior HMS Scan Kit integration
+
+Restored the prior Android Scan Kit bridge, export plugin, Settings SHARE BESUT
+message QR controls, build helper, integration guide and focused/full-gate checks
+from the state before its removal. Existing Twilight audio work was preserved.
+
+Isolated Windows Godot 4.7.2 import passed with the existing Android build-tools
+directory diagnostic. Focused HMS review: **12 checks, PASS**, exit 0. Full
+isolated gameplay gate with the headless render loop disabled: **7,037 checks,
+PASS**, exit 0, no `[FAIL]`, `SCRIPT ERROR` or `ERROR:` markers. The save-code-12
+warnings are intentional rollback fixtures. Evidence:
+- Import: `%LOCALAPPDATA%/Temp/tidesworn-tests-dcedde1ba78741d2aa1caf3433eb194c`
+- HMS: `%LOCALAPPDATA%/Temp/besut-hms-review-2c88fa0029f74d0295ec8138b629d7fb`
+- Full: `%LOCALAPPDATA%/Temp/besut-hms-full-257cd37581ce44a4b630c9c50906034b`
+
+No APK export or physical-device verification was performed. Tests used isolated
+user data. No commit or push was performed.
+
+## 2026-11-02 — English sharing message, worker portraits and interface clarity
+
+The HMS message and Settings explanation now use “Nature needs a protector.”
+Worker Shop cards show the matching in-world NPC for each specialist, alongside
+role, job and hire cost. Equipment/Pack previews use ten distinct authored
+procedural sword silhouettes; shop cards/details show actual ATK upgrade values
+and explain melee damage without implying elemental effects.
+
+Shared Settings offers INTERFACE / HUD opacity (25–100%). This device preference
+is sanitized and persisted, updates land/ocean HUD controls immediately and leaves
+Settings/modals fully readable. Settings sliders synchronize on live changes.
+
+Isolated Windows Godot 4.7.2 import passed; the existing Android build-tools
+folder diagnostic remains. Native interface review: **34 checks, PASS**, with
+832x480 and 1280x720 captures; worker cards, sword cards, HUD and Settings were
+visually inspected. Final headless interface review: **22 checks, PASS**.
+Fresh isolated HMS review: **12 checks, PASS**. Canonical tide scene:
+**7,037 checks, PASS**, exit 0, no failure/script/error markers; the headless
+render loop was disabled. Existing save-code-12 rollback warnings remain.
+Evidence roots under `%LOCALAPPDATA%/Temp/`:
+- `tidesworn-tests-f05bb58e65fb4af6af8164bf3144dc17` (import)
+- `besut-interface-a1fad987e3eb4a1188788a371d153a85` (native captures)
+- `besut-interface-final-6a97a64726554439ae1f895b1a44e704` (final interface)
+- `besut-hms_scan-1d75abde638e419d90ad2de73cd4f59d` (fresh HMS)
+- `besut-tide-d02b53715f584beda03c80e711eaf4bc` (full gameplay)
+
+An initial sequential interface/HMS run reused fixture data and failed the HMS
+fresh-title expectation; rerunning HMS with its own empty isolated user data
+passed. Normal player data was not used. No APK export or push was performed.
+
+## 2026-11-02 — Shared interface sizing, weapon comparison and moving worker previews
+
+Shared title/land/ocean appearance settings now group Interface size (75–130%)
+with HUD opacity. The existing duplicate land-only size slider was removed.
+Size uses the existing sanitized device preference, saves and updates immediately.
+Default ocean controls resolve size through the same layout API used by the drag
+editor. Explicit custom sizes remain exact, matching the land layout contract.
+
+Weapon cards and Pack rows compare candidate weapon ATK with the currently
+wielded weapon, including upgrades, signed differences and equipped/discipline
+states. The shop detail retains the total character ATK comparison.
+Worker Shop cards use cosmetic animated job demonstrations: hammering repairs,
+watering a burning tree, planting a seedling and sword practice against an urchin.
+No worker actors, transactions or world mutations are created by these previews;
+hidden previews stop advancing and Reduce motion freezes them.
+
+Isolated Godot 4.7.2 import passed (existing Android build-tools diagnostic).
+Native interface review: **53 checks, PASS**, including captures at 832x480 and
+1280x720; worker, comparison and Settings layouts visually inspected. Final
+headless interface review: **41 checks, PASS**, no error markers. Full canonical
+tide scene: **7,037 checks, PASS**, exit 0, no failure/script/error markers with
+headless render loop disabled. Existing intentional save-code-12 warnings remain.
+Evidence roots in `%LOCALAPPDATA%/Temp/`:
+- `tidesworn-tests-6dd1d8bb93ae47bdb3ac997dc7205946` (import)
+- `besut-compare-preview-40b43c7f5feb441ea155ca791a98286a` (native review/captures)
+- `besut-final-interface_shop-805177bdb4e347ac880d14988aa4a36a` (final focused)
+- `besut-final-tide-bcaf1d9a56634d06917e608b855ac2e6` (final full gate)
+
+The first full gate exposed four custom ocean layout regressions; the final gate
+passes all four after resolving default scaling inside the shared layout API.
+The focused harness now waits for deferred modal rebuilds even in headless runs,
+fixing resource-leak errors in an intermediate test run. All tests used isolated
+user data. No APK export, commit or push was performed.
+
+## 2026-11-02 — Potion effect previews and living-worker counts
+
+All five Potion Shop stock cards now illustrate their effects with animated Adam
+previews and the matching bottle: health recovery, sprint trails, faster swings,
+shield protection and boss revival. Stats and usage hints follow catalogue data
+and the existing auto-heal threshold. These are cosmetic demonstrations only;
+no items, health, effects or progression are consumed/changed. Hidden previews
+stop advancing; Reduce motion shows a stable representative pose.
+
+GameState.worker_status reads existing assigned slots and resident health to
+report alive/total/fallen without adding save fields. Worker Shop cards show
+alive/total per role, a red fallen warning and Replace action when necessary.
+Hiring uses the existing replacement transaction and price. A village HUD Workers
+alive/total chip highlights shortages even while the shop is closed; role details
+are available in its tooltip and in the shop. Counts refresh on normal state
+signals and use saved health, including sheltered workers.
+
+Isolated Godot 4.7.2 import passed with the existing Android build-tools diagnostic.
+Native focused review: **81 checks, PASS**, including deaths/replacements for all
+four roles, no progression mutations from previews, Reduce motion and HUD/shop
+counts. Captures at 832x480 and 1280x720 cover all potions and a fallen worker;
+small-screen potion, HUD and replacement layouts were visually inspected.
+Full isolated tide scene: **7,037 checks, PASS**, exit 0, no failure/script/error
+markers; headless render loop disabled. Intentional save-code-12 warnings remain.
+Evidence under `%LOCALAPPDATA%/Temp/`:
+- `tidesworn-tests-c065462ee47c46aba7140c8017e60ed2` (import)
+- `besut-potion-workers-visual-c3c1b969803f483f80c1a607cb905dfc` (final focused/captures)
+- `besut-potion-workers-full-3efd1e7d6fec4f3cb50a830658c81b18` (full gate)
+
+Normal player data was not used. No APK export, commit or push was performed.

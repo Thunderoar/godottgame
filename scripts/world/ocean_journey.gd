@@ -51,6 +51,7 @@ var _caught_shark: Sprite2D
 var _shark_start := Vector2.ZERO
 var _capture_start := Vector2.ZERO
 var _ocean_joystick: TouchJoystick
+var _ocean_header: Control
 var _ocean_settings: SettingsPanel
 var _intro := 0.0
 var _clock := 0.0
@@ -120,6 +121,8 @@ func _ready() -> void:
 	_build_ui()
 	_build_ocean_controls()
 	_build_sea_guide()
+	GameSettings.changed.connect(_on_interface_setting_changed)
+	_on_interface_setting_changed("interface_opacity")
 	GameState.control_layout_changed.connect(_apply_ocean_layout)
 	_refresh_ui()
 
@@ -215,6 +218,7 @@ func _build_ui() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_layer.add_child(root)
 	var header := GameUI.panel(Color("#102e40"), Color("#4b8e9b"))
+	_ocean_header = header
 	header.anchor_right = 1
 	header.offset_left = 22
 	header.offset_top = 18
@@ -283,6 +287,15 @@ func _build_ui() -> void:
 	_retry.visible = false
 	_retry.pressed.connect(restart)
 	root.add_child(_retry)
+
+func _on_interface_setting_changed(key: String) -> void:
+	if key == "ui_scale":
+		_apply_ocean_layout()
+	if key != "interface_opacity": return
+	var opacity := float(GameSettings.get_value("interface_opacity")) / 100.0
+	for control in [_ocean_header, _ocean_joystick, _pickup, _controls_button, _return]:
+		if is_instance_valid(control): control.modulate.a = opacity
+
 
 func _place_action(root: Control, button: TouchActionButton, left: float) -> void:
 	button.anchor_left = 1
@@ -729,7 +742,7 @@ func _apply_ocean_layout() -> void:
 		node.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 		node.custom_minimum_size = Vector2.ONE * extent
 		node.size = Vector2.ONE * extent
-		node.position = Vector2(float(values.x), float(values.y))
+		node.position = Vector2(float(values.x), float(values.y)).clamp(Vector2(6, 6), (get_viewport_rect().size - Vector2.ONE * extent - Vector2(6, 6)).max(Vector2(6, 6)))
 		if node is TouchActionButton: node.diameter = extent
 		if node is TouchJoystick:
 			node.radius = extent * 0.38
@@ -741,7 +754,10 @@ static func control_layout_for_view(view: Vector2) -> Dictionary:
 	var saved := GameState.control_layout()
 	for id in defaults:
 		var values: Dictionary = saved.get(id, defaults[id]).duplicate()
-		var extent := clampf(float(values.get("size", 104)), 42, 260)
+		# Authored custom sizes remain exact, just like land controls. Resolve
+		# default scaling here so the drag editor and runtime use identical bounds.
+		var factor := 1.0 if saved.has(id) else GameSettings.ui_scale() / 100.0
+		var extent := clampf(float(values.get("size", 104)) * factor, 42, 260)
 		var origin := Vector2(float(values.get("x", 24)), float(values.get("y", 400))).clamp(Vector2(6,6), (view - Vector2.ONE * extent - Vector2(6,6)).max(Vector2(6,6)))
 		defaults[id] = {"x": origin.x, "y": origin.y, "size": extent}
 	return defaults

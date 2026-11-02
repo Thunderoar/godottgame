@@ -15,6 +15,7 @@ var icon_kind := "spark"
 var _icon: TextureRect
 var _name_label: Label
 var _stat_label: Label
+var _comparison_label: Label
 var _price_label: Label
 var _price_icon: TextureRect
 var _action_button: Button
@@ -39,13 +40,18 @@ func _build() -> void:
 	hbox.add_theme_constant_override("separation", 10)
 	add_child(hbox)
 	_icon = TextureRect.new()
-	_icon.texture = PixelArt.icon(icon_kind, 32)
-	_icon.custom_minimum_size = Vector2(40, 40)
+	_icon.texture = EquipmentArt.icon(item_id, icon_kind)
+	_icon.custom_minimum_size = Vector2(56, 64)
 	_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	hbox.add_child(_icon)
+	if PotionPreview.supports(item_id):
+		_icon.hide()
+		var preview := PotionPreview.new()
+		preview.setup(item_id)
+		hbox.add_child(preview)
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.add_theme_constant_override("separation", 1)
@@ -56,6 +62,9 @@ func _build() -> void:
 	_stat_label = GameUI.label("", 12, GameUI.GREEN)
 	_stat_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.add_child(_stat_label)
+	_comparison_label = GameUI.label("", 12, GameUI.MUTED)
+	_comparison_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	info.add_child(_comparison_label)
 	var right := VBoxContainer.new()
 	right.custom_minimum_size = Vector2(128, 0)
 	right.add_theme_constant_override("separation", 4)
@@ -118,6 +127,19 @@ func refresh() -> void:
 	var item := ItemDB.get_item(item_id)
 	_name_label.text = str(item.get("name", item_id))
 	_stat_label.text = GameState.item_stat_line(item_id)
+	if PotionPreview.supports(item_id):
+		_stat_label.text += "\nEffect preview\n" + PotionPreview.usage_hint(item_id)
+		tooltip_text = str(item.get("description", ""))
+	var comparison := EquipmentArt.comparison(item_id)
+	_comparison_label.visible = not comparison.is_empty()
+	if not comparison.is_empty():
+		_comparison_label.text = str(comparison.text)
+		var delta := int(comparison.delta)
+		_comparison_label.add_theme_color_override("font_color", GameUI.GREEN if delta > 0 and bool(comparison.compatible) else (GameUI.RED if delta < 0 or not bool(comparison.compatible) else GameUI.MUTED))
+	if item.get("kind", "") == "weapon":
+		_stat_label.text += "\n" + EquipmentArt.upgrade_hint(item_id)
+		_stat_label.text += "\nMelee sword · Higher ATK increases damage" if item.get("style", "") == "sword" else ""
+		tooltip_text = str(item.get("description", "")) + "\n" + EquipmentArt.upgrade_hint(item_id)
 	_upgrade_button.visible = item.get("kind","") == "weapon" and GameState.item_count(item_id) > 0
 	if _upgrade_button.visible:
 		var rank := GameState.weapon_rank(item_id)

@@ -13,7 +13,6 @@ const CONTROL_ROWS := [
 ]
 
 var _rows: Dictionary = {}
-var _scale_label: Label
 var _zoom_label: Label
 
 
@@ -31,28 +30,7 @@ func _rebuild() -> void:
 	content.add_child(DeveloperAccessControl.new())
 	add_section("APPEARANCE", GameUI.GOLD)
 	content.add_child(VisualStyleSettings.new())
-
-	add_section("GUI SCALE", GameUI.GOLD)
-	var scale_row := HBoxContainer.new()
-	scale_row.add_theme_constant_override("separation", 12)
-	scale_row.add_child(GameUI.label("Interface scale", 14, GameUI.TEXT))
-	var slider := HSlider.new()
-	slider.min_value = 0.75
-	slider.max_value = 1.30
-	slider.step = 0.05
-	slider.value = hud.get_gui_scale()
-	slider.custom_minimum_size = Vector2(260, 32)
-	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scale_row.add_child(slider)
-	_scale_label = GameUI.label("%d%%" % int(round(slider.value * 100.0)), 16, GameUI.GOLD)
-	_scale_label.custom_minimum_size = Vector2(70, 0)
-	scale_row.add_child(_scale_label)
-	slider.value_changed.connect(func(value: float) -> void:
-		_scale_label.text = "%d%%" % int(round(value * 100.0))
-		hud.set_gui_scale(value, false))
-	slider.drag_ended.connect(func(_changed: bool) -> void: GameSettings.save_settings())
-	slider.focus_exited.connect(GameSettings.save_settings)
-	content.add_child(scale_row)
+	content.add_child(HmsScanControl.new())
 
 	add_section("CAMERA ZOOM", GameUI.GOLD)
 	var zoom_row := HBoxContainer.new()
