@@ -11,11 +11,17 @@ const ARRIVAL_CAPTION := 0.22
 const LOADING_IN := 0.12
 const LOADING_READ := 0.55
 const LOADING_OUT := 0.18
-const INTRO_LANDFALL_PAGE := 3
-const INTRO_CAPTURE_PAGE := 4
-const INTRO_RESCUE_PAGE := 5
-const INTRO_WELCOME_PAGE := 7
+const INTRO_FISHING_PAGE := 3
+const INTRO_KRAKEN_PAGE := 4
+const INTRO_WRECK_PAGE := 5
+const INTRO_LANDFALL_PAGE := 6
+const INTRO_CAPTURE_PAGE := 7
+const INTRO_RESCUE_PAGE := 8
+const INTRO_WELCOME_PAGE := 10
 const INTRO := [
+	"Adam: \"Quiet out here. I could get used to this.\"",
+	"Arjun: \"Wait till you see what I catch.\"",
+	"Mei Ling: \"Catch dinner first. Then we'll be impressed.\"",
 	"Adam, Arjun and Mei Ling went fishing together in a peaceful sea.",
 	"Arjun's hook caught the arm of an enormous Kraken. The sea king awoke in fury!",
 	"The Kraken smashed their ship into three pieces. The three friends were separated.",
@@ -64,6 +70,8 @@ var _reunion_voice_word := -1
 var _reunion_focus_out := false
 var _reunion_paused := false
 var _arjun_paused := false
+var _intro_paused := false
+var _intro_pause: Button
 var _reunion_rows: VBoxContainer
 var _reunion_names: Array[Label] = []
 var _reunion_lines: Array[Label] = []
@@ -78,7 +86,7 @@ func _ready() -> void:
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(root)
-	if kind in ["mei","ending","arjun"]:
+	if kind in ["intro","mei","ending","arjun"]:
 		var backdrop := ColorRect.new()
 		backdrop.color = Color("#151e2b")
 		backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -87,7 +95,7 @@ func _ready() -> void:
 	_canvas = StoryCanvas.new()
 	_canvas.sequence = self
 	_canvas.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	if kind in ["mei","ending","arjun"]:
+	if kind in ["intro","mei","ending","arjun"]:
 		_canvas.offset_bottom = -220 if kind == "ending" else -184
 		_canvas.clip_contents = true
 	root.add_child(_canvas)
@@ -104,7 +112,7 @@ func _ready() -> void:
 	root.add_child(panel)
 	var box := VBoxContainer.new()
 	panel.add_child(box)
-	if kind in ["mei","ending","arjun"]:
+	if kind in ["intro","mei","ending","arjun"]:
 		_beat_label = GameUI.label("", 13, GameUI.GOLD)
 		box.add_child(_beat_label)
 	if kind == "ending":
@@ -129,7 +137,7 @@ func _ready() -> void:
 			dialogue_row.add_child(spoken)
 			_reunion_lines.append(spoken)
 	_caption = GameUI.label("", 22, GameUI.TEXT)
-	if kind in ["mei","ending","arjun"]: _caption.add_theme_font_size_override("font_size", 18)
+	if kind in ["intro","mei","ending","arjun"]: _caption.add_theme_font_size_override("font_size", 18)
 	_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_caption.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_child(_caption)
@@ -139,6 +147,10 @@ func _ready() -> void:
 	_skip = skip
 	skip.pressed.connect(_on_skip_pressed)
 	row.add_child(skip)
+	if kind == "intro":
+		_intro_pause = GameUI.button("Pause", Vector2(110, 42))
+		_intro_pause.pressed.connect(_toggle_intro_pause)
+		row.add_child(_intro_pause)
 	var space := Control.new()
 	space.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(space)
@@ -168,6 +180,9 @@ func _ready() -> void:
 		GameSettings.changed.connect(_on_reunion_setting_changed)
 		_on_reunion_setting_changed("effects_volume")
 	_render()
+	if kind == "intro":
+		root.resized.connect(_fit_intro_controls)
+		_fit_intro_controls()
 	if arrive_from_title and kind == "intro":
 		_arrival_active = true
 		_arrival_reduced = GameSettings.reduce_motion()
@@ -225,6 +240,7 @@ func _apply_arrival() -> void:
 		_opening_loading.cover.modulate.a = state.loading_alpha
 	_next.disabled = true
 	_skip.disabled = true
+	if is_instance_valid(_intro_pause): _intro_pause.disabled = true
 	if state.covered and not _departure_emitted:
 		_departure_emitted = true
 		departure_covered.emit()
@@ -240,6 +256,7 @@ func _finish_arrival() -> void:
 	_caption_panel.modulate.a = 1.0
 	_next.disabled = false
 	_skip.disabled = false
+	if is_instance_valid(_intro_pause): _intro_pause.disabled = false
 	_curtain.hide()
 	if is_instance_valid(_opening_loading):
 		_opening_loading.dismiss()
@@ -272,6 +289,7 @@ func lines() -> Array:
 
 func _process(delta: float) -> void:
 	if _done: return
+	if kind == "intro" and (_intro_paused or _reunion_focus_out): return
 	if _arrival_active:
 		_arrival_time += maxf(0.0, delta)
 		_apply_arrival()
@@ -303,6 +321,8 @@ func _process(delta: float) -> void:
 		if kind == "arjun" and not _done: _page_time = remainder
 
 func _render() -> void:
+	if kind == "intro" and is_instance_valid(_beat_label):
+		_beat_label.text = OpeningCastRenderer.NAMES[page] if page < INTRO_FISHING_PAGE else ("THREE FRIENDS · ONE BOAT" if page == INTRO_FISHING_PAGE else "")
 	_canvas.prepare_page()
 	_canvas.queue_redraw()
 	_caption.text = str(lines()[page])
@@ -322,7 +342,22 @@ func _render() -> void:
 			5: Sfx.play("portal_out", -14)
 			6: Sfx.play("victory", -16)
 
+func _fit_intro_controls() -> void:
+	var narrow := get_viewport().get_visible_rect().size.x < 700
+	_skip.custom_minimum_size.x = 90 if narrow else 150
+	_intro_pause.custom_minimum_size.x = 80 if narrow else 110
+	_next.custom_minimum_size.x = 80 if narrow else 150
+	for button in [_skip, _intro_pause, _next]:
+		button.add_theme_font_size_override("font_size", 14 if narrow else 18)
+	_caption.add_theme_font_size_override("font_size", 16 if narrow else 18)
+
+func _toggle_intro_pause() -> void:
+	if _arrival_active or _done or _reunion_focus_out: return
+	_intro_paused = not _intro_paused
+	_intro_pause.text = "Resume" if _intro_paused else "Pause"
+
 func _on_next_pressed() -> void:
+	if kind == "intro" and (_intro_paused or _reunion_focus_out or _arrival_active): return
 	if kind in ["ending","arjun"] and _reunion_focus_out: return
 	if kind in ["mei","ending","arjun"]:
 		if not _mei_input_armed or _mei_input_cooldown > 0: return
@@ -335,6 +370,7 @@ func _on_next_pressed() -> void:
 	advance()
 
 func _on_skip_pressed() -> void:
+	if kind == "intro" and (_reunion_focus_out or _arrival_active): return
 	if kind in ["ending","arjun"] and _reunion_focus_out: return
 	if kind in ["mei","ending","arjun"] and (not _mei_input_armed or _mei_input_cooldown > 0): return
 	if kind == "ending":
@@ -518,16 +554,20 @@ class StoryCanvas extends Control:
 		GameSettings.changed.connect(_on_presentation_changed)
 	func _on_presentation_changed(key: String) -> void:
 		if key in ["reduce_motion", "effects_quality"]: queue_redraw()
+	func uses_cast_shot() -> bool:
+		return is_instance_valid(sequence) and sequence.kind == "intro" and sequence.page < INTRO_FISHING_PAGE
+	func cast_state() -> Dictionary:
+		return OpeningCastRenderer.sample(sequence.page, sequence._page_time, GameSettings.reduce_motion(), GameSettings.effects_quality())
 	func uses_fishing_shot() -> bool:
-		return is_instance_valid(sequence) and sequence.kind == "intro" and sequence.page == 0
+		return is_instance_valid(sequence) and sequence.kind == "intro" and sequence.page == INTRO_FISHING_PAGE
 	func fishing_state() -> Dictionary:
 		return OpeningFishingRenderer.sample(sequence._page_time, GameSettings.reduce_motion(), GameSettings.effects_quality())
 	func uses_kraken_shot() -> bool:
-		return is_instance_valid(sequence) and sequence.kind == "intro" and sequence.page == 1
+		return is_instance_valid(sequence) and sequence.kind == "intro" and sequence.page == INTRO_KRAKEN_PAGE
 	func kraken_state() -> Dictionary:
 		return OpeningKrakenRenderer.sample(sequence._page_time, GameSettings.reduce_motion(), GameSettings.effects_quality())
 	func uses_wreck_shot() -> bool:
-		return is_instance_valid(sequence) and sequence.kind == "intro" and sequence.page == 2
+		return is_instance_valid(sequence) and sequence.kind == "intro" and sequence.page == INTRO_WRECK_PAGE
 	func uses_landfall_shot() -> bool:
 		return is_instance_valid(sequence) and sequence.kind == "intro" and sequence.page == INTRO_LANDFALL_PAGE
 	func landfall_state() -> Dictionary:
@@ -587,6 +627,10 @@ class StoryCanvas extends Control:
 			if is_instance_valid(sequence._caption_panel): bottom = sequence._caption_panel.position.y - 10.0
 			if _welcome != null:
 				_welcome.draw(self, Rect2(Vector2.ZERO, Vector2(size.x, maxf(1, bottom))), welcome_state())
+			return
+		if uses_cast_shot():
+			draw_rect(Rect2(Vector2.ZERO, size), Color("#102733"))
+			if _fishing != null: _fishing.draw(self, Rect2(Vector2.ZERO, size), cast_state())
 			return
 		if uses_fishing_shot():
 			draw_rect(Rect2(Vector2.ZERO, size), Color("#102733"))

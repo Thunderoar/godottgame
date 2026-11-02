@@ -34,7 +34,7 @@ static func run(game: Game, check: Callable) -> void:
 	for i in StorySequence.INTRO_WELCOME_PAGE:
 		check.call(story._canvas._welcome == null and not story._canvas.uses_welcome_shot(), "intro page %d does not allocate or draw the village welcome early" % i)
 		story.advance()
-	check.call(story.lines().size() == 8 and story._canvas.uses_welcome_shot() and story._canvas._welcome != null and story._page_time == 0, "page seven lazily enters the new eighth beat with full reading time")
+	check.call(story.lines().size() == 11 and story._canvas.uses_welcome_shot() and story._canvas._welcome != null and story._page_time == 0, "page seven lazily enters the new eighth beat with full reading time")
 	check.call(story._caption.text.contains("Welcome to BESUT, Adam") and story._next.text == "Continue", "the village speaks directly to Adam and Continue belongs to the eighth beat")
 	check.call(source == OpeningRescueArt.backdrop().get_image().get_data() and planter_source == OpeningRescueArt.villager("tree_planter", true).get_image().get_data(), "welcome extensions and handoff poses never modify shared shore or villager pixels")
 	var panorama := OpeningWelcomeArt.backdrop().get_image()

@@ -27,10 +27,12 @@ static func run(game: Game, check: Callable) -> void:
 	var story := StorySequence.new()
 	game.add_child(story)
 	story.set_process(false)
+	story.page = StorySequence.INTRO_FISHING_PAGE
+	story._render()
 	check.call(not story._canvas.uses_kraken_shot(), "peaceful beat does not expose the Kraken")
 	story.advance()
-	check.call(story._canvas.uses_kraken_shot() and story.page == 1 and story._page_time == 0, "Next enters the caught-hook beat with a fresh six-second clock")
-	check.call(story._caption.text == StorySequence.INTRO[1], "second-beat story caption remains unchanged")
+	check.call(story._canvas.uses_kraken_shot() and story.page == StorySequence.INTRO_KRAKEN_PAGE and story._page_time == 0, "Next enters the caught-hook beat with a fresh six-second clock")
+	check.call(story._caption.text == StorySequence.INTRO[StorySequence.INTRO_KRAKEN_PAGE], "second-beat story caption remains unchanged")
 	var reduced := GameSettings.reduce_motion()
 	var quality := GameSettings.effects_quality()
 	story._page_time = 2.5
@@ -46,7 +48,7 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(not OpeningKrakenArt.body(2).has_meta("realistic_art"), "opening Kraken is an original classic-pixel sprite, not a modern illustration")
 	story._page_time = 5.99
 	story._process(0.02)
-	check.call(story.page == 2 and story._page_time == 0 and story._canvas.uses_wreck_shot(), "automatic six-second handoff enters the ship-breaking shot with a fresh clock")
+	check.call(story.page == StorySequence.INTRO_WRECK_PAGE and story._page_time == 0 and story._canvas.uses_wreck_shot(), "automatic six-second handoff enters the ship-breaking shot with a fresh clock")
 	for kind in ["arjun", "mei", "ending"]:
 		story.kind = kind
 		story.page = 1
@@ -57,10 +59,12 @@ static func run(game: Game, check: Callable) -> void:
 		var early := StorySequence.new()
 		game.add_child(early)
 		early.set_process(false)
+		early.page = StorySequence.INTRO_FISHING_PAGE
+		early._render()
 		early.advance()
 		early._page_time = t
 		early.advance()
-		check.call(early.page == 2 and early._page_time == 0 and not early._canvas.uses_kraken_shot(), "Next at %.1fs safely exits the Kraken beat" % t)
+		check.call(early.page == StorySequence.INTRO_WRECK_PAGE and early._page_time == 0 and not early._canvas.uses_kraken_shot(), "Next at %.1fs safely exits the Kraken beat" % t)
 		var ref: WeakRef = weakref(early._canvas._kraken)
 		var completions := [0]
 		early.completed.connect(func() -> void: completions[0] += 1)

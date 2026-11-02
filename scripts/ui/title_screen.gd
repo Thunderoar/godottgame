@@ -18,11 +18,10 @@ const CREAM := Color("#f4ebd8")
 const GOLD := Color("#e4bc78")
 const MUTED := Color("#a5b8b6")
 const BORDER := Color("#49616a")
-const HERO_ROLES := {"adam": "BALANCED", "arjun": "HEAVY HITTER", "mei_ling": "RANGED"}
+const HERO_IDS := ["adam"]
+const HERO_ROLES := {"adam": "STORY HERO"}
 const HERO_TACTICS := {
 	"adam": "Quick sword strikes. Stay close and keep moving.",
-	"arjun": "Wide scythe sweeps. Strike nearby enemies with heavy, sweeping attacks.",
-	"mei_ling": "Long-range arrows. Keep your distance and pick your shot.",
 }
 
 var save_available := false
@@ -275,8 +274,8 @@ func _build_heroes(parent: Control) -> void:
 	heading.add_child(_back_button)
 	var words := VBoxContainer.new()
 	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	words.add_child(_label("CHOOSE YOUR ROAD", 32, CREAM))
-	_hero_intro = _paragraph("Three friends, separated by a sea monster. Your campaign begins as Adam.", 15, MUTED)
+	words.add_child(_label("ADAM'S JOURNEY", 32, CREAM))
+	_hero_intro = _paragraph("Begin as Adam. An ordinary day at sea becomes a journey to find his friends.", 15, MUTED)
 	words.add_child(_hero_intro)
 	heading.add_child(words)
 	_heroes.add_child(heading)
@@ -288,8 +287,8 @@ func _build_heroes(parent: Control) -> void:
 	_cards.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_cards.add_theme_constant_override("separation", 16)
 	scroll.add_child(_cards)
-	for index in CharacterDB.CHARACTERS.size():
-		_cards.add_child(_character_card(CharacterDB.CHARACTERS[index], index))
+	for index in HERO_IDS.size():
+		_cards.add_child(_character_card(CharacterDB.get_character(HERO_IDS[index]), index))
 	var confirmation := _panel(Color("#102731"), BORDER)
 	_heroes.add_child(confirmation)
 	var row := HBoxContainer.new()
@@ -395,7 +394,7 @@ func _show_page(page: Page, animate: bool = true) -> void:
 	_schedule_page_fit()
 	if not _hero_available(selected_character_id): selected_character_id = "adam"
 	_select_character(selected_character_id)
-	_footer_hint.text = "MOUSE / TOUCH   ·   ARROWS + ENTER" if page == Page.HOME else "ARROWS + ENTER TO SELECT   ·   TAB TO BEGIN   ·   ESC TO GO BACK"
+	_footer_hint.text = "MOUSE / TOUCH   ·   ARROWS + ENTER" if page == Page.HOME else "TAB TO BEGIN   ·   ESC TO GO BACK"
 	var target := 1.0 if page == Page.HEROES else 0.0
 	if not animate or GameSettings.reduce_motion():
 		_settle_pages()
@@ -525,52 +524,27 @@ func _restore_page_input(root: Control) -> void:
 
 
 func _select_character(character_id: String) -> void:
-	if _departing or not CharacterDB.ids().has(character_id): return
-	if not _hero_available(character_id):
-		_refresh_hero_locks()
-		_show_unlock_requirement(character_id)
-		return
+	if _departing or not HERO_IDS.has(character_id): return
 	selected_character_id = character_id
 	_refresh_hero_locks()
-	_hero_summary.text = "Adam · Sword · Rescue Arjun at sea and Mei Ling in Chaos Citadel"
+	_hero_summary.text = "Adam · Sword · Find your friends. Protect BESUT."
 
 func _hero_available(id: String) -> bool:
-	return id == "adam" or bool(GameState.campaign().get(id + "_rescued", false))
+	return HERO_IDS.has(id)
 
-func _unlock_requirement(id: String) -> String:
-	match id:
-		"arjun": return "Complete both sea levels. Defeat the Kraken King, then open Arjun's prison to rescue him."
-		"mei_ling": return "Defeat %s in %s, through the Dimension Portal, to rescue Mei Ling." % [PortalDB.get_portal(PortalDB.MEI_LING_PORTAL).get("boss_name", "Shadow & Chaos Fiend"), PortalDB.get_portal(PortalDB.MEI_LING_PORTAL).get("name", "Chaos Citadel")]
-	return "Available from the start. Begin Adam's story and find your missing friends."
+func _unlock_requirement(_id: String) -> String:
+	return "Begin Adam's story and find your missing friends."
 
 func _refresh_hero_locks() -> void:
 	if _card_buttons.is_empty(): return
-	if not _hero_available(selected_character_id): selected_character_id = "adam"
+	selected_character_id = "adam"
 	for i in _card_buttons.size():
-		var id := str(CharacterDB.CHARACTERS[i].get("id", ""))
-		var locked := not _hero_available(id)
-		var selected := id == selected_character_id and not locked
-		_card_buttons[i].set_pressed_no_signal(selected)
-		_card_locks[i].visible = locked
-		_card_portraits[i].self_modulate = Color(0.28, 0.32, 0.36) if locked else Color.WHITE
-		_card_status[i].text = "LOCKED" if locked else ("ADAM · STORY HERO" if id == "adam" else "RESCUED · VILLAGE DEFENDER")
-		_card_status[i].add_theme_color_override("font_color", Color("#e1a58b") if locked else GOLD)
-		_card_unlock_text[i].text = _unlock_requirement(id) if locked or id == "adam" else ("Rescued! Arjun guards BESUT with his scythe." if id == "arjun" else "Rescued! Mei Ling guards BESUT with her bow.")
-
-func _show_unlock_requirement(id: String) -> void:
-	var index := CharacterDB.ids().find(id)
-	_open_overlay(str(CharacterDB.get_character(id).get("name", "Friend")) + " · LOCKED", _card_buttons[index])
-	var portrait := TextureRect.new()
-	portrait.texture = PixelArt.portrait(id, 96)
-	portrait.custom_minimum_size = Vector2(0, 130)
-	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	portrait.modulate = Color(0.5, 0.55, 0.6)
-	_overlay_body.add_child(portrait)
-	_overlay_body.add_child(_paragraph(_unlock_requirement(id), 20, CREAM))
-	_overlay_body.add_child(_paragraph("After the rescue, your friend returns to BESUT and helps defend the village.", 16, MUTED))
-	_overlay_close.text = "Back"
-	_overlay_close.grab_focus()
+		_card_buttons[i].set_pressed_no_signal(true)
+		_card_locks[i].hide()
+		_card_portraits[i].self_modulate = Color.WHITE
+		_card_status[i].text = "ADAM · STORY HERO"
+		_card_status[i].add_theme_color_override("font_color", GOLD)
+		_card_unlock_text[i].text = _unlock_requirement("adam")
 
 func _request_begin() -> void:
 	if _departing or current_page != Page.HEROES or _overlay.visible:

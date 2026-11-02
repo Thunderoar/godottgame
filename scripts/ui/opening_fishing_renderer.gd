@@ -60,7 +60,9 @@ func draw(canvas: CanvasItem, available: Rect2, state: Dictionary) -> void:
 	canvas.draw_set_transform(Vector2.ZERO)
 	# Only empty sky/water extend with aspect ratio; ship and actors stay uniform.
 	canvas.draw_texture_rect(_backdrop, available, false)
-	canvas.draw_set_transform(fitted.position, 0, Vector2.ONE * factor)
+	var zoom := float(state.get("camera_zoom", 1.0))
+	var centre: Vector2 = state.get("camera_centre", FRAME * 0.5)
+	canvas.draw_set_transform(fitted.get_center() - centre * factor * zoom, 0, Vector2.ONE * factor * zoom)
 	canvas.draw_texture_rect(_backdrop, Rect2(Vector2.ZERO, FRAME), false)
 	canvas.draw_texture(_cloud, Vector2(48 + state.cloud_shift, 25))
 	canvas.draw_texture_rect(_cloud, Rect2(Vector2(345 - state.cloud_shift, 18), Vector2(108, 24)), false)
@@ -78,7 +80,13 @@ func draw(canvas: CanvasItem, available: Rect2, state: Dictionary) -> void:
 	for i in HEROES.size():
 		var foot: Vector2 = state.feet[i]
 		var at := foot - Vector2(OpeningFishingArt.HERO_SIZE.x * 0.5, OpeningFishingArt.HERO_SIZE.y)
-		canvas.draw_texture_rect(_heroes[HEROES[i]][int(state.poses[i])], Rect2(at, OpeningFishingArt.HERO_SIZE), false)
+		# Flip about the fixed foot anchor, never about the sprite rectangle corner.
+		if i == 2 and bool(state.get("mei_look_left", false)):
+			canvas.draw_set_transform(fitted.get_center() + (foot - centre) * factor * zoom, 0, Vector2(-1, 1) * factor * zoom)
+			canvas.draw_texture_rect(_heroes[HEROES[i]][int(state.poses[i])], Rect2(Vector2(-OpeningFishingArt.HERO_SIZE.x * 0.5, -OpeningFishingArt.HERO_SIZE.y), OpeningFishingArt.HERO_SIZE), false)
+			canvas.draw_set_transform(fitted.get_center() - centre * factor * zoom, 0, Vector2.ONE * factor * zoom)
+		else:
+			canvas.draw_texture_rect(_heroes[HEROES[i]][int(state.poses[i])], Rect2(at, OpeningFishingArt.HERO_SIZE), false)
 	canvas.draw_texture(_bucket, boat + Vector2(350, 92))
 	_draw_fishing(canvas, state)
 	canvas.draw_texture(_hull, boat)

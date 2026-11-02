@@ -35,12 +35,14 @@ static func run(game: Game, check: Callable) -> void:
 	var story := StorySequence.new()
 	game.add_child(story)
 	story.set_process(false)
+	story.page = StorySequence.INTRO_FISHING_PAGE
+	story._render()
 	check.call(story._canvas._wreck == null and not story._canvas.uses_wreck_shot(), "wreck art is not warmed during the title/first-beat handoff")
 	story.advance()
 	check.call(story._canvas._wreck == null and story._canvas.uses_kraken_shot(), "beat two retains its original awakening performance")
 	story.advance()
 	check.call(story._canvas._wreck != null and story._canvas.uses_wreck_shot() and story._page_time == 0, "Next prepares beat three before its first draw and resets the reading clock")
-	check.call(story._caption.text == StorySequence.INTRO[2] and story.lines().size() == 8, "the eight-beat story and third caption remain unchanged")
+	check.call(story._caption.text == StorySequence.INTRO[StorySequence.INTRO_WRECK_PAGE] and story.lines().size() == 11, "the eleven-beat story and third caption remain unchanged")
 	var reduced := GameSettings.reduce_motion()
 	var quality := GameSettings.effects_quality()
 	story._page_time = 1.7
@@ -55,7 +57,7 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(PixelArt.CACHE.size() == cached, "wreck sampling allocates no textures, gameplay nodes or asynchronous animation chains")
 	story._page_time = 5.99
 	story._process(0.02)
-	check.call(story.page == 3 and story._page_time == 0 and not story._canvas.uses_wreck_shot() and story._canvas.uses_landfall_shot(), "six seconds hands off to Mei Ling drifting ashore before captivity")
+	check.call(story.page == StorySequence.INTRO_LANDFALL_PAGE and story._page_time == 0 and not story._canvas.uses_wreck_shot() and story._canvas.uses_landfall_shot(), "six seconds hands off to Mei Ling drifting ashore before captivity")
 	for kind in ["arjun", "mei", "ending"]:
 		story.kind = kind
 		story.page = 2
@@ -66,11 +68,13 @@ static func run(game: Game, check: Callable) -> void:
 		var early := StorySequence.new()
 		game.add_child(early)
 		early.set_process(false)
+		early.page = StorySequence.INTRO_FISHING_PAGE
+		early._render()
 		early.advance()
 		early.advance()
 		early._page_time = t
 		early.advance()
-		check.call(early.page == 3 and early._page_time == 0, "Next at wreck %.2fs exits without a delayed strike callback" % t)
+		check.call(early.page == StorySequence.INTRO_LANDFALL_PAGE and early._page_time == 0, "Next at wreck %.2fs exits without a delayed strike callback" % t)
 		var reference: WeakRef = weakref(early._canvas._wreck)
 		var completions := [0]
 		early.completed.connect(func() -> void: completions[0] += 1)

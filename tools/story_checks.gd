@@ -98,15 +98,16 @@ static func run(game: Game, check: Callable, capture: Callable = Callable()) -> 
 	game.play_story("intro")
 	await game.get_tree().process_frame
 	var intro := _story(game)
-	check.call(intro != null and intro.lines().size() == 8 and game.world.process_mode == Node.PROCESS_MODE_DISABLED, "animated eight-beat introduction locks the village safely")
+	check.call(intro != null and intro.lines().size() == 11 and game.world.process_mode == Node.PROCESS_MODE_DISABLED, "animated eleven-beat introduction locks the village safely")
 	if capture.is_valid():
-		intro.page = 2
+		intro.page = StorySequence.INTRO_WRECK_PAGE
 		intro._page_time = 1.5
 		intro._render()
 		await capture.call("04_shipwreck_story")
 	intro.finish()
 	await game.get_tree().process_frame
 	check.call(bool(GameState.campaign().get("intro_seen")) and game.world.process_mode == mode and not game._story_active, "skipping an introduction finishes once and restores world processing")
+	await preload("res://tools/opening_cast_checks.gd").run(game, check)
 	await OpeningFishingChecks.run(game, check)
 	await OpeningKrakenChecks.run(game, check)
 	await OpeningWreckChecks.run(game, check)

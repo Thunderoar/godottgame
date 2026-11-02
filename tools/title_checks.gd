@@ -23,13 +23,17 @@ static func run(game: Game, check: Callable) -> void:
 	else:
 		check.call(not title.is_sliding() and not title._home.visible, "Reduce Motion reaches the road without travel")
 	check.call(title._home.modulate.a == 1.0 and title._heroes.modulate.a == 1.0, "page travel never fades the content")
-	for i in CharacterDB.CHARACTERS.size():
-		title._card_buttons[i].pressed.emit()
-		if i == 0:
-			check.call(title.selected_character_id == "adam" and title._card_buttons[i].button_pressed, "Adam is available before either friend is rescued")
-		else:
-			check.call(title.selected_character_id == "adam" and title._overlay.visible and title._card_status[i].text == "LOCKED" and not title._card_buttons[i].button_pressed, "%s stays locked and explains its rescue route" % CharacterDB.ids()[i])
-			title._overlay_close.pressed.emit()
+	check.call(title._card_buttons.size() == 1 and title._card_buttons[0].name == "Hero_adam", "selection contains Adam alone, with no locked friend placeholders")
+	title._card_buttons[0].pressed.emit()
+	check.call(title.selected_character_id == "adam" and title._card_buttons[0].button_pressed, "Adam is available before either friend is rescued")
+	for friend in ["arjun", "mei_ling"]:
+		title._select_character(friend)
+		check.call(title.selected_character_id == "adam" and not title._overlay.visible, "removed friend cannot be selected through a stale callback: " + friend)
+	GameState.data.campaign.arjun_rescued = true
+	GameState.data.campaign.mei_ling_rescued = true
+	title._refresh_hero_locks()
+	check.call(title._card_buttons.size() == 1 and not title.has_node("Hero_arjun"), "rescuing both friends never adds them back into selection")
+	GameState.data = original.duplicate(true)
 	var browsed := GameState.data.duplicate(true)
 	browsed.erase("play_time")
 	check.call(game.world == null and browsed == original and not FileAccess.file_exists(GameState.SAVE_PATH), "browsing heroes does not create a world or write a save")

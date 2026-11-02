@@ -27,7 +27,9 @@ static func run(game: Game, check: Callable) -> void:
 	var story := StorySequence.new()
 	game.add_child(story)
 	story.set_process(false)
-	check.call(story._canvas.uses_fishing_shot() and story.lines().size() == 8, "only intro page zero uses the new eight-beat opening renderer")
+	story.page = StorySequence.INTRO_FISHING_PAGE
+	story._render()
+	check.call(story._canvas.uses_fishing_shot() and story.lines().size() == 11, "only the named group page uses the fishing renderer after three introductions")
 	var cache_size := PixelArt.CACHE.size()
 	for i in 100: OpeningFishingRenderer.sample(float(i) * 0.06, false, "high")
 	check.call(PixelArt.CACHE.size() == cache_size, "sampling fishing motion does not allocate or rebuild pixel textures")
@@ -40,8 +42,8 @@ static func run(game: Game, check: Callable) -> void:
 	GameSettings.set_effects_quality(quality, false)
 	story._page_time = 5.99
 	story._process(0.02)
-	check.call(story.page == 1 and story._page_time == 0.0 and story._canvas.uses_kraken_shot(), "six-second auto advance resets time and hands beat two to the pixel Kraken renderer")
-	for page in range(1, StorySequence.INTRO.size()):
+	check.call(story.page == StorySequence.INTRO_KRAKEN_PAGE and story._page_time == 0.0 and story._canvas.uses_kraken_shot(), "six-second auto advance resets time and hands beat two to the pixel Kraken renderer")
+	for page in range(StorySequence.INTRO_KRAKEN_PAGE, StorySequence.INTRO.size()):
 		story.page = page
 		story._render()
 		check.call(not story._canvas.uses_fishing_shot(), "intro page %d does not inherit the peaceful first shot" % page)
@@ -56,11 +58,13 @@ static func run(game: Game, check: Callable) -> void:
 		var early := StorySequence.new()
 		game.add_child(early)
 		early.set_process(false)
+		early.page = StorySequence.INTRO_FISHING_PAGE
+		early._render()
 		early._page_time = t
 		var completions := [0]
 		early.completed.connect(func() -> void: completions[0] += 1)
 		early.advance()
-		check.call(early.page == 1 and early._page_time == 0 and not early._canvas.uses_fishing_shot(), "Next at %.1fs exits the first-beat rendering path" % t)
+		check.call(early.page == StorySequence.INTRO_KRAKEN_PAGE and early._page_time == 0 and not early._canvas.uses_fishing_shot(), "Next at %.1fs exits the first-beat rendering path" % t)
 		early.finish()
 		await game.get_tree().process_frame
 		var skipped := StorySequence.new()

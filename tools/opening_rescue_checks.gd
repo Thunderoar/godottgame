@@ -39,10 +39,10 @@ static func run(game: Game, check: Callable) -> void:
 	game.add_child(story)
 	story.set_process(false)
 	for i in StorySequence.INTRO_RESCUE_PAGE:
-		check.call(story._canvas._rescue == null and not story._canvas.uses_rescue_shot(), "intro page %d never warms or draws the sixth-beat rescue early" % i)
+		check.call(story._canvas._rescue == null and not story._canvas.uses_rescue_shot(), "intro page %d never warms or draws the turtle rescue early" % i)
 		story.advance()
 	check.call(story._canvas._rescue != null and story._canvas.uses_rescue_shot() and story._page_time == 0, "entering only intro page five warms rescue art before drawing")
-	check.call(story.lines().size() == 8 and story._caption.text == StorySequence.INTRO[StorySequence.INTRO_RESCUE_PAGE], "rescue preserves the eight-beat order and original sixth caption")
+	check.call(story.lines().size() == 11 and story._caption.text == StorySequence.INTRO[StorySequence.INTRO_RESCUE_PAGE], "rescue preserves the eleven-beat order and original sixth caption")
 	check.call(source[0] == OpeningFishingArt.hero("adam", 0).get_image().get_data() and source[1] == CoastalArt.turtle_texture().get_image().get_data() and source[2] == OpeningWreckArt.piece("hull", 0).get_image().get_data() and source[3] == PixelArt.npc_texture("water_keeper").get_image().get_data(), "new rescue poses and art leave shared hero, turtle, wreck and villager pixels untouched")
 	var settings := [GameSettings.reduce_motion(), GameSettings.effects_quality()]
 	story._page_time = 2.0
@@ -61,13 +61,13 @@ static func run(game: Game, check: Callable) -> void:
 	check.call(PixelArt.CACHE.size() == cached, "rescue sampling allocates no textures, gameplay actors or asynchronous callbacks")
 	story._page_time = 5.99
 	story._process(0.02)
-	check.call(story.page == 6 and story._page_time == 0 and not story._canvas.uses_rescue_shot(), "six seconds hands rescue to the original final promise caption with fresh reading time")
+	check.call(story.page == StorySequence.INTRO_RESCUE_PAGE + 1 and story._page_time == 0 and not story._canvas.uses_rescue_shot(), "six seconds hands rescue to the original final promise caption with fresh reading time")
 	check.call(story._canvas.uses_rescue_epilogue() and story._canvas.rescue_state().ashore and story._canvas.rescue_state().adam == end.adam, "the final promise keeps Adam safely ashore instead of putting him back on the turtle")
 	var promise_start := story._canvas.rescue_state()
 	story._page_time = 5.8
 	var promise_end := story._canvas.rescue_state()
 	check.call(promise_start == promise_end, "the final promise holds the exact completed rescue tableau for its whole reading time")
-	check.call(story._caption.text == StorySequence.INTRO[6] and story._next.text == "Next", "epilogue reuse preserves the promise's words and Next into the village welcome")
+	check.call(story._caption.text == StorySequence.INTRO[StorySequence.INTRO_RESCUE_PAGE + 1] and story._next.text == "Next", "epilogue reuse preserves the promise's words and Next into the village welcome")
 	story.finish()
 	await game.get_tree().process_frame
 	check.call(GameState.campaign() == campaign and float(GameState.data.get("world_time", 0)) == world_time, "standalone rescue viewing never writes campaign or advances village time")
@@ -87,7 +87,7 @@ static func run(game: Game, check: Callable) -> void:
 		early._page_time = t
 		var reference: WeakRef = weakref(early._canvas._rescue)
 		early.advance()
-		check.call(early.page == 6 and early._page_time == 0, "Next at rescue %.2fs exits immediately without a delayed boarding callback" % t)
+		check.call(early.page == StorySequence.INTRO_RESCUE_PAGE + 1 and early._page_time == 0, "Next at rescue %.2fs exits immediately without a delayed boarding callback" % t)
 		var completed := [0]
 		early.completed.connect(func() -> void: completed[0] += 1)
 		early.finish()
