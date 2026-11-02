@@ -37,6 +37,14 @@ func _ready() -> void:
 			story._render()
 			await _capture("%dx%d-%s" % [extent.x,extent.y,OpeningCastRenderer.NAMES[index].to_lower().replace(" ","-")])
 			_check(_inside(story._caption_panel) and _inside(story._next) and _inside(story._skip) and _inside(story._intro_pause),"cast captions/navigation fit %s / %d" % [extent,index])
+		if extent.x == 1280:
+			for index in 3:
+				for moment in [0.25,1.0,2.0,3.25,4.75]:
+					story.page = index
+					story._page_time = moment
+					story._render()
+					await _capture("acting-%s-%.2f" % [OpeningCastRenderer.NAMES[index].to_lower().replace(" ","-"),moment])
+		story.page = 2
 		story._page_time = 4.0
 		await _capture("%dx%d-pullback" % [extent.x,extent.y])
 		story.page = StorySequence.INTRO_FISHING_PAGE

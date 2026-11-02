@@ -12,6 +12,7 @@ var _hull: Texture2D
 var _bucket: Texture2D
 var _rigging: Array[Texture2D] = []
 var _heroes: Dictionary = {}
+var _cast_actors: Dictionary = {}
 
 func _init() -> void:
 	# Warm every finite frame once before the timed shot; _draw never builds images.
@@ -25,6 +26,12 @@ func _init() -> void:
 		var poses: Array[Texture2D] = []
 		for pose in 3: poses.append(OpeningFishingArt.hero(id, pose))
 		_heroes[id] = poses
+		var acting: Array[Texture2D] = []
+		for action in OpeningCastArt.ACTIONS:
+			for mouth in OpeningCastArt.MOUTHS:
+				for blink in [false,true]:
+					for gaze in 3: acting.append(OpeningCastArt.frame(id,action,mouth,blink,gaze))
+		_cast_actors[id] = acting
 
 static func sample(elapsed: float, reduced: bool, quality: String) -> Dictionary:
 	var t := 0.0 if reduced else clampf(elapsed, 0.0, 6.0)
@@ -34,11 +41,11 @@ static func sample(elapsed: float, reduced: bool, quality: String) -> Dictionary
 		poses[0] = 1 if t >= 2.6 and t < 4.2 else (2 if t >= 0.6 and t < 0.8 else 0)
 		poses[1] = 1 if t >= 1.0 and t < 2.6 else (2 if t >= 3.1 and t < 3.3 else 0)
 		poses[2] = 1 if t >= 2.8 and t < 4.4 else (2 if t >= 4.6 and t < 4.8 else 0)
-	var lift := 1.5 if poses[1] == 1 else 0.0
-	var hand := boat + Vector2(249, 85 - lift)
-	var tip := boat + Vector2(354, 38 - lift * 2)
+	var crew := OpeningCastPerformance.sample(18.0+t,reduced)
+	var hand := OpeningCastPerformance.rod_hand(boat+FEET[1],crew[1])
+	var tip := boat + Vector2(354,38+(hand.y-boat.y-85)*2)
 	return {
-		"boat": boat, "poses": poses,
+		"boat": boat, "poses": poses, "crew": crew, "mei_look_left": false,
 		"feet": PackedVector2Array([boat + FEET[0], boat + FEET[1], boat + FEET[2]]),
 		"hand": hand, "rod_tip": tip,
 		"float": Vector2(593, 228 + roundf(sin(t * 2.1))),
@@ -79,14 +86,17 @@ func draw(canvas: CanvasItem, available: Rect2, state: Dictionary) -> void:
 	canvas.draw_texture(_rigging[int(state.flag)], boat)
 	for i in HEROES.size():
 		var foot: Vector2 = state.feet[i]
+		var actor: Dictionary = state.crew[i]
+		var frame := OpeningCastArt.key(int(actor.action),int(actor.mouth),bool(actor.blink),int(actor.gaze))
+		var texture: Texture2D = _cast_actors[HEROES[i]][frame]
 		var at := foot - Vector2(OpeningFishingArt.HERO_SIZE.x * 0.5, OpeningFishingArt.HERO_SIZE.y)
 		# Flip about the fixed foot anchor, never about the sprite rectangle corner.
 		if i == 2 and bool(state.get("mei_look_left", false)):
 			canvas.draw_set_transform(fitted.get_center() + (foot - centre) * factor * zoom, 0, Vector2(-1, 1) * factor * zoom)
-			canvas.draw_texture_rect(_heroes[HEROES[i]][int(state.poses[i])], Rect2(Vector2(-OpeningFishingArt.HERO_SIZE.x * 0.5, -OpeningFishingArt.HERO_SIZE.y), OpeningFishingArt.HERO_SIZE), false)
+			canvas.draw_texture_rect(texture, Rect2(Vector2(-OpeningFishingArt.HERO_SIZE.x * 0.5, -OpeningFishingArt.HERO_SIZE.y), OpeningFishingArt.HERO_SIZE), false)
 			canvas.draw_set_transform(fitted.get_center() - centre * factor * zoom, 0, Vector2.ONE * factor * zoom)
 		else:
-			canvas.draw_texture_rect(_heroes[HEROES[i]][int(state.poses[i])], Rect2(at, OpeningFishingArt.HERO_SIZE), false)
+			canvas.draw_texture_rect(texture, Rect2(at, OpeningFishingArt.HERO_SIZE), false)
 	canvas.draw_texture(_bucket, boat + Vector2(350, 92))
 	_draw_fishing(canvas, state)
 	canvas.draw_texture(_hull, boat)

@@ -20,11 +20,11 @@ static func sample(shot: int, elapsed: float, reduced: bool, quality: String) ->
 	var push := 0.0 if reduced else smoothstep(0, 2.0, t) * 0.12
 	state["camera_zoom"] = lerpf(CLOSE_ZOOM + push, 1.0, pull)
 	state["camera_centre"] = close.lerp(OpeningFishingRenderer.FRAME * 0.5, pull)
-	# Arjun's hands and his actual rod rise together, not as independent props.
-	if index == 1 and pose == 1:
-		state.hand.y -= 1.5
-		state.rod_tip.y -= 3.0
-	state["mei_look_left"] = index == 2 and not reduced and t < 4.6
+	var score_time := float(index)*6.0+t
+	state.crew = OpeningCastPerformance.sample(score_time,reduced)
+	state.hand = OpeningCastPerformance.rod_hand(state.feet[1],state.crew[1])
+	state.rod_tip = state.boat+Vector2(354,38+(state.hand.y-state.boat.y-85)*2)
+	state["mei_look_left"] = not reduced and score_time >= 10.6 and score_time < 16.6
 	state["subject"] = OpeningFishingRenderer.HEROES[index]
 	state["pullback"] = pull
 	return state

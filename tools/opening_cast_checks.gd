@@ -1,6 +1,7 @@
 extends RefCounted
 ## New performed shots, spatial continuity, reversible presentation and safe controls.
 static func run(game: Game, check: Callable) -> void:
+	await preload("res://tools/opening_cast_liveliness_checks.gd").run(game,check)
 	var campaign := GameState.campaign().duplicate(true)
 	for index in 3:
 		var opening := OpeningCastRenderer.sample(index, 0, false, "high")
