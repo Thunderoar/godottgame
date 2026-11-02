@@ -177,6 +177,7 @@ func _ready() -> void:
 
 	await _test_visual_repairs()
 	await DeepAuditChecks.run(game, _check)
+	await preload("res://tools/combat_visual_checks.gd").run(game, _check)
 	await CreativeChecks.run(game, _check)
 	await _test_movement()
 	await _test_gathering()

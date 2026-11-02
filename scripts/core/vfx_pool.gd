@@ -10,12 +10,15 @@ const RING_COUNT := 14
 const DUST_COUNT := 24
 const NUMBER_COUNT := 18
 const POP_COUNT := 16
+const CONTACT_COUNT := 24
 
 var _sparks: Array[Sprite2D] = []
 var _rings: Array[Sprite2D] = []
 var _dusts: Array[Sprite2D] = []
 var _numbers: Array[Label] = []
 var _pops: Array[Sprite2D] = []
+var _contacts: Array[CombatImpact] = []
+var _contact_cursor := 0
 var _spark_cursor := 0
 var _ring_cursor := 0
 var _dust_cursor := 0
@@ -27,6 +30,10 @@ func _ready() -> void:
 	add_to_group("vfx_pool")
 	z_as_relative = false
 	z_index = 690
+	for i in CONTACT_COUNT:
+		var contact_fx := CombatImpact.new()
+		add_child(contact_fx)
+		_contacts.append(contact_fx)
 	for i in SPARK_COUNT:
 		var s := Sprite2D.new()
 		s.texture = PixelArt.icon("spark", 16)
@@ -55,6 +62,8 @@ func _ready() -> void:
 	for i in NUMBER_COUNT:
 		var l := Label.new()
 		l.add_theme_font_size_override("font_size", 19)
+		l.add_theme_color_override("font_outline_color", Color("#162c36"))
+		l.add_theme_constant_override("outline_size", 5)
 		l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.85))
 		l.add_theme_constant_override("shadow_offset_x", 1)
 		l.add_theme_constant_override("shadow_offset_y", 2)
@@ -74,6 +83,14 @@ func _ready() -> void:
 
 
 # ------------------------------------------------------------------ spawners
+
+func contact(at: Vector2, dir: Vector2, color: Color, kind: String) -> void:
+	# Every spawn resets age, style, direction, tint and visibility; even a busy
+	# slot can be reused without a stale tween hiding the replacement effect.
+	var fx := _contacts[_contact_cursor]
+	_contact_cursor = (_contact_cursor + 1) % CONTACT_COUNT
+	fx.play(at, dir, color, kind)
+
 
 func sparks(at: Vector2, dir: Vector2, color: Color, count: int) -> void:
 	if GameSettings.reduce_motion():
@@ -166,7 +183,8 @@ func number(at: Vector2, amount: int, crit: bool, color: Color) -> void:
 	l.add_theme_color_override("font_color", color)
 	l.scale = Vector2(0.023, 0.023) * (1.15 if crit else 1.0)
 	l.rotation = 0.0
-	l.global_position = at - Vector2(0.34, 0.3)
+	var lane := float((_number_cursor % 3) - 1) * 0.16
+	l.global_position = at - Vector2(0.34, 0.3) + Vector2(lane, -absf(lane)*0.35)
 	var tween := l.create_tween().set_parallel(true)
 	_own(l, tween)
 	if not GameSettings.reduce_motion():

@@ -29,6 +29,12 @@ static func pool() -> VfxPool:
 	return null
 
 
+static func contact(at: Vector2, dir: Vector2, color: Color = Color("#ffe7a1"), kind: String = "normal") -> void:
+	var active_pool := pool()
+	if active_pool != null:
+		active_pool.contact(at, dir, color, kind)
+
+
 static func sparks(at: Vector2, dir: Vector2, color: Color = Color("#ffe7a1"), count: int = 6) -> void:
 	var pool := pool()
 	if pool == null:

@@ -1,8 +1,8 @@
 class_name HitFeedback
 extends RefCounted
 ## Shared hit pipeline: white flash on the victim, directional sparks, a damage
-## number, hit-stop and a camera micro-shake — all quality-gated through
-## GameSettings and pooled through Vfx, so a busy fight allocates nothing.
+## number, hit-stop and a camera micro-shake. Contact shapes are preallocated;
+## legacy sparks/numbers use pooled nodes with owned tweens.
 ##
 ## Callers only pass what they know; everything else has a sensible default.
 
@@ -20,6 +20,8 @@ static func impact(victim: Node2D, from_dir: Vector2, damage: int, opts := {}) -
 	var sprite: CanvasItem = victim.get("sprite") if victim.get("sprite") is CanvasItem else null
 	if sprite != null:
 		flash_white(sprite, 0.09)
+	var variant := "critical" if crit else ("armor" if bool(opts.get("armored", false)) else "normal")
+	Vfx.contact(at, from_dir, color, variant)
 	# Sparks fly opposite the swing direction.
 	var spark_dir := -from_dir if from_dir != Vector2.ZERO else Vector2.ZERO
 	Vfx.sparks(at, spark_dir, color, 5 if not crit else 8)
@@ -39,8 +41,12 @@ static func flash_white(item: CanvasItem, duration := 0.09) -> void:
 	# Short white flash layered on top of any running tint.
 	if item == null or not is_instance_valid(item):
 		return
-	item.modulate = Color(1.9, 1.75, 1.6)
+	if item.has_meta("hit_flash_tween"):
+		var previous := item.get_meta("hit_flash_tween") as Tween
+		if previous != null and previous.is_valid(): previous.kill()
+	item.modulate = Color(1.2, 1.12, 1.06) if GameSettings.reduce_motion() else Color(1.9, 1.75, 1.6)
 	var tween := item.create_tween()
+	item.set_meta("hit_flash_tween", tween)
 	tween.tween_property(item, "modulate", Color.WHITE, duration)
 
 

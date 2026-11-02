@@ -3919,3 +3919,36 @@ Evidence under `%LOCALAPPDATA%/Temp/`:
 - `besut-potion-workers-full-3efd1e7d6fec4f3cb50a830658c81b18` (full gate)
 
 Normal player data was not used. No APK export, commit or push was performed.
+
+## 2026-11-02 — Character combat visual upgrade
+
+- Implemented the ordered plan in `docs/COMBAT_VISUALS.md`: actor-owned directional
+  wind-up, tapered/reversed sword ribbons, pointed third-hit thrust, weapon color
+  profiles, 24 reusable local contact shapes, boss armor brackets, explicit
+  critical presentation, incoming-hurt accents and outlined/staggered numbers.
+- `Player._show_slash` now uses CombatVisuals at the existing Slash Sprite2D site.
+  HitFeedback owns outgoing contacts; Enemy passes its existing `is_boss` identity
+  as `opts.armored`. No new critical roll, block, damage, hitbox or pacing rule.
+- Pristine isolated canonical gate: **7,841 checks, PASS, exit 0**. Modified isolated
+  canonical gate: **8,451 checks, PASS, exit 0**, empty stderr and no failure/error
+  markers. The increase is **610 presentation regression checks**.
+- Matched real-renderer inputs retain **13 sword damage / 0.38-second cooldown**,
+  anticipation without damage, one active-frame hit and recovery to idle.
+  Both 1280x720 and 832x480 exercise 480 actual weapon draw combinations. Captures
+  include consecutive sweep frames, thrust, armor, explicitly requested critical
+  styling, incoming damage, low/reduced-motion, scythe and bow profiles.
+- Baseline and reconstructed rollback source trees match SHA-256
+  `d9d4facc143ce2f984357f4c90ad8f6e28e93d968cbd9a2f37c8ac76ef8a49ba`
+  excluding `.git`, `.godot`, `build` and `output`. A native reconstruction patch
+  and self-contained pristine-byte rollback are stored with the evidence.
+- Render evidence uses Linux Xvfb/Mesa llvmpipe, not native Windows or a physical
+  Android device. X11 input-method and unsupported V-Sync warnings remain visible.
+  Early capture shutdowns intermittently reported leaked resources; diagnostic
+  runs and capture-teardown corrections are retained, not discarded. Final
+  accepted run logs and exact statuses are in the verification ledger. After
+  draining short-lived teardown work, three consecutive modified renders and
+  the restored baseline render passed without shutdown errors (the two Xvfb
+  warnings remain).
+- External transaction record:
+  `/home/roku/Documents/ChatGPT/combat-visuals-20261102-8jjbl00t/`.
+  No export, hardware/touch, soak or performance certification; no commit/push.

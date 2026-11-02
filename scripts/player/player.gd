@@ -53,6 +53,7 @@ var _sleep_hp_start := 0
 var _visual: PlayerSprite
 var _shadow: Sprite2D
 var _attack_sprite: Sprite2D
+var _combat_visuals: CombatVisuals
 var _attack_phase := AttackPhase.NONE
 var _attack_step := 0
 var _phase_time := 0.0
@@ -97,6 +98,7 @@ func _on_boss_revival_used(healed: int) -> void:
 	if not _owns_potion_feedback(): return
 	invulnerable = maxf(invulnerable, 2.0)
 	revival_flash = 2.0
+	if _combat_visuals: _combat_visuals.cancel()
 	_attack_phase = AttackPhase.NONE
 	attacking = false
 	_attack_timer = 0
@@ -143,14 +145,10 @@ func _build_visual() -> void:
 	_visual.z_index = 0
 	add_child(_visual)
 
-	_attack_sprite = Sprite2D.new()
-	_attack_sprite.name = "Slash"
-	_attack_sprite.texture = PixelArt.slash_texture()
-	_attack_sprite.scale = Vector2(0.034, 0.034)
-	_attack_sprite.visible = false
-	_attack_sprite.z_as_relative = false
-	_attack_sprite.z_index = 900
-	add_child(_attack_sprite)
+	_combat_visuals = CombatVisuals.new()
+	_combat_visuals.name = "Slash"
+	_attack_sprite = _combat_visuals
+	add_child(_combat_visuals)
 
 
 func _physics_process(delta: float) -> void:
@@ -291,6 +289,7 @@ func try_attack() -> bool:
 	var step := AttackDB.step(_chain_style, _attack_step)
 	_phase_time = float(step.get("anticipation", 0.06))
 	attacking = true
+	_combat_visuals.anticipate(_attack_dir, _chain_style, str(step.get("arc", "lr")), _phase_time, float(character.get("attack_range", 2.05)))
 	# A tiny hitch at the wind-up start sells the anticipation.
 	if _visual and not GameSettings.reduce_motion():
 		_visual.scale = Vector2(PixelArt.PX * 0.97, PixelArt.PX * 1.02)
@@ -402,6 +401,7 @@ func _fire_arrow(character: Dictionary, arc_kind: String) -> void:
 	arrow.source = self
 	arrow.position = get_parent().to_local(global_position + aim * 0.75 + Vector2(0, -0.65))
 	get_parent().add_child(arrow)
+	_show_slash(arc_kind)
 	# Muzzle flash at the release.
 	Vfx.sparks(global_position + aim * 0.75 + Vector2(0, -0.65), aim, Color("#ffe7a1"), 3)
 	if _visual and _visual.has_method("set_facing"):
@@ -409,27 +409,9 @@ func _fire_arrow(character: Dictionary, arc_kind: String) -> void:
 
 
 func _show_slash(arc := "lr") -> void:
-	if _attack_sprite == null:
+	if _combat_visuals == null:
 		return
-	var tex := RealmPresentation.weapon_arc(arc if arc != "shot" else "lr")
-	_attack_sprite.texture = tex
-	_attack_sprite.texture_filter = VisualStyle.texture_filter()
-	_attack_sprite.visible = true
-	_attack_sprite.position = facing * 0.88
-	_attack_sprite.rotation = facing.angle() + (0.4 if arc != "slam" else 0.0)
-	_attack_sprite.flip_h = arc == "rl"
-	var color := Color(1, 0.98, 0.82, 0.95)
-	if arc == "slam":
-		color = Color(1.0, 0.7, 0.35, 0.95)
-	_attack_sprite.modulate = color
-	_attack_sprite.scale = Vector2(0.010, 0.010)
-	var tween := create_tween()
-	tween.set_parallel(true)
-	tween.tween_property(_attack_sprite, "scale", Vector2(0.021, 0.021), 0.12)
-	tween.tween_property(_attack_sprite, "modulate:a", 0.0, 0.22)
-	tween.chain().tween_callback(func() -> void:
-		if is_instance_valid(_attack_sprite):
-			_attack_sprite.visible = false)
+	_combat_visuals.strike(_attack_dir, _chain_style, arc, float(GameState.character_data().get("attack_range", 2.05)))
 
 
 # ------------------------------------------------------------------ interaction
@@ -484,6 +466,8 @@ func take_damage(amount: int, from: Vector2 = Vector2.ZERO) -> void:
 		return
 	invulnerable = 0.55
 	GameState.damage_player(amount)
+	var contact_dir := (global_position - from).normalized() if from != Vector2.ZERO else -facing
+	Vfx.contact(global_position + Vector2(0,-0.6), contact_dir, Color("#ff9b85"), "hurt")
 	hurt_flash.emit()
 	if from != Vector2.ZERO:
 		var push := (global_position - from).normalized()
@@ -504,6 +488,7 @@ func apply_elemental_slow(seconds: float, factor: float) -> void:
 
 func die() -> void:
 	dead = true
+	if _combat_visuals: _combat_visuals.cancel()
 	sleeping = false
 	velocity = Vector2.ZERO
 	_attack_phase = AttackPhase.NONE

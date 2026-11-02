@@ -825,7 +825,7 @@ func take_damage(amount: int, from_dir: Vector2 = Vector2.ZERO, _source: Node = 
 		get_parent().alert_intruders(true)
 	hp = maxi(0, hp - amount)
 	_hit_flash = 0.14
-	var opts := {"shake": 0.06, "shake_time": 0.1}
+	var opts := {"shake": 0.06, "shake_time": 0.1, "armored": is_boss}
 	if is_boss:
 		# Bosses shrug off staggers; they get an armour flash instead.
 		opts["shake"] = 0.1
