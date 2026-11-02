@@ -13,6 +13,7 @@ func _ready() -> void:
 	if not TestEnvironment.require_isolation():
 		get_tree().quit(1)
 		return
+	preload("res://tools/startup_splash_checks.gd").run(_check)
 	GameState.delete_save()
 	game = load("res://scenes/game.tscn").instantiate()
 	add_child(game)

@@ -138,6 +138,16 @@ reveal. GameState commits guard XP/kill/pair credit together. This supersedes th
 position-only threshold, optional winch and reset-all-guards descriptions below.
 See `docs/CITADEL_APPROACH_PLAN.md`; review `-Twilight`, `-MeiRescue`, `-Developer`.
 
+**2026-11-02 animated startup:** normal app launch now enters the lightweight
+`StartupSplash` in `scenes/startup.tscn`. The native engine boot is black, with
+its static image disabled. A three-second Theora movie always completes before
+Game is instantiated, even when threaded resource loading finishes early. Late
+loading holds the final logo, not a replay. Focus loss pauses the movie; failed
+loading offers Retry after playback; missing video has a timed poster fallback.
+Game's title/Continue/story flow is unchanged. Direct Game test scenes still
+bypass startup; use `tools/startup_splash_review.tscn` for actual decoder, loading,
+focus, input and fallback review. See `docs/ANIMATED_STARTUP_SPLASH.md`.
+
 ## 1. Ground truth and scope
 
 - This checkout is `/home/roku/Documents/ChatGPT/game2/godottgame`; `project.godot` is at its root.
@@ -148,7 +158,8 @@ See `docs/CITADEL_APPROACH_PLAN.md`; review `-Twilight`, `-MeiRescue`, `-Develop
   or replace a repair branch with main. Do not push unless requested.
 - `/usr/bin/godot --version` currently reports `4.7.2.stable.arch_linux.ed1daf0bf`.
   Match export templates to the actual engine, not an older report.
-- `project.godot` runs `res://scenes/game.tscn`: one Node2D with `Game` attached.
+- `project.godot` runs `res://scenes/startup.tscn`: a lightweight video/loading gate.
+  It then instantiates `res://scenes/game.tscn`, one Node2D with `Game` attached.
   Runtime worlds and UI are constructed in GDScript, not assembled in that scene.
 - Autoload order: **GameState → Sfx → GameSettings**. No Creative Studio autoload.
 - At inspection: 136 GDScript files under `scripts/`, 53 under `tools/`, 12 under
