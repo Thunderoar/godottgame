@@ -22,10 +22,16 @@ message includes the full project URL, including `/protect-besut/`.
 Content changes at this same URL do not require a new APK. If the URL changes,
 update `HmsScanService.PAGE_URL` and its QR payload regression checks, then
 re-export. Older installed APKs and previously saved QR images retain their old
-URL; install a rebuilt APK and generate a fresh QR to use GitHub Pages.
+URL, which now redirects automatically. Install a rebuilt APK and generate a
+fresh QR only to encode the GitHub Pages address directly.
 The code contains no visitor-specific query parameters or player save data.
 
-The former Sites deployment is retained for old APKs/QRs:
+The former Sites URL automatically redirects visitors to GitHub Pages, including
+old APKs and saved QR images. The published redirect uses JavaScript history
+replacement (preserving section links), an immediate no-JavaScript meta refresh
+and a manual link fallback. No APK update is needed to follow this redirect.
+Redirect source: `13859f999ac522e007d7952990edd83aba395962`, Sites version 2.
+Old address:
 https://protect-besut-field-guide.modestquail7.chatgpt.site
 Project ID: `appgprj_6ae9579490848191880c5461b49a2a3a`.
 Source: `9bd7ab77eee537c881d04214698b9100dddfb34b`.
