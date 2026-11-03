@@ -1,16 +1,30 @@
-# HUAWEI Scan Kit — local BESUT message QR
+# HUAWEI Scan Kit — BESUT visual field-guide QR
 
-Settings on the title screen, land and ocean include **SHARE BESUT → Create message QR**.
+2026-11-03 Android fix: JNI plugins expose Java methods through
+`JNISingleton.has_java_method()`, rather than `Object.has_method()`. The service
+now checks that Java method table before calling `generate_qr`. See the
+[Godot 4.7 JNI reference](https://docs.godotengine.org/en/4.7/classes/class_jnisingleton.html).
+The separate release test package verifies the real Settings button. Its public
+QR PNG is logged in short Base64 chunks for independent decoding without root
+access or adding storage/debugging permissions to the production build.
+
+Settings on the title screen, land and ocean include **SHARE BESUT → Create website QR**
+and **Open BESUT guide**, a shortcut for viewing the page on the same device.
 On Android, the button calls HUAWEI Scan Kit's real `ScanUtil.buildBitmap()` API through
 the `ProtectBesutHms` Godot v2 Android plugin. Scan the displayed QR with another
-phone, or share a screenshot. Its complete payload is:
+phone, or share a screenshot. Its complete payload is the public website URL:
 
 ```text
-PB (Protect BESUT)
-Nature needs a protector.
+https://yizzan1.github.io/protect-besut/
 ```
 
-This is message sharing, not save export/import or a reward code. It reads no
+The page has game screenshots, story, characters, interactive location tabs,
+play guidance and a shareable conservation pledge. It is public, without sign-in,
+as requested by the user. Its source and deployment identity are documented in
+`docs/BESUT_WEB_GUIDE.md`. QR generation works offline; opening the website in
+the device browser requires internet access.
+
+This shares a public page, not save export/import or a reward code. It reads no
 player progress, account, developer phrase or device identifier. Closing Settings
 releases the displayed texture. It uses the existing Settings ownership and does
 not introduce another modal or pause gameplay.
@@ -31,7 +45,8 @@ records Android 16/target 36 support in this release and 16 KB page support in
 the earlier 2.13.0.301 release. [The generation API](https://developer.huawei.com/consumer/es/doc/HMSCore-References/scan-scanutil4-0000001050167699)
 accepts a string and returns a bitmap. The bridge disables operation tracking;
 the export plugin removes optional network, Wi-Fi-state, camera and image/storage
-permissions from merged SDK manifests. There is no camera scanner or remote call.
+permissions from merged SDK manifests. The native bridge has no camera scanner
+or remote call; the guide opens separately in the device's browser.
 
 ## Build
 
@@ -79,7 +94,7 @@ the test tools in that test export. The harness requires the native singleton,
 presses the real Settings button and saves `user://hms-message-qr.png` for an
 independent scan. It does not create or delete a journey. On a clean install,
 verify success without Huawei sign-in, HMS Core installation or network access;
-scan the QR with another phone and check the exact message above. Check the final
+scan the QR with another phone and check the exact URL above. Check the final
 merged APK manifest for unexpected SDK permissions as part of Android export QA.
 
 2026-11-01 evidence: real Huawei/Godot bridge Java compilation passed; isolated

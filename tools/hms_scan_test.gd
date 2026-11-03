@@ -24,6 +24,12 @@ func _ready() -> void:
 			_check(control._code.visible and control._code.texture != null, "HMS: real Settings action displays native QR")
 			if control._code.texture != null:
 				_check(control._code.texture.get_image().save_png("user://hms-message-qr.png") == OK, "HMS: save generated QR for independent decode review")
+				if OS.has_feature("android"):
+					# Test package only: retrieve the public QR without needing root
+					# or enabling debugging/storage permissions in release builds.
+					var encoded := Marshalls.raw_to_base64(control._code.texture.get_image().save_png_to_buffer())
+					for offset in range(0, encoded.length(), 512):
+						print("HMS_QR_PNG:" + encoded.substr(offset, 512))
 		game.title_screen._close_overlay()
 		_check(control._code.texture == null and not control._code.visible, "HMS: closing Settings releases the QR texture")
 	var after := GameState.data.duplicate(true)

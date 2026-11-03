@@ -39,10 +39,17 @@ If the game resource fails, finish the movie first, then present Retry loading o
 
 ## Verification
 
+- `tools/test_startup_launch.ps1 -Godot <console-executable>` refreshes imports, then launches the configured main scene in a fresh process without test-side Game preloads. Add `-Native -Resolution 832x480` (or `1280x720`) for a rendered menu capture. The check requires the splash to disappear, exactly one Game with a usable Start Game button, the full minimum duration, and successful navigation to the hero page. The wrapper rejects script/resource errors even if Godot exits 0.
 - `tools/startup_splash_checks.gd`: fast gate truth table, native black engine boot, stream/poster types and exactly-once guard; included in the canonical gameplay suite.
 - `tools/startup_splash_review.tscn`: actual decoder and threaded-load review. Covers ready-before-film-end, delayed readiness with held final frame, keyboard input, focus pause/resume, missing-video fallback, failed-load retry, cancellation, real Game handoff, and uniform fitting at 1280×720 / 832×480 / 360×780.
 - Media QA checks the first three presented frames are exactly black, confirms rising fade samples, three-second durations and near-static final half-second, and records audio levels plus hashes.
 - All tests use isolated user data. Linux Xvfb/Mesa llvmpipe validation is distinct from unperformed Windows-native, Android hardware or export testing.
+
+### Local startup stuck at the logo after updating source
+
+On 2026-11-03, the Windows player log showed missing global classes (`CombatVisuals`, `CombatBodyMotion`, `CombatPoseArt`, `CombatHit`, `CombatImpact`, `OpeningCastRenderer`) and a missing imported splash poster. These compilation failures cascaded into incomplete HUD/title construction. Refreshing imports with `tools/test_isolated.ps1 -Godot <console-executable> -ImportOnly` rebuilt the class cache and poster, and fresh launches reached the menu. Restart an already running failed player after importing; its failed script instances cannot recover from the on-disk cache refresh. No journey reset or save deletion is required.
+
+Verification on Windows / Godot 4.7.2: fresh headless and native 1280x720 launches reached the complete menu; the final native 832x480 launch check also exercised Start Game navigation. Both menu captures were inspected. The decoder/lifecycle review passed 39 checks and the canonical gameplay gate passed 8,691 checks, each with exit 0 and no failure/error markers. Existing save-warning entries occurred in the gameplay fixtures; import retained the Android build-tools-directory warning. Evidence is under `%TEMP%/pb-startup-0e068382fb654cdaa7bdab2074fdfd9d`, `%TEMP%/pb-splash-review-62631e27de5e45f7a336b42a557efcf2`, and `%TEMP%/tidesworn-tests-ffa74a8b0d7a4e4c97b1dccd2ec4225a`. The failed normal player was restarted with refreshed imports; no release export or phone validation was performed.
 
 The existing four artifact role paths are reused. Current rollback restores commit `d9e6fc3` (static splash/direct Game startup), preserving both committed boat-introduction passes and the newer combat-visuals commit. Previous role versions remain under the supplemental `startup-splash/prior_roles/` record. Literal commands, outputs, corrections and current results are appended to `VERIFICATION.txt`.
 

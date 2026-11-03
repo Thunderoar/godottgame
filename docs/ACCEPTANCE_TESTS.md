@@ -4024,3 +4024,142 @@ Normal player data was not used. No APK export, commit or push was performed.
   Initial parser/capture errors and corrected fixture expectations are recorded,
   not hidden. No native Windows, Android/touch, subjective listening, blinded
   user study or hardware performance/thermal certification; no commit/push.
+
+## 2026-11-03 — Fix real Android HMS QR availability and export 1.3.3
+
+The phone error came from the generic Object.has_method guard, not a missing
+HMS SDK: Android JNISingleton's Java methods require has_java_method. The service
+now uses JNI introspection and keeps ordinary Object checks for test adapters.
+Android runtime evidence confirms Object.has_method(generate_qr)=false while
+has_java_method(generate_qr)=true. Added regression checks and test-only PNG log
+chunks small enough for Android/Godot logging to retrieve and independently scan.
+
+Isolated Godot 4.7.2 import passed. Desktop HMS: **14 checks, PASS**. A separately
+packaged release test APK on the Android 17 x86_64 emulator: **18 checks, PASS**,
+including actual native Scan Kit generation and the real title Settings button.
+Repeated offline with Wi-Fi/data disabled and no installed Huawei package: PASS.
+An independent ZXing decoder reads exactly `PB (Protect BESUT)` followed by
+`Nature needs a protector.` from the actual native PNG. The emulator's SwiftShader
+logged GLES shader-linking errors, so this is QR functional verification, not
+full visual certification. No physical-phone execution is claimed.
+
+Full isolated canonical tide scene: **8,691 checks, PASS**, exit 0, no FAIL,
+SCRIPT ERROR or ERROR markers; headless render loop disabled. Expected save-code-12
+rollback warnings remain. An initial run against stale checkout class metadata
+was stopped; the imported disposable copy resolved it. One intermediate gate
+used the test APK's main scene and failed only the normal-startup assertion;
+restoring the production main scene produced the final full PASS.
+
+Exported `build/android/ProtectBESUT-1.3.3-HMS.apk` (versionCode 12) with standard
+startup, ARM64/ARMv7 and a new user-authorized key. Signature, manifest/package
+metadata and 16-KiB ZIP alignment checks pass. Manifest registers the HMS bridge
+and declares no app permissions. The initial Gradle attempt lacked Android SDK
+36; installing the matching platform/build tools resolved the build prerequisite.
+The new key is outside the repo; its password is not recorded in source/docs.
+The different signing identity requires separate installation from the old key;
+no app or save was removed. Existing APK files were preserved. Build report and
+verification artifacts are under `build/android/verification-hms-20261103` and
+`build/android/BUILD-REPORT-HMS-1.3.3.txt`.
+
+Evidence: `%LOCALAPPDATA%/Temp/besut-hms-fix-7cfaefeeeb5d4825991349f05d8dcccb`.
+No commit or push performed; concurrent startup documentation edits preserved.
+
+## 2026-11-03 — Public visual BESUT guide behind the sharing QR
+
+Published a new public Sites field guide at
+`https://protect-besut-field-guide.modestquail7.chatgpt.site`. The user explicitly
+requested a visual webpage and access for anyone with the link without sign-in.
+The separate static Site repository contains real village/ocean/Twilight captures,
+character sprites, story, interactive location tabs, phone guidance, conservation
+pledge/message-copy interaction and creator credits. Project identity/source
+location are recorded in `docs/BESUT_WEB_GUIDE.md`. Version 1, pushed source
+`9bd7ab77eee537c881d04214698b9100dddfb34b`, deployment succeeded; unauthenticated
+HTTP 200 confirmed. Browser QA covered 390x844 and 1280x900, loaded images,
+no horizontal overflow, location tabs, keyboard selection, FAQ and message copy.
+The temporary capture harness produced the assets but reported coroutine resource
+cleanup errors on exit; it was not used as gameplay acceptance evidence.
+
+HmsScanService now encodes only that stable HTTPS URL. Settings explains the
+content, labels generation Create website QR and offers Open BESUT guide for
+same-device viewing. Existing JNI method detection is retained. No save data or
+visitor-specific parameters are encoded. Existing QR screenshots keep the old
+message; generate a fresh QR after updating. Website content changes at the same
+URL can be published without replacing the app's QR again.
+
+Real Android release test package: **18 HMS checks, PASS**. Independent ZXing
+scan of native PNG reads the exact public URL. Full isolated canonical tide scene:
+**8,691 checks, PASS**, exit 0, no failure/script/error markers; headless render
+loop disabled. Expected save-code-12 rollback warnings remain. Software-emulator
+GLES linking diagnostics prevent claiming full emulator visual certification.
+No physical-phone installation is claimed.
+
+Exported `build/android/ProtectBESUT-1.3.4-Guide.apk`, code 13, same package and
+signing certificate as the working 1.3.3-HMS build. Signature verification and
+16-KiB ZIP alignment pass; ARM64/ARMv7 and standard startup retained. No app
+permissions added. Evidence/report under `build/android/verification-guide-20261103`
+and `build/android/BUILD-REPORT-Guide-1.3.4.txt`. Temporary source and test data:
+`%LOCALAPPDATA%/Temp/besut-hms-fix-7cfaefeeeb5d4825991349f05d8dcccb`.
+Normal player saves and previous APK files were preserved. No game-repo push or
+commit performed; Site source was pushed as required for authorized publication.
+
+## 2026-11-03 — Move the public QR guide to GitHub Pages
+
+Published the existing buildless field guide at
+`https://yizzan1.github.io/protect-besut/`, from public repository
+`https://github.com/yizzan1/protect-besut`, source
+`2698790d66d69bf3967c51cd332b5dcc8e7c6f08`. GitHub Pages reports built;
+unauthenticated HTTP checks return 200 for the guide, CSS, JavaScript, all game
+images and the bundled font. JavaScript syntax and relative asset checks pass.
+The copied protector message now retains the full `/protect-besut/` project
+path, and social-preview/canonical URLs use GitHub Pages. Layout is unchanged;
+no new browser interaction review or physical-phone review was performed.
+
+Updated HmsScanService.PAGE_URL, exact QR payload regression expectations and
+current guide documentation. The former Sites page remains available to old
+installed APKs and previously saved QR images. New APKs must be exported from
+the updated source and their QR generated again to use the GitHub URL.
+
+Godot 4.7.2 isolated import exits 0; focused HMS: **14 checks, PASS**;
+interface/shop: **63 checks, PASS**, both exit 0 with no failure/error markers.
+User data was isolated through APPDATA, LOCALAPPDATA and TIDESWORN_TEST_ROOT.
+Evidence: `%LOCALAPPDATA%/Temp/besut-github-guide-FhQgyG`.
+No full gameplay gate or APK export was run for this URL-only update. The
+website source was committed/pushed for publication; game-repository changes
+remain uncommitted. Existing concurrent Android/startup edits were preserved.
+
+## 2026-11-03 — Smaller direct-install APKs with complete game content
+
+Enabled Godot native-library ZIP compression for the existing universal Android
+preset and added Android ARM64 as a second, ARM64-only preset. Both export
+version 1.3.5/code 14. Package identity/signing key are unchanged from the working
+1.3.3/1.3.4 builds; the standard preset retains ARMv7 support. No engine modules,
+art styles, music, cinematics, game logic or features were removed or downsampled.
+
+Baseline 1.3.4 APK: 247,767,903 bytes. ARM64: **123,117,178 bytes, 50.31% smaller**.
+Universal: **149,223,799 bytes, 39.77% smaller**. All **1,409 game resource/script
+files** hash-identically to the original. All retained native libraries are also
+byte-identical; only ZIP compression and ABI selection changed. Android-generated
+dexopt metadata is excluded from resource equality. Textures were already well
+compressed and were left unchanged. Download size and installed size differ:
+Android extracts compressed libraries during installation.
+
+Both production exports pass signature verification, same-certificate checks,
+package/version/ABI inspection and 16-KiB ZIP alignment. All ARM64 native ELF
+load segments meet 16-KiB alignment. Manifest extractNativeLibs=true matches the
+compressed-library packaging. A separate compressed ARM64 release test package
+installed on the Android 17 emulator (ARM64 via NDK translation): **20 checks,
+PASS**, including actual movie completion without fallback, exactly one Game,
+real Settings QR generation and no journey creation. Independent ZXing scan
+confirms the unchanged public guide URL. This is not physical-device or full
+visual certification; known SwiftShader GLES linking diagnostics remain. An
+intermediate test-copy harness added its startup child during root setup; deferring
+that addition fixed the harness. Production startup code was unchanged.
+
+Full isolated canonical tide scene: **8,691 checks, PASS**, exit 0, no failure/
+script/error markers; headless render loop disabled. Expected save-code-12 fixture
+warnings remain. Deliverables: `build/android/ProtectBESUT-1.3.5-ARM64.apk` and
+`build/android/ProtectBESUT-1.3.5-Universal.apk`, with hashes and
+`build/android/BUILD-REPORT-Slim-1.3.5.txt`. Verification receipts are in
+`build/android/verification-slim-20261103`. Temporary evidence/test source:
+`%LOCALAPPDATA%/Temp/besut-hms-fix-7cfaefeeeb5d4825991349f05d8dcccb`.
+Previous APKs and normal player data were preserved. No commit or push performed.

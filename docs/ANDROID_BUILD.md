@@ -4,6 +4,27 @@ Use Godot 4.7.2 with matching Android export templates, JDK 17 and an Android SD
 
 The package is com.tidesworn.protectbesut. Output: build/android/ProtectBESUT.apk. Build outputs and signing material are not tracked. The preset contains no signing passwords or machine-specific SDK paths.
 
+## Smaller direct-install APKs
+
+Both presets enable `gradle_build/compress_native_libraries`. Android extracts
+the compressed libraries at installation instead of loading them directly from
+the APK. This reduces the download; the installed footprint does not shrink by
+the same percentage. Game resources and native-library contents are unchanged.
+
+- **Android**: universal ARM64 + ARMv7, for both supported processor families.
+- **Android ARM64**: ARM64 only, for phones whose Android system supports
+  `arm64-v8a`. Use the universal build for 32-bit Android systems, including
+  devices that have a 64-bit processor but run a 32-bit OS.
+
+Export the smaller variant with the same signing environment as below:
+
+```powershell
+& "C:\path\to\Godot_v4.7.2-stable_win64_console.exe" --headless --path . --export-release "Android ARM64" build/android/ProtectBESUT-ARM64.apk
+```
+
+Keep the same signing key and package for updates. Version 1.3.5/code 14 is the
+first compressed release. The original 1.3.4 APK is preserved for comparison.
+
 For a direct-install development APK, supply the existing development keystore using GODOT_ANDROID_KEYSTORE_RELEASE_PATH, GODOT_ANDROID_KEYSTORE_RELEASE_USER and GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD, then run:
 
 ```powershell

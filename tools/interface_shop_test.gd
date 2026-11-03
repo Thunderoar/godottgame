@@ -95,7 +95,7 @@ func _ready() -> void:
 		_check(not images.has(key), "distinct sword silhouette: " + id)
 		images[key] = true
 	_check(EquipmentArt.upgrade_hint("iron_sword").contains("14 → 17"), "upgrade preview uses actual attack formula")
-	_check(HmsScanService.MESSAGE == "PB (Protect BESUT)\nNature needs a protector.", "English QR message")
+	_check(HmsScanService.MESSAGE == "https://yizzan1.github.io/protect-besut/", "QR opens the public visual guide")
 	GameState.data.village_progression.legacy_access = true
 	for view in [Vector2i(1280,720), Vector2i(832,480)]:
 		get_window().size = view

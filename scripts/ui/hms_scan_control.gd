@@ -10,14 +10,18 @@ var _generate: Button
 func _ready() -> void:
 	add_theme_constant_override("separation", 8)
 	add_child(GameUI.label("SHARE BESUT", 14, GameUI.GOLD))
-	var description := GameUI.label("Create a QR code with our message: Nature needs a protector.", 13, GameUI.TEXT)
+	var description := GameUI.label("Share the BESUT field guide: game screenshots, the story of three friends, places to explore and ways to protect nature.", 13, GameUI.TEXT)
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(description)
-	_generate = GameUI.button("Create message QR", Vector2(0, 44))
+	_generate = GameUI.button("Create website QR", Vector2(0, 44))
 	_generate.name = "CreateBesutQR"
 	_generate.disabled = not HmsScanService.available()
 	_generate.pressed.connect(_create_qr)
 	add_child(_generate)
+	var open_guide := GameUI.button("Open BESUT guide ↗", Vector2(0, 44))
+	open_guide.name = "OpenBesutGuide"
+	open_guide.pressed.connect(func() -> void: OS.shell_open(HmsScanService.PAGE_URL))
+	add_child(open_guide)
 	_status = GameUI.label("", 13, GameUI.MUTED)
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(_status)
@@ -39,7 +43,7 @@ func _create_qr() -> void:
 	var result := HmsScanService.generate_message_qr()
 	_code.texture = result.get("texture") as Texture2D
 	_code.visible = bool(result.get("ok", false))
-	_status.text = "Scan with another phone, or share a screenshot. The code contains only the BESUT message." if _code.visible else str(result.get("message", "Could not create the QR code."))
+	_status.text = "Scan with another phone to open the visual BESUT guide, or share a screenshot. The public page needs an internet connection; no sign-in is required." if _code.visible else str(result.get("message", "Could not create the QR code."))
 
 
 func _clear_qr() -> void:
